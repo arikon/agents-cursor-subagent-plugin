@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "cursor-subagent": {
+      "command": "/Users/arikon/.nvm/versions/node/v24.18.0/bin/node",
+      "args": ["/Users/arikon/projects/codex-cursor-subagent-plugin/scripts/cursor-subagent-mcp.mjs"],
+      "approval_mode": "never"
+    }
+  }
+}
