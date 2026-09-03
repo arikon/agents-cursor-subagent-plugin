@@ -1,8 +1,12 @@
 {
   "mcpServers": {
     "cursor-subagent": {
-      "command": "/Users/arikon/.nvm/versions/node/v24.18.0/bin/node",
+      "command": "/Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node",
       "args": ["/Users/arikon/projects/codex-cursor-subagent-plugin/scripts/cursor-subagent-mcp.mjs"],
+      "env": {
+        "AGENT_CLI_CREDENTIAL_STORE": "file",
+        "CURSOR_AGENT_COMMAND": "/Users/arikon/.local/share/cursor-agent/versions/2026.08.25-3e8eec8/cursor-agent"
+      },
       "approval_mode": "never"
     }
   }

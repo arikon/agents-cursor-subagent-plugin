@@ -1,0 +1,47 @@
+{
+  "adapter_version": "codex-cli-0.152.1-fixture-v1",
+  "codex_version": "codex-cli 0.152.1",
+  "operations": [
+    "admit",
+    "help",
+    "marketplace-list",
+    "plugin-list",
+    "render",
+    "mcp-check",
+    "agent-status",
+    "canary-prompt",
+    "marketplace-add",
+    "marketplace-remove",
+    "plugin-add",
+    "plugin-remove"
+  ],
+  "covered_outcomes": [
+    "success",
+    "nonzero",
+    "partial",
+    "timeout",
+    "output_overflow",
+    "reread_failure"
+  ],
+  "cli_forms": {
+    "version": ["--version"],
+    "help": ["plugin", "--help"],
+    "agent_version": ["--version"],
+    "agent_status": ["status", "--format", "json"],
+    "marketplace_list": ["plugin", "marketplace", "list", "--json"],
+    "plugin_list": ["plugin", "list", "--json"],
+    "marketplace_add": ["plugin", "marketplace", "add", "<SOURCE>", "--json"],
+    "marketplace_remove": ["plugin", "marketplace", "remove", "<MARKETPLACE>", "--json"],
+    "plugin_add": ["plugin", "add", "<PLUGIN>@<MARKETPLACE>", "--json"],
+    "plugin_remove": ["plugin", "remove", "<PLUGIN>@<MARKETPLACE>", "--json"]
+  },
+  "agent_status_forms": {
+    "version": "2026.08.25-3e8eec8",
+    "authenticated": {"status": "authenticated", "isAuthenticated": true, "hasAccessToken": true, "hasRefreshToken": true},
+    "required": [
+      {"status": "unauthenticated", "isAuthenticated": false, "hasAccessToken": false, "hasRefreshToken": false},
+      {"status": "partially-authenticated", "isAuthenticated": false, "hasAccessToken": true, "hasRefreshToken": false}
+    ],
+    "unknown_status": "error"
+  }
+}

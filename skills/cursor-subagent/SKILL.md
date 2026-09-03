@@ -7,11 +7,10 @@ description: "Делегировать задачу Cursor Agent через ин
 
 Используй этот skill, когда пользователь явно просит поручить часть работы Cursor.
 
-1. Создай сессию `cursor_start_session`, передав изолированную рабочую директорию и режим. По умолчанию `ask`; для исследования используй `plan`, а `agent` — только после явного разрешения на изменения.
-2. Отправь задачу `cursor_send_prompt`. Не предполагай, что работа завершена: это асинхронный вызов.
-3. Читай `cursor_session_status` в режиме по умолчанию (`summary`), пока Cursor не вернётся в `idle`, `failed` или не запросит ввод. Не запрашивай `detail: "full"` при обычном опросе: он нужен только для отладки протокола. При необходимости задай `max_chars`, но не больше объёма, нужного для решения.
-4. Если есть вопрос, передай пользователю варианты и ответь через `cursor_answer_question` только после его выбора. Если есть план, покажи его пользователю и вызови `cursor_answer_plan` только после явного одобрения.
-5. Запросы на команды и запись в файлы обрабатывай через `cursor_answer_permission`; по умолчанию отклоняй их, пока пользователь не дал полномочия. Не выбирай `allow-always` без явного запроса.
-6. Возьми финальный результат из `cursor_session_status`, проверь изменения самостоятельно и закрой сессию `cursor_close_session`.
+1. Начни с `cursor_delegate({prompt,cwd,mode})`. Для `ask` и `plan` допустим canonical checkout; для пишущего `agent` вызывающий обязан заранее передать отдельный изолированный worktree. Skill не создаёт и не проверяет VCS-worktree.
+2. Сохрани полные `session_id` и `turn_id`, затем наблюдай ход только через `cursor_wait({session_id,turn_id,after_event_id,timeout_ms})`. Не опрашивай `cursor_session_status`: это advanced-диагностика, а не workflow.
+3. При pending передавай пользователю контекст и отвечай полными `session_id`, `turn_id`, `request_id`: question — `cursor_answer_question`, plan — только после явного одобрения через `cursor_answer_plan`, permission — только в рамках выданных полномочий через `cursor_answer_permission`.
+4. Protocol completion не доказывает семантический успех задачи: проверь результат и изменения самостоятельно. В `finally` всегда вызови `cursor_close_session({session_id})`; повторный close безопасен.
+5. Answer-tools — часть основного interactive workflow. Низкоуровневые `cursor_start_session`, `cursor_send_prompt`, `cursor_session_status` и `cursor_cancel` предназначены только для advanced diagnosis/recovery.
 
 Каждая сессия принадлежит одному Cursor-процессу. Не запускай два пишущих агента в одном worktree.
