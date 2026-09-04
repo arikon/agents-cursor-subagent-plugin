@@ -94,3 +94,31 @@ repeats, normative requirements in its `spec.md`.
   наблюдения и кратковременные сетевые ошибки сами по себе не являются таким
   доказательством. Если сетевые ошибки повторяются несколько раз подряд в
   течение заметного времени (минут), проблему можно признать доказанной.
+
+## Запуск тестов и coverage
+
+- Не снижать покрытие продуктового кода тестами. Поддерживай его около 90% или
+  выше по lines, branches и functions в полном fail-closed manifest
+  согласованного product scope: source не может исчезнуть из знаменателя только
+  потому, что перестал загружаться тестами.
+  Не добавляй искусственные тесты незначимых веток только ради метрики:
+  исключение допустимо лишь для реально недостижимого defensive-кода и должно
+  быть локально обосновано рядом с исключением либо в review.
+- Запускай тесты в foreground и считай прогон успешным только после завершения
+  команды с exit code `0` и её финального TAP summary. Не используй `&`, не
+  перенаправляй проверочный прогон в фоновый лог и не считай частичный вывод
+  доказательством pass.
+- Для обычной unit/transport-проверки используй последовательный запуск:
+
+  ```sh
+  node --test --test-concurrency=1 \
+    tests/runtime.test.mjs tests/facade.test.mjs tests/mcp-smoke.test.mjs \
+    tests/mcp-transport.test.mjs tests/cursor-skill-eval.test.mjs \
+    tests/run-cursor-skill-eval.test.mjs
+  ```
+
+- Для того же набора с coverage используй только `node
+  scripts/run-unit-coverage.mjs`. Этот runner ожидает событие `close` дочернего
+  test process и возвращает его exit code; дождись финальной таблицы coverage.
+- Release, real-Codex и hosted-auth lanes запускай отдельными foreground
+  командами. Они не входят в unit coverage и не могут подменять его результат.

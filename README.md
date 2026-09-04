@@ -1,62 +1,125 @@
 # Codex Cursor Subagent Plugin
 
-Прототип локального плагина Codex, который запускает установленный `agent acp` и предоставляет его как интерактивного субагента через MCP.
+Prototype of a local Codex plugin that launches the installed `agent acp` and exposes it as an interactive subagent through MCP.
 
-Для personal-установки `.mcp.json` использует подтверждённые абсолютные пути к Node из ChatGPT.app и Cursor Agent с файловым credential store. Переносимая managed-установка остаётся отдельным package-canary механизмом; source checkout после неё не нужен.
+The plugin uses the Node.js runtime and Cursor Agent command available in the
+environment where Codex runs. The portable managed installation remains a
+separate package-canary mechanism; it does not require a source checkout
+afterwards.
 
-## Модель взаимодействия
+## Interaction model
 
-`Codex → MCP-плагин → Cursor ACP (stdio JSON-RPC)`
+`Codex → MCP plugin → Cursor ACP (stdio JSON-RPC)`
 
-Плагин не использует `cursor-agent --yolo`, файловый IPC или автоматическое подтверждение команд. Основной workflow — `cursor_delegate → cursor_wait`; вопросы, планы и разрешения остаются ожидающими до явного адресного ответа.
+The plugin does not use `cursor-agent --yolo`, file-based IPC, or automatic command approval. The primary workflow is `cursor_delegate → cursor_wait`; questions, plans, and approval requests remain pending until explicitly answered.
 
-## Требования
+## Requirements
 
 - Node.js 18+;
-- установленный Cursor Agent (`agent`) и выполненный `agent login`; для нестандартного пути задайте `CURSOR_AGENT_COMMAND` в окружении MCP-сервера;
-- Codex с поддержкой локальных плагинов/MCP.
+- Cursor Agent (`agent`) installed and authenticated with `agent login`; for a non-standard path, set `CURSOR_AGENT_COMMAND` in the MCP server environment;
+- Codex with local plugin/MCP support.
 
-Для локальной проверки:
+For local verification:
 
 ```sh
 node --test tests/mcp-smoke.test.mjs
+node --test tests/mcp-transport.test.mjs
+node scripts/run-unit-coverage.mjs
 ```
 
-## Глобальная personal-установка
+The final command produces Node.js's built-in coverage report only for unit and
+transport tests; release and hosted Codex lanes are intentionally excluded. It
+runs test files sequentially, waits for the child Node test process to emit
+`close`, and returns that process's exit code to the invoking shell.
 
-Это единственный пользовательский путь глобальной установки. Marketplace
-`personal` уже имеет root `/Users/arikon`; его plugin source должен быть
-симлинком `/Users/arikon/plugins/codex-cursor-subagent-plugin` на этот checkout.
-Не передавайте `/Users/arikon` в `cursor-subagent-bootstrap.mjs`: managed
-bootstrap владеет целым root и предназначен только для отдельного disposable
-marketplace в package-canary.
+## Installation from GitHub
 
-После изменения плагина обновите cachebuster и переустановите тот же personal
-plugin:
+Install the plugin through a Git marketplace, using the standard Codex CLI
+workflow:
 
 ```sh
-python3 /Users/arikon/.codex/skills/.system/plugin-creator/scripts/update_plugin_cachebuster.py \
-  /Users/arikon/projects/codex-cursor-subagent-plugin
-/Applications/ChatGPT.app/Contents/Resources/codex plugin add \
-  codex-cursor-subagent-plugin@personal --json
+codex plugin marketplace add arikon/codex-cursor-subagent-plugin --ref main
+codex plugin add codex-cursor-subagent-plugin@codex-cursor-subagent-plugin
 ```
 
-Проверьте результат через `codex plugin list --json`: должен присутствовать
-ровно один `codex-cursor-subagent-plugin@personal`, указывающий на симлинк
-выше. Для подхвата обновлённых skills и MCP создайте новую задачу Codex.
+The first command registers a GitHub repository as a marketplace; the second
+installs the plugin from its marketplace snapshot. Check the configured
+marketplaces and installed plugins with:
 
-## Использование при разработке
+```sh
+codex plugin marketplace list --json
+codex plugin list --json
+```
 
-После global personal-установки основной инструмент — `cursor_delegate`; answer-tools и `cursor_wait` составляют interactive workflow. Runtime advanced API включает только `cursor_start_session`, `cursor_send_prompt`, `cursor_session_status` и `cursor_cancel`.
+Start a new Codex task after installing or updating the plugin so Codex loads
+its skills and MCP server. To update the marketplace snapshot later, run:
 
-Передавайте `cwd` отдельного worktree для любой задачи, которая может изменять файлы. Для read-only задачи явно передавайте режим `ask`; перед изменением файлов явно выберите `agent`.
+```sh
+codex plugin marketplace upgrade codex-cursor-subagent-plugin
+```
 
-## Изолированная переносимая установка
+## Development usage
 
-`scripts/cursor-subagent-bootstrap.mjs` — единственная точка изолированного managed-install для package release canary.
-Она принимает абсолютные canonical пути к source root, managed marketplace root,
-Node.js, Codex, Cursor Agent и разрешённым workspace roots. Команда
-`preflight` только проверяет readiness; `install`, `update` и `uninstall`
-работают через version-specific adapter. Перед реальной регистрацией сначала
-запусти preflight; live Codex/Cursor canary является явным opt-in и не заменяет
-детерминированные fake-fixture тесты.
+After installation, `cursor_delegate` is the primary tool; the answer tools
+and `cursor_wait` form the interactive workflow. The advanced runtime API only
+includes `cursor_start_session`, `cursor_send_prompt`, `cursor_session_status`,
+and `cursor_cancel`.
+
+Pass the `cwd` of a separate worktree for every task that may change files. For
+a read-only task, explicitly select `ask`; before changing files, explicitly
+select `agent`.
+
+## Isolated portable installation
+
+`scripts/cursor-subagent-bootstrap.mjs` is the sole entry point for an isolated
+managed installation used by the package release canary. It accepts absolute,
+canonical paths to the source root, managed marketplace root, Node.js, Codex,
+Cursor Agent, and permitted workspace roots. The `preflight` command only
+checks readiness; `install`, `update`, and `uninstall` operate through a
+version-specific adapter. Run preflight before an actual registration; the live
+Codex/Cursor canary is an explicit opt-in and does not replace deterministic
+fake-fixture tests.
+
+## Migrating to a new Codex version
+
+The plugin and eval harness deliberately do not treat a new Codex version as
+compatible by default. Admission and golden fixtures are currently pinned to
+`codex-cli 0.152.1`; a version mismatch stops the managed installation or eval
+as `external_adapter_drift` / `integration_failure` rather than producing an
+implicit success.
+
+To migrate to version `X.Y.Z`:
+
+1. Obtain the release binary and source at tag `rust-vX.Y.Z`; verify
+   `codex --version` using that exact binary.
+2. Confirm from source or the actual interface the plugin CLI and JSON schema,
+   `skills/list`, persistent `thread/start`/`thread/archive`/`turn/start`,
+   explicit skill input, and `mcpServer/elicitation/request`.
+3. Update the version-specific layer:
+   `tests/fixtures/codex-v01521-adapter.mjs`,
+   `tests/fixtures/codex-v01521-adapter.golden.json`, and
+   `tests/fixtures/codex-app-server-v01521.golden.json`; rename them for the
+   new version. Do not add version-conditional product logic to the MCP runtime
+   or skill.
+4. Add a negative admission test for the old fixture and run:
+
+   ```sh
+   node --test tests/bootstrap.test.mjs tests/codex-app-server-client.test.mjs
+   node --test tests/cursor-skill-eval.test.mjs \
+     tests/run-cursor-skill-eval.test.mjs \
+     tests/codex-client-integration.test.mjs
+   openspec validate add-cursor-subagent-skill-evals --strict
+   node scripts/check-openspec-semantics.mjs
+   ```
+
+5. In a separate temporary `CODEX_HOME`, run the authenticated model lane:
+
+   ```sh
+   CURSOR_EVAL_HOSTED_CODEX=1 node scripts/run-cursor-skill-eval.mjs model-question
+   ```
+
+   Preserve a single `EvalResultV1` and bounded evidence. An
+   `agent_behavior_mismatch` result measures the model's instruction following;
+   it is not grounds for weakening adapter admission.
+6. After deterministic checks pass, upgrade the Git marketplace snapshot and
+   reinstall the plugin using the commands above.

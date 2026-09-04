@@ -21,6 +21,12 @@ const send = (message) => process.stdout.write(`${JSON.stringify(message)}\n`);
 let promptId = null;
 let pendingResponsesRemaining = 0;
 const log = (message) => { if (process.env.FAKE_ACP_LOG) appendFileSync(process.env.FAKE_ACP_LOG, `${JSON.stringify(message)}\n`); };
+// This is deliberately narrower than FAKE_ACP_LOG.  Hosted evals may retain it
+// outside their disposable fixture, so it records only fixture-defined outcome
+// tags rather than ACP prompts, model text, or arbitrary tool arguments.
+const safeEvidence = (message) => {
+  if (process.env.FAKE_ACP_SAFE_EVIDENCE) appendFileSync(process.env.FAKE_ACP_SAFE_EVIDENCE, `${JSON.stringify(message)}\n`);
+};
 const finishPrompt = (id, text) => {
   send({ jsonrpc: '2.0', method: 'session/update', params: { sessionId: 'fake', update: { sessionUpdate: 'agent_message_chunk', content: { text } } } });
   send({ jsonrpc: '2.0', id, result: { stopReason: process.env.FAKE_ACP_BAD_PROMPT_RESULT ? 'unknown' : (process.env.FAKE_ACP_STOP_REASON || 'end_turn') } });
@@ -29,6 +35,13 @@ input.on('line', (line) => {
   const request = JSON.parse(line);
   if (!request.method && request.id !== undefined) {
     log(request);
+    if (process.env.FAKE_ACP_PENDING === 'question') {
+      const answer = request.result?.outcome;
+      safeEvidence({ callback: 'question', request_id: request.id, outcome: answer?.outcome || null,
+        selected_option_ids: answer?.answers?.flatMap((item) => item.selectedOptionIds || []) || [] });
+    }
+    if (process.env.FAKE_ACP_PENDING === 'plan') safeEvidence({ callback: 'plan', request_id: request.id, outcome: request.result?.outcome?.outcome || null });
+    if (process.env.FAKE_ACP_PENDING === 'permission') safeEvidence({ callback: 'permission', request_id: request.id, option_id: request.result?.outcome?.optionId || null });
     if (process.env.FAKE_ACP_PENDING === 'duplicate' && request.error) return;
     if (pendingResponsesRemaining > 0) pendingResponsesRemaining -= 1;
     if (pendingResponsesRemaining > 0) return;

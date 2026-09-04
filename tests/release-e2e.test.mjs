@@ -22,7 +22,7 @@ const MANAGED_PLUGIN_ID = 'codex-cursor-subagent-plugin';
 
 async function copyPayload(destination) {
   await mkdir(destination);
-  for (const path of ['.codex-plugin/plugin.json', 'README.md', 'scripts/cursor-subagent-mcp.mjs', 'scripts/cursor-subagent-bootstrap.mjs']) {
+  for (const path of ['.codex-plugin/plugin.json', 'README.md', 'scripts/cursor-subagent-mcp.mjs', 'scripts/recording-mcp-proxy.mjs', 'scripts/cursor-subagent-bootstrap.mjs']) {
     await mkdir(join(destination, path, '..'), { recursive: true });
     await cp(join(repository, path), join(destination, path));
   }

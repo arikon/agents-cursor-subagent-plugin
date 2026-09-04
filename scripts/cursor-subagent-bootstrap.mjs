@@ -269,7 +269,7 @@ async function collectTree(root, { excludeMarker = false } = {}) {
 }
 
 async function collectPayload(sourceRoot) {
-  const fixed = ['.codex-plugin/plugin.json', 'README.md', 'scripts/cursor-subagent-mcp.mjs', 'scripts/cursor-subagent-bootstrap.mjs'];
+  const fixed = ['.codex-plugin/plugin.json', 'README.md', 'scripts/cursor-subagent-mcp.mjs', 'scripts/recording-mcp-proxy.mjs', 'scripts/cursor-subagent-bootstrap.mjs'];
   const entries = [];
   for (const path of fixed) {
     const absolute = join(sourceRoot, path); const info = await lstat(absolute).catch(() => null);

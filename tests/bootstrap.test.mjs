@@ -34,7 +34,7 @@ async function fixture(t) {
   t.after(() => rm(root, { recursive: true, force: true }));
   const source = join(root, 'source'); const workspace = join(root, 'workspace'); const managed = join(root, 'managed-marketplace');
   await mkdir(source); await mkdir(workspace);
-  for (const path of ['.codex-plugin/plugin.json', 'README.md', 'scripts/cursor-subagent-mcp.mjs', 'scripts/cursor-subagent-bootstrap.mjs']) {
+  for (const path of ['.codex-plugin/plugin.json', 'README.md', 'scripts/cursor-subagent-mcp.mjs', 'scripts/recording-mcp-proxy.mjs', 'scripts/cursor-subagent-bootstrap.mjs']) {
     await mkdir(join(source, path, '..'), { recursive: true }); await cp(join(repository, path), join(source, path));
   }
   await cp(join(repository, 'skills'), join(source, 'skills'), { recursive: true });
@@ -62,7 +62,13 @@ test('versioned Codex adapter help matches its checked-in golden operation and o
   const agent = join(context.root, 'agent'); await cp(fakeCursorAgentStatus, agent); await chmod(agent, 0o755);
   const log = join(context.root, 'codex-argv.log'); const agentLog = join(context.root, 'agent-argv.log');
   const state = join(context.root, 'versioned-state.json');
-  const env = { ...process.env, FAKE_CODEX_CLI_LOG: log, FAKE_CODEX_CLI_STATE: state, FAKE_CURSOR_AGENT_LOG: agentLog };
+  const env = {
+    ...process.env,
+    CURSOR_EVAL_ADAPTER_TIMEOUT_MS: '60000',
+    FAKE_CODEX_CLI_LOG: log,
+    FAKE_CODEX_CLI_STATE: state,
+    FAKE_CURSOR_AGENT_LOG: agentLog,
+  };
   const help = await adapterFixtureCall(context.executable, 'help', { codex_executable: codex }, env, versionedAdapter);
   assert.deepEqual(help, { adapter_version: golden.adapter_version, codex_version: golden.codex_version, operations: golden.operations });
   const rendered = await adapterFixtureCall(context.executable, 'render', {
@@ -90,9 +96,13 @@ test('versioned Codex adapter help matches its checked-in golden operation and o
   const args = ['--source-root', context.source, '--managed-marketplace-root', context.managed,
     '--node-executable', context.executable, '--codex-executable', codex, '--agent-executable', agent,
     '--allowed-workspace-root', context.workspace];
-  let lifecycle = await runBootstrap(['install', ...args], { env: adapterEnv }); assert.equal(lifecycle.exitCode, 0, JSON.stringify(lifecycle));
-  lifecycle = await runBootstrap(['preflight', '--managed-marketplace-root', context.managed, '--node-executable', context.executable,
-    '--codex-executable', codex, '--agent-executable', agent], { env: adapterEnv });
+  const runVersionedBootstrap = (argv, bootstrapEnv = adapterEnv) => runBootstrap(argv, {
+    env: bootstrapEnv,
+    runCommand: (command, commandArgs, options) => runPackageCommand(command, commandArgs, { ...options, timeoutMs: 70_000 }),
+  });
+  let lifecycle = await runVersionedBootstrap(['install', ...args]); assert.equal(lifecycle.exitCode, 0, JSON.stringify(lifecycle));
+  lifecycle = await runVersionedBootstrap(['preflight', '--managed-marketplace-root', context.managed, '--node-executable', context.executable,
+    '--codex-executable', codex, '--agent-executable', agent]);
   assert.equal(lifecycle.envelope.auth_state, 'authenticated');
   assert.deepEqual((await readFile(agentLog, 'utf8')).trim().split('\n').map(JSON.parse), [['--version'], ['status', '--format', 'json']]);
   for (const [status, expected] of [['unauthenticated', 'required'], ['partially-authenticated', 'required'], ['error', 'unknown']]) {
@@ -109,8 +119,8 @@ test('versioned Codex adapter help matches its checked-in golden operation and o
     'unknown Cursor Agent version must stop before status');
   const codexBeforeIndependent = (await readFile(log, 'utf8')).trim().split('\n').length;
   const agentBeforeIndependent = (await readFile(agentLog, 'utf8')).trim().split('\n').length;
-  lifecycle = await runBootstrap(['preflight', '--managed-marketplace-root', context.managed, '--node-executable', context.executable,
-    '--codex-executable', codex, '--agent-executable', agent], { env: { ...adapterEnv, FAKE_CODEX_CLI_VERSION: 'codex-cli 0.152.2' } });
+  lifecycle = await runVersionedBootstrap(['preflight', '--managed-marketplace-root', context.managed, '--node-executable', context.executable,
+    '--codex-executable', codex, '--agent-executable', agent], { ...adapterEnv, FAKE_CODEX_CLI_VERSION: 'codex-cli 0.152.2' });
   assert.equal(lifecycle.envelope.checks.find(({ name }) => name === 'codex_cli').status, 'fail');
   assert.equal(lifecycle.envelope.checks.find(({ name }) => name === 'marketplace_registration').status, 'not_checked');
   assert.equal(lifecycle.envelope.checks.find(({ name }) => name === 'plugin_registration').status, 'not_checked');
@@ -119,7 +129,7 @@ test('versioned Codex adapter help matches its checked-in golden operation and o
   assert.deepEqual((await readFile(log, 'utf8')).trim().split('\n').map(JSON.parse).slice(codexBeforeIndependent), [['--version']]);
   assert.deepEqual((await readFile(agentLog, 'utf8')).trim().split('\n').map(JSON.parse).slice(agentBeforeIndependent),
     [['--version'], ['status', '--format', 'json']]);
-  lifecycle = await runBootstrap(['uninstall', '--managed-marketplace-root', context.managed, '--codex-executable', codex], { env: adapterEnv });
+  lifecycle = await runVersionedBootstrap(['uninstall', '--managed-marketplace-root', context.managed, '--codex-executable', codex]);
   assert.equal(lifecycle.exitCode, 0, JSON.stringify(lifecycle));
   const invocations = (await readFile(log, 'utf8')).trim().split('\n').map(JSON.parse);
   for (const [name, expected] of Object.entries(golden.cli_forms).filter(([name, value]) => !name.startsWith('agent_') &&
@@ -137,7 +147,7 @@ test('versioned Codex adapter help matches its checked-in golden operation and o
   const unknown = await adapterFixtureCall(context.executable, 'admit', { codex_executable: codex }, { ...env, FAKE_CODEX_CLI_VERSION: 'codex-cli 0.152.2' }, versionedAdapter);
   assert.equal(unknown.admitted, false);
   const beforeUnknown = (await readFile(log, 'utf8')).trim().split('\n').length;
-  lifecycle = await runBootstrap(['install', ...args], { env: { ...adapterEnv, FAKE_CODEX_CLI_VERSION: 'codex-cli 0.152.2' } });
+  lifecycle = await runVersionedBootstrap(['install', ...args], { ...adapterEnv, FAKE_CODEX_CLI_VERSION: 'codex-cli 0.152.2' });
   assert.equal(lifecycle.envelope.error_code, 'adapter_drift');
   const afterUnknown = (await readFile(log, 'utf8')).trim().split('\n').map(JSON.parse).slice(beforeUnknown);
   assert.deepEqual(afterUnknown, [['--version']], 'unknown version must stop before read or mutation argv');
@@ -145,12 +155,15 @@ test('versioned Codex adapter help matches its checked-in golden operation and o
 
 test('versioned adapter bounds nested Cursor commands and waits for killed child close', async (t) => {
   const context = await fixture(t); const agent = join(context.root, 'agent'); await cp(fakeCursorAgentStatus, agent); await chmod(agent, 0o755);
-  const pidPath = join(context.root, 'nested-agent.pid'); const started = Date.now();
+  const pidPath = join(context.root, 'nested-agent.pid'); const timeoutMs = 2_000; const started = Date.now();
   let result = await adapterFixtureResult(context.executable, 'agent-status', { agent_executable: agent }, {
-    ...process.env, FAKE_CURSOR_AGENT_BLOCK_ARGV: '--version', FAKE_CURSOR_AGENT_PID_PATH: pidPath,
+    ...process.env,
+    CURSOR_EVAL_ADAPTER_TIMEOUT_MS: String(timeoutMs),
+    FAKE_CURSOR_AGENT_BLOCK_ARGV: '--version',
+    CURSOR_EVAL_ADAPTER_NESTED_PID_PATH: pidPath,
   }, versionedAdapter);
   const elapsed = Date.now() - started;
-  assert.equal(result.code, 1); assert.match(result.stderr, /nested command timed out/); assert.ok(elapsed >= 9_000 && elapsed < 13_000, elapsed);
+  assert.equal(result.code, 1); assert.match(result.stderr, /nested command timed out/); assert.ok(elapsed >= timeoutMs - 200 && elapsed < 5_000, elapsed);
   const pid = Number((await readFile(pidPath, 'utf8')).trim().split('\n').at(-1));
   assert.throws(() => process.kill(pid, 0), { code: 'ESRCH' }, 'nested Cursor child survived adapter timeout');
   result = await adapterFixtureResult(context.executable, 'agent-status', { agent_executable: agent }, {
@@ -164,7 +177,7 @@ test('package command waits for child close after timeout and output overflow ki
   for (const overflow of [false, true]) {
     const pidPath = join(context.root, `killed-${overflow}.pid`);
     const result = await runPackageCommand(context.executable, [killWaitCommand], { env: { ...process.env, KILL_WAIT_PID_PATH: pidPath,
-      ...(overflow ? { KILL_WAIT_OVERFLOW: '1' } : {}) }, timeoutMs: overflow ? 1_000 : 50, outputBytes: 64, closeWaitMs: 1_000 });
+      ...(overflow ? { KILL_WAIT_OVERFLOW: '1' } : {}) }, timeoutMs: overflow ? 1_000 : 500, outputBytes: 64, closeWaitMs: 1_000 });
     assert.equal(overflow ? result.overflow : result.timeout, true);
     const pid = Number(await readFile(pidPath, 'utf8'));
     assert.throws(() => process.kill(pid, 0), { code: 'ESRCH' }, `child ${pid} was still alive after command return`);

@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 
 import { spawn } from 'node:child_process';
+import { appendFileSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { join } from 'node:path';
 
-const VERSION = 'codex-cli 0.152.1';
+const VERSION = `codex-cli ${process.env.CURSOR_EVAL_ADMITTED_CODEX_VERSION || '0.152.1'}`;
 const AGENT_VERSION = '2026.08.25-3e8eec8';
-const ADAPTER = 'codex-cli-0.152.1-fixture-v1';
+const ADAPTER = `codex-cli-${VERSION.slice('codex-cli '.length)}-fixture-v1`;
+const NESTED_COMMAND_TIMEOUT_MS = Number(process.env.CURSOR_EVAL_ADAPTER_TIMEOUT_MS || '10000');
 const ID = 'codex-cursor-subagent-plugin';
 const OPERATIONS = ['admit', 'help', 'marketplace-list', 'plugin-list', 'render', 'mcp-check', 'agent-status', 'canary-prompt', 'marketplace-add', 'marketplace-remove', 'plugin-add', 'plugin-remove'];
 const [, , operation, raw] = process.argv;
@@ -15,6 +17,7 @@ const request = JSON.parse(raw || '{}');
 async function runExecutable(command, args, { allowNonzero = false } = {}) {
   const result = await new Promise((resolveRun) => {
     const child = spawn(command, args, { env: process.env, stdio: ['ignore', 'pipe', 'pipe'] });
+    if (process.env.CURSOR_EVAL_ADAPTER_NESTED_PID_PATH) appendFileSync(process.env.CURSOR_EVAL_ADAPTER_NESTED_PID_PATH, `${child.pid}\n`);
     const stdout = []; const stderr = []; let bytes = 0; let killReason = null; let settled = false; let timer; let closeTimer;
     const finish = (value) => { if (!settled) { settled = true; clearTimeout(timer); clearTimeout(closeTimer); resolveRun(value); } };
     const killAndWait = (reason) => {
@@ -29,7 +32,7 @@ async function runExecutable(command, args, { allowNonzero = false } = {}) {
     child.once('error', (error) => finish({ code: null, stdout: '', stderr: error.message }));
     child.once('close', (code) => finish({ code, stdout: Buffer.concat(stdout).toString('utf8').trim(),
       stderr: Buffer.concat(stderr).toString('utf8').trim(), timeout: killReason === 'timeout', overflow: killReason === 'overflow' }));
-    timer = setTimeout(() => killAndWait('timeout'), 10_000);
+    timer = setTimeout(() => killAndWait('timeout'), NESTED_COMMAND_TIMEOUT_MS);
   });
   if (result.timeout) throw new Error(`nested command timed out (${args.join(' ')})`);
   if (result.overflow) throw new Error(`nested command exceeded output limit (${args.join(' ')})`);
@@ -98,9 +101,10 @@ async function main() {
   }
   if (operation === 'render') return { files: [
     { path: '.agents/plugins/marketplace.json', content_base64: Buffer.from(JSON.stringify({ name: ID, plugins: [{ name: ID, source: { source: 'local', path: `./plugins/${ID}` } }] })).toString('base64') },
-    { path: `plugins/${ID}/.mcp.json`, content_base64: Buffer.from(JSON.stringify({ command: request.node_executable,
-      args: [join(request.install_root, 'scripts/cursor-subagent-mcp.mjs')], env: { CURSOR_AGENT_COMMAND: request.agent_executable,
-        AGENT_CLI_CREDENTIAL_STORE: 'file', CURSOR_SUBAGENT_ALLOWED_ROOTS: JSON.stringify(request.allowed_workspace_roots) } })).toString('base64') },
+    { path: `plugins/${ID}/.mcp.json`, content_base64: Buffer.from(JSON.stringify({ mcpServers: { 'cursor-subagent': { command: request.node_executable,
+      args: [join(request.install_root, 'scripts/recording-mcp-proxy.mjs'), join(request.install_root, 'scripts/cursor-subagent-mcp.mjs')], env: { CURSOR_AGENT_COMMAND: request.agent_executable,
+        AGENT_CLI_CREDENTIAL_STORE: 'file', CURSOR_SUBAGENT_ALLOWED_ROOTS: JSON.stringify(request.allowed_workspace_roots),
+        ...(process.env.CURSOR_EVAL_MCP_EVIDENCE ? { CURSOR_EVAL_MCP_EVIDENCE: process.env.CURSOR_EVAL_MCP_EVIDENCE } : {}) } } } })).toString('base64') },
   ] };
   if (operation === 'canary-prompt') return { prompt: `Create or replace only ${request.marker_path} with ${JSON.stringify(request.marker_bytes)} and do not modify anything else.` };
   if (operation === 'marketplace-add') { const result = await json(['plugin', 'marketplace', 'add', request.path, '--json']); if (result.marketplaceName !== request.id) throw new Error('marketplace add schema drift'); return { ok: true }; }

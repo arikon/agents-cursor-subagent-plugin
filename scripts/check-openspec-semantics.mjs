@@ -8,6 +8,8 @@ const changes = [
   "harden-cursor-acp-session-runtime",
   "add-cursor-delegation-workflow",
   "package-cursor-subagent-plugin",
+  "add-cursor-subagent-skill-evals",
+  "add-durable-node-test-supervisor",
 ];
 const changeContracts = {
   "harden-cursor-acp-session-runtime": {
@@ -24,6 +26,17 @@ const changeContracts = {
     capability: "cursor-plugin-distribution",
     specDirectory: "cursor-plugin-distribution",
     ownerClaim: "Этот change owns install/discovery и release canary",
+  },
+  "add-cursor-subagent-skill-evals": {
+    capability: "cursor-subagent-skill-evals",
+    specDirectory: "cursor-subagent-skill-evals",
+    ownerClaim: "Этот change owns only Codex behavior-eval orchestration and",
+    modified: [{ capability: "cursor-task-delegation", requirement: "Skill workflow делегирования" }],
+  },
+  "add-durable-node-test-supervisor": {
+    capability: "node-test-supervision",
+    specDirectory: "node-test-supervision",
+    ownerClaim: "`node-test-supervision` owns runner lifecycle, artifacts, reporting and coverage gate",
   },
 };
 const baselineFields = [
@@ -89,6 +102,18 @@ if (/^v1_baseline:/m.test(config)) {
   errors.push("openspec/config.yaml: unsupported v1_baseline key is not a semantic gate");
 }
 
+const activeChanges = readdirSync(resolve(root, "openspec/changes"), { withFileTypes: true })
+  .filter((entry) => entry.isDirectory() && entry.name !== "archive")
+  .map((entry) => entry.name);
+for (const change of activeChanges) {
+  const designPath = `openspec/changes/${change}/design.md`;
+  if (!changes.includes(change)) {
+    errors.push(`openspec/changes/${change}: active change is absent from semantic-gate registry`);
+  } else if (!existsSync(resolve(root, designPath)) || !read(designPath).includes("## v1 Contract Baseline")) {
+    errors.push(`${designPath}: registered active change is missing v1 Contract Baseline`);
+  }
+}
+
 for (const change of changes) {
   const rootPath = changeRoot(change);
   const designPath = `${rootPath}/design.md`;
@@ -117,8 +142,10 @@ for (const change of changes) {
 
   const requirements = requirementNames(change);
   const index = indexedRequirements(design);
-  if (new Set(index).size !== index.length || index.length !== requirements.length ||
-      requirements.some((requirement) => !index.includes(requirement))) {
+  const modified = contract.modified || [];
+  const expectedIndex = [...requirements, ...modified.map(({ requirement }) => requirement)];
+  if (new Set(index).size !== index.length || index.length !== expectedIndex.length ||
+      expectedIndex.some((requirement) => !index.includes(requirement))) {
     errors.push(`${designPath}: Public-invariant index must equal this change's requirement set`);
   }
   for (const requirement of requirements) {
@@ -133,6 +160,17 @@ for (const change of changes) {
     }
     if (!read(`${rootPath}/tasks.md`).includes(`«${requirement}»`)) {
       errors.push(`${rootPath}/tasks.md: no task references requirement «${requirement}»`);
+    }
+  }
+  for (const { capability, requirement } of modified) {
+    const deltaPath = `${rootPath}/specs/${capability}/spec.md`;
+    const mainPath = `openspec/specs/${capability}/spec.md`;
+    if (!proposal.includes(`- \`${capability}\``) || !read(deltaPath).includes("## MODIFIED Requirements") ||
+        !read(deltaPath).includes(`### Requirement: ${requirement}`) || !read(mainPath).includes(`### Requirement: ${requirement}`)) {
+      errors.push(`${rootPath}: invalid modified capability ${capability}/${requirement}`);
+    }
+    if (!design.includes(`«${requirement}»`) || !read(`${rootPath}/tasks.md`).includes(`«${requirement}»`)) {
+      errors.push(`${rootPath}: modified requirement ${requirement} lacks baseline/task traceability`);
     }
   }
 
@@ -160,6 +198,39 @@ for (const change of [
       }
     }
   }
+}
+
+const evalRoot = changeRoot("add-cursor-subagent-skill-evals");
+const evalSpec = read(`${evalRoot}/specs/cursor-subagent-skill-evals/spec.md`);
+const evalDesign = read(`${evalRoot}/design.md`);
+const evalTasks = read(`${evalRoot}/tasks.md`);
+for (const facadeRequirement of ["«Skill workflow делегирования»", "«Workspace discipline делегирования»"]) {
+  if (!evalSpec.includes(facadeRequirement)) {
+    errors.push(`skill eval spec: missing facade owner reference ${facadeRequirement}`);
+  }
+}
+if (!evalSpec.includes("package-owned bootstrap") || !evalDesign.includes("package-owned bootstrap") ||
+    !evalDesign.includes("«Внешний контракт bootstrap»") || !evalDesign.includes("«Проверяемая чистая установка»") ||
+    !evalDesign.includes("«Ограниченный жизненный цикл ACP-процесса»")) {
+  errors.push("skill eval artifacts: must reuse package-owned bootstrap rather than create a parallel install path");
+}
+if (!evalDesign.includes("## Scenario Matrix") || !evalDesign.includes("scenario_id")) {
+  errors.push("skill eval design: missing deterministic scenario matrix");
+}
+for (const scenario of ["client-happy", "model-question", "model-plan", "model-permission-covered", "model-permission-expansion", "model-semantic-failure", "live-marker"]) {
+  if (!evalDesign.includes(`\`${scenario}\``)) errors.push(`skill eval design: scenario matrix missing ${scenario}`);
+}
+for (const field of ["schema_version", "actual_task_outcome", "reported_task_outcome", "fixture_assertion_outcome", "evidence_publication_status", "evidence_ref", "cleanup_status", "failure_stage", "not_observed", "not_reported"]) {
+  if (!evalSpec.includes(field)) errors.push(`skill eval spec: EvalResultV1 missing ${field}`);
+}
+if (evalTasks.includes("повторного пишущего delegate")) {
+  errors.push("skill eval tasks: multi-delegate orchestration is future scope, not this v1 baseline");
+}
+if (!evalSpec.includes("the transcript exists only inside published evidence")) {
+  errors.push("skill eval spec: transcript must remain conditional on published evidence");
+}
+if (/eval_status[^\n]{0,160}external_adapter_drift|external_adapter_drift[^\n]{0,160}eval_status/.test(evalSpec)) {
+  errors.push("skill eval spec: external_adapter_drift is adapter classification, not EvalResultV1 eval_status");
 }
 
 const facadeSpec = read(
