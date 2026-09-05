@@ -1,0 +1,20 @@
+{
+  "name": "cursor-acp-subagent",
+  "description": "Delegate tasks to Cursor Agent through an interactive ACP session.",
+  "author": {
+    "name": "Local developer"
+  },
+  "repository": "https://github.com/arikon/codex-cursor-subagent-plugin",
+  "skills": "./skills",
+  "mcpServers": {
+    "cursor-subagent": {
+      "command": "node",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/scripts/cursor-subagent-mcp.mjs"
+      ],
+      "env": {
+        "AGENT_CLI_CREDENTIAL_STORE": "file"
+      }
+    }
+  }
+}

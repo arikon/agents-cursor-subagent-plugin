@@ -16,6 +16,28 @@ test('source MCP manifest uses only portable runtime paths', () => {
   assert.deepEqual(server.env, { AGENT_CLI_CREDENTIAL_STORE: 'file' });
 });
 
+test('Claude marketplace plugin uses the cached plugin root without changing authority', () => {
+  const plugin = JSON.parse(readFileSync(new URL('../.claude-plugin/plugin.json', import.meta.url), 'utf8'));
+  const marketplace = JSON.parse(readFileSync(new URL('../.claude-plugin/marketplace.json', import.meta.url), 'utf8'));
+  const server = plugin.mcpServers['cursor-subagent'];
+  assert.equal(plugin.name, 'cursor-acp-subagent');
+  assert.equal(plugin.skills, './skills');
+  assert.equal(server.command, 'node');
+  assert.deepEqual(server.args, ['${CLAUDE_PLUGIN_ROOT}/scripts/cursor-subagent-mcp.mjs']);
+  assert.deepEqual(server.env, { AGENT_CLI_CREDENTIAL_STORE: 'file' });
+  assert.equal('approval_mode' in server, false);
+  assert.equal('CURSOR_AGENT_COMMAND' in server.env, false);
+  assert.equal(JSON.stringify(plugin).includes('/Users/'), false);
+  assert.equal(marketplace.name, 'codex-cursor-subagent-plugin');
+  assert.deepEqual(marketplace.plugins, [{
+    name: 'cursor-acp-subagent',
+    source: { source: 'github', repo: 'arikon/codex-cursor-subagent-plugin' },
+    description: 'Delegate tasks to Cursor Agent through an interactive ACP session.',
+    strict: true,
+  }]);
+  assert.equal('version' in marketplace.plugins[0], false);
+});
+
 test('MCP server fails loudly when its packaged manifest is absent', async (t) => {
   const root = mkdtempSync(join(tmpdir(), 'cursor-mcp-no-manifest-')); t.after(() => rmSync(root, { recursive: true, force: true }));
   const scripts = join(root, 'scripts'); mkdirSync(scripts); const copy = join(scripts, 'cursor-subagent-mcp.mjs'); copyFileSync(serverPath, copy);

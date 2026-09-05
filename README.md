@@ -61,6 +61,31 @@ its skills and MCP server. To update the marketplace snapshot later, run:
 codex plugin marketplace upgrade codex-cursor-subagent-plugin
 ```
 
+## Installation from Claude Code marketplace
+
+The same GitHub repository is a Claude Code marketplace. It requires `node` and
+an authenticated Cursor Agent available as `agent` in `PATH`; set
+`CURSOR_AGENT_COMMAND` in the Claude Code environment only when the command has
+a non-standard location.
+
+```sh
+claude plugin marketplace add arikon/codex-cursor-subagent-plugin
+claude plugin install cursor-acp-subagent@codex-cursor-subagent-plugin
+```
+
+Refresh the marketplace and installed plugin after a new Git revision, then
+restart Claude Code to load the updated MCP server:
+
+```sh
+claude plugin marketplace update codex-cursor-subagent-plugin
+claude plugin update cursor-acp-subagent@codex-cursor-subagent-plugin
+```
+
+Installing the plugin only makes the existing `cursor_*` MCP tools and
+`cursor-subagent` skill available. It does not approve Cursor actions: questions,
+plans, and out-of-scope, destructive, external, or credential-related permission
+requests still require the same explicit authority as in Codex.
+
 ## Development usage
 
 After installation, `cursor_delegate` is the primary tool; the answer tools

@@ -9,6 +9,7 @@ const changeIds = Object.freeze({
   accelerateNodeUnitTests: "accelerate-node-unit-tests",
   hardenTestContracts: "harden-test-contracts",
   interactiveAcpUx: "improve-interactive-acp-ux",
+  claudeCodeMarketplace: "add-claude-code-marketplace-plugin",
 });
 
 export const PROJECT_SEMANTIC_REGISTRY = Object.freeze({
@@ -124,6 +125,18 @@ export const PROJECT_SEMANTIC_REGISTRY = Object.freeze({
         Object.freeze({ capability: "cursor-task-delegation", requirement: "Skill workflow делегирования" }),
         Object.freeze({ capability: "cursor-task-delegation", requirement: "Высокоуровневое создание делегирования" }),
       ]),
+    }),
+    Object.freeze({
+      id: changeIds.claudeCodeMarketplace,
+      capability: "claude-code-plugin-distribution",
+      specDirectory: "claude-code-plugin-distribution",
+      ownerClaim: "`claude-code-plugin-distribution` owns only Claude catalog, cache-safe plugin launch and packaging verification",
+      ownedRequirements: Object.freeze([
+        "Git marketplace публикует Claude Code plugin",
+        "Claude Code plugin предоставляет существующий interactive workflow",
+        "Упаковка не расширяет authority boundary",
+      ]),
+      modified: Object.freeze([]),
     }),
   ]),
   roles: changeIds,

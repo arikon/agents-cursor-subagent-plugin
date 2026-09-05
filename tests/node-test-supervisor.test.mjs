@@ -148,6 +148,7 @@ test('lane matrix produces the exact child argv and keeps parent deadlines fixed
   const unitTests = [
     'tests/bootstrap.test.mjs',
     'tests/check-openspec-semantics.test.mjs',
+    'tests/claude-marketplace-canary.test.mjs',
     'tests/codex-app-server-client.test.mjs',
     'tests/cursor-skill-eval.test.mjs',
     'tests/facade.test.mjs',
