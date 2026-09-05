@@ -101,6 +101,18 @@ repeats, normative requirements in its `spec.md`.
   выше по lines, branches и functions в полном fail-closed manifest
   согласованного product scope: source не может исчезнуть из знаменателя только
   потому, что перестал загружаться тестами.
+  Каждый тест MUST проверять наблюдаемое поведение, публичный контракт или
+  реалистичный failure path. Не закрепляй внутреннюю структуру, конкретные
+  строки, приватные helper-ы, способ реализации либо конфигурационные детали,
+  если сами они не являются документированным внешним контрактом. Coverage
+  сам по себе не является основанием для теста.
+  Для тестов соблюдай DRY, SSOT и SRP: у каждого наблюдаемого сценария и
+  контракта есть один тестовый владелец на подходящем слое. Не повторяй одну
+  семантическую проверку в unit, transport, smoke, facade или e2e-тесте;
+  вышележащий тест добавляет только собственную интеграционную ответственность.
+  Перед добавлением теста и при review набора тестов MUST сверять существующие
+  сценарии, удалять смысловые дубликаты и переносить общую fixture/помощник к
+  единственному владельцу, не создавая test-only API в продуктовом коде.
   Не добавляй искусственные тесты незначимых веток только ради метрики:
   исключение допустимо лишь для реально недостижимого defensive-кода и должно
   быть локально обосновано рядом с исключением либо в review.
@@ -108,17 +120,33 @@ repeats, normative requirements in its `spec.md`.
   команды с exit code `0` и её финального TAP summary. Не используй `&`, не
   перенаправляй проверочный прогон в фоновый лог и не считай частичный вывод
   доказательством pass.
-- Для обычной unit/transport-проверки используй последовательный запуск:
+- Для обычной unit-проверки используй supervisor lane:
 
   ```sh
-  node --test --test-concurrency=1 \
-    tests/runtime.test.mjs tests/facade.test.mjs tests/mcp-smoke.test.mjs \
-    tests/mcp-transport.test.mjs tests/cursor-skill-eval.test.mjs \
-    tests/run-cursor-skill-eval.test.mjs
+  node scripts/run-node-tests.mjs unit
   ```
 
-- Для того же набора с coverage используй только `node
-  scripts/run-unit-coverage.mjs`. Этот runner ожидает событие `close` дочернего
-  test process и возвращает его exit code; дождись финальной таблицы coverage.
+- Для того же fixed набора с coverage используй `node
+  scripts/run-node-tests.mjs coverage` (старый `run-unit-coverage.mjs` остаётся
+  только compatibility entrypoint). Для release-проверки используй `node
+  scripts/run-node-tests.mjs release`. Supervisor владеет process group,
+  ожидает `close`, печатает terminal verdict и сохраняет `tap.txt`, `stderr.txt`,
+  `failures.jsonl` и атомарный `result.json` в выведенном artifact directory.
+  При non-pass verdict сначала читай `result.json`, затем указанные в нём refs.
+  При verdict `coverage_gate` после `result.json` читай последнее событие
+  `test:coverage` в `failures.jsonl`: его per-file `lines`, `branches` и
+  `functions` с нулевым `count` — первичный источник для поиска непокрытых
+  строк, веток и функций. Весь raw отчёт MUST быть рабочей очередью review,
+  а не необязательной диагностикой: до завершения change каждую непокрытую
+  точку классифицируй как осмысленный контракт, реалистичный failure path,
+  действительно недостижимую защитную ветвь или мёртвый код. Для первых двух
+  MUST добавить или расширить поведенческий тест; мёртвый код MUST удалить;
+  исключить можно только действительно недостижимый defensive-код с локальным
+  обоснованием рядом с исключением или в review. Порог 90% — только
+  минимальный fail-closed gate, а не цель, не критерий готовности и не причина
+  прекращать анализ: прохождение агрегатного процента при неразобранных
+  осмысленных ветках или строках является незавершённой работой. Новые тесты
+  всё равно должны проверять наблюдаемый контракт или реалистичный failure
+  path, а не конкретную строку либо конфигурацию.
 - Release, real-Codex и hosted-auth lanes запускай отдельными foreground
   командами. Они не входят в unit coverage и не могут подменять его результат.

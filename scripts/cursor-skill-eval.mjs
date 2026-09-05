@@ -28,7 +28,6 @@ export function assertEvalResultV1(result) {
   if (result.eval_status === 'skipped' && (result.actual_task_outcome !== 'not_observed' || result.reported_task_outcome !== 'not_reported' || result.failure_stage !== null)) throw new Error('skipped EvalResultV1 must be pre-run');
   if (result.eval_status === 'pass' && (result.cleanup_status !== 'succeeded' || result.fixture_assertion_outcome !== 'pass' || result.failure_stage !== null)) throw new Error('passing EvalResultV1 requires complete evidence and cleanup');
   if (result.eval_status === 'integration_failure' && result.failure_stage === null) throw new Error('integration_failure requires failure_stage');
-  if (bytes(JSON.stringify(result)) > EVAL_LIMITS.stdoutBytes) throw new Error('EvalResultV1 exceeds stdout limit');
   return result;
 }
 
@@ -36,7 +35,6 @@ export function evalResult(input) { return assertEvalResultV1({ schema_version: 
 
 export function writeEvalResult(result, output = process.stdout) {
   const encoded = JSON.stringify(assertEvalResultV1(result));
-  if (bytes(encoded) > EVAL_LIMITS.stdoutBytes) throw new Error('EvalResultV1 exceeds stdout limit');
   output.write(`${encoded}\n`);
 }
 
@@ -48,12 +46,6 @@ export function classifyEval({ enabled, integrationFailure = null, behaviorMatch
 
 export function classifyScenario({ enabled, integrationFailure = null, expectedActual, actual, expectedReported, reported }) {
   return classifyEval({ enabled, integrationFailure, behaviorMatches: expectedActual === actual && expectedReported === reported });
-}
-
-export function liveMarkerResult({ enabled, cleanupFailure = false }) {
-  if (!enabled) return evalResult({ scenario_id: 'live-marker', lane: 'full-live', eval_status: 'skipped', actual_task_outcome: 'not_observed', reported_task_outcome: 'not_reported', fixture_assertion_outcome: 'not_observed', evidence_publication_status: 'not_attempted', cleanup_status: 'not_required', failure_stage: null });
-  if (cleanupFailure) return evalResult({ scenario_id: 'live-marker', lane: 'full-live', eval_status: 'integration_failure', actual_task_outcome: 'not_observed', reported_task_outcome: 'not_reported', fixture_assertion_outcome: 'not_observed', evidence_publication_status: 'not_attempted', cleanup_status: 'failed', failure_stage: 'cleanup', error_code: 'cleanup_failed' });
-  throw new Error('live-marker requires a provisioned live runner');
 }
 
 function contained(child, parent) {
@@ -70,20 +62,4 @@ export async function publishEvidence({ evidenceRoot, fixtureRoot, evidence }) {
   const finalPath = resolve(destination, `${randomUUID()}.json`); const temporaryPath = `${finalPath}.tmp`;
   await writeFile(temporaryPath, encoded, { encoding: 'utf8', flag: 'wx' }); await rename(temporaryPath, finalPath);
   return finalPath;
-}
-
-// Narrow public MCP recorder; runtime transport/state remains runtime-owned.
-export class RecordingMcpProxy {
-  constructor(client) { this.client = client; this.transcript = []; }
-  async request(method, params, timeoutMs) {
-    this.transcript.push({ direction: 'request', method, params });
-    try { const response = await this.client.request(method, params, timeoutMs); this.transcript.push({ direction: 'response', method, response }); return response; }
-    catch (error) { this.transcript.push({ direction: 'error', method, message: error.message }); throw error; }
-  }
-  async tool(name, args) {
-    this.transcript.push({ direction: 'tool_request', name, args });
-    try { const response = await this.client.tool(name, args); this.transcript.push({ direction: 'tool_response', name, response }); return response; }
-    catch (error) { this.transcript.push({ direction: 'tool_error', name, message: error.message }); throw error; }
-  }
-  snapshot() { return structuredClone(this.transcript); }
 }

@@ -22,15 +22,18 @@ The plugin does not use `cursor-agent --yolo`, file-based IPC, or automatic comm
 For local verification:
 
 ```sh
-node --test tests/mcp-smoke.test.mjs
-node --test tests/mcp-transport.test.mjs
-node scripts/run-unit-coverage.mjs
+node scripts/run-node-tests.mjs unit
+node scripts/run-node-tests.mjs coverage
+node scripts/run-node-tests.mjs release
 ```
 
-The final command produces Node.js's built-in coverage report only for unit and
-transport tests; release and hosted Codex lanes are intentionally excluded. It
-runs test files sequentially, waits for the child Node test process to emit
-`close`, and returns that process's exit code to the invoking shell.
+Все команды запускаются в foreground и завершаются одним terminal verdict.
+Успешный прогон печатает краткий итог; при любом ином verdict он печатает
+диагностику текущего прогона и путь к artifacts. В этом каталоге находятся
+`tap.txt`, `stderr.txt`, `failures.jsonl` и атомарно опубликованный `result.json`;
+для расследования сначала прочитайте именно этот `result.json`, затем связанные
+с ним файлы. `coverage` использует только product manifest, а `release` не
+включает hosted/real-Codex opt-ins.
 
 ## Installation from GitHub
 

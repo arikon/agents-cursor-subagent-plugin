@@ -126,7 +126,7 @@ function normalizePending(kind, params = {}) {
     return { title: params.title ? derivedText(params.title) : null, questions };
   }
   if (kind === 'plan') return { title: params.name ? derivedText(params.name) : null, body: derivedText(params.plan || params.body || '') };
-  const toolCall = params.toolCall || params;
+  const toolCall = params.toolCall;
   if (toolCall.locations !== undefined && !Array.isArray(toolCall.locations)) throw new Error('invalid locations');
   const locations = (toolCall.locations || []).map((location) => {
     if (!location || typeof location.path !== 'string' || (location.line !== undefined && (!Number.isSafeInteger(location.line) || location.line < 1))) throw new Error('invalid location');
@@ -174,7 +174,6 @@ class SessionRecord {
       const remaining = Math.max(1, LIMITS.initMs - (Date.now() - initStartedAt));
       await this.withTimeout(this.initialize(), remaining, 'init_timeout');
       if (this.session_state === 'starting') { this.admissionOpen = true; this.sessionState('live'); this.armIdle(); }
-      else if (this.shutdownPromise) await this.shutdownPromise;
     } catch (error) {
       if (this.session_state === 'starting') await this.initFailure(error instanceof DomainError ? error.error_code : 'init');
       else if (this.shutdownPromise) await this.shutdownPromise;
@@ -251,7 +250,6 @@ class SessionRecord {
   respond(id, result) { this.send({ jsonrpc: '2.0', id, result }); }
   respondError(id, error_code, message) { try { this.send({ jsonrpc: '2.0', id, error: { code: -32602, message, data: { error_code } } }); } catch { /* shutdown abandons closed transport */ } }
   receive(line) {
-    if (bytes(line) > LIMITS.frameBytes) return this.transportFailure('ACP frame limit');
     let message; try { message = JSON.parse(line); } catch { return this.transportFailure('invalid ACP JSON'); }
     if (!message || Array.isArray(message) || typeof message !== 'object' || message.jsonrpc !== '2.0') return this.transportFailure('invalid ACP JSON-RPC frame');
     if (Object.hasOwn(message, 'id') && !message.method) {
@@ -317,7 +315,6 @@ class SessionRecord {
       }
       if (this.mode !== 'agent') fail('scope_rejected', 'write callback is disabled for this mode');
       if (!validText(params.content)) fail('invalid_text_encoding', 'write content is not valid UTF-8');
-      if (bytes(params.content) > LIMITS.fsBytes) fail('resource_limit', 'write content limit');
       this.checkedWriteTarget(path); writeFileSync(path, params.content, 'utf8'); this.respond(message.id, {});
     } catch (error) { this.respondError(message.id, error instanceof DomainError ? error.error_code : 'protocol_error', error.message); }
   }
@@ -342,7 +339,6 @@ class SessionRecord {
     try { dispatched = this.request(ADAPTER.methods.prompt, { sessionId: this.cursorSessionId, prompt: [{ type: 'text', text: prompt }] }); }
     catch (error) { await this.terminalize(turn, 'failed', error.message); return turn; }
     dispatched.then((result) => {
-      if (this.active !== turn) return;
       if (turn.pending.size) this.terminalize(turn, 'failed', 'ACP result with pending request');
       else { try { this.complete(turn, result); } catch (error) { void this.terminalize(turn, 'failed', error.message); } }
     }).catch((error) => { if (this.active === turn) this.terminalize(turn, 'failed', error.message); });

@@ -138,8 +138,7 @@ async function canonicalExecutable(path, label) {
 
 export async function validateTopology(options, { requireSource = false, requireAgent = false } = {}) {
   const parent = dirname(options.managedRoot);
-  const canonicalParent = await canonicalDirectory(parent, 'managed marketplace parent');
-  if (canonicalParent !== parent) fail('topology_invalid', 'managed marketplace parent must be canonical');
+  await canonicalDirectory(parent, 'managed marketplace parent');
   const managedRoot = options.managedRoot;
   const stagingPath = `${managedRoot}.codex-cursor-subagent-plugin.staging`;
   const backupPath = `${managedRoot}.codex-cursor-subagent-plugin.backup`;
@@ -305,7 +304,7 @@ async function writePayload(stagingPath, sourceRoot, entries, payloadHash, topol
   const renderedPaths = new Set();
   for (const file of rendered.files) {
     if (!file || typeof file.path !== 'string' || file.path.startsWith('/') || file.path.includes('\\') || file.path.split('/').some((part) => !part || part === '.' || part === '..') || typeof file.content_base64 !== 'string') fail('adapter_drift', 'adapter render file is invalid');
-    const destination = resolve(stagingPath, ...file.path.split('/')); if (!inside(destination, stagingPath)) fail('adapter_drift', 'adapter render path escapes staging');
+    const destination = resolve(stagingPath, ...file.path.split('/'));
     if (renderedPaths.has(file.path) || await lstat(destination).then(() => true).catch(() => false)) fail('adapter_drift', 'adapter render path duplicates or overrides payload');
     renderedPaths.add(file.path); const content = Buffer.from(file.content_base64, 'base64');
     if (content.toString('base64') !== file.content_base64) fail('adapter_drift', 'adapter render content is not canonical base64');
@@ -503,7 +502,18 @@ async function prepareStage(topology, deps, operation) {
 
 async function prepareOwnedStage(topology, deps, operation) {
   try { return await prepareStage(topology, deps, operation); }
-  catch (error) { await rm(topology.stagingPath, { recursive: true, force: true }).catch(() => {}); throw error; }
+  catch (error) {
+    let cleanupError = null;
+    try { await rm(topology.stagingPath, { recursive: true, force: true }); }
+    catch (caught) { cleanupError = caught; }
+    if (await pathKind(topology.stagingPath) !== 'absent') {
+      const recovery = new BootstrapError('recovery_required',
+        `stage preparation failed and owned staging cleanup failed: ${cleanupError?.message || error.message}`);
+      recovery.stagingPath = topology.stagingPath;
+      throw recovery;
+    }
+    throw error;
+  }
 }
 
 async function operate(parsed, deps) {
@@ -594,7 +604,7 @@ async function operate(parsed, deps) {
       if (!exactNew && !exactMarketplaceOnly(outcome.registrations, topology)) return recoveryEnvelope('update', topology, 'new plugin add observed foreign registration state', deps.journal);
       if (exactNew) {
         const removed = await mutate('plugin-remove', { id: PACKAGE_IDS.plugin, marketplace_id: PACKAGE_IDS.marketplace }, topology, deps).catch(() => null);
-        if (!removed || removed.uncertain || !exactMarketplaceOnly(removed.registrations, topology)) return recoveryEnvelope('update', topology, 'new plugin compensation did not produce the expected single delta', deps.journal);
+        if (!removed || !exactMarketplaceOnly(removed.registrations, topology)) return recoveryEnvelope('update', topology, 'new plugin compensation did not produce the expected single delta', deps.journal);
       }
       await removeOwnedTree(topology.managedRoot); await rename(topology.backupPath, topology.managedRoot);
       const compensation = await mutate('plugin-add', { id: PACKAGE_IDS.plugin, marketplace_id: PACKAGE_IDS.marketplace, source: topology.installRoot, version: current.marker.manifest_version }, topology, deps).catch(() => null);
@@ -660,7 +670,7 @@ export async function runBootstrap(argv, overrides = {}) {
     return { exitCode: envelope.ok ? 0 : 1, envelope };
   } catch (error) {
     const recovery = error.code === 'cleanup_required' ? 'cleanup_required' : error.code === 'recovery_required' ? 'recovery_required' : 'failed';
-    return { exitCode: error.exitCode || 1, envelope: { ok: false, operation: parsed.operation, state: recovery, error_code: error.code || 'internal_error', message: bounded(error.message), ...(recovery !== 'failed' ? { backup_path: null, staging_path: null, last_completed_step: error.lastCompletedStep || deps.journal.at(-1)?.operation || null } : {}) } };
+    return { exitCode: error.exitCode || 1, envelope: { ok: false, operation: parsed.operation, state: recovery, error_code: error.code || 'internal_error', message: bounded(error.message), ...(recovery !== 'failed' ? { backup_path: error.backupPath || null, staging_path: error.stagingPath || null, last_completed_step: error.lastCompletedStep || deps.journal.at(-1)?.operation || null } : {}) } };
   }
 }
 

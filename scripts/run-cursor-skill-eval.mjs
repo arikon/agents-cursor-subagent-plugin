@@ -180,13 +180,13 @@ export async function runEval({ scenarioId = 'client-happy', env = process.env }
   }
   try {
     let publishedResult;
-    const evidenceRef = await publish({ evidenceRoot, fixtureRoot, makeEvidence: (ref) => {
+    await publish({ evidenceRoot, fixtureRoot, makeEvidence: (ref) => {
       publishedResult = evalResult({ ...fields, evidence_publication_status: 'published', evidence_ref: ref });
       return { schema_version: 1, scenario_id: scenarioId, lane: config.lane, failure_artifact: !childResult,
         skill: childResult?.skill || null, transcript: childResult?.transcript || [], provider_oracle: childResult?.provider_oracle || null,
         fixture_oracle: childResult?.fixture_oracle || null, harness: harnessEvidence, final_result: publishedResult };
     } });
-    return publishedResult || evalResult({ ...fields, evidence_publication_status: 'published', evidence_ref: evidenceRef });
+    return publishedResult;
   } catch (error) {
     const cleanupFailed = fields.failure_stage === 'cleanup';
     return evalResult({ ...fields, eval_status: 'integration_failure', evidence_publication_status: 'failed', evidence_ref: null,

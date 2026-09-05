@@ -1,0 +1,154 @@
+{
+  "adapter_version": "node-test-runner-v22.23.1-v1",
+  "node_version": "22.23.1",
+  "input_events": [
+    {
+      "type": "test:start",
+      "data": {
+        "nesting": 0,
+        "name": "observable failure"
+      }
+    },
+    {
+      "type": "test:fail",
+      "data": {
+        "name": "observable failure",
+        "nesting": 0,
+        "testNumber": 1,
+        "details": {
+          "duration_ms": 4.5,
+          "type": "test",
+          "error": {
+            "name": "AssertionError",
+            "message": "expected true"
+          }
+        },
+        "line": 7,
+        "column": 1,
+        "file": "/workspace/tests/example.test.mjs"
+      }
+    },
+    {
+      "type": "test:diagnostic",
+      "data": {
+        "nesting": 0,
+        "message": "fail 1",
+        "level": "info"
+      }
+    },
+    {
+      "type": "test:coverage",
+      "data": {
+        "nesting": 0,
+        "summary": {
+          "workingDirectory": "/workspace",
+          "files": [],
+          "totals": {
+            "totalLineCount": 10,
+            "totalBranchCount": 4,
+            "totalFunctionCount": 2,
+            "coveredLineCount": 10,
+            "coveredBranchCount": 4,
+            "coveredFunctionCount": 2,
+            "coveredLinePercent": 100,
+            "coveredBranchPercent": 100,
+            "coveredFunctionPercent": 100
+          },
+          "thresholds": {
+            "line": 0,
+            "branch": 0,
+            "function": 0
+          }
+        }
+      }
+    },
+    {
+      "type": "test:summary",
+      "data": {
+        "success": false,
+        "counts": {
+          "tests": 1,
+          "failed": 1,
+          "passed": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0,
+          "topLevel": 1,
+          "suites": 0
+        },
+        "duration_ms": 8.25
+      }
+    },
+    {
+      "type": "test:pass",
+      "data": {
+        "name": "unrelated passing test",
+        "nesting": 0
+      }
+    }
+  ],
+  "expected_records": [
+    {
+      "type": "test:fail",
+      "data": {
+        "name": "observable failure",
+        "nesting": 0,
+        "testNumber": 1,
+        "details": {
+          "duration_ms": 4.5,
+          "type": "test",
+          "error": {
+            "name": "AssertionError",
+            "message": "expected true"
+          }
+        },
+        "line": 7,
+        "column": 1,
+        "file": "/workspace/tests/example.test.mjs"
+      }
+    },
+    {
+      "type": "test:coverage",
+      "data": {
+        "nesting": 0,
+        "summary": {
+          "workingDirectory": "/workspace",
+          "files": [],
+          "totals": {
+            "totalLineCount": 10,
+            "totalBranchCount": 4,
+            "totalFunctionCount": 2,
+            "coveredLineCount": 10,
+            "coveredBranchCount": 4,
+            "coveredFunctionCount": 2,
+            "coveredLinePercent": 100,
+            "coveredBranchPercent": 100,
+            "coveredFunctionPercent": 100
+          },
+          "thresholds": {
+            "line": 0,
+            "branch": 0,
+            "function": 0
+          }
+        }
+      }
+    },
+    {
+      "type": "test:summary",
+      "data": {
+        "success": false,
+        "counts": {
+          "tests": 1,
+          "failed": 1,
+          "passed": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0,
+          "topLevel": 1,
+          "suites": 0
+        },
+        "duration_ms": 8.25
+      }
+    }
+  ]
+}

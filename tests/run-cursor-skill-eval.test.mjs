@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { EventEmitter } from 'node:events';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PassThrough } from 'node:stream';
@@ -63,6 +63,27 @@ test('eval runner returns a bounded machine-readable integration failure for an 
   assert.deepEqual({ status: result.eval_status, stage: result.failure_stage, code: result.error_code }, { status: 'integration_failure', stage: 'runner', code: 'unknown_scenario' });
 });
 
+test('eval runner defaults to the credential-free client scenario when no scenario is supplied', async () => {
+  const { stdout, stderr } = await execute(process.execPath, [run], {
+    env: { ...process.env, CURSOR_EVAL_REAL_CODEX: '', CURSOR_EVAL_HOSTED_CODEX: '', CURSOR_SUBAGENT_LIVE_E2E: '' },
+  });
+  assert.equal(stderr, '');
+  const result = assertEvalResultV1(JSON.parse(stdout));
+  assert.deepEqual(
+    { scenario: result.scenario_id, lane: result.lane, status: result.eval_status },
+    { scenario: 'client-happy', lane: 'client-integration', status: 'skipped' },
+  );
+});
+
+test('eval runner bounds an untrusted unknown scenario name in its public result', async () => {
+  const { stdout, stderr } = await execute(process.execPath, [run, 'x'.repeat(4_096)], { env: process.env });
+  assert.equal(stderr, '');
+  const result = assertEvalResultV1(JSON.parse(stdout));
+  assert.equal(result.eval_status, 'integration_failure');
+  assert.ok(Buffer.byteLength(result.scenario_id, 'utf8') <= 128);
+  assert.match(result.scenario_id, /\.\.\.$/);
+});
+
 test('runner selects each lane and propagates the scenario environment expected by its harness', async () => {
   const cases = [
     ['client-happy', { CURSOR_EVAL_REAL_CODEX: '1' }, 'client-integration', 'credential-free client-happy', { CURSOR_EVAL_REAL_CODEX: '1' }],
@@ -115,6 +136,88 @@ test('runner and fixture setup catches always return valid stage-specific EvalRe
   assert.deepEqual({ status: harness.eval_status, stage: harness.failure_stage, code: harness.error_code, assertion: harness.fixture_assertion_outcome, cleanup: harness.cleanup_status },
     { status: 'integration_failure', stage: 'runner', code: 'harness_spawn_failure', assertion: 'not_observed', cleanup: 'succeeded' });
   assertEvalResultV1(harness);
+  const generic = await runEval({ scenarioId: 'model-question', env: { CURSOR_EVAL_HOSTED_CODEX: '1' } }, {
+    mkdtemp: async () => '/tmp/fixture', runHarness: async () => { throw new Error('runner failed'); }, rm: removed,
+  });
+  assert.deepEqual(
+    { status: generic.eval_status, stage: generic.failure_stage, code: generic.error_code, cleanup: generic.cleanup_status },
+    { status: 'integration_failure', stage: 'runner', code: 'runner_failure', cleanup: 'succeeded' },
+  );
+  assertEvalResultV1(generic);
+});
+
+test('runner owns the disposable fixture lifecycle by default', async () => {
+  let fixtureRoot;
+  const result = await runEval({ scenarioId: 'client-happy', env: { CURSOR_EVAL_REAL_CODEX: '1' } }, {
+    runHarness: async (_config, harnessEnv) => {
+      fixtureRoot = harnessEnv.CURSOR_EVAL_CHILD_RESULT.slice(0, -'/child-result.json'.length);
+      return passHarness();
+    },
+    publishEvidence: published,
+  });
+  assert.equal(result.eval_status, 'pass');
+  await assert.rejects(readFile(fixtureRoot), /ENOENT/);
+});
+
+test('runner normalizes a harness infrastructure failure without child evidence', async () => {
+  const result = await runEval({ scenarioId: 'model-question', env: { CURSOR_EVAL_HOSTED_CODEX: '1' } }, {
+    mkdtemp: async () => '/tmp/fixture',
+    rm: removed,
+    publishEvidence: published,
+    runHarness: async () => ({ code: 9, signal: null, failure: 'harness_failure', childResult: null, semantic: null, diagnostics: 'failed' }),
+  });
+  assert.deepEqual(
+    {
+      status: result.eval_status,
+      actual: result.actual_task_outcome,
+      reported: result.reported_task_outcome,
+      assertion: result.fixture_assertion_outcome,
+      stage: result.failure_stage,
+      code: result.error_code,
+    },
+    {
+      status: 'integration_failure',
+      actual: 'not_observed',
+      reported: 'not_reported',
+      assertion: 'not_observed',
+      stage: 'runner',
+      code: 'harness_failure',
+    },
+  );
+  assertEvalResultV1(result);
+});
+
+test('runner preserves semantic outcomes when child evidence is unavailable', async () => {
+  const result = await runEval({ scenarioId: 'model-semantic-failure', env: { CURSOR_EVAL_HOSTED_CODEX: '1' } }, {
+    mkdtemp: async () => '/tmp/fixture',
+    rm: removed,
+    publishEvidence: published,
+    runHarness: async () => ({
+      code: 1,
+      signal: null,
+      failure: 'scenario_contract_mismatch',
+      childResult: null,
+      semantic: { actual: 'failed', reported: 'succeeded' },
+      diagnostics: '',
+    }),
+  });
+  assert.deepEqual(
+    {
+      status: result.eval_status,
+      actual: result.actual_task_outcome,
+      reported: result.reported_task_outcome,
+      assertion: result.fixture_assertion_outcome,
+      stage: result.failure_stage,
+    },
+    {
+      status: 'agent_behavior_mismatch',
+      actual: 'failed',
+      reported: 'succeeded',
+      assertion: 'fail',
+      stage: 'scenario',
+    },
+  );
+  assertEvalResultV1(result);
 });
 
 test('published evidence is emitted after cleanup with correlated child proof and the final EvalResultV1', async () => {
@@ -173,6 +276,7 @@ test('child-result parser rejects every required evidence-contract violation', (
   const invalidResults = [
     { ...valid, schema_version: 2 },
     { ...valid, scenario_id: 'model-plan' },
+    { ...valid, skill: null },
     { ...valid, skill: { ...valid.skill, sha256: 'not-a-sha' } },
     { ...valid, skill: { ...valid.skill, bytes: 0 } },
     { ...valid, transcript: [] },
@@ -269,6 +373,21 @@ test('harness returns validated child evidence and bounded diagnostics after a s
   assert.equal(Buffer.byteLength(result.diagnostics, 'utf8') <= 8_000, true);
 });
 
+test('harness executes its configured Node test through the default process boundary', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'cursor-eval-harness-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const childResultPath = join(root, 'child-result.json');
+  const childTestPath = join(root, 'scenario.test.mjs');
+  await writeFile(childResultPath, encodedChildResult('client-happy'));
+  await writeFile(childTestPath, "import test from 'node:test';\ntest('scenario', () => {});\n");
+  const result = await runHarness(
+    { pattern: 'scenario', test: childTestPath },
+    { ...process.env, CURSOR_EVAL_CHILD_RESULT: childResultPath, CURSOR_EVAL_SCENARIO_ID: 'client-happy' },
+  );
+  assert.equal(result.failure, null);
+  assert.deepEqual(result.childResult, childResult());
+});
+
 test('harness maps a semantic marker to scenario-contract mismatch with parsed outcomes', async () => {
   const result = await runHarness({ pattern: 'scenario', test: '/tmp/test.mjs' }, { CURSOR_EVAL_CHILD_RESULT: '/tmp/result.json', CURSOR_EVAL_SCENARIO_ID: 'model-semantic-failure' }, {
     spawn: () => makeHarnessChild({ stdout: 'semantic_failure actual=failed reported=succeeded', code: 1 }),
@@ -344,6 +463,17 @@ test('CLI emits a single runner-termination result when SIGTERM wins the race', 
   assert.equal(processLike.exitCode, 143);
   assert.deepEqual({ count: written.length, code: written[0].error_code, cleanup: written[0].cleanup_status }, { count: 1, code: 'runner_terminated', cleanup: 'failed' });
   assertEvalResultV1(written[0]);
+
+  let resolveUnknown;
+  const unknownEvaluation = new Promise((resolve) => { resolveUnknown = resolve; });
+  const unknownProcess = new EventEmitter();
+  const unknownWritten = [];
+  const unknownRunning = cli({ argv: ['node', 'runner', 'unknown'], processLike: unknownProcess, evaluate: async () => unknownEvaluation, write: (value) => unknownWritten.push(value) });
+  unknownProcess.emit('SIGTERM');
+  resolveUnknown(await runEval({ scenarioId: 'unknown', env: {} }));
+  await unknownRunning;
+  assert.deepEqual({ count: unknownWritten.length, lane: unknownWritten[0].lane, code: unknownWritten[0].error_code }, { count: 1, lane: 'model-behavior', code: 'runner_terminated' });
+  assertEvalResultV1(unknownWritten[0]);
 });
 
 test('CLI converts an unhandled evaluation rejection to EvalResultV1', async () => {
@@ -352,4 +482,9 @@ test('CLI converts an unhandled evaluation rejection to EvalResultV1', async () 
   await cli({ argv: ['node', 'runner', 'live-marker'], processLike, evaluate: async () => { throw new Error('unexpected'); }, write: (value) => written.push(value) });
   assert.deepEqual({ count: written.length, lane: written[0].lane, code: written[0].error_code }, { count: 1, lane: 'full-live', code: 'unhandled_runner_failure' });
   assertEvalResultV1(written[0]);
+
+  const fallback = [];
+  await cli({ argv: ['node', 'runner', 'unknown'], processLike: new EventEmitter(), evaluate: async () => { throw new Error('unexpected'); }, write: (value) => fallback.push(value) });
+  assert.deepEqual({ count: fallback.length, lane: fallback[0].lane, code: fallback[0].error_code }, { count: 1, lane: 'model-behavior', code: 'unhandled_runner_failure' });
+  assertEvalResultV1(fallback[0]);
 });

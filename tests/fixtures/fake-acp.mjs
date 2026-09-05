@@ -3,8 +3,14 @@ import { createInterface } from 'node:readline';
 import { appendFileSync } from 'node:fs';
 
 if (process.argv.includes('--version')) {
-  process.stdout.write(`${process.env.FAKE_ACP_VERSION || '2026.08.25-3e8eec8'}\n`);
-  process.exit(0);
+  if (process.env.FAKE_ACP_VERSION_MODE === 'overflow') {
+    await new Promise((resolve) => process.stdout.write('v'.repeat(64_001), resolve));
+  } else if (process.env.FAKE_ACP_VERSION_MODE === 'invalid-utf8') {
+    await new Promise((resolve) => process.stdout.write(Buffer.from([0xc3, 0x28, 0x0a]), resolve));
+  } else {
+    process.stdout.write(`${process.env.FAKE_ACP_VERSION || '2026.08.25-3e8eec8'}\n`);
+  }
+  process.exit(process.env.FAKE_ACP_VERSION_MODE === 'nonzero' ? 9 : 0);
 }
 
 const expectedPolicyArgv = process.env.FAKE_ACP_EXPECT_DEFAULT_ARGV
@@ -17,7 +23,7 @@ if (process.env.FAKE_ACP_REQUIRE_POLICY
 }
 
 const input = createInterface({ input: process.stdin });
-const send = (message) => process.stdout.write(`${JSON.stringify(message)}\n`);
+const send = (message) => process.stdout.write(`${JSON.stringify(message)}${process.env.FAKE_ACP_CRLF ? '\r\n' : '\n'}`);
 let promptId = null;
 let pendingResponsesRemaining = 0;
 const log = (message) => { if (process.env.FAKE_ACP_LOG) appendFileSync(process.env.FAKE_ACP_LOG, `${JSON.stringify(message)}\n`); };
@@ -30,11 +36,31 @@ const safeEvidence = (message) => {
 const finishPrompt = (id, text) => {
   send({ jsonrpc: '2.0', method: 'session/update', params: { sessionId: 'fake', update: { sessionUpdate: 'agent_message_chunk', content: { text } } } });
   send({ jsonrpc: '2.0', id, result: { stopReason: process.env.FAKE_ACP_BAD_PROMPT_RESULT ? 'unknown' : (process.env.FAKE_ACP_STOP_REASON || 'end_turn') } });
+  safeEvidence({ event: 'prompt_result', request_id: id });
 };
 input.on('line', (line) => {
   const request = JSON.parse(line);
   if (!request.method && request.id !== undefined) {
     log(request);
+    if (process.env.FAKE_ACP_PENDING === 'invalid-question') {
+      const question = { id: 'q', question: 'Continue?', options: [{ id: 'yes', label: 'Yes' }] };
+      switch (process.env.FAKE_ACP_CALLBACK_VARIANT) {
+        case 'missing-questions':
+          return send({ jsonrpc: '2.0', id: 'q1', method: 'cursor/ask_question', params: {} });
+        case 'null-question': return send({ jsonrpc: '2.0', id: 'q1', method: 'cursor/ask_question', params: { questions: [null] } });
+        case 'empty-question-id': question.id = ''; break;
+        case 'empty-options': question.options = []; break;
+        case 'duplicate-question': return send({ jsonrpc: '2.0', id: 'q1', method: 'cursor/ask_question', params: { questions: [question, { ...question }] } });
+        case 'duplicate-option': question.options = [{ id: 'yes', label: 'Yes' }, { id: 'yes', label: 'Again' }]; break;
+        case 'empty-option-id': question.options[0].id = ''; break;
+        case 'invalid-question-text': question.question = '\ud800'; break;
+        case 'invalid-option-label': question.options[0].label = '\ud800'; break;
+        case 'null-option': question.options[0] = null; break;
+        case 'invalid-multiplicity': question.allowMultiple = 'sometimes'; break;
+        default: throw new Error(`unknown invalid question fixture: ${process.env.FAKE_ACP_CALLBACK_VARIANT}`);
+      }
+      return send({ jsonrpc: '2.0', id: 'q1', method: 'cursor/ask_question', params: { questions: [question] } });
+    }
     if (process.env.FAKE_ACP_PENDING === 'question') {
       const answer = request.result?.outcome;
       safeEvidence({ callback: 'question', request_id: request.id, outcome: answer?.outcome || null,
@@ -50,14 +76,26 @@ input.on('line', (line) => {
   }
   if (request.method === 'initialize') {
     if (process.env.FAKE_ACP_INIT_FRAME) return process.stdout.write(`${process.env.FAKE_ACP_INIT_FRAME}\n`);
+    if (process.env.FAKE_ACP_INIT_RESPONSE_VARIANT === 'missing-payload') return send({ jsonrpc: '2.0', id: request.id });
+    if (process.env.FAKE_ACP_INIT_RESPONSE_VARIANT === 'error-no-message') return send({ jsonrpc: '2.0', id: request.id, error: {} });
+    if (process.env.FAKE_ACP_INIT_RESPONSE_VARIANT === 'unknown-id-first') send({ jsonrpc: '2.0', id: 'unknown', result: {} });
     const reply = () => send({ jsonrpc: '2.0', id: request.id, result: process.env.FAKE_ACP_BAD_ADMISSION ? {} : { protocolVersion: 1, authMethods: [{ id: 'cursor_login' }], agentCapabilities: process.env.FAKE_ACP_BAD_CAPABILITIES ? {} : { loadSession: true, mcpCapabilities: { http: true, sse: true }, promptCapabilities: { audio: false, embeddedContext: false, image: true }, sessionCapabilities: { list: {} } } } });
     return process.env.FAKE_ACP_DELAY_INIT_MS ? setTimeout(reply, Number(process.env.FAKE_ACP_DELAY_INIT_MS)) : reply();
   }
   if (request.method === 'authenticate') return send({ jsonrpc: '2.0', id: request.id, result: {} });
-  if (request.method === 'session/new') return send({ jsonrpc: '2.0', id: request.id, result: { sessionId: 'fake', modes: { currentModeId: 'agent', availableModes: ['ask', 'plan', 'agent'].map((id) => ({ id })) } } });
+  if (request.method === 'session/new') {
+    const result = { sessionId: 'fake', modes: { currentModeId: 'agent', availableModes: ['ask', 'plan', 'agent'].map((id) => ({ id })) } };
+    if (process.env.FAKE_ACP_SESSION_VARIANT === 'missing-id') delete result.sessionId;
+    if (process.env.FAKE_ACP_SESSION_VARIANT === 'missing-modes') delete result.modes;
+    if (process.env.FAKE_ACP_SESSION_VARIANT === 'incomplete-modes') result.modes.availableModes = [{ id: 'ask' }];
+    return send({ jsonrpc: '2.0', id: request.id, result });
+  }
   if (request.method === 'session/set_mode') return send({ jsonrpc: '2.0', id: request.id, result: {} });
   if (request.method === 'session/prompt') {
     promptId = request.id;
+    if (process.env.FAKE_ACP_PROMPT_RESPONSE_VARIANT === 'missing-payload') return send({ jsonrpc: '2.0', id: request.id });
+    if (process.env.FAKE_ACP_PROMPT_RESPONSE_VARIANT === 'error-no-message') return send({ jsonrpc: '2.0', id: request.id, error: {} });
+    if (process.env.FAKE_ACP_PROMPT_RESPONSE_VARIANT === 'unknown-id-first') send({ jsonrpc: '2.0', id: 'unknown', result: {} });
     if (process.env.FAKE_ACP_REJECT_PROMPT) {
       promptId = null;
       return send({ jsonrpc: '2.0', id: request.id, error: { code: -32000, message: 'prompt rejected' } });
@@ -70,14 +108,31 @@ input.on('line', (line) => {
     }
     if (process.env.FAKE_ACP_INVALID_UTF8) { process.stdout.write(Buffer.from([0xc3, 0x28, 0x0a])); return; }
     if (process.env.FAKE_ACP_INVALID_FRAME) { process.stdout.write(`${process.env.FAKE_ACP_INVALID_FRAME}\n`); return; }
+    if (process.env.FAKE_ACP_FRAME_VARIANT === 'overflow-line') { process.stdout.write(`${'x'.repeat(1_048_577)}\n`); return; }
+    if (process.env.FAKE_ACP_FRAME_VARIANT === 'overflow-buffer') { process.stdout.write('x'.repeat(1_048_577)); return; }
+    if (process.env.FAKE_ACP_FRAME_VARIANT === 'invalid-agent-message') {
+      send({ jsonrpc: '2.0', method: 'session/update', params: { sessionId: 'fake', update: { sessionUpdate: 'agent_message_chunk', content: { text: '\ud800' } } } });
+      return;
+    }
     if (process.env.FAKE_ACP_PENDING === 'question') {
       send({ jsonrpc: '2.0', id: 'q1', method: 'cursor/ask_question', params: { questions: [{ id: 'q', question: 'Continue?', options: [{ id: 'yes', label: 'Yes' }, { id: 'no', label: 'No' }] }] } });
+      return;
+    }
+    if (process.env.FAKE_ACP_PENDING === 'question-optional') {
+      send({ jsonrpc: '2.0', id: 'q1', method: 'cursor/ask_question', params: { title: 'Continue', questions: [{ id: 'q', prompt: 'Continue?', allowMultiple: true, options: [{ id: 'yes', label: 'Yes' }, { id: 'no', label: 'No' }] }] } });
       return;
     }
     if (process.env.FAKE_ACP_PENDING === 'two-questions') {
       pendingResponsesRemaining = 2;
       send({ jsonrpc: '2.0', id: 'q1', method: 'cursor/ask_question', params: { questions: [{ id: 'first', question: 'First?', options: [{ id: 'yes', label: 'Yes' }] }] } });
       send({ jsonrpc: '2.0', id: 'q2', method: 'cursor/ask_question', params: { questions: [{ id: 'second', question: 'Second?', options: [{ id: 'yes', label: 'Yes' }] }] } });
+      return;
+    }
+    if (process.env.FAKE_ACP_PENDING === 'pending-capacity') {
+      pendingResponsesRemaining = 8;
+      for (let index = 0; index < 9; index += 1) {
+        send({ jsonrpc: '2.0', id: `q${index}`, method: 'cursor/ask_question', params: { questions: [{ id: `question-${index}`, question: `Question ${index}?`, options: [{ id: 'yes', label: 'Yes' }] }] } });
+      }
       return;
     }
     if (process.env.FAKE_ACP_PENDING === 'oversized-question') {
@@ -95,17 +150,55 @@ input.on('line', (line) => {
       const duplicate = { ...callback, params: { questions: [{ id: 'q2', question: 'Second?', options: [{ id: 'no', label: 'No' }] }] } };
       process.stdout.write(`${JSON.stringify(callback)}\n${JSON.stringify(duplicate)}\n`); return;
     }
+    if (process.env.FAKE_ACP_PENDING === 'invalid-permission') {
+      const params = { sessionId: 'fake', toolCall: { toolCallId: 'tool-1', title: 'Run?', kind: 'execute', locations: [{ path: process.cwd(), line: 1 }] }, options: [{ optionId: 'opaque-reject', kind: 'reject_once', name: 'No' }, { optionId: 'opaque-allow', kind: 'allow_once', name: 'Yes' }] };
+      switch (process.env.FAKE_ACP_CALLBACK_VARIANT) {
+        case 'session-mismatch': params.sessionId = 'other'; break;
+        case 'missing-tool-call': delete params.toolCall; break;
+        case 'empty-tool-call-id': params.toolCall.toolCallId = ''; break;
+        case 'duplicate-semantic-option': params.options.push({ optionId: 'another-allow', kind: 'allow_once', name: 'Again' }); break;
+        case 'missing-options': delete params.options; break;
+        case 'empty-option-id': params.options[0].optionId = ''; break;
+        case 'invalid-option-label': params.options[0].name = '\ud800'; break;
+        case 'missing-semantic-option': params.options = [params.options[0]]; break;
+        case 'unsupported-option-kind': params.options[0].kind = 'allow_always'; break;
+        case 'invalid-locations': params.toolCall.locations = {}; break;
+        case 'invalid-location-path': params.toolCall.locations = [{ path: 42 }]; break;
+        case 'invalid-location': params.toolCall.locations = [{ path: process.cwd(), line: 0 }]; break;
+        default: throw new Error(`unknown invalid permission fixture: ${process.env.FAKE_ACP_CALLBACK_VARIANT}`);
+      }
+      return send({ jsonrpc: '2.0', id: 'p1', method: 'session/request_permission', params });
+    }
     if (process.env.FAKE_ACP_PENDING === 'permission') return send({ jsonrpc: '2.0', id: 'p1', method: 'session/request_permission', params: { sessionId: 'fake', toolCall: { toolCallId: 'tool-1', title: 'Run?', kind: 'execute', locations: [{ path: process.cwd(), line: 1 }] }, options: [{ optionId: 'opaque-reject', kind: 'reject_once', name: 'No' }, { optionId: 'opaque-allow', kind: 'allow_once', name: 'Yes' }] } });
+    if (process.env.FAKE_ACP_PENDING === 'permission-optional') return send({ jsonrpc: '2.0', id: 'p1', method: 'session/request_permission', params: { sessionId: 'fake', toolCall: { toolCallId: 'tool-1' }, options: [{ optionId: 'opaque-reject', kind: 'reject_once', label: 'No' }, { optionId: 'opaque-allow', kind: 'allow_once', label: 'Yes' }] } });
+    if (process.env.FAKE_ACP_PENDING === 'plan-optional') return send({ jsonrpc: '2.0', id: 'plan1', method: 'cursor/create_plan', params: { body: 'Fallback body' } });
     if (process.env.FAKE_ACP_PENDING === 'ambiguous-permission') return send({ jsonrpc: '2.0', id: 'p1', method: 'session/request_permission', params: { sessionId: 'fake', toolCall: { toolCallId: 'tool-1' }, options: [{ optionId: 'one', kind: 'allow_once' }] } });
     if (process.env.FAKE_ACP_PENDING === 'plan') return send({ jsonrpc: '2.0', id: 'plan1', method: 'cursor/create_plan', params: { name: 'Plan', plan: 'Do it' } });
-    if (process.env.FAKE_ACP_PENDING === 'read') return send({ jsonrpc: '2.0', id: 'fs1', method: 'fs/read_text_file', params: { sessionId: 'fake', path: process.env.FAKE_ACP_PATH, line: Number(process.env.FAKE_ACP_LINE || 1), limit: 20 } });
-    if (process.env.FAKE_ACP_PENDING === 'write') return send({ jsonrpc: '2.0', id: 'fs1', method: 'fs/write_text_file', params: { sessionId: 'fake', path: process.env.FAKE_ACP_PATH, content: process.env.FAKE_ACP_CONTENT || '' } });
+    if (process.env.FAKE_ACP_PENDING === 'read') {
+      const params = { sessionId: 'fake', path: process.env.FAKE_ACP_PATH, line: Number(process.env.FAKE_ACP_LINE || 1), limit: Number(process.env.FAKE_ACP_LIMIT || 20) };
+      if (process.env.FAKE_ACP_FS_VARIANT === 'session-mismatch') params.sessionId = 'other';
+      if (process.env.FAKE_ACP_FS_VARIANT === 'relative-path') params.path = 'relative.txt';
+      if (process.env.FAKE_ACP_FS_VARIANT === 'nul-path') params.path = `${process.cwd()}\0invalid`;
+      if (process.env.FAKE_ACP_FS_VARIANT === 'line-zero') params.line = 0;
+      if (process.env.FAKE_ACP_FS_VARIANT === 'limit-negative') params.limit = -1;
+      return send({ jsonrpc: '2.0', id: 'fs1', method: 'fs/read_text_file', params: process.env.FAKE_ACP_FS_VARIANT === 'missing-params' ? null : params });
+    }
+    if (process.env.FAKE_ACP_PENDING === 'write') {
+      let content = process.env.FAKE_ACP_CONTENT || '';
+      const path = process.env.FAKE_ACP_FS_VARIANT === 'nul-path' ? `${process.cwd()}\0invalid` : process.env.FAKE_ACP_PATH;
+      if (process.env.FAKE_ACP_FS_VARIANT === 'invalid-content') content = '\ud800';
+      return send({ jsonrpc: '2.0', id: 'fs1', method: 'fs/write_text_file', params: { sessionId: 'fake', path, content } });
+    }
     if (process.env.FAKE_ACP_PENDING === 'unknown') return send({ jsonrpc: '2.0', id: 'unknown1', method: 'cursor/not_admitted', params: {} });
     promptId = null;
-    finishPrompt(request.id, process.env.FAKE_ACP_RESULT || 'done');
+    if (process.env.FAKE_ACP_DELAY_RESULT_MS) setTimeout(() => finishPrompt(request.id, process.env.FAKE_ACP_RESULT || 'done'), Number(process.env.FAKE_ACP_DELAY_RESULT_MS));
+    else finishPrompt(request.id, process.env.FAKE_ACP_RESULT || 'done');
     if (process.env.FAKE_ACP_EXIT_AFTER_RESULT) setImmediate(() => process.exit(0));
     return;
   }
-  if (request.method === 'session/cancel') return process.exit(0);
+  if (request.method === 'session/cancel') {
+    if (process.env.FAKE_ACP_IGNORE_CANCEL) return;
+    return process.exit(0);
+  }
   if (request.id !== undefined) send({ jsonrpc: '2.0', id: request.id, result: {} });
 });

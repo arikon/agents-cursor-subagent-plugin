@@ -2,43 +2,8 @@
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
-
-const root = process.cwd();
-const changes = [
-  "harden-cursor-acp-session-runtime",
-  "add-cursor-delegation-workflow",
-  "package-cursor-subagent-plugin",
-  "add-cursor-subagent-skill-evals",
-  "add-durable-node-test-supervisor",
-];
-const changeContracts = {
-  "harden-cursor-acp-session-runtime": {
-    capability: "cursor-acp-session-runtime",
-    specDirectory: "cursor-acp-session-runtime",
-    ownerClaim: "Этот change owns runtime requirements",
-  },
-  "add-cursor-delegation-workflow": {
-    capability: "cursor-task-delegation",
-    specDirectory: "cursor-task-delegation",
-    ownerClaim: "Этот change owns only composition",
-  },
-  "package-cursor-subagent-plugin": {
-    capability: "cursor-plugin-distribution",
-    specDirectory: "cursor-plugin-distribution",
-    ownerClaim: "Этот change owns install/discovery и release canary",
-  },
-  "add-cursor-subagent-skill-evals": {
-    capability: "cursor-subagent-skill-evals",
-    specDirectory: "cursor-subagent-skill-evals",
-    ownerClaim: "Этот change owns only Codex behavior-eval orchestration and",
-    modified: [{ capability: "cursor-task-delegation", requirement: "Skill workflow делегирования" }],
-  },
-  "add-durable-node-test-supervisor": {
-    capability: "node-test-supervision",
-    specDirectory: "node-test-supervision",
-    ownerClaim: "`node-test-supervision` owns runner lifecycle, artifacts, reporting and coverage gate",
-  },
-};
+import { fileURLToPath } from "node:url";
+import { PROJECT_SEMANTIC_REGISTRY } from "./openspec-semantic-registry.mjs";
 const baselineFields = [
   "**Goal.**",
   "**Non-goals.**",
@@ -47,44 +12,55 @@ const baselineFields = [
   "**Implementation-ready exit.**",
   "**Future-change candidates.**",
 ];
-const errors = [];
 
-function read(relativePath) {
-  return readFileSync(resolve(root, relativePath), "utf8");
-}
+export function checkOpenSpecSemantics(rootPath = process.cwd(), registry = PROJECT_SEMANTIC_REGISTRY) {
+  const root = resolve(rootPath);
+  const errors = [];
+  const changes = registry.changes.map(({ id }) => id);
+  const changeContracts = Object.fromEntries(registry.changes.map((contract) => [contract.id, contract]));
+  const { runtime: runtimeChange, facade: facadeChange, package: packageChange, eval: evalChange } = registry.roles;
+  const resolvedRoots = new Map();
 
-function changeRoot(change) {
-  const active = `openspec/changes/${change}`;
-  if (existsSync(resolve(root, active))) return active;
-  const archive = resolve(root, "openspec/changes/archive");
-  const matches = existsSync(archive)
-    ? readdirSync(archive).filter((entry) => entry.endsWith(`-${change}`))
-    : [];
-  if (matches.length === 1) return `openspec/changes/archive/${matches[0]}`;
-  errors.push(`cannot resolve exactly one active or archived change root for ${change}`);
-  return active;
-}
-
-function requireText(relativePath, text) {
-  if (!read(relativePath).includes(text)) {
-    errors.push(`${relativePath}: missing ${text}`);
+  function read(relativePath) {
+    return readFileSync(resolve(root, relativePath), "utf8");
   }
-}
 
-function requirementNames(change) {
-  const specPath = `${changeRoot(change)}/specs`;
-  const specFile = `${specPath}/${changeContracts[change].specDirectory}/spec.md`;
-  return [...read(specFile).matchAll(/^### Requirement: (.+)$/gm)].map(
-    ([, name]) => name,
-  );
-}
+  function changeRoot(change) {
+    if (resolvedRoots.has(change)) return resolvedRoots.get(change);
+    const active = `openspec/changes/${change}`;
+    if (existsSync(resolve(root, active))) {
+      resolvedRoots.set(change, active);
+      return active;
+    }
+    const archive = resolve(root, "openspec/changes/archive");
+    const matches = existsSync(archive)
+      ? readdirSync(archive).filter((entry) => entry.endsWith(`-${change}`))
+      : [];
+    if (matches.length === 1) {
+      const archived = `openspec/changes/archive/${matches[0]}`;
+      resolvedRoots.set(change, archived);
+      return archived;
+    }
+    errors.push(`cannot resolve exactly one active or archived change root for ${change}`);
+    resolvedRoots.set(change, null);
+    return null;
+  }
 
-function indexedRequirements(design) {
-  const match = design.match(/^\*\*Public-invariant index\.\*\* (.+)$/m);
-  return match ? [...match[1].matchAll(/«([^»]+)»/g)].map(([, name]) => name) : [];
-}
+  function requirementNames(change) {
+    const resolvedRoot = changeRoot(change);
+    const specPath = `${resolvedRoot}/specs`;
+    const specFile = `${specPath}/${changeContracts[change].specDirectory}/spec.md`;
+    return [...read(specFile).matchAll(/^### Requirement: (.+)$/gm)].map(
+      ([, name]) => name,
+    );
+  }
 
-const requirementOwners = new Map();
+  function indexedRequirements(design) {
+    const match = design.match(/^\*\*Public-invariant index\.\*\* (.+)$/m);
+    return match ? [...match[1].matchAll(/«([^»]+)»/g)].map(([, name]) => name) : [];
+  }
+
+  const requirementOwners = new Map();
 
 const agents = read("AGENTS.md");
 if (!agents.includes("## OpenSpec convergence")) {
@@ -116,6 +92,7 @@ for (const change of activeChanges) {
 
 for (const change of changes) {
   const rootPath = changeRoot(change);
+  if (!rootPath) continue;
   const designPath = `${rootPath}/design.md`;
   const design = read(designPath);
   const proposal = read(`${rootPath}/proposal.md`);
@@ -142,7 +119,7 @@ for (const change of changes) {
 
   const requirements = requirementNames(change);
   const index = indexedRequirements(design);
-  const modified = contract.modified || [];
+  const modified = contract.modified;
   const expectedIndex = [...requirements, ...modified.map(({ requirement }) => requirement)];
   if (new Set(index).size !== index.length || index.length !== expectedIndex.length ||
       expectedIndex.some((requirement) => !index.includes(requirement))) {
@@ -182,14 +159,10 @@ for (const change of changes) {
   }
 }
 
-for (const change of [
-  "add-cursor-delegation-workflow",
-  "package-cursor-subagent-plugin",
-]) {
+for (const change of [facadeChange, packageChange]) {
   const rootPath = changeRoot(change);
-  const specArtifact = change === "add-cursor-delegation-workflow"
-    ? "specs/cursor-task-delegation/spec.md"
-    : "specs/cursor-plugin-distribution/spec.md";
+  if (!rootPath) continue;
+  const specArtifact = `specs/${changeContracts[change].specDirectory}/spec.md`;
   for (const artifact of ["proposal.md", "design.md", "tasks.md", specArtifact]) {
     const contents = read(`${rootPath}/${artifact}`);
     for (const internal of ["SessionRecord", "RuntimeEvent", "pendingRequests", "failure_kind"]) {
@@ -200,10 +173,10 @@ for (const change of [
   }
 }
 
-const evalRoot = changeRoot("add-cursor-subagent-skill-evals");
-const evalSpec = read(`${evalRoot}/specs/cursor-subagent-skill-evals/spec.md`);
-const evalDesign = read(`${evalRoot}/design.md`);
-const evalTasks = read(`${evalRoot}/tasks.md`);
+const evalRoot = changeRoot(evalChange);
+const evalSpec = evalRoot ? read(`${evalRoot}/specs/${changeContracts[evalChange].specDirectory}/spec.md`) : '';
+const evalDesign = evalRoot ? read(`${evalRoot}/design.md`) : '';
+const evalTasks = evalRoot ? read(`${evalRoot}/tasks.md`) : '';
 for (const facadeRequirement of ["«Skill workflow делегирования»", "«Workspace discipline делегирования»"]) {
   if (!evalSpec.includes(facadeRequirement)) {
     errors.push(`skill eval spec: missing facade owner reference ${facadeRequirement}`);
@@ -217,7 +190,7 @@ if (!evalSpec.includes("package-owned bootstrap") || !evalDesign.includes("packa
 if (!evalDesign.includes("## Scenario Matrix") || !evalDesign.includes("scenario_id")) {
   errors.push("skill eval design: missing deterministic scenario matrix");
 }
-for (const scenario of ["client-happy", "model-question", "model-plan", "model-permission-covered", "model-permission-expansion", "model-semantic-failure", "live-marker"]) {
+for (const scenario of registry.evalScenarioIds) {
   if (!evalDesign.includes(`\`${scenario}\``)) errors.push(`skill eval design: scenario matrix missing ${scenario}`);
 }
 for (const field of ["schema_version", "actual_task_outcome", "reported_task_outcome", "fixture_assertion_outcome", "evidence_publication_status", "evidence_ref", "cleanup_status", "failure_stage", "not_observed", "not_reported"]) {
@@ -233,18 +206,20 @@ if (/eval_status[^\n]{0,160}external_adapter_drift|external_adapter_drift[^\n]{0
   errors.push("skill eval spec: external_adapter_drift is adapter classification, not EvalResultV1 eval_status");
 }
 
-const facadeSpec = read(
-  `${changeRoot("add-cursor-delegation-workflow")}/specs/cursor-task-delegation/spec.md`,
-);
+const facadeRoot = changeRoot(facadeChange);
+const facadeSpec = facadeRoot
+  ? read(`${facadeRoot}/specs/${changeContracts[facadeChange].specDirectory}/spec.md`)
+  : '';
 for (const wireTerm of ["CallToolResult", "SessionEnvelope", "TurnEnvelope", "DelegateError", "delegated:true"]) {
   if (facadeSpec.includes(wireTerm)) {
     errors.push(`facade spec: runtime owns MCP wire term ${wireTerm}`);
   }
 }
 
-const runtimeSpec = read(
-  `${changeRoot("harden-cursor-acp-session-runtime")}/specs/cursor-acp-session-runtime/spec.md`,
-);
+const runtimeRoot = changeRoot(runtimeChange);
+const runtimeSpec = runtimeRoot
+  ? read(`${runtimeRoot}/specs/${changeContracts[runtimeChange].specDirectory}/spec.md`)
+  : '';
 for (const claim of [
   "единственный нормативный источник переходов",
   "единственным владельцем MCP schemas и всех response envelopes",
@@ -255,10 +230,24 @@ for (const claim of [
   }
 }
 
-if (errors.length > 0) {
-  console.error("OpenSpec semantic gate failed:");
-  for (const error of errors) console.error(`- ${error}`);
-  process.exitCode = 1;
-} else {
-  console.log(`OpenSpec mechanical semantic gate passed for ${changes.length} changes; independent critic establishes semantic readiness.`);
+  return {
+    ok: errors.length === 0,
+    errors,
+    checkedChanges: changes.length,
+  };
+}
+
+export function runOpenSpecSemanticsCli(rootPath = process.cwd(), output = console, registry = PROJECT_SEMANTIC_REGISTRY) {
+  const result = checkOpenSpecSemantics(rootPath, registry);
+  if (!result.ok) {
+    output.error("OpenSpec semantic gate failed:");
+    for (const error of result.errors) output.error(`- ${error}`);
+    return 1;
+  }
+  output.log(`OpenSpec mechanical semantic gate passed for ${result.checkedChanges} changes; independent critic establishes semantic readiness.`);
+  return 0;
+}
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  process.exitCode = runOpenSpecSemanticsCli();
 }
