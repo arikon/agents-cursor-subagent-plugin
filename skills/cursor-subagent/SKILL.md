@@ -1,17 +1,40 @@
 ---
 name: "cursor-subagent"
-description: "Делегировать задачу Cursor Agent через интерактивную сессию ACP."
+description: "Delegate a task to Cursor Agent through an interactive ACP session."
 ---
 
 # Cursor ACP subagent
 
-Используй этот skill, когда пользователь явно просит поручить часть работы Cursor.
+Use this skill when the user explicitly asks to delegate part of the work to
+Cursor.
 
-1. Начни с `cursor_delegate({prompt,cwd,mode})`. Для `ask` и `plan` допустим canonical checkout; для пишущего `agent` вызывающий обязан заранее передать отдельный изолированный worktree. Skill не создаёт и не проверяет VCS-worktree.
-2. Сохрани полные `session_id` и `turn_id`, затем наблюдай ход только через `cursor_wait({session_id,turn_id,after_event_id,timeout_ms})`. Не опрашивай `cursor_session_status`: это advanced-диагностика, а не workflow.
-3. При pending передавай пользователю нормализованный контекст и отвечай полными `session_id`, `turn_id`, `request_id`: question — `cursor_answer_question` только после отдельного user follow-up с выбором, skip или cancel; plan — `cursor_answer_plan` с `accept` только после явного одобрения, а с `reject` только после явного отклонения или отмены.
-4. Permission, точно покрытый текущим поручением, отвечай ровно один раз через `cursor_answer_permission` с `decision: "allow-once"` без дополнительного user turn. Если permission расширяет scope, содержит destructive/external action или доступ к credentials, не выводи разрешение из неявного контекста: до отдельного explicit user follow-up не вызывай answer-tool, а после него ответь ровно один раз и только `allow-once` или `reject-once` согласно явному решению.
-5. Protocol completion не доказывает семантический успех задачи: проверь результат и изменения самостоятельно. В `finally` всегда вызови `cursor_close_session({session_id})`; повторный close безопасен.
-6. Answer-tools — часть основного interactive workflow. Низкоуровневые `cursor_start_session`, `cursor_send_prompt`, `cursor_session_status` и `cursor_cancel` предназначены только для advanced diagnosis/recovery.
+1. Start with `cursor_delegate({prompt,cwd,mode})`. A canonical checkout is
+   permitted for `ask` and `plan`; for write-capable `agent`, the caller MUST
+   provide a separate isolated worktree in advance. This skill neither creates
+   nor verifies VCS worktrees.
+2. Retain the complete `session_id` and `turn_id`, then observe progress only
+   with `cursor_wait({session_id,turn_id,after_event_id,timeout_ms})`. Do not
+   poll `cursor_session_status`: it is for advanced diagnostics, not the
+   workflow.
+3. When pending, give the user normalized context and retain the complete
+   `session_id`, `turn_id`, and `request_id`: for a question, call
+   `cursor_answer_question` only after a separate user follow-up choosing an
+   answer, skip, or cancel; for a plan, call `cursor_answer_plan` with `accept`
+   only after explicit approval, and with `reject` only after explicit rejection
+   or cancellation.
+4. Answer a permission exactly covered by the current task exactly once through
+   `cursor_answer_permission` with `decision: "allow-once"`, without another
+   user turn. When a permission expands scope or includes a destructive or
+   external action or credential access, do not infer permission from implicit
+   context: do not call an answer tool until a separate explicit user follow-up;
+   then answer exactly once with only `allow-once` or `reject-once`, according
+   to that explicit decision.
+5. Protocol completion does not prove semantic task success: verify the result
+   and changes independently. Always call `cursor_close_session({session_id})`
+   in `finally`; calling it repeatedly is safe.
+6. Answer tools are part of the primary interactive workflow. The low-level
+   `cursor_start_session`, `cursor_send_prompt`, `cursor_session_status`, and
+   `cursor_cancel` are intended only for advanced diagnosis or recovery.
 
-Каждая сессия принадлежит одному Cursor-процессу. Не запускай два пишущих агента в одном worktree.
+Each session belongs to one Cursor process. Do not run two write-capable agents
+in the same worktree.

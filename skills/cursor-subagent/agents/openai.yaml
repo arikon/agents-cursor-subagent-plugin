@@ -1,7 +1,7 @@
 interface:
   display_name: "Cursor Subagent"
-  short_description: "Делегировать задачу Cursor через интерактивный ACP"
-  default_prompt: "Используй $cursor-subagent, чтобы делегировать задачу Cursor Agent через ACP."
+  short_description: "Delegate a task to Cursor through interactive ACP"
+  default_prompt: "Use $cursor-subagent to delegate a task to Cursor Agent through ACP."
 
 policy:
   allow_implicit_invocation: true
