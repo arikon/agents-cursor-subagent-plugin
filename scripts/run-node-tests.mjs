@@ -23,8 +23,8 @@ const productSources = Object.freeze([
 ]);
 const coverageThresholds = Object.freeze({ lines: 90, branches: 90, functions: 90 });
 export const LANES = Object.freeze({
-  unit: Object.freeze({ tests: unitTests, concurrency: 1, timeoutMs: 120_000, deadlineMs: 600_000 }),
-  coverage: Object.freeze({ tests: unitTests, concurrency: 1, timeoutMs: 120_000, deadlineMs: 900_000, coverage: true }),
+  unit: Object.freeze({ tests: unitTests, concurrency: 2, timeoutMs: 120_000, deadlineMs: 600_000 }),
+  coverage: Object.freeze({ tests: unitTests, concurrency: 2, timeoutMs: 120_000, deadlineMs: 900_000, coverage: true }),
   release: Object.freeze({ tests: Object.freeze(['tests/release-e2e.test.mjs']), concurrency: 1, timeoutMs: 120_000, deadlineMs: 300_000 }),
 });
 

@@ -7,7 +7,7 @@ import { dirname, join } from 'node:path';
 import { PassThrough } from 'node:stream';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { cli, runSupervisor } from '../scripts/run-node-tests.mjs';
+import { cli, LANES, runSupervisor } from '../scripts/run-node-tests.mjs';
 import { runUnitCoverage } from '../scripts/run-unit-coverage.mjs';
 
 const projectRoot = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -142,6 +142,67 @@ async function stopProcessGroup(child) {
   try { process.kill(-child.pid, 'SIGTERM'); } catch (error) { if (error.code !== 'ESRCH') throw error; }
   await closed;
 }
+
+test('lane matrix produces the exact child argv and keeps parent deadlines fixed', async (t) => {
+  const unitTests = [
+    'tests/bootstrap.test.mjs',
+    'tests/check-openspec-semantics.test.mjs',
+    'tests/codex-app-server-client.test.mjs',
+    'tests/cursor-skill-eval.test.mjs',
+    'tests/facade.test.mjs',
+    'tests/mcp-smoke.test.mjs',
+    'tests/mcp-transport.test.mjs',
+    'tests/node-test-reporter-v22.test.mjs',
+    'tests/run-cursor-skill-eval.test.mjs',
+    'tests/runtime.test.mjs',
+    'tests/node-test-supervisor.test.mjs',
+  ];
+  const productSources = [
+    'scripts/check-openspec-semantics.mjs', 'scripts/codex-app-server-client.mjs', 'scripts/cursor-skill-eval.mjs', 'scripts/openspec-semantic-registry.mjs',
+    'scripts/cursor-subagent-bootstrap.mjs', 'scripts/cursor-subagent-mcp.mjs', 'scripts/node-test-reporter-v22.mjs',
+    'scripts/recording-mcp-proxy.mjs', 'scripts/run-cursor-skill-eval.mjs', 'scripts/run-node-tests.mjs', 'scripts/run-unit-coverage.mjs',
+  ];
+  const cases = [
+    { lane: 'unit', concurrency: 2, tests: unitTests, timeoutMs: 120_000, deadlineMs: 600_000, coverage: false },
+    { lane: 'coverage', concurrency: 2, tests: unitTests, timeoutMs: 120_000, deadlineMs: 900_000, coverage: true },
+    { lane: 'release', concurrency: 1, tests: ['tests/release-e2e.test.mjs'], timeoutMs: 120_000, deadlineMs: 300_000, coverage: false },
+  ];
+  const coverage = await coverageSummary();
+
+  for (const scenario of cases) {
+    await t.test(scenario.lane, async (t) => {
+      let invocation;
+      const delegate = fakeSpawn({ coverage: scenario.lane === 'coverage' ? coverage : null });
+      const captureSpawn = (command, args, options) => {
+        invocation = { command, args, options };
+        return delegate(command, args, options);
+      };
+      const result = await runSupervisor({
+        laneName: scenario.lane,
+        artifactRoot: await artifactRoot(t),
+        dependencies: { platform: 'linux', spawn: captureSpawn },
+      });
+
+      assert.equal(result.verdict, 'passed');
+      assert.equal(invocation.command, process.execPath);
+      assert.deepEqual(
+        invocation.args,
+        [
+          '--test', `--test-concurrency=${scenario.concurrency}`, `--test-timeout=${scenario.timeoutMs}`,
+          '--test-reporter=tap', `--test-reporter-destination=${join(result.artifactDir, 'tap.txt')}`,
+          `--test-reporter=${join(projectRoot, 'scripts/node-test-reporter-v22.mjs')}`,
+          `--test-reporter-destination=${join(result.artifactDir, 'failures.jsonl')}`,
+          ...(scenario.coverage ? [
+            '--experimental-test-coverage', '--test-coverage-lines=90', '--test-coverage-branches=90', '--test-coverage-functions=90',
+            ...productSources.map((source) => `--test-coverage-include=${source}`),
+          ] : []),
+          ...scenario.tests.map((path) => join(projectRoot, path)),
+        ],
+      );
+      assert.equal(LANES[scenario.lane].deadlineMs, scenario.deadlineMs);
+    });
+  }
+});
 
 test('unsupported platform and invalid lane fail closed before spawn', async () => {
   let spawnCount = 0;

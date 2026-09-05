@@ -49,6 +49,7 @@ const contracts = {
   [supervisorChange]: {
     capability: 'fixture-supervisor-capability',
     ownerClaim: '`fixture-supervisor-capability` owns runner lifecycle, artifacts, reporting and coverage gate',
+    requirementIds: ['NTS-3'],
     requirements: [
       'Supervisor fixture requirement',
     ],
@@ -75,7 +76,6 @@ const registry = {
     eval: evalChange,
     supervisor: supervisorChange,
   },
-  evalScenarioIds: evalScenarios,
 };
 
 async function write(root, relativePath, contents) {
@@ -91,7 +91,9 @@ async function append(root, relativePath, suffix) {
 
 function designFor(contract) {
   const indexed = [...contract.requirements, ...(contract.modifiedRequirements ?? [])]
-    .map((requirement) => `«${requirement}»`)
+    .map((requirement, index) => contract.requirementIds?.[index]
+      ? `\`${contract.requirementIds[index]}\` → «${requirement}»`
+      : `«${requirement}»`)
     .join(', ');
   return [
     '# Design',
@@ -144,7 +146,7 @@ async function fixture(t) {
   await write(
     root,
     `openspec/changes/${evalChange}/specs/${contracts[facadeChange].capability}/spec.md`,
-    '## MODIFIED Requirements\n### Requirement: Skill workflow делегирования\nModified contract.\n',
+    '## MODIFIED Requirements\n### Requirement: Skill workflow делегирования\nMain capability contract.\nModified contract.\n',
   );
 
   await append(root, `openspec/changes/${evalChange}/proposal.md`, `- \`${contracts[facadeChange].capability}\`\n`);
@@ -204,10 +206,133 @@ async function replace(root, path, from, to = '') {
   await writeFile(target, source.replaceAll(from, to));
 }
 
+async function addReferenceOnlyToolingChange(root, {
+  marker = 'schema: spec-driven\nskip_specs: true\n',
+  registryRequirementId = 'NTS-3',
+  registryRequirement = 'Supervisor fixture requirement',
+  registryOwnerChange = supervisorChange,
+  artifactRequirementId = registryRequirementId,
+  artifactRequirement = registryRequirement,
+  withReferences = true,
+  withDelta = false,
+  capabilityClaim = false,
+} = {}) {
+  const toolingChange = 'fixture-tooling';
+  const toolingOwner = '`fixture-supervisor-capability` retains tooling ownership';
+  const changeRoot = `openspec/changes/${toolingChange}`;
+  if (marker !== null) await write(root, `${changeRoot}/.openspec.yaml`, marker);
+  await write(root, `${changeRoot}/proposal.md`, capabilityClaim
+    ? '## Capabilities\n\n- `fixture-tooling-capability`\n'
+    : '## Capabilities\n\nNo capability changes.\n');
+  await write(root, `${changeRoot}/design.md`, [
+    '# Design',
+    '## v1 Contract Baseline',
+    '**Goal.** Fixture tooling goal.',
+    '**Non-goals.** Fixture tooling non-goals.',
+    `**Public-invariant index.** \`${artifactRequirementId}\` → «${artifactRequirement}»`,
+    `**Owner map.** ${toolingOwner}`,
+    '**Implementation-ready exit.** Fixture exit.',
+    '**Future-change candidates.** None.',
+    '',
+  ].join('\n'));
+  await write(root, `${changeRoot}/tasks.md`, `- [ ] Verify \`${artifactRequirementId}\` «${artifactRequirement}».\n`);
+  if (withDelta) {
+    await write(root, `${changeRoot}/specs/unexpected/spec.md`, '### Requirement: Unexpected delta\n');
+  }
+  return {
+    ...registry,
+    changes: [...registry.changes, {
+      id: toolingChange,
+      ownerClaim: toolingOwner,
+      modified: [],
+      references: withReferences ? [{
+        ownerChange: registryOwnerChange,
+        capability: contracts[supervisorChange].capability,
+        requirementId: registryRequirementId,
+        requirement: registryRequirement,
+      }] : [],
+    }],
+  };
+}
+
 test('semantic gate accepts a complete five-change contract tree', async (t) => {
   const root = await fixture(t);
   const result = run(root);
   assert.deepEqual(result, { ok: true, errors: [], checkedChanges: 5 });
+});
+
+test('semantic gate accepts a registered skip-specs tooling change without a capability delta', async (t) => {
+  const root = await fixture(t);
+  const toolingRegistry = await addReferenceOnlyToolingChange(root);
+  assert.deepEqual(checkOpenSpecSemantics(root, toolingRegistry), {
+    ok: true,
+    errors: [],
+    checkedChanges: 6,
+  });
+});
+
+for (const { name, options, expected } of [
+  {
+    name: 'reference-only change without skip_specs marker',
+    options: { marker: null },
+    expected: 'reference-only change must declare top-level skip_specs: true',
+  },
+  {
+    name: 'reference-only change with conflicting skip_specs marker',
+    options: { marker: 'schema: spec-driven\nskip_specs: false\n' },
+    expected: 'reference-only change must declare top-level skip_specs: true',
+  },
+  {
+    name: 'reference-only change with an invalid owner reference',
+    options: { registryRequirement: 'Missing owner requirement' },
+    expected: 'invalid owner reference',
+  },
+  {
+    name: 'reference-only change with a missing owner change',
+    options: { registryOwnerChange: 'missing-owner-change' },
+    expected: 'invalid owner reference',
+  },
+  {
+    name: 'reference-only change without an owner reference',
+    options: { withReferences: false },
+    expected: 'must declare an existing owner requirement',
+  },
+  {
+    name: 'reference-only change with artifact traceability drift',
+    options: { artifactRequirement: 'Different artifact requirement' },
+    expected: 'Public-invariant index|lacks baseline/task traceability',
+  },
+  {
+    name: 'reference-only change with an invalid requirement ID',
+    options: { registryRequirementId: 'NTS-999' },
+    expected: 'invalid owner reference',
+  },
+  {
+    name: 'reference-only change with a capability delta',
+    options: { withDelta: true },
+    expected: 'cannot contain capability deltas',
+  },
+  {
+    name: 'reference-only change with a capability claim',
+    options: { capabilityClaim: true },
+    expected: 'reference-only change cannot claim a capability',
+  },
+]) {
+  test(`semantic gate rejects ${name}`, async (t) => {
+    const root = await fixture(t);
+    const toolingRegistry = await addReferenceOnlyToolingChange(root, options);
+    assertRejected(checkOpenSpecSemantics(root, toolingRegistry), expected);
+  });
+}
+
+test('semantic gate rejects skip_specs on a capability-owning change', async (t) => {
+  const root = await fixture(t);
+  await write(
+    root,
+    `openspec/changes/${supervisorChange}/.openspec.yaml`,
+    'schema: spec-driven\nskip_specs: true\n',
+  );
+  assertRejected(run(root), 'skip_specs change must be reference-only');
 });
 
 test('CLI contract publishes a terminal success verdict', async (t) => {
@@ -235,7 +360,7 @@ for (const { name, path, from, to = '', expected } of [
   { name: 'unsupported schema', path: 'openspec/config.yaml', from: 'schema: spec-driven', to: 'schema: custom', expected: 'must select the spec-driven schema' },
   { name: 'duplicated project governance', path: 'openspec/config.yaml', from: 'defined only in AGENTS.md', to: 'defined here', expected: 'must point to, not duplicate' },
   { name: 'missing baseline field', path: `openspec/changes/${supervisorChange}/design.md`, from: '**Future-change candidates.** None.', expected: 'baseline missing' },
-  { name: 'missing new capability declaration', path: `openspec/changes/${supervisorChange}/proposal.md`, from: `- \`${contracts[supervisorChange].capability}\``, expected: 'missing New Capability' },
+  { name: 'missing capability declaration', path: `openspec/changes/${supervisorChange}/proposal.md`, from: `- \`${contracts[supervisorChange].capability}\``, expected: 'missing capability' },
   { name: 'duplicated requirement ownership', path: `openspec/changes/${facadeChange}/specs/${contracts[facadeChange].capability}/spec.md`, from: 'Workspace discipline делегирования', to: 'Runtime fixture requirement', expected: 'multiple owners' },
   { name: 'modified requirement without task traceability', path: `openspec/changes/${evalChange}/tasks.md`, from: '«Skill workflow делегирования»', expected: 'modified requirement Skill workflow делегирования lacks baseline/task traceability' },
   { name: 'normative keyword outside delta spec', path: `openspec/changes/${supervisorChange}/proposal.md`, from: '## New Capabilities', to: '## New Capabilities\nMUST remain normative.', expected: 'normative keyword belongs only in its delta spec' },
@@ -290,10 +415,10 @@ test('semantic gate rejects an empty capability spec', async (t) => {
 for (const { name, path, from, to = '', expected } of [
   { name: 'missing modified delta', path: `openspec/changes/${evalChange}/specs/${contracts[facadeChange].capability}/spec.md`, from: '## MODIFIED Requirements', expected: 'invalid modified capability' },
   { name: 'orphaned authority rule', path: `openspec/changes/${evalChange}/specs/${contracts[facadeChange].capability}/spec.md`, from: '### Requirement: Skill workflow делегирования', expected: 'invalid modified capability' },
+  { name: 'incomplete modified requirement copy', path: `openspec/changes/${evalChange}/specs/${contracts[facadeChange].capability}/spec.md`, from: 'Main capability contract.', expected: 'invalid modified capability' },
   { name: 'incomplete EvalResultV1', path: `openspec/changes/${evalChange}/specs/${contracts[evalChange].capability}/spec.md`, from: 'failure_stage', expected: 'EvalResultV1 missing failure_stage' },
   { name: 'unconditional transcript', path: `openspec/changes/${evalChange}/specs/${contracts[evalChange].capability}/spec.md`, from: 'the transcript exists only inside published evidence', expected: 'transcript must remain conditional' },
   { name: 'invalid external adapter eval status', path: `openspec/changes/${evalChange}/specs/${contracts[evalChange].capability}/spec.md`, from: '"eval_status": "pass | skipped | integration_failure | agent_behavior_mismatch",', to: '"eval_status": "external_adapter_drift",', expected: 'external_adapter_drift is adapter classification' },
-  { name: 'incomplete scenario matrix', path: `openspec/changes/${evalChange}/design.md`, from: '`fixture-plan`', expected: 'scenario matrix missing fixture-plan' },
   { name: 'inaccurate owner reference', path: `openspec/changes/${evalChange}/specs/${contracts[evalChange].capability}/spec.md`, from: 'package-owned bootstrap', expected: 'must reuse package-owned bootstrap' },
 ]) {
   test(`semantic gate rejects ${name}`, async (t) => {

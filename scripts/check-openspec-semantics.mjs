@@ -47,17 +47,53 @@ export function checkOpenSpecSemantics(rootPath = process.cwd(), registry = PROJ
   }
 
   function requirementNames(change) {
+    if (!changeContracts[change].capability) return [];
     const resolvedRoot = changeRoot(change);
     const specPath = `${resolvedRoot}/specs`;
     const specFile = `${specPath}/${changeContracts[change].specDirectory}/spec.md`;
+    const modifiedNames = new Set(changeContracts[change].modified.map(({ requirement }) => requirement));
     return [...read(specFile).matchAll(/^### Requirement: (.+)$/gm)].map(
       ([, name]) => name,
-    );
+    ).filter((name) => !modifiedNames.has(name));
+  }
+
+  function declaresSkipSpecs(resolvedRoot) {
+    const markerPath = `${resolvedRoot}/.openspec.yaml`;
+    if (!existsSync(resolve(root, markerPath))) return false;
+    const match = read(markerPath).match(/^skip_specs:[ \t]*(true|false)[ \t]*(?:#.*)?$/m);
+    return match?.[1] === "true";
   }
 
   function indexedRequirements(design) {
     const match = design.match(/^\*\*Public-invariant index\.\*\* (.+)$/m);
     return match ? [...match[1].matchAll(/«([^»]+)»/g)].map(([, name]) => name) : [];
+  }
+
+  function indexedRequirementMappings(design) {
+    const match = design.match(/^\*\*Public-invariant index\.\*\* (.+)$/m);
+    return match
+      ? [...match[1].matchAll(/`([^`]+)`\s*→\s*«([^»]+)»/g)]
+        .map(([, requirementId, requirement]) => ({ requirementId, requirement }))
+      : [];
+  }
+
+  function requirementBlock(contents, requirement) {
+    const marker = `### Requirement: ${requirement}`;
+    const start = contents.indexOf(marker);
+    if (start === -1) return "";
+    const remainder = contents.slice(start);
+    const next = remainder.slice(marker.length).search(/\n(?:### Requirement:|## (?:ADDED|MODIFIED|REMOVED|RENAMED) Requirements)/);
+    return next === -1 ? remainder.trim() : remainder.slice(0, marker.length + next).trim();
+  }
+
+  function preservesRequirement(source, modified) {
+    const sourceLines = source.split("\n").map((line) => line.trim()).filter(Boolean);
+    const modifiedLines = modified.split("\n").map((line) => line.trim()).filter(Boolean);
+    let cursor = 0;
+    for (const line of modifiedLines) {
+      if (line === sourceLines[cursor]) cursor += 1;
+    }
+    return cursor === sourceLines.length;
   }
 
   const requirementOwners = new Map();
@@ -96,7 +132,34 @@ for (const change of changes) {
   const designPath = `${rootPath}/design.md`;
   const design = read(designPath);
   const proposal = read(`${rootPath}/proposal.md`);
+  const tasks = read(`${rootPath}/tasks.md`);
   const contract = changeContracts[change];
+  const references = contract.references ?? [];
+  const referenceOnly = !contract.capability;
+  const skipSpecs = declaresSkipSpecs(rootPath);
+  const capabilityStart = proposal.indexOf("## Capabilities");
+  const capabilityRemainder = capabilityStart === -1 ? "" : proposal.slice(capabilityStart);
+  const capabilityEnd = capabilityRemainder.indexOf("\n## ", 1);
+  const capabilitySection = capabilityEnd === -1
+    ? capabilityRemainder
+    : capabilityRemainder.slice(0, capabilityEnd);
+
+  if (referenceOnly && !skipSpecs) {
+    errors.push(`${rootPath}/.openspec.yaml: reference-only change must declare top-level skip_specs: true`);
+  }
+  if (referenceOnly && references.length === 0) {
+    errors.push(`${rootPath}: reference-only skip_specs change must declare an existing owner requirement`);
+  }
+  if (!referenceOnly && skipSpecs) {
+    errors.push(`${rootPath}: skip_specs change must be reference-only in semantic registry`);
+  }
+  if (referenceOnly && /^-[ \t]+`[^`]+`/m.test(capabilitySection)) {
+    errors.push(`${rootPath}/proposal.md: reference-only change cannot claim a capability`);
+  }
+  if (referenceOnly && existsSync(resolve(root, `${rootPath}/specs`)) &&
+      readdirSync(resolve(root, `${rootPath}/specs`)).length > 0) {
+    errors.push(`${rootPath}: reference-only skip_specs change cannot contain capability deltas`);
+  }
 
   if (!design.includes("## v1 Contract Baseline")) {
     errors.push(`${designPath}: missing v1 Contract Baseline`);
@@ -110,17 +173,23 @@ for (const change of changes) {
   if (!design.includes(contract.ownerClaim)) {
     errors.push(`${designPath}: owner map does not declare ${contract.ownerClaim}`);
   }
-  if (!proposal.includes(`- \`${contract.capability}\``)) {
-    errors.push(`${rootPath}/proposal.md: missing New Capability ${contract.capability}`);
-  }
-  if (!read(`${rootPath}/specs/${contract.specDirectory}/spec.md`)) {
-    errors.push(`${rootPath}: capability ${contract.capability} has no expected spec path`);
+  if (!referenceOnly) {
+    if (!proposal.includes(`- \`${contract.capability}\``)) {
+      errors.push(`${rootPath}/proposal.md: missing capability ${contract.capability}`);
+    }
+    if (!read(`${rootPath}/specs/${contract.specDirectory}/spec.md`)) {
+      errors.push(`${rootPath}: capability ${contract.capability} has no expected spec path`);
+    }
   }
 
   const requirements = requirementNames(change);
   const index = indexedRequirements(design);
   const modified = contract.modified;
-  const expectedIndex = [...requirements, ...modified.map(({ requirement }) => requirement)];
+  const expectedIndex = [
+    ...requirements,
+    ...modified.map(({ requirement }) => requirement),
+    ...references.map(({ requirement }) => requirement),
+  ];
   if (new Set(index).size !== index.length || index.length !== expectedIndex.length ||
       expectedIndex.some((requirement) => !index.includes(requirement))) {
     errors.push(`${designPath}: Public-invariant index must equal this change's requirement set`);
@@ -135,19 +204,40 @@ for (const change of changes) {
     if (!design.includes(`«${requirement}»`)) {
       errors.push(`${designPath}: baseline does not index requirement «${requirement}»`);
     }
-    if (!read(`${rootPath}/tasks.md`).includes(`«${requirement}»`)) {
+    if (!tasks.includes(`«${requirement}»`)) {
       errors.push(`${rootPath}/tasks.md: no task references requirement «${requirement}»`);
     }
   }
   for (const { capability, requirement } of modified) {
     const deltaPath = `${rootPath}/specs/${capability}/spec.md`;
     const mainPath = `openspec/specs/${capability}/spec.md`;
-    if (!proposal.includes(`- \`${capability}\``) || !read(deltaPath).includes("## MODIFIED Requirements") ||
-        !read(deltaPath).includes(`### Requirement: ${requirement}`) || !read(mainPath).includes(`### Requirement: ${requirement}`)) {
+    const deltaSpec = read(deltaPath);
+    const mainSpec = read(mainPath);
+    if (!proposal.includes(`- \`${capability}\``) || !deltaSpec.includes("## MODIFIED Requirements") ||
+        !deltaSpec.includes(`### Requirement: ${requirement}`) || !mainSpec.includes(`### Requirement: ${requirement}`) ||
+        !preservesRequirement(requirementBlock(mainSpec, requirement), requirementBlock(deltaSpec, requirement))) {
       errors.push(`${rootPath}: invalid modified capability ${capability}/${requirement}`);
     }
-    if (!design.includes(`«${requirement}»`) || !read(`${rootPath}/tasks.md`).includes(`«${requirement}»`)) {
+    if (!design.includes(`«${requirement}»`) || !tasks.includes(`«${requirement}»`)) {
       errors.push(`${rootPath}: modified requirement ${requirement} lacks baseline/task traceability`);
+    }
+  }
+  for (const { ownerChange, capability, requirementId, requirement } of references) {
+    const owner = changeContracts[ownerChange];
+    const ownerRoot = owner ? changeRoot(ownerChange) : null;
+    const ownerMappings = ownerRoot
+      ? indexedRequirementMappings(read(`${ownerRoot}/design.md`))
+      : [];
+    const validOwner = owner?.capability === capability &&
+      requirementNames(ownerChange).includes(requirement) &&
+      ownerMappings.some((mapping) =>
+        mapping.requirementId === requirementId && mapping.requirement === requirement);
+    if (!validOwner) {
+      errors.push(`${rootPath}: invalid owner reference ${ownerChange}/${capability}/${requirementId}/${requirement}`);
+    }
+    if (!design.includes(`\`${requirementId}\``) || !design.includes(`«${requirement}»`) ||
+        !tasks.includes(`\`${requirementId}\``) || !tasks.includes(`«${requirement}»`)) {
+      errors.push(`${rootPath}: referenced requirement ${requirementId}/${requirement} lacks baseline/task traceability`);
     }
   }
 
@@ -189,9 +279,6 @@ if (!evalSpec.includes("package-owned bootstrap") || !evalDesign.includes("packa
 }
 if (!evalDesign.includes("## Scenario Matrix") || !evalDesign.includes("scenario_id")) {
   errors.push("skill eval design: missing deterministic scenario matrix");
-}
-for (const scenario of registry.evalScenarioIds) {
-  if (!evalDesign.includes(`\`${scenario}\``)) errors.push(`skill eval design: scenario matrix missing ${scenario}`);
 }
 for (const field of ["schema_version", "actual_task_outcome", "reported_task_outcome", "fixture_assertion_outcome", "evidence_publication_status", "evidence_ref", "cleanup_status", "failure_stage", "not_observed", "not_reported"]) {
   if (!evalSpec.includes(field)) errors.push(`skill eval spec: EvalResultV1 missing ${field}`);

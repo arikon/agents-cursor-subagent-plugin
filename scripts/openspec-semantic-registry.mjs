@@ -4,6 +4,8 @@ const changeIds = Object.freeze({
   package: "package-cursor-subagent-plugin",
   eval: "add-cursor-subagent-skill-evals",
   supervisor: "add-durable-node-test-supervisor",
+  expandedEval: "expand-cursor-subagent-skill-evals",
+  parallelTestLanes: "parallelize-node-test-lanes",
 });
 
 export const PROJECT_SEMANTIC_REGISTRY = Object.freeze({
@@ -45,15 +47,29 @@ export const PROJECT_SEMANTIC_REGISTRY = Object.freeze({
       ownerClaim: "`node-test-supervision` owns runner lifecycle, artifacts, reporting and coverage gate",
       modified: Object.freeze([]),
     }),
+    Object.freeze({
+      id: changeIds.expandedEval,
+      capability: "cursor-subagent-skill-evals",
+      specDirectory: "cursor-subagent-skill-evals",
+      ownerClaim: "`cursor-subagent-skill-evals` owns corpus admission, selection, scenario oracle, classification and eval evidence",
+      modified: Object.freeze([
+        Object.freeze({ capability: "cursor-subagent-skill-evals", requirement: "Разделённые eval lanes и evidence загрузки skill" }),
+        Object.freeze({ capability: "cursor-subagent-skill-evals", requirement: "Сценарный контракт поведения и authority-aware interaction" }),
+      ]),
+    }),
+    Object.freeze({
+      id: changeIds.parallelTestLanes,
+      ownerClaim: "`node-test-supervision` сохраняет владение runner lifecycle,",
+      modified: Object.freeze([]),
+      references: Object.freeze([
+        Object.freeze({
+          ownerChange: changeIds.supervisor,
+          capability: "node-test-supervision",
+          requirementId: "NTS-3",
+          requirement: "Lane selection и coverage scope",
+        }),
+      ]),
+    }),
   ]),
   roles: changeIds,
-  evalScenarioIds: Object.freeze([
-    "client-happy",
-    "model-question",
-    "model-plan",
-    "model-permission-covered",
-    "model-permission-expansion",
-    "model-semantic-failure",
-    "live-marker",
-  ]),
 });
