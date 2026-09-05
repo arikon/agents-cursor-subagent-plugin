@@ -820,7 +820,10 @@ test('negative, nonzero, partial and output-overflow mutators compensate only th
 
 test('mutator timeout compensates an observed partial add and list reread failure requires recovery', async (t) => {
   const timeoutContext = await fixture(t); timeoutContext.env.FAKE_CODEX_TIMEOUT_OPERATION = 'marketplace-add';
-  let result = await runBootstrap(['install', ...timeoutContext.common], { env: timeoutContext.env });
+  let result = await runBootstrap(['install', ...timeoutContext.common], {
+    env: timeoutContext.env,
+    runCommand: (command, args, options) => runPackageCommand(command, args, { ...options, timeoutMs: 1_000 }),
+  });
   assert.equal(result.envelope.state, 'failed');
   const timeoutState = JSON.parse(await readFile(timeoutContext.state, 'utf8'));
   assert.deepEqual(timeoutState.marketplaces, []); assert.deepEqual(timeoutState.mutations, ['marketplace-add', 'marketplace-remove']);

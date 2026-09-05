@@ -6,6 +6,7 @@ const changeIds = Object.freeze({
   supervisor: "add-durable-node-test-supervisor",
   expandedEval: "expand-cursor-subagent-skill-evals",
   parallelTestLanes: "parallelize-node-test-lanes",
+  accelerateNodeUnitTests: "accelerate-node-unit-tests",
 });
 
 export const PROJECT_SEMANTIC_REGISTRY = Object.freeze({
@@ -65,6 +66,19 @@ export const PROJECT_SEMANTIC_REGISTRY = Object.freeze({
     }),
     Object.freeze({
       id: changeIds.parallelTestLanes,
+      ownerClaim: "`node-test-supervision` сохраняет владение runner lifecycle,",
+      modified: Object.freeze([]),
+      references: Object.freeze([
+        Object.freeze({
+          ownerChange: changeIds.supervisor,
+          capability: "node-test-supervision",
+          requirementId: "NTS-3",
+          requirement: "Lane selection и coverage scope",
+        }),
+      ]),
+    }),
+    Object.freeze({
+      id: changeIds.accelerateNodeUnitTests,
       ownerClaim: "`node-test-supervision` сохраняет владение runner lifecycle,",
       modified: Object.freeze([]),
       references: Object.freeze([
