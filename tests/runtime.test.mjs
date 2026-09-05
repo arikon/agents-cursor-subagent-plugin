@@ -10,7 +10,7 @@ import { LIMITS, Runtime } from '../scripts/cursor-subagent-mcp.mjs';
 const fake = fileURLToPath(new URL('./fixtures/fake-acp.mjs', import.meta.url));
 const server = fileURLToPath(new URL('../scripts/cursor-subagent-mcp.mjs', import.meta.url));
 const cwd = process.cwd();
-const fakeEnvNames = ['CURSOR_AGENT_COMMAND', 'CURSOR_SUBAGENT_ADAPTER_ARGS', 'FAKE_ACP_PENDING', 'FAKE_ACP_CALLBACK_VARIANT', 'FAKE_ACP_FS_VARIANT', 'FAKE_ACP_LOG', 'FAKE_ACP_SAFE_EVIDENCE', 'FAKE_ACP_PATH', 'FAKE_ACP_CONTENT', 'FAKE_ACP_LINE', 'FAKE_ACP_LIMIT', 'FAKE_ACP_RESULT', 'FAKE_ACP_BAD_ADMISSION', 'FAKE_ACP_BAD_CAPABILITIES', 'FAKE_ACP_BAD_PROMPT_RESULT', 'FAKE_ACP_STOP_REASON', 'FAKE_ACP_VERSION', 'FAKE_ACP_VERSION_MODE', 'FAKE_ACP_EXIT_ON_PROMPT', 'FAKE_ACP_EXIT_AFTER_RESULT', 'FAKE_ACP_STDOUT_EOF_ON_PROMPT', 'FAKE_ACP_INVALID_UTF8', 'FAKE_ACP_INVALID_FRAME', 'FAKE_ACP_INIT_FRAME', 'FAKE_ACP_INIT_RESPONSE_VARIANT', 'FAKE_ACP_SESSION_VARIANT', 'FAKE_ACP_PROMPT_RESPONSE_VARIANT', 'FAKE_ACP_FRAME_VARIANT', 'FAKE_ACP_DELAY_INIT_MS', 'FAKE_ACP_DELAY_RESULT_MS', 'FAKE_ACP_IGNORE_CANCEL', 'FAKE_ACP_CRLF', 'FAKE_ACP_REQUIRE_POLICY', 'FAKE_ACP_EXPECT_DEFAULT_ARGV', 'FAKE_ACP_REJECT_PROMPT'];
+const fakeEnvNames = ['CURSOR_AGENT_COMMAND', 'CURSOR_SUBAGENT_ADAPTER_ARGS', 'CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH', 'FAKE_ACP_PENDING', 'FAKE_ACP_CALLBACK_VARIANT', 'FAKE_ACP_FS_VARIANT', 'FAKE_ACP_LOG', 'FAKE_ACP_SAFE_EVIDENCE', 'FAKE_ACP_PATH', 'FAKE_ACP_CONTENT', 'FAKE_ACP_LINE', 'FAKE_ACP_LIMIT', 'FAKE_ACP_RESULT', 'FAKE_ACP_BAD_ADMISSION', 'FAKE_ACP_BAD_CAPABILITIES', 'FAKE_ACP_BAD_PROMPT_RESULT', 'FAKE_ACP_STOP_REASON', 'FAKE_ACP_VERSION', 'FAKE_ACP_VERSION_MODE', 'FAKE_ACP_EXIT_ON_PROMPT', 'FAKE_ACP_EXIT_AFTER_RESULT', 'FAKE_ACP_STDOUT_EOF_ON_PROMPT', 'FAKE_ACP_INVALID_UTF8', 'FAKE_ACP_INVALID_FRAME', 'FAKE_ACP_INIT_FRAME', 'FAKE_ACP_INIT_RESPONSE_VARIANT', 'FAKE_ACP_SESSION_VARIANT', 'FAKE_ACP_PROMPT_RESPONSE_VARIANT', 'FAKE_ACP_FRAME_VARIANT', 'FAKE_ACP_DELAY_INIT_MS', 'FAKE_ACP_DELAY_RESULT_MS', 'FAKE_ACP_IGNORE_CANCEL', 'FAKE_ACP_CRLF', 'FAKE_ACP_REQUIRE_POLICY', 'FAKE_ACP_EXPECT_DEFAULT_ARGV', 'FAKE_ACP_REJECT_PROMPT'];
 
 function withFake(t, extra = {}) {
   const old = Object.fromEntries(fakeEnvNames.map((name) => [name, process.env[name]]));
@@ -23,6 +23,18 @@ function withFake(t, extra = {}) {
   const runtime = new Runtime({ roots: Object.hasOwn(extra, 'roots') ? extra.roots : [cwd] });
   t.after(() => { for (const name of fakeEnvNames) old[name] === undefined ? delete process.env[name] : process.env[name] = old[name]; });
   return runtime;
+}
+
+function withInjectedFake(t, extra = {}) {
+  const env = isolatedFakeEnvironment(extra.env);
+  return new Runtime({ env, roots: Object.hasOwn(extra, 'roots') ? extra.roots : [cwd] });
+}
+
+function isolatedFakeEnvironment(overrides = {}) {
+  const env = { ...process.env };
+  for (const name of fakeEnvNames) delete env[name];
+  return { ...env, CURSOR_AGENT_COMMAND: process.execPath, FAKE_ACP_PENDING: '', FAKE_ACP_REQUIRE_POLICY: '1',
+    CURSOR_SUBAGENT_ADAPTER_ARGS: JSON.stringify([fake]), ...overrides };
 }
 
 function withDefaultFake(t) {
@@ -415,6 +427,109 @@ test('pending request is turn-addressed and answer restores running state', asyn
   assert.equal(completed.turn_status, 'completed');
   assert.deepEqual(JSON.parse(readFileSync(log, 'utf8').trim()).result, { outcome: { outcome: 'answered', answers: [{ questionId: 'q', selectedOptionIds: ['yes'] }] } });
   await runtime.call('cursor_close_session', { session_id: session.session_id });
+});
+
+test('explicit fake-ACP program mode sequences pending, effect and terminal steps', async (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'cursor-runtime-program-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const programPath = join(root, 'program.json');
+  const evidencePath = join(root, 'observations.jsonl');
+  const outputPath = join(root, 'result.txt');
+  writeFileSync(programPath, JSON.stringify({
+    kind: 'fake-acp',
+    steps: [
+      {
+        type: 'pending', request_kind: 'question', step_id: 'question-1', callback_id: 'q-1',
+        question_id: 'q', prompt: 'Continue?', options: [{ id: 'choice-1', label: 'Yes' }],
+        expected_callback: { kind: 'answer', option_ids: ['choice-1'] },
+      },
+      {
+        type: 'pending', request_kind: 'plan', step_id: 'plan-1', callback_id: 'plan-1', plan_text: 'Do it',
+        expected_callback: { kind: 'decision', decision: 'accept' },
+      },
+      {
+        type: 'pending', request_kind: 'permission', step_id: 'permission-1', callback_id: 'permission-1',
+        action: { operation: 'write', path: 'result.txt' }, choices: ['allow-once', 'reject-once'],
+        expected_callback: { kind: 'decision', decision: 'allow-once' },
+      },
+      {
+        type: 'effect', step_id: 'effect-1', callback_id: 'write-1', operation: 'write',
+        path: 'result.txt', text: 'written', expected_callback: { kind: 'write-result', outcome: 'succeeded' },
+      },
+      { type: 'terminal', step_id: 'terminal-1', turn_status: 'completed', result_text: 'CURSOR_EVAL_OK' },
+    ],
+  }));
+  const runtime = withInjectedFake(t, { roots: [realpathSync(root)], env: {
+    CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH: programPath,
+    FAKE_ACP_SAFE_EVIDENCE: evidencePath,
+  } });
+  const session = await runtime.call('cursor_start_session', { cwd: root, mode: 'agent' });
+  const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'run program' });
+
+  let state = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, after_event_id: turn.last_event_id, timeout_ms: 1_000 });
+  assert.equal(state.active_turn.pending[0].kind, 'question');
+  state = await runtime.call('cursor_answer_question', {
+    session_id: session.session_id, turn_id: turn.turn_id, request_id: 'q-1', outcome: 'answered',
+    answers: [{ question_id: 'q', selected_option_ids: ['choice-1'] }],
+  });
+  state = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, after_event_id: state.last_event_id, timeout_ms: 1_000 });
+  assert.equal(state.active_turn.pending[0].kind, 'plan');
+  state = await runtime.call('cursor_answer_plan', {
+    session_id: session.session_id, turn_id: turn.turn_id, request_id: 'plan-1', decision: 'accept',
+  });
+  state = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, after_event_id: state.last_event_id, timeout_ms: 1_000 });
+  assert.equal(state.active_turn.pending[0].kind, 'permission');
+  state = await runtime.call('cursor_answer_permission', {
+    session_id: session.session_id, turn_id: turn.turn_id, request_id: 'permission-1', decision: 'allow-once',
+  });
+  const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id, state.last_event_id);
+
+  assert.equal(terminal.turn_status, 'completed');
+  assert.equal(terminal.last_terminal_turn.result.text, 'CURSOR_EVAL_OK');
+  assert.equal(readFileSync(outputPath, 'utf8'), 'written');
+  assert.deepEqual(readJsonLines(evidencePath).filter((entry) => entry.kind), [
+    { kind: 'answer', step_id: 'question-1', callback_id: 'q-1', option_ids: ['choice-1'] },
+    { kind: 'decision', step_id: 'plan-1', callback_id: 'plan-1', decision: 'accept' },
+    { kind: 'decision', step_id: 'permission-1', callback_id: 'permission-1', decision: 'allow-once' },
+    { kind: 'write-result', step_id: 'effect-1', callback_id: 'write-1', outcome: 'succeeded' },
+    { kind: 'effect.file-written', step_id: 'effect-1', callback_id: 'write-1' },
+  ]);
+  await runtime.call('cursor_close_session', { session_id: session.session_id });
+});
+
+test('fake-ACP program mode records callback failures without shared environment mutation', async (t) => {
+  for (const [name, response, reason] of [
+    ['error', { jsonrpc: '2.0', id: 'q-1', error: { code: -1, message: 'rejected' } }, 'error'],
+    ['missing result', { jsonrpc: '2.0', id: 'q-1' }, 'missing'],
+    ['wrong callback id', { jsonrpc: '2.0', id: 'other', result: {} }, 'id-mismatch'],
+  ]) {
+    await t.test(name, async (t) => {
+      const root = mkdtempSync(join(tmpdir(), 'cursor-runtime-program-failure-'));
+      t.after(() => rmSync(root, { recursive: true, force: true }));
+      const programPath = join(root, 'program.json'); const evidencePath = join(root, 'observations.jsonl');
+      writeFileSync(programPath, JSON.stringify({ kind: 'fake-acp', steps: [
+        { type: 'pending', request_kind: 'question', step_id: 'question-1', callback_id: 'q-1', question_id: 'q', prompt: 'Continue?', options: [{ id: 'choice-1', label: 'Yes' }], expected_callback: { kind: 'answer', option_ids: ['choice-1'] } },
+        { type: 'terminal', step_id: 'terminal-1', turn_status: 'completed', result_text: null },
+      ] }));
+      const child = spawn(process.execPath, [fake], { cwd: root, env: isolatedFakeEnvironment({ FAKE_ACP_REQUIRE_POLICY: '', CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH: programPath, FAKE_ACP_SAFE_EVIDENCE: evidencePath }), stdio: ['pipe', 'pipe', 'pipe'] });
+      t.after(() => { child.kill('SIGKILL'); });
+      child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 'prompt-1', method: 'session/prompt', params: {} })}\n`);
+      const pending = JSON.parse(await waitForLine(child.stdout));
+      assert.deepEqual({ id: pending.id, method: pending.method }, { id: 'q-1', method: 'cursor/ask_question' });
+      child.stdin.write(`${JSON.stringify(response)}\n`);
+      for (let attempt = 0; attempt < 100; attempt += 1) {
+        const evidence = (() => { try { return readJsonLines(evidencePath); } catch (error) { if (error.code === 'ENOENT') return []; throw error; } })();
+        if (evidence.length) {
+          assert.deepEqual(evidence.find(({ kind }) => kind === 'callback.failure'), { kind: 'callback.failure', step_id: 'question-1', callback_id: 'q-1', reason });
+          child.kill('SIGKILL');
+          await waitForExit(child);
+          return;
+        }
+        await new Promise((resolveWait) => setTimeout(resolveWait, 5));
+      }
+      assert.fail('fake-ACP did not record callback failure');
+    });
+  }
 });
 
 test('question answers reject malformed or unadvertised inputs without mutating pending state', async (t) => {

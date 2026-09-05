@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { createInterface } from 'node:readline';
-import { appendFileSync } from 'node:fs';
+import { appendFileSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 if (process.argv.includes('--version')) {
   if (process.env.FAKE_ACP_VERSION_MODE === 'overflow') {
@@ -24,6 +25,10 @@ if (process.env.FAKE_ACP_REQUIRE_POLICY
 
 const input = createInterface({ input: process.stdin });
 const send = (message) => process.stdout.write(`${JSON.stringify(message)}${process.env.FAKE_ACP_CRLF ? '\r\n' : '\n'}`);
+const program = process.env.CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH
+  ? JSON.parse(readFileSync(process.env.CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH, 'utf8'))
+  : null;
+if (program && (program.kind !== 'fake-acp' || !Array.isArray(program.steps))) throw new Error('invalid materialized fake-ACP program');
 let promptId = null;
 let pendingResponsesRemaining = 0;
 const log = (message) => { if (process.env.FAKE_ACP_LOG) appendFileSync(process.env.FAKE_ACP_LOG, `${JSON.stringify(message)}\n`); };
@@ -38,10 +43,112 @@ const finishPrompt = (id, text) => {
   send({ jsonrpc: '2.0', id, result: { stopReason: process.env.FAKE_ACP_BAD_PROMPT_RESULT ? 'unknown' : (process.env.FAKE_ACP_STOP_REASON || 'end_turn') } });
   safeEvidence({ event: 'prompt_result', request_id: id });
 };
+let programStepIndex = 0;
+let awaitedProgramStep = null;
+const permissionOptionIds = new Map();
+const recordProgramFailure = (step, reason) => safeEvidence({
+  kind: 'callback.failure', step_id: step.step_id, callback_id: step.callback_id, reason,
+});
+const advanceProgram = () => {
+  if (!program || promptId === null || awaitedProgramStep) return;
+  const step = program.steps[programStepIndex];
+  if (!step) throw new Error('fake-ACP program ended without terminal step');
+  programStepIndex += 1;
+  if (step.type === 'terminal') {
+    if (step.result_text !== null) {
+      send({ jsonrpc: '2.0', method: 'session/update', params: { sessionId: 'fake', update: { sessionUpdate: 'agent_message_chunk', content: { text: step.result_text } } } });
+    }
+    const id = promptId;
+    promptId = null;
+    send({ jsonrpc: '2.0', id, result: { stopReason: 'end_turn' } });
+    safeEvidence({ event: 'prompt_result', request_id: id, step_id: step.step_id });
+    return;
+  }
+  awaitedProgramStep = step;
+  if (step.type === 'effect') {
+    send({ jsonrpc: '2.0', id: step.callback_id, method: 'fs/write_text_file', params: {
+      sessionId: 'fake', path: resolve(process.cwd(), step.path), content: step.text,
+    } });
+    return;
+  }
+  if (step.type !== 'pending') throw new Error(`unsupported fake-ACP program step: ${step.type}`);
+  if (step.request_kind === 'question') {
+    send({ jsonrpc: '2.0', id: step.callback_id, method: 'cursor/ask_question', params: {
+      questions: [{ id: step.question_id, question: step.prompt, options: step.options }],
+    } });
+    return;
+  }
+  if (step.request_kind === 'plan') {
+    send({ jsonrpc: '2.0', id: step.callback_id, method: 'cursor/create_plan', params: { plan: step.plan_text } });
+    return;
+  }
+  if (step.request_kind === 'permission') {
+    const allowId = `${step.callback_id}:allow`;
+    const rejectId = `${step.callback_id}:reject`;
+    permissionOptionIds.set(allowId, 'allow-once');
+    permissionOptionIds.set(rejectId, 'reject-once');
+    send({ jsonrpc: '2.0', id: step.callback_id, method: 'session/request_permission', params: {
+      sessionId: 'fake',
+      toolCall: {
+        toolCallId: step.callback_id,
+        title: `${step.action.operation} ${step.action.path}`,
+        kind: step.action.operation,
+        locations: [{ path: resolve(process.cwd(), step.action.path) }],
+      },
+      options: [
+        { optionId: allowId, kind: 'allow_once', name: 'Allow once' },
+        { optionId: rejectId, kind: 'reject_once', name: 'Reject once' },
+      ],
+    } });
+    return;
+  }
+  throw new Error(`unsupported fake-ACP pending kind: ${step.request_kind}`);
+};
+const handleProgramResponse = (response) => {
+  const step = awaitedProgramStep;
+  if (!step) return false;
+  const actualId = String(response.id);
+  if (actualId !== step.callback_id) {
+    recordProgramFailure(step, 'id-mismatch');
+    return true;
+  }
+  awaitedProgramStep = null;
+  if (response.error) {
+    recordProgramFailure(step, 'error');
+  } else if (!Object.hasOwn(response, 'result')) {
+    recordProgramFailure(step, 'missing');
+  } else if (step.type === 'effect') {
+    safeEvidence({
+      step_id: step.step_id, callback_id: actualId, kind: 'write-result', outcome: 'succeeded',
+    });
+    safeEvidence({ kind: 'effect.file-written', step_id: step.step_id, callback_id: actualId });
+  } else if (step.request_kind === 'question') {
+    const outcome = response.result?.outcome;
+    safeEvidence({
+      kind: 'answer', step_id: step.step_id, callback_id: actualId,
+      option_ids: outcome?.answers?.flatMap((answer) => answer.selectedOptionIds || []) || [],
+    });
+  } else if (step.request_kind === 'plan') {
+    const outcome = response.result?.outcome?.outcome;
+    safeEvidence({
+      kind: 'decision', step_id: step.step_id, callback_id: actualId,
+      decision: outcome === 'accepted' ? 'accept' : outcome === 'rejected' ? 'reject' : null,
+    });
+  } else {
+    const optionId = response.result?.outcome?.optionId;
+    safeEvidence({
+      kind: 'decision', step_id: step.step_id, callback_id: actualId,
+      decision: permissionOptionIds.get(optionId) || null,
+    });
+  }
+  advanceProgram();
+  return true;
+};
 input.on('line', (line) => {
   const request = JSON.parse(line);
   if (!request.method && request.id !== undefined) {
     log(request);
+    if (program && handleProgramResponse(request)) return;
     if (process.env.FAKE_ACP_PENDING === 'invalid-question') {
       const question = { id: 'q', question: 'Continue?', options: [{ id: 'yes', label: 'Yes' }] };
       switch (process.env.FAKE_ACP_CALLBACK_VARIANT) {
@@ -93,6 +200,7 @@ input.on('line', (line) => {
   if (request.method === 'session/set_mode') return send({ jsonrpc: '2.0', id: request.id, result: {} });
   if (request.method === 'session/prompt') {
     promptId = request.id;
+    if (program) { advanceProgram(); return; }
     if (process.env.FAKE_ACP_PROMPT_RESPONSE_VARIANT === 'missing-payload') return send({ jsonrpc: '2.0', id: request.id });
     if (process.env.FAKE_ACP_PROMPT_RESPONSE_VARIANT === 'error-no-message') return send({ jsonrpc: '2.0', id: request.id, error: {} });
     if (process.env.FAKE_ACP_PROMPT_RESPONSE_VARIANT === 'unknown-id-first') send({ jsonrpc: '2.0', id: 'unknown', result: {} });
@@ -197,8 +305,12 @@ input.on('line', (line) => {
     return;
   }
   if (request.method === 'session/cancel') {
+    if (program && awaitedProgramStep) recordProgramFailure(awaitedProgramStep, 'missing');
     if (process.env.FAKE_ACP_IGNORE_CANCEL) return;
     return process.exit(0);
   }
   if (request.id !== undefined) send({ jsonrpc: '2.0', id: request.id, result: {} });
+});
+input.on('close', () => {
+  if (program && awaitedProgramStep) recordProgramFailure(awaitedProgramStep, 'missing');
 });

@@ -40,8 +40,8 @@ function text(value, field) {
   return value;
 }
 function inside(path, root) { const rel = relative(root, path); return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel)); }
-function readRoots() {
-  const raw = process.env.CURSOR_SUBAGENT_ALLOWED_ROOTS;
+function readRoots(env) {
+  const raw = env.CURSOR_SUBAGENT_ALLOWED_ROOTS;
   if (raw === undefined || raw === '') return null;
   let roots; try { roots = JSON.parse(raw); } catch { throw new Error('CURSOR_SUBAGENT_ALLOWED_ROOTS must be a JSON array'); }
   if (!Array.isArray(roots)) throw new Error('CURSOR_SUBAGENT_ALLOWED_ROOTS must be a JSON array');
@@ -51,19 +51,19 @@ function readRoots() {
     return canonical;
   }))];
 }
-const cursorCommand = () => process.env.CURSOR_AGENT_COMMAND || 'agent';
-function cursorArgs() {
-  if (!process.env.CURSOR_SUBAGENT_ADAPTER_ARGS) return ADAPTER.argv;
+const cursorCommand = (env) => env.CURSOR_AGENT_COMMAND || 'agent';
+function cursorArgs(env) {
+  if (!env.CURSOR_SUBAGENT_ADAPTER_ARGS) return ADAPTER.argv;
   try {
-    const args = JSON.parse(process.env.CURSOR_SUBAGENT_ADAPTER_ARGS);
+    const args = JSON.parse(env.CURSOR_SUBAGENT_ADAPTER_ARGS);
     if (!Array.isArray(args) || !args.every((value) => typeof value === 'string')) throw new Error();
     return [...args, ...ADAPTER.fixturePolicyArgv];
   } catch { throw new Error('invalid adapter fixture arguments'); }
 }
-function cursorVersionArgs() {
-  if (!process.env.CURSOR_SUBAGENT_ADAPTER_ARGS) return ['--version'];
+function cursorVersionArgs(env) {
+  if (!env.CURSOR_SUBAGENT_ADAPTER_ARGS) return ['--version'];
   try {
-    const args = JSON.parse(process.env.CURSOR_SUBAGENT_ADAPTER_ARGS);
+    const args = JSON.parse(env.CURSOR_SUBAGENT_ADAPTER_ARGS);
     if (!Array.isArray(args) || !args.every((value) => typeof value === 'string')) throw new Error();
     return [...args, '--version'];
   } catch { throw new Error('invalid adapter fixture arguments'); }
@@ -164,7 +164,7 @@ class SessionRecord {
     const initStartedAt = Date.now();
     try {
       this.installedCursorVersion = await this.withTimeout(this.probeCursorVersion(), LIMITS.initMs, 'init_timeout');
-      this.child = spawn(cursorCommand(), cursorArgs(), { cwd: this.cwd, stdio: ['pipe', 'pipe', 'pipe'], env: process.env });
+      this.child = spawn(cursorCommand(this.runtime.env), cursorArgs(this.runtime.env), { cwd: this.cwd, stdio: ['pipe', 'pipe', 'pipe'], env: this.runtime.env });
       this.child.stderr.resume();
       this.child.stdin.on('error', () => this.transportFailure('child stdin EPIPE'));
       this.attachStdout();
@@ -181,7 +181,7 @@ class SessionRecord {
   }
   probeCursorVersion() {
     return new Promise((resolveVersion, reject) => {
-      const child = spawn(cursorCommand(), cursorVersionArgs(), { cwd: this.cwd, stdio: ['ignore', 'pipe', 'pipe'], env: process.env }); this.child = child;
+      const child = spawn(cursorCommand(this.runtime.env), cursorVersionArgs(this.runtime.env), { cwd: this.cwd, stdio: ['ignore', 'pipe', 'pipe'], env: this.runtime.env }); this.child = child;
       const chunks = []; let size = 0; let overflow = false;
       const collect = (chunk) => { size += chunk.length; if (size > LIMITS.inputBytes) overflow = true; else chunks.push(chunk); };
       child.stdout.on('data', collect); child.stderr.on('data', collect);
@@ -383,7 +383,11 @@ class SessionRecord {
       for (const waiter of this.rpc.values()) waiter.reject(new Error('session closing')); this.rpc.clear();
       if (this.child?.pid && !this.childExited) {
         const exited = new Promise((done) => this.child.once('exit', done));
-        if (this.adapterCancelSent) await Promise.race([exited, new Promise((done) => setTimeout(done, LIMITS.graceMs))]);
+        let graceTimer = null;
+        if (this.adapterCancelSent) {
+          await Promise.race([exited, new Promise((done) => { graceTimer = setTimeout(done, LIMITS.graceMs); })]);
+          if (graceTimer) clearTimeout(graceTimer);
+        }
         if (!this.childExited) try { this.child.kill('SIGTERM'); } catch {}
         if (!this.childExited) await Promise.race([exited, new Promise((done) => setImmediate(done))]);
         if (!this.childExited) try { this.child.kill('SIGKILL'); } catch {}
@@ -397,7 +401,7 @@ class SessionRecord {
 }
 
 export class Runtime {
-  constructor({ roots = readRoots() } = {}) { this.roots = roots; this.sessions = new Map(); this.live = new Set(); }
+  constructor({ env = process.env, roots = readRoots(env) } = {}) { this.env = env; this.roots = roots; this.sessions = new Map(); this.live = new Set(); }
   canonicalCwd(cwd) { if (!validText(cwd) || !isAbsolute(cwd)) fail('invalid_args', 'cwd must be an absolute string'); let canonical; try { canonical = realpathSync(cwd); } catch { fail('scope_rejected', 'cwd does not exist'); } if (!lstatSync(canonical).isDirectory()) fail('scope_rejected', 'cwd is not a directory'); if (this.roots && !this.roots.some((root) => inside(canonical, root))) fail('scope_rejected', 'cwd is outside allowed roots'); return canonical; }
   evict() { const now = Date.now(); for (const [id, session] of this.sessions) if (session.session_state === 'tombstone' && now - session.tombstonedAt >= LIMITS.retentionMs) this.sessions.delete(id); const tombs = [...this.sessions.values()].filter((session) => session.session_state === 'tombstone').sort((a, b) => a.tombstonedAt - b.tombstonedAt || a.id.localeCompare(b.id)); while (tombs.length > LIMITS.tombstones) this.sessions.delete(tombs.shift().id); }
   session(id) { this.evict(); const session = this.sessions.get(id); if (!session) fail('unknown_session', 'unknown session'); return session; }

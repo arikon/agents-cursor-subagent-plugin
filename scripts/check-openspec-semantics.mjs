@@ -96,6 +96,51 @@ export function checkOpenSpecSemantics(rootPath = process.cwd(), registry = PROJ
     return cursor === sourceLines.length;
   }
 
+  function authoritativeRequirements() {
+    const specsRoot = resolve(root, "openspec/specs");
+    return new Map(readdirSync(specsRoot, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => {
+        const specPath = `openspec/specs/${entry.name}/spec.md`;
+        const requirements = existsSync(resolve(root, specPath))
+          ? [...read(specPath).matchAll(/^### Requirement: (.+)$/gm)].map(([, name]) => name)
+          : [];
+        return [entry.name, new Set(requirements)];
+      }));
+  }
+
+  function validateCorpusOwnerRequirements(contract) {
+    if (!contract.corpusPath) return;
+    let corpus;
+    try {
+      corpus = JSON.parse(read(contract.corpusPath));
+    } catch (error) {
+      errors.push(`${contract.corpusPath}: cannot read corpus owner requirements: ${error.message}`);
+      return;
+    }
+    if (!Array.isArray(corpus.scenarios)) {
+      errors.push(`${contract.corpusPath}: cannot inspect corpus owner requirements`);
+      return;
+    }
+    const mainRequirements = authoritativeRequirements();
+    for (const [rowIndex, scenario] of corpus.scenarios.entries()) {
+      if (!Array.isArray(scenario?.owner_requirements)) {
+        errors.push(`${contract.corpusPath}: scenario row ${rowIndex} lacks owner_requirements`);
+        continue;
+      }
+      for (const [referenceIndex, reference] of scenario.owner_requirements.entries()) {
+        const keys = reference && typeof reference === "object" && !Array.isArray(reference)
+          ? Object.keys(reference).sort()
+          : [];
+        const validShape = keys.length === 2 && keys[0] === "capability" && keys[1] === "requirement" &&
+          typeof reference.capability === "string" && typeof reference.requirement === "string";
+        if (!validShape || !mainRequirements.get(reference?.capability)?.has(reference.requirement)) {
+          errors.push(`${contract.corpusPath}: invalid owner requirement at row ${rowIndex}, reference ${referenceIndex}`);
+        }
+      }
+    }
+  }
+
   const requirementOwners = new Map();
 
 const agents = read("AGENTS.md");
@@ -183,6 +228,11 @@ for (const change of changes) {
   }
 
   const requirements = requirementNames(change);
+  const expectedOwnedRequirements = contract.ownedRequirements;
+  if (expectedOwnedRequirements && (requirements.length !== expectedOwnedRequirements.length ||
+      requirements.some((requirement) => !expectedOwnedRequirements.includes(requirement)))) {
+    errors.push(`${rootPath}: owned requirement labels differ from semantic-gate registry`);
+  }
   const index = indexedRequirements(design);
   const modified = contract.modified;
   const expectedIndex = [
@@ -240,6 +290,7 @@ for (const change of changes) {
       errors.push(`${rootPath}: referenced requirement ${requirementId}/${requirement} lacks baseline/task traceability`);
     }
   }
+  validateCorpusOwnerRequirements(contract);
 
   for (const artifact of ["proposal.md", "design.md", "tasks.md"]) {
     const path = `${rootPath}/${artifact}`;

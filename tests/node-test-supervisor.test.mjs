@@ -158,7 +158,7 @@ test('lane matrix produces the exact child argv and keeps parent deadlines fixed
     'tests/node-test-supervisor.test.mjs',
   ];
   const productSources = [
-    'scripts/check-openspec-semantics.mjs', 'scripts/codex-app-server-client.mjs', 'scripts/cursor-skill-eval.mjs', 'scripts/openspec-semantic-registry.mjs',
+    'scripts/check-openspec-semantics.mjs', 'scripts/codex-app-server-client.mjs', 'scripts/cursor-eval-scenario.mjs', 'scripts/cursor-skill-eval.mjs', 'scripts/openspec-semantic-registry.mjs',
     'scripts/cursor-subagent-bootstrap.mjs', 'scripts/cursor-subagent-mcp.mjs', 'scripts/node-test-reporter-v22.mjs',
     'scripts/recording-mcp-proxy.mjs', 'scripts/run-cursor-skill-eval.mjs', 'scripts/run-node-tests.mjs', 'scripts/run-unit-coverage.mjs',
   ];
@@ -180,6 +180,7 @@ test('lane matrix produces the exact child argv and keeps parent deadlines fixed
       const result = await runSupervisor({
         laneName: scenario.lane,
         artifactRoot: await artifactRoot(t),
+        env: { ...process.env, CURSOR_EVAL_REAL_CODEX: '1', CURSOR_EVAL_HOSTED_CODEX: '1', CURSOR_SUBAGENT_LIVE_E2E: '1' },
         dependencies: { platform: 'linux', spawn: captureSpawn },
       });
 
@@ -199,6 +200,7 @@ test('lane matrix produces the exact child argv and keeps parent deadlines fixed
           ...scenario.tests.map((path) => join(projectRoot, path)),
         ],
       );
+      for (const name of ['CURSOR_EVAL_REAL_CODEX', 'CURSOR_EVAL_HOSTED_CODEX', 'CURSOR_SUBAGENT_LIVE_E2E']) assert.equal(invocation.options.env[name], undefined);
       assert.equal(LANES[scenario.lane].deadlineMs, scenario.deadlineMs);
     });
   }

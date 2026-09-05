@@ -17,7 +17,7 @@ const unitTests = Object.freeze([
   'tests/node-test-reporter-v22.test.mjs', 'tests/run-cursor-skill-eval.test.mjs', 'tests/runtime.test.mjs', 'tests/node-test-supervisor.test.mjs',
 ]);
 const productSources = Object.freeze([
-  'scripts/check-openspec-semantics.mjs', 'scripts/codex-app-server-client.mjs', 'scripts/cursor-skill-eval.mjs', 'scripts/openspec-semantic-registry.mjs',
+  'scripts/check-openspec-semantics.mjs', 'scripts/codex-app-server-client.mjs', 'scripts/cursor-eval-scenario.mjs', 'scripts/cursor-skill-eval.mjs', 'scripts/openspec-semantic-registry.mjs',
   'scripts/cursor-subagent-bootstrap.mjs', 'scripts/cursor-subagent-mcp.mjs', 'scripts/node-test-reporter-v22.mjs',
   'scripts/recording-mcp-proxy.mjs', 'scripts/run-cursor-skill-eval.mjs', 'scripts/run-node-tests.mjs', 'scripts/run-unit-coverage.mjs',
 ]);

@@ -3,13 +3,13 @@ import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { chmod, cp, mkdir, mkdtemp, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import { createInterface } from 'node:readline';
-import { join } from 'node:path';
+import { isAbsolute, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { runBootstrap, runPackageCommand } from '../scripts/cursor-subagent-bootstrap.mjs';
+import { MARKER_NAME, runBootstrap, runPackageCommand } from '../scripts/cursor-subagent-bootstrap.mjs';
 import { CodexAppServerClient } from '../scripts/codex-app-server-client.mjs';
-import { classifyScenario, evalResult, publishEvidence } from '../scripts/cursor-skill-eval.mjs';
+import { canonicalJson, evaluateScenario, materializeScenario } from '../scripts/cursor-eval-scenario.mjs';
 
 const repository = fileURLToPath(new URL('..', import.meta.url));
 const codex = process.env.CURSOR_EVAL_CODEX_EXECUTABLE || '/Applications/ChatGPT.app/Contents/Resources/codex';
@@ -24,7 +24,7 @@ async function configureFakeAgent(path, values = {}) {
   const assignments = Object.entries({ FAKE_ACP_RESULT: 'CURSOR_EVAL_OK', ...values })
     .map(([name, value]) => `process.env[${JSON.stringify(name)}] = ${JSON.stringify(value)};`)
     .join('\n');
-  await writeFile(path, `#!/usr/bin/env node\n${assignments}\nawait import("./fake-acp.mjs");\n`, 'utf8');
+  await writeFile(path, `#!/usr/bin/env node\n${assignments}\nif (process.argv[2] === "status") { process.stdout.write(JSON.stringify({ status: "authenticated", isAuthenticated: true, hasAccessToken: true, hasRefreshToken: true })); process.exit(0); }\nawait import("./fake-acp.mjs");\n`, 'utf8');
   await chmod(path, 0o755);
 }
 
@@ -37,10 +37,10 @@ function acceptOnlyCursorToolElicitation({ method, params }) {
   return { action: 'accept' };
 }
 
-async function layout() {
+async function layout(workspaceOverride = null) {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'cursor-codex-client-')));
-  const source = join(root, 'source'); const workspace = join(root, 'workspace'); const home = join(root, 'codex-home');
-  await mkdir(source); await mkdir(workspace); await mkdir(home);
+  const source = join(root, 'source'); const workspace = workspaceOverride || join(root, 'workspace'); const home = join(root, 'codex-home');
+  await mkdir(source); if (!workspaceOverride) await mkdir(workspace); await mkdir(home);
   for (const path of ['.codex-plugin/plugin.json', 'README.md', 'scripts/cursor-subagent-mcp.mjs', 'scripts/recording-mcp-proxy.mjs', 'scripts/cursor-subagent-bootstrap.mjs']) {
     await mkdir(join(source, path, '..'), { recursive: true }); await cp(join(repository, path), join(source, path));
   }
@@ -50,7 +50,144 @@ async function layout() {
   await configureFakeAgent(join(fakeAgentRoot, 'agent'));
   await cp(fileURLToPath(new URL('./fixtures/fake-acp.mjs', import.meta.url)), join(fakeAgentRoot, 'fake-acp.mjs'));
   const skillBytes = await readFile(join(source, 'skills/cursor-subagent/SKILL.md'));
-  return { root, source, hidden: join(root, 'source.hidden'), workspace, home, managed: join(root, 'marketplace'), fakeAgent: join(fakeAgentRoot, 'agent'), skillSha256: sha256(skillBytes), skillBytes: skillBytes.length };
+  return { root, source, hidden: join(root, 'source.hidden'), workspace, allowedWorkspace: await realpath(workspace), home,
+    managed: join(root, 'marketplace'), fakeAgent: join(fakeAgentRoot, 'agent'), skillSha256: sha256(skillBytes), skillBytes: skillBytes.length };
+}
+
+function digestFromEnvironment(prefix) {
+  const digest = { sha256: process.env[`${prefix}_SHA256`], bytes: Number(process.env[`${prefix}_BYTES`]) };
+  assert.match(digest.sha256 || '', /^[a-f0-9]{64}$/, `${prefix} sha256 is missing or invalid`);
+  assert.ok(Number.isSafeInteger(digest.bytes) && digest.bytes > 0 && digest.bytes <= 1_048_576, `${prefix} bytes is missing or invalid`);
+  return digest;
+}
+
+async function readOuterScenario() {
+  const workspace = process.env.CURSOR_EVAL_WORKSPACE;
+  const payload = process.env.CURSOR_EVAL_SCENARIO_PAYLOAD;
+  assert.ok(typeof workspace === 'string' && isAbsolute(workspace), 'CURSOR_EVAL_WORKSPACE must be absolute');
+  await realpath(workspace);
+  assert.ok(typeof payload === 'string' && Buffer.byteLength(payload, 'utf8') <= 65_536, 'CURSOR_EVAL_SCENARIO_PAYLOAD is missing or oversized');
+  const consumedScenario = digestFromEnvironment('CURSOR_EVAL_SCENARIO');
+  assert.deepEqual({ sha256: sha256(payload), bytes: Buffer.byteLength(payload, 'utf8') }, consumedScenario, 'materialized scenario digest mismatch');
+  const scenario = JSON.parse(payload);
+  const rematerialized = materializeScenario(scenario, { workspace });
+  assert.equal(rematerialized.canonicalPayload, payload, 'child received a non-canonical scenario payload');
+  assert.equal(scenario.scenario_id, process.env.CURSOR_EVAL_SCENARIO_ID, 'scenario id mismatch');
+  assert.equal(scenario.scenario_kind, 'programmed', 'integration child accepts only programmed scenarios');
+  return { workspace, scenario, consumedScenario, consumedCorpus: digestFromEnvironment('CURSOR_EVAL_CORPUS') };
+}
+
+async function ensureProgramPath(fixture, scenario) {
+  if (process.env.CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH) return process.env.CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH;
+  const path = join(fixture.root, 'fake-acp-program.json');
+  await writeFile(path, canonicalJson(scenario.program), 'utf8');
+  return path;
+}
+
+async function packageProof(fixture, node, env, skillEvidence) {
+  const preflight = await runBootstrap(['preflight', '--managed-marketplace-root', fixture.managed,
+    '--node-executable', node, '--codex-executable', codex, '--agent-executable', fixture.fakeAgent], { env,
+    runCommand: (command, args, options) => runPackageCommand(command, args, { ...options, timeoutMs: 70_000 }) });
+  assert.equal(preflight.exitCode, 0, JSON.stringify(preflight.envelope));
+  const marker = JSON.parse(await readFile(join(fixture.managed, MARKER_NAME), 'utf8'));
+  const managedBytes = await readFile(join(fixture.managed, 'plugins/codex-cursor-subagent-plugin/skills/cursor-subagent/SKILL.md'));
+  const managedInstalledSkill = { sha256: sha256(managedBytes), bytes: managedBytes.length };
+  const cacheLoadedSkill = { sha256: skillEvidence.content_sha256, bytes: skillEvidence.content_bytes };
+  assert.deepEqual(cacheLoadedSkill, managedInstalledSkill, 'cache-loaded skill differs from managed installed skill');
+  const admissionResult = await runPackageCommand(node, [adapter, 'admit', JSON.stringify({ codex_executable: codex })], { env, timeoutMs: 70_000 });
+  assert.equal(admissionResult.code, 0, admissionResult.error || admissionResult.output);
+  const admission = JSON.parse(admissionResult.output);
+  assert.equal(admission.admitted, true, 'adapter admission must succeed');
+  assert.match(admission.implementation_sha256 || '', /^[a-f0-9]{64}$/, 'adapter admission omitted implementation digest');
+  assert.ok(Number.isSafeInteger(admission.implementation_bytes) && admission.implementation_bytes > 0, 'adapter admission omitted implementation size');
+  assert.equal(typeof admission.codex_version, 'string');
+  assert.ok(admission.codex_version, 'Codex client version is empty');
+  return {
+    adapter: { sha256: admission.implementation_sha256, bytes: admission.implementation_bytes },
+    managed_installed_skill: managedInstalledSkill,
+    cache_loaded_skill: cacheLoadedSkill,
+    installed_payload: { marker_format: marker.format, payload_hash: marker.payload_hash, artifact_hash: marker.artifact_hash, manifest_version: marker.manifest_version },
+    client: { name: 'codex-app-server', version: admission.codex_version },
+  };
+}
+
+async function readSafeEvidence(path) {
+  return await readFile(path, 'utf8').then((content) => content.trim() ? content.trim().split('\n').map((line) => JSON.parse(line)) : [], (error) => {
+    if (error.code === 'ENOENT') return [];
+    throw error;
+  });
+}
+
+function observationsFromEvidence(scenario, transcript, safeEvidence, outcomes) {
+  const pendingSteps = scenario.program.steps.filter(({ type }) => type === 'pending');
+  const terminalStep = scenario.program.steps.find(({ type }) => type === 'terminal');
+  const delegate = transcript.find(({ tool }) => tool === 'cursor_delegate');
+  const sessionId = delegate?.response?.session_id;
+  const turnId = delegate?.response?.turn_id;
+  const pendingWaits = transcript.filter(({ tool, response }) => tool === 'cursor_wait' && response?.active_turn?.pending?.length);
+  const trace = [];
+  if (sessionId) trace.push({ kind: 'session.allocated', session_id: sessionId });
+  if (turnId) trace.push({ kind: 'turn.started', turn_id: turnId });
+  for (const [index, step] of pendingSteps.entries()) {
+    const pending = pendingWaits[index]?.response?.active_turn?.pending?.[0];
+    if (pending) trace.push({ kind: `pending.${step.request_kind}`, step_id: step.step_id, session_id: sessionId, turn_id: turnId, request_id: pending.request_id });
+    const answerTool = `cursor_answer_${step.request_kind}`;
+    const answer = transcript.find((entry) => entry.tool === answerTool && (!pending?.request_id || String(entry.request?.request_id) === String(pending.request_id)));
+    if (answer) {
+      trace.push({ kind: `answer.${step.request_kind}`, step_id: step.step_id, session_id: sessionId, turn_id: turnId, request_id: answer.request?.request_id,
+        ...(step.request_kind === 'question' ? { option_ids: answer.request?.answers?.flatMap(({ selected_option_ids: ids }) => ids || []) || [] } : { decision: answer.request?.decision }) });
+    }
+    for (const effect of scenario.program.steps.filter(({ type }) => type === 'effect')) {
+      if (safeEvidence.some(({ kind, step_id: stepId }) => kind === 'effect.file-written' && stepId === effect.step_id)) trace.push({ kind: 'effect.file-written', step_id: effect.step_id, session_id: sessionId, turn_id: turnId });
+    }
+  }
+  if (pendingSteps.length === 0) {
+    for (const effect of scenario.program.steps.filter(({ type }) => type === 'effect')) {
+      if (safeEvidence.some(({ kind, step_id: stepId }) => kind === 'effect.file-written' && stepId === effect.step_id)) trace.push({ kind: 'effect.file-written', step_id: effect.step_id, session_id: sessionId, turn_id: turnId });
+    }
+  }
+  if (transcript.some(({ tool, response }) => tool === 'cursor_wait' && response?.turn_status === 'completed')) trace.push({ kind: 'turn.completed', step_id: terminalStep.step_id, session_id: sessionId, turn_id: turnId });
+  if (transcript.some(({ tool }) => tool === 'cursor_close_session')) trace.push({ kind: 'session.close-attempted', session_id: sessionId });
+  const callbacks = safeEvidence.filter(({ kind }) => ['answer', 'decision', 'write-result'].includes(kind))
+    .map(({ step_id, callback_id, kind, option_ids, decision, outcome }) => ({ step_id, callback_id, kind,
+      ...(option_ids ? { option_ids } : {}), ...(decision ? { decision } : {}), ...(outcome ? { outcome } : {}) }));
+  const effects = safeEvidence.filter(({ kind }) => kind === 'effect.file-written')
+    .map(({ step_id, callback_id, kind }) => ({ step_id, callback_id, kind }));
+  return { trace, callbacks, effects, ...outcomes };
+}
+
+async function observeFixtureOutcome(scenario, workspace, reportedText = '') {
+  const predicate = scenario.fixture_predicate;
+  let actual;
+  if (predicate.kind === 'file-text') actual = await readFile(join(workspace, ...predicate.path.split('/')), 'utf8').then((text) => text === predicate.text ? 'succeeded' : 'failed', () => 'failed');
+  else if (predicate.kind === 'file-absent') actual = await readFile(join(workspace, ...predicate.path.split('/'))).then(() => 'failed', (error) => error.code === 'ENOENT' ? 'succeeded' : Promise.reject(error));
+  else if (predicate.kind === 'terminal-token') actual = reportedText.includes(predicate.token) ? 'succeeded' : 'failed';
+  else actual = 'succeeded';
+  const reported = scenario.scenario_id === 'model-semantic-failure'
+    ? reportedText.includes('CURSOR_EVAL_FAILED') ? 'failed' : reportedText.includes('CURSOR_EVAL_OK') ? 'succeeded' : 'not_reported'
+    : reportedText ? 'succeeded' : actual;
+  return { actual_task_outcome: actual, reported_task_outcome: reported };
+}
+
+async function reportedTextForThread(runner, threadId) {
+  const thread = await runner.request('thread/read', { threadId, includeTurns: true });
+  const messages = [];
+  for (const turn of thread.thread?.turns || []) {
+    const items = await runner.request('thread/items/list', { threadId, turnId: turn.id, limit: 100, sortDirection: 'asc' });
+    messages.push(...(items.data?.flatMap(({ item }) => item?.type === 'agentMessage' ? [item.text] : []) || []));
+  }
+  return messages.join('\n');
+}
+
+async function finalizeChildResult(fixture, result, error = null) {
+  let cleanupStatus = 'succeeded';
+  try { await rm(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); }
+  catch { cleanupStatus = 'failed'; }
+  const value = result
+    ? { ...result, provenance: { ...result.provenance, cleanup_status: cleanupStatus } }
+    : { schema_version: 1, scenario_id: process.env.CURSOR_EVAL_SCENARIO_ID, error_code: 'child_failure', message: String(error?.message || 'child failed').slice(0, 8_000), cleanup_status: cleanupStatus };
+  await writeChildResult(value);
+  if (cleanupStatus === 'failed' && !error) throw new Error('integration child cleanup failed');
 }
 
 async function startProvider(env) {
@@ -90,20 +227,6 @@ async function stopProcess(child) {
   }
 }
 
-async function runCodex(args, env) {
-  const child = spawn(codex, args, { env, stdio: ['ignore', 'pipe', 'pipe'] });
-  const stdout = []; const stderr = []; let size = 0;
-  for (const stream of [child.stdout, child.stderr]) stream.on('data', (chunk) => { size += chunk.length; if (size <= 1_048_576) (stream === child.stdout ? stdout : stderr).push(chunk); });
-  const result = await new Promise((resolveRun, rejectRun) => {
-    const timer = setTimeout(() => { child.kill('SIGKILL'); rejectRun(new Error('real Codex eval timed out')); }, 45_000);
-    child.once('error', rejectRun);
-    child.once('close', (code) => { clearTimeout(timer); resolveRun({ code, output: Buffer.concat(stdout).toString('utf8'), diagnostics: Buffer.concat(stderr).toString('utf8'), overflow: size > 1_048_576 }); });
-  });
-  if (result.overflow) throw new Error('real Codex eval output exceeded bound');
-  if (result.code !== 0) throw new Error(`real Codex eval failed (${result.code}): ${result.diagnostics.slice(0, 2_000)}`);
-  return result;
-}
-
 async function waitForProviderEvidence(path, minimumRequests = 4) {
   const deadline = Date.now() + 15_000;
   let latest = null;
@@ -129,23 +252,6 @@ async function waitForMcpEvidence(path, minimumTranscriptLength = 3, timeoutMs =
   throw new Error(`recording MCP proxy did not publish tool transcript: ${JSON.stringify(latest)}`);
 }
 
-async function waitForMcpEvidenceOrTurnTerminal(runner, threadId, path, timeoutMs = 90_000) {
-  const deadline = Date.now() + timeoutMs;
-  let latest = null;
-  while (Date.now() < deadline) {
-    try {
-      const value = JSON.parse(await readFile(path, 'utf8'));
-      latest = value;
-      if (value.transcript?.length >= 3) return { mcp: value, terminal: null };
-    } catch (error) { if (error.code !== 'ENOENT') throw error; }
-    const thread = await runner.request('thread/read', { threadId, includeTurns: true });
-    const terminal = thread.thread?.turns?.find(({ status }) => status === 'completed' || status === 'failed' || status === 'interrupted');
-    if (terminal) return { mcp: null, terminal: { status: terminal.status, durationMs: terminal.durationMs, error: terminal.error?.message || null, transcript: latest } };
-    await new Promise((resolveWait) => setTimeout(resolveWait, 250));
-  }
-  return { mcp: null, terminal: null, timeout: true, transcript: latest };
-}
-
 async function waitForExactTurnTerminal(runner, threadId, turnId, timeoutMs = 15_000) {
   const deadline = Date.now() + timeoutMs;
   let latest = null;
@@ -156,36 +262,6 @@ async function waitForExactTurnTerminal(runner, threadId, turnId, timeoutMs = 15
     await new Promise((resolveWait) => setTimeout(resolveWait, 50));
   }
   throw new Error(`evaluated turn did not become terminal: ${JSON.stringify({ turn_id: turnId, status: latest?.status ?? null })}`);
-}
-
-function assertCorrelatedPendingTranscript(transcript, answerTool, fixtureCallback) {
-  assert.equal(transcript.length, 5);
-  const [delegate, firstWait, answer, terminalWait, close] = transcript;
-  assert.deepEqual(transcript.map(({ tool }) => tool), ['cursor_delegate', 'cursor_wait', answerTool, 'cursor_wait', 'cursor_close_session']);
-  const sessionId = delegate.response?.session_id;
-  const turnId = delegate.response?.turn_id;
-  assert.equal(typeof sessionId, 'string');
-  assert.equal(typeof turnId, 'string');
-  assert.equal(firstWait.request?.session_id, sessionId);
-  assert.equal(firstWait.request?.turn_id, turnId);
-  assert.equal(firstWait.response?.session_id, sessionId);
-  assert.equal(firstWait.response?.turn_id, turnId);
-  const pending = firstWait.response?.active_turn?.pending?.[0];
-  assert.equal(typeof pending?.request_id, 'string');
-  assert.equal(answer.request?.session_id, sessionId);
-  assert.equal(answer.request?.turn_id, turnId);
-  assert.equal(answer.request?.request_id, pending.request_id);
-  assert.equal(answer.response?.session_id, sessionId);
-  assert.equal(answer.response?.turn_id, turnId);
-  assert.equal(terminalWait.request?.session_id, sessionId);
-  assert.equal(terminalWait.request?.turn_id, turnId);
-  assert.equal(terminalWait.response?.session_id, sessionId);
-  assert.equal(terminalWait.response?.turn_id, turnId);
-  assert.equal(terminalWait.response?.turn_status, 'completed');
-  assert.equal(close.request?.session_id, sessionId);
-  assert.equal(close.response?.session_id, sessionId);
-  assert.equal(close.response?.session_state, 'tombstone');
-  assert.equal(fixtureCallback.request_id, pending.request_id);
 }
 
 async function writeChildResult(result) {
@@ -209,7 +285,7 @@ test('credential-free Codex client observes only the package-bootstrap-installed
   const installed = await runBootstrap(['install', '--source-root', fixture.source,
     '--managed-marketplace-root', fixture.managed, '--node-executable', node,
     '--codex-executable', codex, '--agent-executable', fixture.fakeAgent,
-    '--allowed-workspace-root', fixture.workspace], { env });
+    '--allowed-workspace-root', fixture.allowedWorkspace], { env });
   assert.equal(installed.exitCode, 0, JSON.stringify(installed.envelope));
   await rename(fixture.source, fixture.hidden);
   const client = new CodexAppServerClient(codex, ['app-server', '--stdio'], env);
@@ -225,31 +301,32 @@ test('credential-free Codex client observes only the package-bootstrap-installed
 });
 
 test('hosted Codex actually calls the installed Cursor MCP tools', { skip: process.env.CURSOR_EVAL_HOSTED_CODEX === '1' ? false : 'requires explicit hosted-auth eval lane' }, async (t) => {
-  const fixture = await layout(); t.after(() => rm(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }));
-  const evidenceRoot = await mkdtemp(join(tmpdir(), 'cursor-hosted-eval-published-')); t.after(() => rm(evidenceRoot, { recursive: true, force: true }));
+  const outer = await readOuterScenario();
+  const fixture = await layout(outer.workspace);
+  t.after(() => rm(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }));
+  const evidenceRoot = join(fixture.root, 'evidence');
+  await mkdir(evidenceRoot);
+  const safeEvidencePath = join(evidenceRoot, 'acp-safe.jsonl');
+  const programPath = await ensureProgramPath(fixture, outer.scenario);
   const authFile = process.env.CURSOR_EVAL_AUTH_FILE || '/Users/arikon/.codex/auth.json';
   const node = await realpath(process.execPath);
-  const selectedModelScenario = process.env.CURSOR_EVAL_MODEL_SCENARIO || '';
   await cp(authFile, join(fixture.home, 'auth.json'));
   const env = { ...process.env, CODEX_HOME: fixture.home, CODEX_SQLITE_HOME: fixture.home,
     CURSOR_SUBAGENT_ADAPTER_CONFIG_ROOT: fixture.home,
     CURSOR_SUBAGENT_CODEX_ADAPTER_COMMAND: JSON.stringify([node, adapter]),
     CURSOR_EVAL_ADAPTER_TIMEOUT_MS: '60000',
     CURSOR_AGENT_COMMAND: node, CURSOR_SUBAGENT_ADAPTER_ARGS: JSON.stringify([fakeAcp]),
-    FAKE_ACP_EXPECT_CODEX_HOME: fixture.home, CURSOR_EVAL_WORKSPACE: fixture.workspace,
-    FAKE_ACP_PENDING: process.env.CURSOR_EVAL_FAKE_ACP_PENDING || '',
-    CURSOR_EVAL_MODEL_SCENARIO: selectedModelScenario,
-    FAKE_ACP_RESULT: selectedModelScenario === 'semantic-failure' ? 'CURSOR_EVAL_DONE_NO_MARKER' : 'CURSOR_EVAL_OK', CURSOR_EVAL_MCP_EVIDENCE: join(evidenceRoot, 'mcp.json'),
-    FAKE_ACP_SAFE_EVIDENCE: join(evidenceRoot, 'acp-safe.jsonl') };
+    FAKE_ACP_EXPECT_CODEX_HOME: fixture.home, CURSOR_EVAL_WORKSPACE: outer.workspace,
+    CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH: programPath, CURSOR_EVAL_MCP_EVIDENCE: join(evidenceRoot, 'mcp.json'),
+    FAKE_ACP_SAFE_EVIDENCE: safeEvidencePath };
   await configureFakeAgent(fixture.fakeAgent, {
-    FAKE_ACP_PENDING: env.FAKE_ACP_PENDING,
-    FAKE_ACP_RESULT: env.FAKE_ACP_RESULT,
+    CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH: programPath,
     FAKE_ACP_SAFE_EVIDENCE: env.FAKE_ACP_SAFE_EVIDENCE,
   });
   const installed = await runBootstrap(['install', '--source-root', fixture.source,
     '--managed-marketplace-root', fixture.managed, '--node-executable', node,
     '--codex-executable', codex, '--agent-executable', fixture.fakeAgent,
-    '--allowed-workspace-root', fixture.workspace], { env,
+    '--allowed-workspace-root', fixture.allowedWorkspace], { env,
     runCommand: (command, args, options) => runPackageCommand(command, args, { ...options, timeoutMs: 70_000 }) });
   assert.equal(installed.exitCode, 0, JSON.stringify(installed.envelope));
   await rename(fixture.source, fixture.hidden);
@@ -257,126 +334,82 @@ test('hosted Codex actually calls the installed Cursor MCP tools', { skip: proce
     requestTimeoutMs: 120_000, onServerRequest: acceptOnlyCursorToolElicitation,
   });
   let hostedThreadId = null;
+  let childResult = null;
+  let failure = null;
   try {
     await runner.initialize();
     const skillEvidence = await runner.skillLoadEvidence(fixture.workspace, skill);
     assert.equal(typeof skillEvidence.plugin_id, 'string');
     assert.equal(skillEvidence.content_sha256, fixture.skillSha256);
     assert.equal(skillEvidence.content_bytes, fixture.skillBytes);
+    const proof = await packageProof(fixture, node, env, skillEvidence);
     const thread = await runner.startThread({ cwd: fixture.workspace });
     hostedThreadId = thread.thread.id;
-    const pendingScenario = env.FAKE_ACP_PENDING;
-    const modelScenario = env.CURSOR_EVAL_MODEL_SCENARIO || pendingScenario;
-    const permissionCovered = modelScenario === 'permission-covered';
-    const permissionExpansion = modelScenario === 'permission-expansion';
-    const semanticFailure = modelScenario === 'semantic-failure';
-    const mode = pendingScenario === 'plan' ? 'plan' : pendingScenario === 'permission' ? 'agent' : 'ask';
-    const markerPath = join(fixture.workspace, 'result.txt');
-    const phaseOneText = pendingScenario
-      ? permissionCovered
-        ? `Создай через Cursor только ${markerPath} с точным содержимым CURSOR_EVAL_OK. Этим поручением я явно разрешаю одну такую запись.`
-        : permissionExpansion
-          ? `Делегируй Cursor только read-only проверку ${markerPath}. Запись изменений сейчас не разрешаю.`
-          : pendingScenario === 'question'
-            ? 'Делегируй Cursor проверку в режиме ask. Если Cursor задаст вопрос, покажи его мне.'
-            : 'Запроси у Cursor план. Не одобряй его без моего решения.'
-      : semanticFailure
-        ? `Use the explicitly selected Cursor plugin now. Delegate an ask-mode task to create exactly ${join(fixture.workspace, 'result.txt')} with CURSOR_EVAL_OK. Wait until Cursor is terminal, independently inspect that exact marker file, then close the session. If the marker is absent or differs, reply exactly CURSOR_EVAL_FAILED; otherwise reply CURSOR_EVAL_OK.`
-        : 'Use the explicitly selected Cursor plugin now. Do not answer in natural language before tools. You MUST call cursor_delegate in ask mode for a read-only check, cursor_wait with exactly the opaque IDs returned by delegate until terminal, then cursor_close_session. Only after close may you reply CURSOR_EVAL_OK.';
-    if (pendingScenario) assert.doesNotMatch(phaseOneText, /cursor_(?:delegate|wait|answer|close)|session_id|turn_id|request_id|allow-once|reject-once/);
     await runner.startTurn({ threadId: thread.thread.id,
-      text: phaseOneText,
+      text: outer.scenario.initial_input,
       skill: { name: skill, path: skillEvidence.path }, pluginName: skillEvidence.plugin_id });
-    if (pendingScenario) {
-      if (permissionCovered) {
-        const completedMcp = await waitForMcpEvidence(join(evidenceRoot, 'mcp.json'), 5, 90_000);
-        const safeEvidence = (await readFile(join(evidenceRoot, 'acp-safe.jsonl'), 'utf8')).trim().split('\n').map((line) => JSON.parse(line));
-        assert.deepEqual(safeEvidence, [{ callback: 'permission', request_id: 'p1', option_id: 'opaque-allow' }]);
-        assertCorrelatedPendingTranscript(completedMcp.transcript, 'cursor_answer_permission', safeEvidence[0]);
-        return;
-      }
-      const pendingMcp = await waitForMcpEvidence(join(evidenceRoot, 'mcp.json'), 2, 90_000);
-      assert.deepEqual(pendingMcp.transcript.map(({ tool }) => tool), ['cursor_delegate', 'cursor_wait']);
-      const followUp = pendingScenario === 'question'
-        ? 'Выбираю показанный вариант Yes.'
-        : pendingScenario === 'plan'
-          ? 'Явно одобряю показанный план.'
-          : `Разрешаю только одну запись в ${markerPath} с содержимым CURSOR_EVAL_OK.`;
-      assert.doesNotMatch(followUp, /cursor_(?:delegate|wait|answer|close)|session_id|turn_id|request_id|allow-once|reject-once/);
-      await runner.startTurn({ threadId: thread.thread.id, text: followUp,
+    for (const followup of outer.scenario.followups) {
+      await waitForMcpEvidence(join(evidenceRoot, 'mcp.json'), 2, 90_000);
+      await runner.startTurn({ threadId: thread.thread.id, text: followup.input,
         skill: { name: skill, path: skillEvidence.path }, pluginName: skillEvidence.plugin_id });
-      const completedMcp = await waitForMcpEvidence(join(evidenceRoot, 'mcp.json'), 5, 90_000);
-      const answerTool = pendingScenario === 'question' ? 'cursor_answer_question' : pendingScenario === 'plan' ? 'cursor_answer_plan' : 'cursor_answer_permission';
-      assert.deepEqual(completedMcp.transcript.map(({ tool }) => tool), ['cursor_delegate', 'cursor_wait', answerTool, 'cursor_wait', 'cursor_close_session']);
-      const safeEvidence = (await readFile(join(evidenceRoot, 'acp-safe.jsonl'), 'utf8')).trim().split('\n').map((line) => JSON.parse(line));
-      const expectedSafe = pendingScenario === 'question'
-        ? { callback: 'question', request_id: 'q1', outcome: 'answered', selected_option_ids: ['yes'] }
-        : pendingScenario === 'plan' ? { callback: 'plan', request_id: 'plan1', outcome: 'accepted' }
-          : { callback: 'permission', request_id: 'p1', option_id: 'opaque-allow' };
-      assert.deepEqual(safeEvidence, [expectedSafe]);
-      assertCorrelatedPendingTranscript(completedMcp.transcript, answerTool, safeEvidence[0]);
-      return;
     }
-    const observed = await waitForMcpEvidenceOrTurnTerminal(runner, thread.thread.id, join(evidenceRoot, 'mcp.json'));
-    let mcp = observed.mcp;
-    if (!mcp) {
-      const [statusResult, turnsResult] = await Promise.allSettled([
-        runner.request('mcpServerStatus/list', { threadId: thread.thread.id, detail: 'toolsAndAuthOnly' }),
-        runner.request('thread/read', { threadId: thread.thread.id, includeTurns: true }),
-      ]);
-      const status = statusResult.status === 'fulfilled' ? statusResult.value : null;
-      const turns = turnsResult.status === 'fulfilled' ? turnsResult.value : null;
-      const turnId = turns?.thread?.turns?.[0]?.id ?? null;
-      const itemsResult = turnId
-        ? await runner.request('thread/items/list', { threadId: thread.thread.id, turnId, limit: 100, sortDirection: 'asc' }).then((value) => ({ value }), (error) => ({ error: error.message }))
-        : { error: 'turn id unavailable' };
-      const items = itemsResult.value ?? null;
-      const publicStatus = status?.data?.filter(({ name }) => name === 'cursor-subagent').map(({ name, runtimeStatus, pluginId, tools }) => ({ name, runtimeStatus, pluginId, toolNames: Object.keys(tools || {}).sort() })) || [];
-      const publicTurns = turns?.thread?.turns?.map(({ status: turnStatus, error: turnError, durationMs }) => ({ status: turnStatus, error: turnError?.message || null, durationMs })) || [];
-      const publicItems = items?.data?.flatMap(({ item }) => item?.type === 'agentMessage' ? [{ type: item.type, text: item.text.slice(0, 1_000) }] : item?.type === 'mcpToolCall' ? [{ type: item.type, server: item.server, tool: item.tool, status: item.status }] : []).slice(-8) || [];
-      throw new Error(`hosted MCP transcript missing; ${JSON.stringify({ terminal: observed.terminal || null, timeout: observed.timeout === true, publicStatus, publicTurns, publicItems, notificationMethods: [...new Set(runner.notifications.map(({ method }) => method))].sort().slice(0, 24), serverRequests: runner.serverRequests.map(({ method }) => method), diagnostics: [statusResult, turnsResult].filter(({ status: state }) => state === 'rejected').map(({ reason }) => reason.message), itemsDiagnostic: itemsResult.error ?? null })}`);
-    }
-    assert.deepEqual(mcp.transcript.map(({ tool }) => tool), ['cursor_delegate', 'cursor_wait', 'cursor_close_session']);
-    if (semanticFailure) {
-      const markerExists = await readFile(join(fixture.workspace, 'result.txt'), 'utf8').then(() => true, () => false);
-      const turns = await runner.request('thread/read', { threadId: thread.thread.id, includeTurns: true });
-      const turnId = turns.thread?.turns?.[0]?.id;
-      const items = turnId ? await runner.request('thread/items/list', { threadId: thread.thread.id, turnId, limit: 100, sortDirection: 'asc' }) : { data: [] };
-      const message = items.data?.flatMap(({ item }) => item?.type === 'agentMessage' ? [item.text] : []).join('\n') || '';
-      const reported = message.includes('CURSOR_EVAL_FAILED') ? 'failed' : message.includes('CURSOR_EVAL_OK') ? 'succeeded' : 'not_reported';
-      const actual = markerExists ? 'succeeded' : 'failed';
-      const verdict = classifyScenario({ enabled: true, expectedActual: 'failed', actual, expectedReported: 'failed', reported });
-      if (verdict !== 'pass') throw new Error(`semantic_failure actual=${actual} reported=${reported}`);
-    }
+    const expectedCalls = outer.scenario.program.steps.some(({ type }) => type === 'pending') ? 5 : 3;
+    const mcp = await waitForMcpEvidence(join(evidenceRoot, 'mcp.json'), expectedCalls, 90_000);
+    const safeEvidence = await readSafeEvidence(safeEvidencePath);
+    const reportedText = await reportedTextForThread(runner, thread.thread.id);
+    const outcomes = await observeFixtureOutcome(outer.scenario, outer.workspace, reportedText);
+    const observations = observationsFromEvidence(outer.scenario, mcp.transcript, safeEvidence, outcomes);
+    const oracle = evaluateScenario(outer.scenario, observations);
+    assert.equal(oracle.eval_status, 'pass', JSON.stringify(oracle));
+    childResult = {
+      schema_version: 1, scenario_id: outer.scenario.scenario_id,
+      provenance: { consumed_scenario: outer.consumedScenario, consumed_corpus: outer.consumedCorpus, ...proof,
+        model: { provider: null, name: null } },
+      observations: { ...observations, assertion_outcome: oracle.assertion_outcome, eval_status: oracle.eval_status },
+      transcript: mcp.transcript,
+      provider_oracle: { request_count: mcp.transcript.length, skill_context_seen: true, terminal_result_matched: oracle.assertion_outcome === 'pass',
+        tool_sequence: mcp.transcript.map(({ tool }) => tool), request_trace: mcp.transcript.map(({ tool, call_id: callId }, index) => ({ step: index + 1, tool, call_id: callId })) },
+    };
+  } catch (error) {
+    failure = error;
   } finally {
     if (hostedThreadId) await runner.archiveThread(hostedThreadId).catch(() => {});
-    await runner.close();
+    await runner.close().catch((error) => { failure ||= error; });
+    await finalizeChildResult(fixture, childResult, failure);
   }
+  if (failure) throw failure;
 });
 
 test('credential-free client-happy completes the installed-skill MCP loop when provisioned', { skip: process.env.CURSOR_EVAL_REAL_CODEX === '1' ? false : 'requires provisioned loopback eval lane' }, async (t) => {
-  const fixture = await layout(); t.after(() => rm(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }));
-  const evidenceRoot = await mkdtemp(join(tmpdir(), 'cursor-eval-published-')); t.after(() => rm(evidenceRoot, { recursive: true, force: true }));
+  const outer = await readOuterScenario();
+  assert.equal(outer.scenario.scenario_id, 'client-happy');
+  const fixture = await layout(outer.workspace);
+  t.after(() => rm(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }));
+  const evidenceRoot = join(fixture.root, 'evidence');
+  const programPath = await ensureProgramPath(fixture, outer.scenario);
   const node = await realpath(process.execPath); const providerEvidence = join(fixture.root, 'provider-safe-evidence.json');
   const env = { ...process.env, CODEX_HOME: fixture.home, CODEX_SQLITE_HOME: fixture.home,
     CURSOR_SUBAGENT_ADAPTER_CONFIG_ROOT: fixture.home,
     CURSOR_SUBAGENT_CODEX_ADAPTER_COMMAND: JSON.stringify([node, adapter]),
     CURSOR_AGENT_COMMAND: node, CURSOR_SUBAGENT_ADAPTER_ARGS: JSON.stringify([fakeAcp]),
-    FAKE_ACP_EXPECT_CODEX_HOME: fixture.home, CURSOR_EVAL_WORKSPACE: fixture.workspace,
-    FAKE_ACP_RESULT: 'CURSOR_EVAL_OK', CURSOR_EVAL_SKILL_SENTINEL: 'Protocol completion не доказывает семантический успех задачи',
+    FAKE_ACP_EXPECT_CODEX_HOME: fixture.home, CURSOR_EVAL_WORKSPACE: outer.workspace,
+    CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH: programPath, CURSOR_EVAL_SKILL_SENTINEL: 'Protocol completion не доказывает семантический успех задачи',
     CURSOR_EVAL_PROVIDER_EVIDENCE: providerEvidence, CURSOR_EVAL_MCP_EVIDENCE: join(evidenceRoot, 'mcp.json'),
     CURSOR_EVAL_WARMUP: '1', CURSOR_EVAL_DEFERRED_TOOL_SEARCH: '1', OLLAMA_HOST: 'http://127.0.0.1:11434' };
+  await configureFakeAgent(fixture.fakeAgent, { CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH: programPath });
   const installed = await runBootstrap(['install', '--source-root', fixture.source,
     '--managed-marketplace-root', fixture.managed, '--node-executable', node,
     '--codex-executable', codex, '--agent-executable', fixture.fakeAgent,
-    '--allowed-workspace-root', fixture.workspace], { env });
+    '--allowed-workspace-root', fixture.allowedWorkspace], { env });
   assert.equal(installed.exitCode, 0, JSON.stringify(installed.envelope));
   const mcpConfig = JSON.parse(await readFile(join(fixture.managed, 'plugins/codex-cursor-subagent-plugin/.mcp.json'), 'utf8'));
   assert.equal(mcpConfig.mcpServers['cursor-subagent'].args[0], join(fixture.managed, 'plugins/codex-cursor-subagent-plugin/scripts/recording-mcp-proxy.mjs'));
   assert.equal(mcpConfig.mcpServers['cursor-subagent'].env.CURSOR_EVAL_MCP_EVIDENCE, join(evidenceRoot, 'mcp.json'));
   await rename(fixture.source, fixture.hidden);
-  const provider = await startProvider(env); t.after(() => stopProcess(provider.child));
+  const provider = await startProvider(env);
   const runner = new CodexAppServerClient(codex, ['app-server', '--stdio', '-c', 'features.apps=true', '-c', 'model_provider="ollama"', '-c', 'oss_provider="ollama"', '-c', 'model="gpt-5.4-mini"'], env, { requestTimeoutMs: 15_000, onServerRequest: acceptOnlyCursorToolElicitation });
+  let childResult = null;
+  let failure = null;
   try {
     await runner.initialize();
     const skillEvidence = await runner.skillLoadEvidence(fixture.workspace, skill);
@@ -385,6 +418,7 @@ test('credential-free client-happy completes the installed-skill MCP loop when p
     assert.ok(skillEvidence.path.startsWith(`${fixture.home}/plugins/cache/`));
     assert.equal(skillEvidence.content_sha256, fixture.skillSha256);
     assert.equal(skillEvidence.content_bytes, fixture.skillBytes);
+    const proof = await packageProof(fixture, node, env, skillEvidence);
     const cachedMcpConfig = JSON.parse(await readFile(join(skillEvidence.path, '..', '..', '..', '.mcp.json'), 'utf8'));
     assert.equal(cachedMcpConfig.mcpServers['cursor-subagent'].args[0], join(fixture.managed, 'plugins/codex-cursor-subagent-plugin/scripts/recording-mcp-proxy.mjs'));
     const thread = await runner.startThread({ cwd: fixture.workspace });
@@ -396,7 +430,7 @@ test('credential-free client-happy completes the installed-skill MCP loop when p
     assert.equal(selectedServer?.pluginId, skillEvidence.plugin_id);
     assert.equal(selectedServer?.runtimeStatus, 'connected');
     assert.deepEqual(Object.keys(selectedServer?.tools || {}).sort(), ['cursor_answer_permission', 'cursor_answer_plan', 'cursor_answer_question', 'cursor_cancel', 'cursor_close_session', 'cursor_delegate', 'cursor_send_prompt', 'cursor_session_status', 'cursor_start_session', 'cursor_wait']);
-    const evaluatedTurn = await runner.startTurn({ threadId: thread.thread.id, text: 'Делегируй Cursor read-only проверку и верни CURSOR_EVAL_OK.', skill: { name: skill, path: skillEvidence.path }, pluginName: skillEvidence.plugin_id });
+    const evaluatedTurn = await runner.startTurn({ threadId: thread.thread.id, text: outer.scenario.initial_input, skill: { name: skill, path: skillEvidence.path }, pluginName: skillEvidence.plugin_id });
     assert.equal(typeof evaluatedTurn.turn?.id, 'string');
     const evidence = await waitForProviderEvidence(providerEvidence, 8);
     assert.equal(evidence.provider_request_seen, true);
@@ -423,21 +457,26 @@ test('credential-free client-happy completes the installed-skill MCP loop when p
       throw new Error(`${error.message}; app-server diagnostics: ${diagnostics}`);
     }
     assert.deepEqual(mcp.transcript.map(({ tool }) => tool), ['cursor_delegate', 'cursor_wait', 'cursor_close_session']);
-    const evidenceRef = await publishEvidence({ evidenceRoot, fixtureRoot: fixture.root, evidence: { scenario_id: 'client-happy', skill_load: skillEvidence, provider: evidence, transcript: mcp.transcript } });
-    const result = evalResult({ scenario_id: 'client-happy', lane: 'client-integration', eval_status: 'pass', actual_task_outcome: 'succeeded', reported_task_outcome: 'succeeded', fixture_assertion_outcome: 'pass', evidence_publication_status: 'published', evidence_ref: evidenceRef, cleanup_status: 'succeeded', failure_stage: null });
-    assert.equal(JSON.parse(await readFile(evidenceRef, 'utf8')).provider.skill_context_seen, true);
-    await runner.close();
-    await rm(fixture.root, { recursive: true, force: true });
-    await writeChildResult({
-      scenario_id: process.env.CURSOR_EVAL_SCENARIO_ID || 'client-happy',
-      eval_status: 'pass',
-      skill: { sha256: skillEvidence.content_sha256, bytes: skillEvidence.content_bytes },
+    const reportedText = reportedMessages.join('\n');
+    const outcomes = await observeFixtureOutcome(outer.scenario, outer.workspace, reportedText);
+    const observations = observationsFromEvidence(outer.scenario, mcp.transcript, [], outcomes);
+    const oracle = evaluateScenario(outer.scenario, observations);
+    assert.equal(oracle.eval_status, 'pass', JSON.stringify(oracle));
+    childResult = {
+      schema_version: 1, scenario_id: outer.scenario.scenario_id,
+      provenance: { consumed_scenario: outer.consumedScenario, consumed_corpus: outer.consumedCorpus, ...proof,
+        model: { provider: 'ollama', name: 'gpt-5.4-mini' } },
+      observations: { ...observations, assertion_outcome: oracle.assertion_outcome, eval_status: oracle.eval_status },
       transcript: mcp.transcript,
       provider_oracle: { request_count: evidence.requests, skill_context_seen: evidence.skill_context_seen,
         terminal_result_matched: evidence.terminal_result_matched, tool_sequence: evidence.tool_sequence.slice(1), request_trace: evidence.request_trace },
-      fixture_oracle: { actual_task_outcome: 'succeeded', reported_task_outcome: 'succeeded', assertion_outcome: 'pass' },
-    });
-    assert.equal(result.evidence_ref, evidenceRef);
-    assert.equal(JSON.parse(await readFile(evidenceRef, 'utf8')).provider.skill_context_seen, true);
-  } finally { await runner.close(); }
+    };
+  } catch (error) {
+    failure = error;
+  } finally {
+    await runner.close().catch((error) => { failure ||= error; });
+    await stopProcess(provider.child).catch((error) => { failure ||= error; });
+    await finalizeChildResult(fixture, childResult, failure);
+  }
+  if (failure) throw failure;
 });

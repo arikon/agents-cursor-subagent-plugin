@@ -230,14 +230,17 @@ close attempt как scenario mismatch. Runtime остаётся единств�
   присваивая driver роль runtime validator
 
 ### Requirement: Immutable evidence manifest
-Существующий private published evidence object каждого выполненного scenario
-MUST сохранить прежние transcript/oracle/result fields и получить ровно одно
+Существующий private published evidence object каждого scenario с полным
+validated proof MUST сохранить прежние transcript/oracle/result fields и получить ровно одно
 новое поле `manifest`. Его значение MUST быть закрытым `EvidenceManifestV1` с
 `schema_version: 1`, `hash_algorithm: "sha256"`,
 `hash_encoding: "lowercase-hex"`, digest objects `installed_skill`, `corpus`,
 `materialized_scenario`, `adapter`, closed `installed_payload`, `client` и
 `model`, без additional properties. Closure относится только к manifest
-subobject и MUST NOT переопределять существующий evidence envelope.
+subobject и MUST NOT переопределять существующий evidence envelope. При
+pre-proof failure durable evidence MUST NOT публиковаться: используется
+существующий `EvalResultV1` с `evidence_publication_status:"not_attempted"` и
+`evidence_ref:null`, без nullable variant manifest.
 
 Digest object MUST иметь ровно `{ "sha256": string, "bytes": integer }`;
 digest — 64 lowercase hexadecimal characters, `bytes` — positive safe integer
@@ -264,24 +267,31 @@ scenario, вычислить canonical payload/digest и передать child 
 bounded payload с ожидаемым digest. Child MUST проверить digest до исполнения,
 через package-owned validation захватить marker projection, exact managed skill
 digest и programmed-only cache-loaded skill evidence до разрушения layout,
-выполнить собственный transport/package cleanup и всегда записать bounded
-child-result в outer-owned path, включая cleanup status. Outer MUST сверить
-scenario digest, adapter digest, raw corpus digest и aggregate projection,
-попытаться удалить собственный fixture, затем сформировать окончательный
+выполнить собственный transport/package cleanup и на управляемых
+client/model/package terminal branches через finalizer записать bounded
+child-result в outer-owned path, включая cleanup status. Abrupt process loss
+остаётся pre-proof missing-result integration failure. Outer MUST сверить
+exact scenario и raw corpus digests и MUST проверить closed shape/bounds adapter
+и aggregate package projection. Adapter fixture/golden владеет фактической
+сверкой adapter bytes/version, package preflight — фактической сверкой package
+proof; outer MUST NOT повторять admission, выводить adapter source из argv/path
+или обходить package tree. Outer MUST попытаться удалить собственный fixture,
+затем сформировать окончательный
 `EvalResultV1` и только после обеих cleanup attempts опубликовать immutable
-evidence с final result. Cleanup failure MUST быть отражён в published failure
-evidence по существующему classifier precedence; publication failure после
+evidence с final result только при полном validated proof. Cleanup failure MUST
+быть отражён в published failure evidence по существующему classifier precedence;
+pre-proof failure не публикует durable evidence. Publication failure после
 cleanup сохраняет существующую classification. Public bootstrap envelope MUST
-не изменяться. Missing или mismatched digest/hash MUST давать
+не изменяться. Missing или mismatched owned digest либо malformed proof MUST давать
 `integration_failure` до behavior verdict.
 Manifest MUST NOT содержать run ordinal, temp roots или перечень внутренних
 harness modules.
 
 #### Scenario: Evidence связано с точным payload
 - **WHEN** outer запускает выбранный scenario и получает child-result
-- **THEN** scenario/adapter digests совпадают, installed skill и aggregate
-  package hashes подтверждены до cleanup, а outer публикует один вложенный
-  manifest
+- **THEN** scenario/raw-corpus digests совпадают, adapter/package proof
+  корректной closed формы захвачен до cleanup, а outer публикует один вложенный
+  manifest только при полном proof
 
 ### Requirement: Cost-aware execution policy
 Corpus admission и canonical materialization семи rows, pure-oracle evaluation
@@ -292,8 +302,8 @@ Corpus admission и canonical materialization семи rows, pure-oracle evaluat
 `{ timeout: 2000 }`, который MUST NOT трактоваться как standalone wall-clock
 SLO. Единственный новый product module `scripts/cursor-eval-scenario.mjs` MUST
 экспортировать pure admission, materialization и oracle functions; imports MUST
-не создавать child process, сеть или credentials. Instrumentation MUST
-фиксировать ноль application child spawn calls. Test MUST иметь counts
+не создавать child process, сеть или credentials. Test body MUST вызывать только
+эти pure operations, без runner/harness и process-per-scenario, и иметь counts
 `admission=7`, `materialization=7`, `oracle=6`, `package-reference=1`, без
 отдельного test file или process-per-scenario; pure oracle MUST NOT вызываться
 для package reference.
@@ -306,15 +316,16 @@ spawn/env contract test без вложенного `unit` или `coverage`. П
 scenario count MAY выводиться только как TAP diagnostics. Change MUST NOT
 модифицировать `node-test-supervision` `result.json` или lane schema.
 
-Tests с реальным filesystem/process I/O MUST использовать per-test `mkdtemp` и
-не разделять mutable state между files; no-I/O contract tests MAY использовать
-inert injected path strings. Tests MUST NOT изменять shared `process.env`.
+Новые или изменённые этим change eval/driver tests с реальным filesystem/process
+I/O MUST использовать per-test `mkdtemp` и не разделять mutable state между files; no-I/O contract tests MAY использовать
+inert injected path strings. Такие eval/driver tests MUST NOT изменять shared
+`process.env`.
 
 #### Scenario: Exact-seven corpus проверяется дешёвым слоем
 - **WHEN** выполняется unit contract test
 - **THEN** один table-driven test принимает и материализует семь rows, оценивает
   oracle-ом шесть programmed rows и проверяет plumbing одной package reference
-  при нуле application child spawns
+  без runner/harness и process-per-scenario
 
 #### Scenario: Hosted scenario не включён явно
 - **WHEN** запускается обычный unit или coverage lane без hosted/live opt-in

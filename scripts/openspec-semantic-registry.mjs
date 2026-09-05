@@ -51,7 +51,13 @@ export const PROJECT_SEMANTIC_REGISTRY = Object.freeze({
       id: changeIds.expandedEval,
       capability: "cursor-subagent-skill-evals",
       specDirectory: "cursor-subagent-skill-evals",
+      corpusPath: "evals/cursor-subagent-scenarios.v1.json",
       ownerClaim: "`cursor-subagent-skill-evals` owns corpus admission, selection, scenario oracle, classification and eval evidence",
+      ownedRequirements: Object.freeze([
+        "Scenario program driver и pure scenario oracle",
+        "Immutable evidence manifest",
+        "Cost-aware execution policy",
+      ]),
       modified: Object.freeze([
         Object.freeze({ capability: "cursor-subagent-skill-evals", requirement: "Разделённые eval lanes и evidence загрузки skill" }),
         Object.freeze({ capability: "cursor-subagent-skill-evals", requirement: "Сценарный контракт поведения и authority-aware interaction" }),

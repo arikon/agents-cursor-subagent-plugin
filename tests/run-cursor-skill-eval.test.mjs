@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -8,8 +9,9 @@ import { PassThrough } from 'node:stream';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
+import { admitScenarioCorpus, evaluateScenario, materializeScenario, parseScenarioCorpus } from '../scripts/cursor-eval-scenario.mjs';
 import { assertEvalResultV1 } from '../scripts/cursor-skill-eval.mjs';
-import { cli, parseChildResult, publishFinalEvidence, runEval, runHarness, transcriptIsCorrelated } from '../scripts/run-cursor-skill-eval.mjs';
+import { cli, parseChildResult, publishFinalEvidence, runEval, runHarness } from '../scripts/run-cursor-skill-eval.mjs';
 
 const run = fileURLToPath(new URL('../scripts/run-cursor-skill-eval.mjs', import.meta.url));
 const execute = promisify(execFile);
@@ -20,15 +22,281 @@ const transcript = [
 ];
 const toolSequence = ['tool_search', 'cursor_delegate', 'tool_search', 'cursor_wait', 'tool_search', 'cursor_close_session', 'final'];
 const requestTrace = toolSequence.map((tool, index) => ({ step: index + 1, tool, call_id: tool === 'final' ? null : `call_${index + 2}` }));
-const childResult = (actual = 'succeeded', reported = 'succeeded', status = 'pass') => ({
-  skill: { sha256: 'a'.repeat(64), bytes: 123 }, transcript,
-  provider_oracle: { request_count: 8, skill_context_seen: true, terminal_result_matched: true, tool_sequence: toolSequence, request_trace: requestTrace },
-  fixture_oracle: { actual_task_outcome: actual, reported_task_outcome: reported, assertion_outcome: status === 'pass' ? 'pass' : 'fail' }, eval_status: status,
+const rawCorpus = await readFile(fileURLToPath(new URL('../evals/cursor-subagent-scenarios.v1.json', import.meta.url)));
+const admittedCorpus = parseScenarioCorpus(rawCorpus);
+const corpusDigest = { sha256: createHash('sha256').update(rawCorpus).digest('hex'), bytes: rawCorpus.length };
+const scenarioById = new Map(admittedCorpus.scenarios.map((scenario) => [scenario.scenario_id, scenario]));
+const fixedDigest = (character, bytes = 123) => ({ sha256: character.repeat(64), bytes });
+const observationsFor = (scenario, { actual = scenario.expected_actual_task_outcome || 'succeeded', reported = scenario.expected_reported_task_outcome || 'succeeded', status = 'pass' } = {}) => ({
+  trace: scenario.scenario_kind === 'programmed' ? scenario.expected_trace.map((entry) => ({ ...entry,
+    session_id: 'S', ...(entry.kind !== 'session.allocated' ? { turn_id: 'T' } : {}),
+    ...(entry.kind.startsWith('pending.') || entry.kind.startsWith('answer.') ? { request_id: scenario.program.steps.find(({ step_id: stepId }) => stepId === entry.step_id)?.callback_id } : {}) })) : [],
+  callbacks: scenario.scenario_kind === 'programmed' ? scenario.program.steps.filter(({ type }) => type === 'pending' || type === 'effect').map((step) => ({ step_id: step.step_id, callback_id: step.callback_id, ...step.expected_callback })) : [],
+  effects: scenario.scenario_kind === 'programmed' ? scenario.program.steps.filter(({ type }) => type === 'effect').map((step) => ({ kind: 'effect.file-written', step_id: step.step_id, callback_id: step.callback_id, path: step.path, text: step.text })) : [],
+  actual_task_outcome: actual, reported_task_outcome: reported,
+  assertion_outcome: status === 'pass' ? 'pass' : status === 'integration_failure' ? 'not_observed' : 'fail', eval_status: status,
 });
-const passHarness = async () => ({ code: 0, signal: null, failure: null, childResult: childResult(), semantic: null, diagnostics: '' });
+const childResult = (scenarioId = 'model-question', options = {}) => {
+  const scenario = scenarioById.get(scenarioId);
+  const scenarioDigest = options.scenarioDigest || materializeScenario(scenario, { workspace: '/tmp/fixture/workspace' }).digest;
+  const skillDigest = fixedDigest('a');
+  const provenance = {
+    consumed_scenario: scenarioDigest, consumed_corpus: options.corpusDigest || corpusDigest, adapter: fixedDigest('b', 456),
+    managed_installed_skill: skillDigest, cache_loaded_skill: scenario.scenario_kind === 'programmed' ? skillDigest : null,
+    installed_payload: { marker_format: 1, payload_hash: 'c'.repeat(64), artifact_hash: 'd'.repeat(64), manifest_version: '0.1.0+codex.fixture' },
+    client: { name: 'codex-app-server', version: '0.152.1' }, model: { provider: null, name: null }, cleanup_status: options.cleanup || 'succeeded',
+  };
+  return {
+    provenance,
+    manifest: { schema_version: 1, hash_algorithm: 'sha256', hash_encoding: 'lowercase-hex', installed_skill: skillDigest,
+      corpus: provenance.consumed_corpus, materialized_scenario: provenance.consumed_scenario, adapter: provenance.adapter,
+      installed_payload: provenance.installed_payload, client: provenance.client, model: provenance.model },
+    observations: observationsFor(scenario, options), transcript,
+    provider_oracle: { request_count: 8, skill_context_seen: true, terminal_result_matched: true, tool_sequence: toolSequence, request_trace: requestTrace },
+  };
+};
+const passHarness = async (config, env) => ({ code: 0, signal: null, failure: null,
+  childResult: childResult(config.scenario.scenario_id, {
+    scenarioDigest: { sha256: env.CURSOR_EVAL_SCENARIO_SHA256, bytes: Number(env.CURSOR_EVAL_SCENARIO_BYTES) },
+    corpusDigest: { sha256: env.CURSOR_EVAL_CORPUS_SHA256, bytes: Number(env.CURSOR_EVAL_CORPUS_BYTES) },
+  }), diagnostics: '' });
 const published = async ({ makeEvidence }) => { makeEvidence('/tmp/evidence.json'); return '/tmp/evidence.json'; };
 const removed = async () => {};
-const encodedChildResult = (scenarioId, overrides = {}) => JSON.stringify({ schema_version: 1, scenario_id: scenarioId, ...childResult(), ...overrides });
+const inertFixture = { mkdtemp: async () => '/tmp/fixture', mkdir: async () => {}, rm: removed };
+const encodedChildResult = (scenarioId, options = {}, overrides = {}) => JSON.stringify({ schema_version: 1, scenario_id: scenarioId, ...childResult(scenarioId, options), ...overrides });
+
+test('exact-seven corpus admission, materialization and pure oracle stay in one process', { timeout: 2_000 }, async (t) => {
+  const corpus = parseScenarioCorpus(rawCorpus);
+  const counts = { admission: corpus.scenarios.length, materialization: 0, oracle: 0, packageReference: 0 };
+  const byId = new Map(corpus.scenarios.map((scenario) => [scenario.scenario_id, scenario]));
+  const observed = (scenario) => ({
+    trace: scenario.expected_trace.map((entry) => ({
+      ...entry,
+      session_id: 'session-1',
+      ...(entry.kind !== 'session.allocated' ? { turn_id: 'turn-1' } : {}),
+      ...(entry.kind.startsWith('pending.') || entry.kind.startsWith('answer.') ? { request_id: scenario.program.steps.find(({ step_id: stepId }) => stepId === entry.step_id)?.callback_id } : {}),
+    })),
+    callbacks: scenario.program.steps.filter(({ type }) => type === 'pending' || type === 'effect').map((step) => ({
+      step_id: step.step_id, callback_id: step.callback_id, ...step.expected_callback,
+    })),
+    effects: scenario.program.steps.filter(({ type }) => type === 'effect').map((step) => ({
+      kind: 'effect.file-written', step_id: step.step_id, callback_id: step.callback_id, path: step.path, text: step.text,
+    })),
+    actual_task_outcome: scenario.expected_actual_task_outcome,
+    reported_task_outcome: scenario.expected_reported_task_outcome,
+  });
+
+  for (const scenario of corpus.scenarios) {
+    const materialized = materializeScenario(scenario, { workspace: '/tmp/cursor-eval-workspace' });
+    counts.materialization += 1;
+    assert.equal(materialized.digest.bytes, Buffer.byteLength(materialized.canonicalPayload, 'utf8'));
+    assert.match(materialized.digest.sha256, /^[a-f0-9]{64}$/);
+    if (scenario.scenario_kind === 'package-canary-reference') {
+      counts.packageReference += 1;
+      continue;
+    }
+    counts.oracle += 1;
+    assert.deepEqual(evaluateScenario(materialized.materializedScenario, observed(materialized.materializedScenario)), {
+      assertion_outcome: 'pass',
+      actual_task_outcome: scenario.expected_actual_task_outcome,
+      reported_task_outcome: scenario.expected_reported_task_outcome,
+      eval_status: 'pass',
+      mismatches: [],
+    });
+  }
+  assert.deepEqual(counts, { admission: 7, materialization: 7, oracle: 6, packageReference: 1 });
+
+  const question = byId.get('model-question');
+  const questionObserved = observed(question);
+  const answerIndex = questionObserved.trace.findIndex(({ kind }) => kind === 'answer.question');
+  const pendingIndex = questionObserved.trace.findIndex(({ kind }) => kind === 'pending.question');
+  const answerBeforePending = structuredClone(questionObserved);
+  [answerBeforePending.trace[pendingIndex], answerBeforePending.trace[answerIndex]] = [answerBeforePending.trace[answerIndex], answerBeforePending.trace[pendingIndex]];
+  assert.ok(evaluateScenario(question, answerBeforePending).mismatches.includes('answer-before-pending'));
+  const wrongId = structuredClone(questionObserved);
+  wrongId.trace[answerIndex].request_id = 'other-request';
+  assert.ok(evaluateScenario(question, wrongId).mismatches.includes('id-mismatch'));
+  const afterClose = structuredClone(questionObserved);
+  afterClose.trace.push({ kind: 'turn.completed', step_id: 'terminal-1' });
+  assert.ok(evaluateScenario(question, afterClose).mismatches.includes('operation-after-close'));
+  const unexpectedEffect = structuredClone(questionObserved);
+  unexpectedEffect.effects.push({ kind: 'effect.file-written', step_id: 'not-planned', callback_id: 'write-x' });
+  assert.ok(evaluateScenario(question, unexpectedEffect).mismatches.includes('unexpected-effect'));
+  const missingClose = structuredClone(questionObserved);
+  missingClose.trace.pop();
+  assert.ok(evaluateScenario(question, missingClose).mismatches.includes('missing-close-attempt'));
+  const missingIds = structuredClone(questionObserved);
+  for (const entry of missingIds.trace) {
+    delete entry.session_id;
+    delete entry.turn_id;
+    delete entry.request_id;
+  }
+  assert.ok(evaluateScenario(question, missingIds).mismatches.includes('id-mismatch'));
+  const answerBeforePendingContract = structuredClone(question);
+  const pendingTraceIndex = answerBeforePendingContract.expected_trace.findIndex(({ kind }) => kind === 'pending.question');
+  const answerTraceIndex = answerBeforePendingContract.expected_trace.findIndex(({ kind }) => kind === 'answer.question');
+  [answerBeforePendingContract.expected_trace[pendingTraceIndex], answerBeforePendingContract.expected_trace[answerTraceIndex]] =
+    [answerBeforePendingContract.expected_trace[answerTraceIndex], answerBeforePendingContract.expected_trace[pendingTraceIndex]];
+  assert.throws(() => admitScenarioCorpus({ ...corpus, scenarios: corpus.scenarios.map((scenario) => scenario.scenario_id === question.scenario_id ? answerBeforePendingContract : scenario) }),
+    (error) => error.evalCode === 'adapter_admission');
+
+  const effectScenario = byId.get('model-permission-covered');
+  const effectObserved = observed(effectScenario);
+  const effectStep = effectScenario.program.steps.find(({ type }) => type === 'effect');
+  const withoutEffectCallback = structuredClone(effectObserved);
+  withoutEffectCallback.callbacks = withoutEffectCallback.callbacks.filter(({ step_id: stepId }) => stepId !== effectStep.step_id);
+  assert.ok(evaluateScenario(effectScenario, withoutEffectCallback).mismatches.includes('missing-effect-callback'));
+  const wrongEffectCallback = structuredClone(effectObserved);
+  wrongEffectCallback.callbacks.find(({ step_id: stepId }) => stepId === effectStep.step_id).callback_id = 'other-write';
+  assert.ok(evaluateScenario(effectScenario, wrongEffectCallback).mismatches.includes('effect-callback-id-mismatch'));
+  const failedEffectCallback = structuredClone(effectObserved);
+  failedEffectCallback.callbacks.find(({ step_id: stepId }) => stepId === effectStep.step_id).outcome = 'failed';
+  assert.ok(evaluateScenario(effectScenario, failedEffectCallback).mismatches.includes('effect-callback-error'));
+  const withoutEffect = structuredClone(effectObserved);
+  withoutEffect.effects = [];
+  assert.ok(evaluateScenario(effectScenario, withoutEffect).mismatches.includes('missing-effect'));
+
+  const invalidPathCases = ['', '/absolute', '.', '..', 'dir\\file', 'nul\0file', 'x'.repeat(4_097)];
+  for (const path of invalidPathCases) {
+    const invalid = structuredClone(corpus);
+    invalid.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-permission-covered').prior_authority.allowed_actions[0].path = path;
+    assert.throws(() => admitScenarioCorpus(invalid), (error) => error.evalCode === 'adapter_admission');
+  }
+  const invalidPlaceholder = structuredClone(corpus);
+  const invalidQuestion = invalidPlaceholder.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-question');
+  invalidQuestion.initial_input += ' ${RESULT_FILE}';
+  assert.throws(() => admitScenarioCorpus(invalidPlaceholder), (error) => error.evalCode === 'adapter_admission');
+  const unknownPlaceholder = structuredClone(corpus);
+  unknownPlaceholder.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-question').initial_input += ' ${UNKNOWN}';
+  assert.throws(() => admitScenarioCorpus(unknownPlaceholder), (error) => error.evalCode === 'adapter_admission');
+  const duplicate = structuredClone(corpus);
+  duplicate.scenarios[1].scenario_id = duplicate.scenarios[0].scenario_id;
+  duplicate.scenarios[1].lane = duplicate.scenarios[0].lane;
+  assert.throws(() => admitScenarioCorpus(duplicate), (error) => error.evalCode === 'adapter_admission');
+
+  const assertInvalid = (mutate) => {
+    const candidate = structuredClone(corpus);
+    mutate(candidate, candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-question'));
+    assert.throws(() => admitScenarioCorpus(candidate), (error) => error.evalCode === 'adapter_admission');
+  };
+  const invalidCorpusMutations = [
+    (candidate) => { candidate.extra = true; },
+    (candidate) => { candidate.schema_version = 2; },
+    (candidate) => { candidate.scenarios.pop(); },
+    (_candidate, scenario) => { scenario.scenario_id = 'Model-Question'; },
+    (_candidate, scenario) => { scenario.scenario_id = 'new-scenario'; },
+    (_candidate, scenario) => { scenario.lane = 'full-live'; },
+    (_candidate, scenario) => { scenario.scenario_kind = 'other'; },
+    (_candidate, scenario) => { scenario.owner_requirements = []; },
+    (_candidate, scenario) => { scenario.owner_requirements.push(structuredClone(scenario.owner_requirements[0])); },
+    (_candidate, scenario) => { scenario.owner_requirements[0].extra = true; },
+    (_candidate, scenario) => { scenario.owner_requirements[0].capability = ''; },
+    (_candidate, scenario) => { scenario.initial_input = ''; },
+    (_candidate, scenario) => { scenario.initial_input = '\ud800'; },
+    (_candidate, scenario) => { scenario.prior_authority = { kind: 'other' }; },
+    (_candidate, scenario) => { scenario.prior_authority = { kind: 'none', extra: true }; },
+    (_candidate, scenario) => { scenario.prior_authority = { kind: 'delegated', allowed_actions: [] }; },
+    (_candidate, scenario) => { scenario.prior_authority = { kind: 'delegated', allowed_actions: [{ operation: 'delete', path: 'result.txt' }] }; },
+    (_candidate, scenario) => { scenario.program.kind = 'other'; },
+    (_candidate, scenario) => { scenario.program.steps = []; },
+    (_candidate, scenario) => { scenario.program.steps[0].request_kind = 'other'; },
+    (_candidate, scenario) => { scenario.program.steps[0].expected_callback.kind = 'decision'; },
+    (_candidate, scenario) => { scenario.program.steps[0].options = []; },
+    (_candidate, scenario) => { scenario.program.steps[0].options.push(structuredClone(scenario.program.steps[0].options[0])); },
+    (_candidate, scenario) => { scenario.program.steps[0].expected_callback.option_ids = ['missing']; },
+    (_candidate, scenario) => { scenario.program.steps[1].type = 'other'; },
+    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-plan').program.steps[0].expected_callback.decision = 'other'; },
+    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-permission-covered').program.steps[0].choices.reverse(); },
+    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-permission-covered').program.steps[0].expected_callback.kind = 'answer'; },
+    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-permission-covered').program.steps[1].operation = 'read'; },
+    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-permission-covered').program.steps[1].expected_callback.outcome = 'failed'; },
+    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'client-happy').program.steps[0].turn_status = 'failed'; },
+    (_candidate, scenario) => { scenario.followups[0].after_pending_step = 'missing'; },
+    (_candidate, scenario) => { scenario.followups.push(structuredClone(scenario.followups[0])); },
+    (_candidate, scenario) => { scenario.expected_trace[0].kind = 'other'; },
+    (_candidate, scenario) => { scenario.expected_trace[2].step_id = 'missing'; },
+    (_candidate, scenario) => { scenario.expected_trace[2].kind = 'turn.completed'; },
+    (_candidate, scenario) => { scenario.expected_trace[3].option_ids = ['missing']; },
+    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-plan').expected_trace[3].decision = 'other'; },
+    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-plan').expected_trace[3].decision = 'reject'; },
+    (_candidate, scenario) => { scenario.expected_trace.splice(2, 0, { kind: 'turn.completed', step_id: 'terminal-1' }); },
+    (_candidate, scenario) => { scenario.forbidden_observations[0] = 'other'; },
+    (_candidate, scenario) => { scenario.forbidden_observations[1] = scenario.forbidden_observations[0]; },
+    (_candidate, scenario) => { scenario.fixture_predicate = { kind: 'other' }; },
+    (_candidate, scenario) => { scenario.expected_actual_task_outcome = 'not_observed'; },
+    (candidate) => {
+      const scenario = candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-plan');
+      scenario.program.steps[0].expected_callback.decision = 'reject';
+      scenario.expected_trace[3].decision = 'reject';
+    },
+    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'live-marker').expected_enabled_eval_status = 'fail'; },
+    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'live-marker').owner_requirements[0].requirement = 'other'; },
+  ];
+  invalidCorpusMutations.forEach(assertInvalid);
+  for (const invalidCorpus of [null, [], 'corpus']) {
+    assert.throws(() => admitScenarioCorpus(invalidCorpus), (error) => error.evalCode === 'adapter_admission');
+  }
+
+  const variantCorpus = structuredClone(corpus);
+  variantCorpus.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'client-happy').fixture_predicate = { kind: 'none' };
+  variantCorpus.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-semantic-failure').fixture_predicate = { kind: 'file-absent', path: 'result.txt' };
+  admitScenarioCorpus(variantCorpus);
+  assert.throws(() => parseScenarioCorpus('{'), (error) => error.evalCode === 'adapter_admission');
+  assert.throws(() => materializeScenario(byId.get('model-semantic-failure'), { workspace: 'relative' }), (error) => error.evalCode === 'adapter_admission');
+
+  const oversized = structuredClone(byId.get('model-permission-expansion'));
+  oversized.initial_input = 'i'.repeat(8_000);
+  oversized.followups[0].input = 'f'.repeat(8_000);
+  oversized.program.steps.find(({ type }) => type === 'effect').text = 'e'.repeat(8_000);
+  oversized.program.steps.find(({ type }) => type === 'terminal').result_text = 't'.repeat(8_000);
+  oversized.fixture_predicate.text = 'p'.repeat(8_000);
+  oversized.prior_authority.allowed_actions = Array.from({ length: 8 }, (_value, index) => ({ operation: 'read', path: `${index}${'x'.repeat(4_095)}` }));
+  assert.throws(() => materializeScenario(oversized, { workspace: '/tmp/cursor-eval-workspace' }), (error) => error.evalCode === 'adapter_admission');
+
+  for (const field of ['trace', 'callbacks', 'effects']) {
+    assert.throws(() => evaluateScenario(question, { ...questionObserved, [field]: {} }), /must be arrays/);
+  }
+  const sessionMismatch = structuredClone(questionObserved);
+  sessionMismatch.trace[1].session_id = 'other-session';
+  assert.ok(evaluateScenario(question, sessionMismatch).mismatches.includes('id-mismatch'));
+  const turnMismatch = structuredClone(questionObserved);
+  turnMismatch.trace[2].turn_id = 'other-turn';
+  assert.ok(evaluateScenario(question, turnMismatch).mismatches.includes('id-mismatch'));
+  const wrongTraceEffect = structuredClone(questionObserved);
+  wrongTraceEffect.trace.splice(-1, 0, { kind: 'effect.file-written', step_id: 'terminal-1' });
+  assert.ok(evaluateScenario(question, wrongTraceEffect).mismatches.includes('unexpected-effect'));
+  const forbiddenTrace = structuredClone(questionObserved);
+  forbiddenTrace.trace.splice(-1, 0, { kind: 'raw-provider-payload' });
+  assert.ok(evaluateScenario(question, forbiddenTrace).mismatches.includes('raw-provider-payload'));
+
+  const missingPendingCallback = structuredClone(questionObserved);
+  missingPendingCallback.callbacks = [];
+  assert.ok(evaluateScenario(question, missingPendingCallback).mismatches.includes('missing-callback'));
+  const wrongPendingCallback = structuredClone(questionObserved);
+  wrongPendingCallback.callbacks[0].option_ids = ['other'];
+  assert.ok(evaluateScenario(question, wrongPendingCallback).mismatches.includes('callback-mismatch'));
+  const wrongPendingCallbackId = structuredClone(questionObserved);
+  wrongPendingCallbackId.callbacks[0].callback_id = 'other-question';
+  assert.ok(evaluateScenario(question, wrongPendingCallbackId).mismatches.includes('id-mismatch'));
+  const omittedOutcomes = structuredClone(questionObserved);
+  delete omittedOutcomes.actual_task_outcome;
+  delete omittedOutcomes.reported_task_outcome;
+  assert.deepEqual(
+    evaluateScenario(question, omittedOutcomes),
+    {
+      assertion_outcome: 'fail',
+      actual_task_outcome: 'not_observed',
+      reported_task_outcome: 'not_reported',
+      eval_status: 'agent_behavior_mismatch',
+      mismatches: ['actual-outcome-mismatch', 'reported-outcome-mismatch'],
+    },
+  );
+  const wrongOutcomes = structuredClone(questionObserved);
+  wrongOutcomes.actual_task_outcome = 'failed';
+  wrongOutcomes.reported_task_outcome = 'failed';
+  assert.deepEqual(evaluateScenario(question, wrongOutcomes).mismatches.slice(-2), ['actual-outcome-mismatch', 'reported-outcome-mismatch']);
+  t.diagnostic(`scenario counts ${JSON.stringify(counts)}`);
+});
 
 function makeHarnessChild({ stdout = '', stderr = '', code = 0, signal = null, error = null } = {}) {
   const child = new EventEmitter();
@@ -87,23 +355,31 @@ test('eval runner bounds an untrusted unknown scenario name in its public result
 test('runner selects each lane and propagates the scenario environment expected by its harness', async () => {
   const cases = [
     ['client-happy', { CURSOR_EVAL_REAL_CODEX: '1' }, 'client-integration', 'credential-free client-happy', { CURSOR_EVAL_REAL_CODEX: '1' }],
-    ['model-plan', { CURSOR_EVAL_HOSTED_CODEX: '1' }, 'model-behavior', 'hosted Codex', { CURSOR_EVAL_HOSTED_CODEX: '1', CURSOR_EVAL_FAKE_ACP_PENDING: 'plan' }],
-    ['model-permission-covered', { CURSOR_EVAL_HOSTED_CODEX: '1' }, 'model-behavior', 'hosted Codex', { CURSOR_EVAL_FAKE_ACP_PENDING: 'permission', CURSOR_EVAL_MODEL_SCENARIO: 'permission-covered' }],
+    ['model-plan', { CURSOR_EVAL_HOSTED_CODEX: '1' }, 'model-behavior', 'hosted Codex', { CURSOR_EVAL_HOSTED_CODEX: '1' }],
+    ['model-permission-covered', { CURSOR_EVAL_HOSTED_CODEX: '1' }, 'model-behavior', 'hosted Codex', { CURSOR_EVAL_HOSTED_CODEX: '1' }],
     ['live-marker', { CURSOR_SUBAGENT_LIVE_E2E: '1' }, 'full-live', 'live release canary', { CURSOR_SUBAGENT_LIVE_E2E: '1' }],
   ];
   for (const [scenarioId, env, lane, pattern, expectedEnv] of cases) {
     let observed;
-    const result = await runEval({ scenarioId, env }, { mkdtemp: async () => '/tmp/fixture', rm: removed, publishEvidence: published,
-      runHarness: async (config, harnessEnv) => { observed = { pattern: config.pattern, env: harnessEnv }; return passHarness(); } });
+    const result = await runEval({ scenarioId, env }, { ...inertFixture, publishEvidence: published,
+      runHarness: async (config, harnessEnv) => { observed = { pattern: config.pattern, env: harnessEnv }; return passHarness(config, harnessEnv); } });
     assert.equal(assertEvalResultV1(result).eval_status, 'pass'); assert.equal(result.lane, lane); assert.equal(observed.pattern, pattern);
     for (const [name, value] of Object.entries(expectedEnv)) assert.equal(observed.env[name], value);
+    assert.equal(observed.env.CURSOR_EVAL_WORKSPACE, '/tmp/fixture/workspace');
+    assert.deepEqual(JSON.parse(observed.env.CURSOR_EVAL_SCENARIO_PAYLOAD).scenario_id, scenarioId);
+    assert.match(observed.env.CURSOR_EVAL_SCENARIO_SHA256, /^[a-f0-9]{64}$/);
+    assert.equal(Number.isSafeInteger(Number(observed.env.CURSOR_EVAL_SCENARIO_BYTES)), true);
+    assert.equal(observed.env.CURSOR_EVAL_CORPUS_SHA256, corpusDigest.sha256);
+    assert.equal(Number(observed.env.CURSOR_EVAL_CORPUS_BYTES), corpusDigest.bytes);
   }
 });
 
 test('cleanup failure overrides a behavior mismatch after evidence publication', async () => {
   const result = await runEval({ scenarioId: 'model-question', env: { CURSOR_EVAL_HOSTED_CODEX: '1' } }, {
-    mkdtemp: async () => '/tmp/fixture', publishEvidence: published,
-    runHarness: async () => ({ code: 1, signal: null, failure: 'scenario_contract_mismatch', childResult: childResult('succeeded', 'failed', 'agent_behavior_mismatch'), semantic: null, diagnostics: '' }),
+    ...inertFixture, publishEvidence: published,
+    runHarness: async (config, harnessEnv) => ({ code: 1, signal: null, failure: 'scenario_contract_mismatch',
+      childResult: childResult(config.scenario.scenario_id, { actual: 'succeeded', reported: 'failed', status: 'agent_behavior_mismatch',
+        scenarioDigest: { sha256: harnessEnv.CURSOR_EVAL_SCENARIO_SHA256, bytes: Number(harnessEnv.CURSOR_EVAL_SCENARIO_BYTES) }, corpusDigest }), diagnostics: '' }),
     rm: async () => { throw new Error('fixture remains'); },
   });
   assert.deepEqual(assertEvalResultV1(result), {
@@ -117,7 +393,7 @@ test('cleanup failure overrides a behavior mismatch after evidence publication',
 test('publication failure has integration precedence and still performs cleanup', async () => {
   let cleanupCalled = false;
   const result = await runEval({ scenarioId: 'model-plan', env: { CURSOR_EVAL_HOSTED_CODEX: '1' } }, {
-    mkdtemp: async () => '/tmp/fixture', runHarness: passHarness,
+    ...inertFixture, runHarness: passHarness,
     publishEvidence: async () => { throw new Error('disk full'); },
     rm: async () => { cleanupCalled = true; },
   });
@@ -127,17 +403,28 @@ test('publication failure has integration precedence and still performs cleanup'
 });
 
 test('runner and fixture setup catches always return valid stage-specific EvalResultV1 objects', async () => {
+  let spawned = false;
+  const corpus = await runEval({ scenarioId: 'client-happy', env: { CURSOR_EVAL_REAL_CODEX: '1' } }, {
+    readFile: async () => { throw Object.assign(new Error('malformed corpus'), { evalCode: 'adapter_admission' }); },
+    runHarness: async () => { spawned = true; throw new Error('must not spawn'); },
+  });
+  assert.deepEqual(
+    { status: corpus.eval_status, stage: corpus.failure_stage, code: corpus.error_code, cleanup: corpus.cleanup_status },
+    { status: 'integration_failure', stage: 'adapter_admission', code: 'adapter_admission', cleanup: 'not_required' },
+  );
+  assert.equal(spawned, false);
+  assertEvalResultV1(corpus);
   const setup = await runEval({ scenarioId: 'client-happy', env: { CURSOR_EVAL_REAL_CODEX: '1' } }, { mkdtemp: async () => { throw new Error('no temp'); } });
   assert.deepEqual({ status: setup.eval_status, stage: setup.failure_stage, code: setup.error_code, cleanup: setup.cleanup_status }, { status: 'integration_failure', stage: 'runner', code: 'fixture_setup_failed', cleanup: 'not_required' });
   assertEvalResultV1(setup);
   const harness = await runEval({ scenarioId: 'model-question', env: { CURSOR_EVAL_HOSTED_CODEX: '1' } }, {
-    mkdtemp: async () => '/tmp/fixture', runHarness: async () => { throw Object.assign(new Error('spawn failed'), { evalCode: 'harness_spawn_failure' }); }, rm: removed,
+    ...inertFixture, runHarness: async () => { throw Object.assign(new Error('spawn failed'), { evalCode: 'harness_spawn_failure' }); },
   });
   assert.deepEqual({ status: harness.eval_status, stage: harness.failure_stage, code: harness.error_code, assertion: harness.fixture_assertion_outcome, cleanup: harness.cleanup_status },
     { status: 'integration_failure', stage: 'runner', code: 'harness_spawn_failure', assertion: 'not_observed', cleanup: 'succeeded' });
   assertEvalResultV1(harness);
   const generic = await runEval({ scenarioId: 'model-question', env: { CURSOR_EVAL_HOSTED_CODEX: '1' } }, {
-    mkdtemp: async () => '/tmp/fixture', runHarness: async () => { throw new Error('runner failed'); }, rm: removed,
+    ...inertFixture, runHarness: async () => { throw new Error('runner failed'); },
   });
   assert.deepEqual(
     { status: generic.eval_status, stage: generic.failure_stage, code: generic.error_code, cleanup: generic.cleanup_status },
@@ -151,7 +438,7 @@ test('runner owns the disposable fixture lifecycle by default', async () => {
   const result = await runEval({ scenarioId: 'client-happy', env: { CURSOR_EVAL_REAL_CODEX: '1' } }, {
     runHarness: async (_config, harnessEnv) => {
       fixtureRoot = harnessEnv.CURSOR_EVAL_CHILD_RESULT.slice(0, -'/child-result.json'.length);
-      return passHarness();
+      return passHarness(_config, harnessEnv);
     },
     publishEvidence: published,
   });
@@ -161,8 +448,7 @@ test('runner owns the disposable fixture lifecycle by default', async () => {
 
 test('runner normalizes a harness infrastructure failure without child evidence', async () => {
   const result = await runEval({ scenarioId: 'model-question', env: { CURSOR_EVAL_HOSTED_CODEX: '1' } }, {
-    mkdtemp: async () => '/tmp/fixture',
-    rm: removed,
+    ...inertFixture,
     publishEvidence: published,
     runHarness: async () => ({ code: 9, signal: null, failure: 'harness_failure', childResult: null, semantic: null, diagnostics: 'failed' }),
   });
@@ -187,17 +473,38 @@ test('runner normalizes a harness infrastructure failure without child evidence'
   assertEvalResultV1(result);
 });
 
-test('runner preserves semantic outcomes when child evidence is unavailable', async () => {
+test('runner does not publish durable evidence before complete programmed or package proof', async () => {
+  const packageFailure = childResult('live-marker');
+  packageFailure.manifest = null;
+  packageFailure.observations = { ...packageFailure.observations, assertion_outcome: 'not_observed', eval_status: 'integration_failure' };
+  for (const [scenarioId, env, harness] of [
+    ['model-question', { CURSOR_EVAL_HOSTED_CODEX: '1' }, { code: 9, signal: null, failure: 'harness_failure', childResult: null, diagnostics: 'failed' }],
+    ['live-marker', { CURSOR_SUBAGENT_LIVE_E2E: '1' }, { code: 1, signal: null, failure: 'child_integration_failure', childResult: packageFailure, diagnostics: 'failed' }],
+  ]) {
+    let published = false;
+    const result = await runEval({ scenarioId, env }, {
+      ...inertFixture,
+      runHarness: async () => harness,
+      publishEvidence: async () => { published = true; },
+    });
+    assert.deepEqual(
+      { status: result.eval_status, publication: result.evidence_publication_status, ref: result.evidence_ref },
+      { status: 'integration_failure', publication: 'not_attempted', ref: null },
+    );
+    assert.equal(published, false);
+    assertEvalResultV1(result);
+  }
+});
+
+test('runner treats missing child evidence as an integration failure before behavior classification', async () => {
   const result = await runEval({ scenarioId: 'model-semantic-failure', env: { CURSOR_EVAL_HOSTED_CODEX: '1' } }, {
-    mkdtemp: async () => '/tmp/fixture',
-    rm: removed,
+    ...inertFixture,
     publishEvidence: published,
     runHarness: async () => ({
       code: 1,
       signal: null,
       failure: 'scenario_contract_mismatch',
       childResult: null,
-      semantic: { actual: 'failed', reported: 'succeeded' },
       diagnostics: '',
     }),
   });
@@ -210,41 +517,47 @@ test('runner preserves semantic outcomes when child evidence is unavailable', as
       stage: result.failure_stage,
     },
     {
-      status: 'agent_behavior_mismatch',
-      actual: 'failed',
-      reported: 'succeeded',
-      assertion: 'fail',
-      stage: 'scenario',
+      status: 'integration_failure',
+      actual: 'not_observed',
+      reported: 'not_reported',
+      assertion: 'not_observed',
+      stage: 'runner',
     },
   );
   assertEvalResultV1(result);
 });
 
-test('published evidence is emitted after cleanup with correlated child proof and the final EvalResultV1', async () => {
+test('published evidence is emitted after cleanup with exact child provenance and the final EvalResultV1', async () => {
   const order = []; let evidence;
   const result = await runEval({ scenarioId: 'client-happy', env: { CURSOR_EVAL_REAL_CODEX: '1' } }, {
-    mkdtemp: async () => '/tmp/fixture', runHarness: passHarness,
+    ...inertFixture, runHarness: passHarness,
     rm: async () => { order.push('cleanup'); },
     publishEvidence: async ({ makeEvidence }) => { order.push('publication'); evidence = makeEvidence('/tmp/final-evidence.json'); return '/tmp/final-evidence.json'; },
   });
   assert.deepEqual(order, ['cleanup', 'publication']); assert.equal(result.eval_status, 'pass');
   assert.deepEqual(evidence.skill, { sha256: 'a'.repeat(64), bytes: 123 });
-  assert.deepEqual(evidence.transcript, transcript); assert.deepEqual(evidence.provider_oracle, childResult().provider_oracle);
-  assert.deepEqual(evidence.fixture_oracle, childResult().fixture_oracle); assert.deepEqual(evidence.final_result, result);
+  assert.deepEqual(evidence.transcript, transcript); assert.deepEqual(evidence.provider_oracle, childResult('client-happy').provider_oracle);
+  assert.equal(evidence.fixture_oracle.eval_status, 'pass'); assert.deepEqual(evidence.final_result, result);
+  assert.deepEqual(Object.keys(evidence.manifest).sort(), ['adapter', 'client', 'corpus', 'hash_algorithm', 'hash_encoding', 'installed_payload', 'installed_skill', 'materialized_scenario', 'model', 'schema_version']);
+  assert.deepEqual(evidence.manifest.installed_skill, { sha256: 'a'.repeat(64), bytes: 123 });
   assert.equal(Buffer.byteLength(JSON.stringify(evidence), 'utf8') < 1_048_576, true);
 });
 
 test('semantic failure outcomes are classified independently of successful TAP exit', async () => {
   const result = await runEval({ scenarioId: 'model-semantic-failure', env: { CURSOR_EVAL_HOSTED_CODEX: '1' } }, {
-    mkdtemp: async () => '/tmp/fixture', rm: removed, publishEvidence: published,
-    runHarness: async () => ({ code: 0, signal: null, failure: null, childResult: childResult('failed', 'failed'), semantic: null, diagnostics: '' }),
+    ...inertFixture, publishEvidence: published,
+    runHarness: async (config, harnessEnv) => ({ code: 0, signal: null, failure: null,
+      childResult: childResult(config.scenario.scenario_id, { actual: 'failed', reported: 'failed',
+        scenarioDigest: { sha256: harnessEnv.CURSOR_EVAL_SCENARIO_SHA256, bytes: Number(harnessEnv.CURSOR_EVAL_SCENARIO_BYTES) }, corpusDigest }), diagnostics: '' }),
   });
   assert.deepEqual({ status: result.eval_status, actual: result.actual_task_outcome, reported: result.reported_task_outcome, assertion: result.fixture_assertion_outcome },
     { status: 'pass', actual: 'failed', reported: 'failed', assertion: 'pass' });
 
   const dishonest = await runEval({ scenarioId: 'model-semantic-failure', env: { CURSOR_EVAL_HOSTED_CODEX: '1' } }, {
-    mkdtemp: async () => '/tmp/fixture', rm: removed, publishEvidence: published,
-    runHarness: async () => ({ code: 0, signal: null, failure: null, childResult: childResult('failed', 'succeeded', 'agent_behavior_mismatch'), semantic: null, diagnostics: '' }),
+    ...inertFixture, publishEvidence: published,
+    runHarness: async (config, harnessEnv) => ({ code: 0, signal: null, failure: null,
+      childResult: childResult(config.scenario.scenario_id, { actual: 'failed', reported: 'succeeded', status: 'agent_behavior_mismatch',
+        scenarioDigest: { sha256: harnessEnv.CURSOR_EVAL_SCENARIO_SHA256, bytes: Number(harnessEnv.CURSOR_EVAL_SCENARIO_BYTES) }, corpusDigest }), diagnostics: '' }),
   });
   assert.deepEqual({ status: dishonest.eval_status, actual: dishonest.actual_task_outcome, reported: dishonest.reported_task_outcome },
     { status: 'agent_behavior_mismatch', actual: 'failed', reported: 'succeeded' });
@@ -252,7 +565,7 @@ test('semantic failure outcomes are classified independently of successful TAP e
 
 test('cleanup failure remains the primary stage when failure-artifact publication also fails', async () => {
   const result = await runEval({ scenarioId: 'model-question', env: { CURSOR_EVAL_HOSTED_CODEX: '1' } }, {
-    mkdtemp: async () => '/tmp/fixture', runHarness: passHarness,
+    ...inertFixture, runHarness: passHarness,
     rm: async () => { throw new Error('cleanup broke'); }, publishEvidence: async () => { throw new Error('publication broke'); },
   });
   assert.deepEqual({ status: result.eval_status, stage: result.failure_stage, code: result.error_code, publication: result.evidence_publication_status, cleanup: result.cleanup_status },
@@ -260,9 +573,16 @@ test('cleanup failure remains the primary stage when failure-artifact publicatio
   assertEvalResultV1(result);
 });
 
-test('child-result parser normalizes valid correlated evidence', () => {
-  const parsed = parseChildResult(encodedChildResult('model-question'), 'model-question');
-  assert.deepEqual(parsed, childResult());
+test('child-result parser normalizes exact provenance and builds the closed private manifest', () => {
+  const parsed = parseChildResult(encodedChildResult('model-question'), 'model-question', { scenario: scenarioById.get('model-question') });
+  assert.deepEqual(parsed.manifest, {
+    schema_version: 1, hash_algorithm: 'sha256', hash_encoding: 'lowercase-hex',
+    installed_skill: fixedDigest('a'), corpus: corpusDigest,
+    materialized_scenario: materializeScenario(scenarioById.get('model-question'), { workspace: '/tmp/fixture/workspace' }).digest,
+    adapter: fixedDigest('b', 456),
+    installed_payload: { marker_format: 1, payload_hash: 'c'.repeat(64), artifact_hash: 'd'.repeat(64), manifest_version: '0.1.0+codex.fixture' },
+    client: { name: 'codex-app-server', version: '0.152.1' }, model: { provider: null, name: null },
+  });
 });
 
 test('child-result parser rejects malformed JSON and oversized evidence', () => {
@@ -276,90 +596,50 @@ test('child-result parser rejects every required evidence-contract violation', (
   const invalidResults = [
     { ...valid, schema_version: 2 },
     { ...valid, scenario_id: 'model-plan' },
-    { ...valid, skill: null },
-    { ...valid, skill: { ...valid.skill, sha256: 'not-a-sha' } },
-    { ...valid, skill: { ...valid.skill, bytes: 0 } },
-    { ...valid, transcript: [] },
+    { ...valid, provenance: null },
+    { ...valid, provenance: { ...valid.provenance, extra: true } },
+    { ...valid, provenance: { ...valid.provenance, consumed_scenario: { ...valid.provenance.consumed_scenario, sha256: 'not-a-sha' } } },
+    { ...valid, provenance: { ...valid.provenance, adapter: { ...valid.provenance.adapter, bytes: 0 } } },
+    { ...valid, provenance: { ...valid.provenance, managed_installed_skill: null } },
+    { ...valid, provenance: { ...valid.provenance, cache_loaded_skill: fixedDigest('e') } },
+    { ...valid, provenance: { ...valid.provenance, installed_payload: { ...valid.provenance.installed_payload, extra: true } } },
+    { ...valid, provenance: { ...valid.provenance, installed_payload: { ...valid.provenance.installed_payload, payload_hash: 'bad' } } },
+    { ...valid, provenance: { ...valid.provenance, client: { name: '', version: '1' } } },
+    { ...valid, provenance: { ...valid.provenance, model: { provider: null, name: null, raw: 'forbidden' } } },
+    { ...valid, provenance: { ...valid.provenance, cleanup_status: 'unknown' } },
+    { ...valid, observations: null },
+    { ...valid, observations: { ...valid.observations, trace: null } },
+    { ...valid, observations: { ...valid.observations, actual_task_outcome: 'unknown' } },
+    { ...valid, observations: { ...valid.observations, reported_task_outcome: 'unknown' } },
+    { ...valid, observations: { ...valid.observations, assertion_outcome: 'unknown' } },
+    { ...valid, observations: { ...valid.observations, eval_status: 'skipped' } },
     { ...valid, provider_oracle: null },
     { ...valid, provider_oracle: [] },
-    { ...valid, provider_oracle: { ...valid.provider_oracle, request_count: 0 } },
-    { ...valid, provider_oracle: { ...valid.provider_oracle, skill_context_seen: false } },
-    { ...valid, provider_oracle: { ...valid.provider_oracle, terminal_result_matched: 'yes' } },
-    { ...valid, provider_oracle: { ...valid.provider_oracle, tool_sequence: null } },
-    { ...valid, provider_oracle: { ...valid.provider_oracle, tool_sequence: [] } },
-    { ...valid, provider_oracle: { ...valid.provider_oracle, tool_sequence: Array(17).fill('tool_search'), request_trace: Array(17).fill(null) } },
-    { ...valid, provider_oracle: { ...valid.provider_oracle, tool_sequence: [...toolSequence.slice(0, -1), 'x'.repeat(129)] } },
-    { ...valid, provider_oracle: { ...valid.provider_oracle, request_trace: null } },
-    { ...valid, provider_oracle: { ...valid.provider_oracle, request_trace: requestTrace.slice(0, -1) } },
-    { ...valid, provider_oracle: { ...valid.provider_oracle, request_trace: requestTrace.map((entry, index) => index === 0 ? { ...entry, extra: true } : entry) } },
-    { ...valid, provider_oracle: { ...valid.provider_oracle, request_trace: requestTrace.map((entry, index) => index === 0 ? { ...entry, step: 2 } : entry) } },
-    { ...valid, provider_oracle: { ...valid.provider_oracle, request_trace: requestTrace.map((entry, index) => index === 0 ? { ...entry, tool: 'cursor_wait' } : entry) } },
-    { ...valid, provider_oracle: { ...valid.provider_oracle, request_trace: requestTrace.map((entry, index) => index === 0 ? { ...entry, call_id: '' } : entry) } },
-    { ...valid, provider_oracle: { ...valid.provider_oracle, request_trace: requestTrace.map((entry, index) => index === 0 ? { ...entry, call_id: 'x'.repeat(129) } : entry) } },
-    { ...valid, provider_oracle: { ...valid.provider_oracle, request_trace: requestTrace.map((entry, index) => index === requestTrace.length - 1 ? { ...entry, call_id: 'call_final' } : entry) } },
-    { ...valid, fixture_oracle: null },
-    { ...valid, fixture_oracle: { ...valid.fixture_oracle, actual_task_outcome: 'unknown' } },
-    { ...valid, fixture_oracle: { ...valid.fixture_oracle, reported_task_outcome: 'unknown' } },
-    { ...valid, fixture_oracle: { ...valid.fixture_oracle, assertion_outcome: 'unknown' } },
-    { ...valid, eval_status: 'skipped' },
   ];
   for (const value of invalidResults) {
-    assert.throws(() => parseChildResult(JSON.stringify(value), 'model-question'), (error) => error.evalCode === 'child_result_invalid');
+    assert.throws(() => parseChildResult(JSON.stringify(value), 'model-question', { scenario: scenarioById.get('model-question') }), (error) => error.evalCode === 'child_result_invalid');
   }
 });
 
-test('client-happy child evidence rejects any deviation from the exact deferred route', () => {
-  const valid = JSON.parse(encodedChildResult('client-happy'));
-  const wrongSequence = [...toolSequence]; wrongSequence[2] = 'cursor_wait';
-  const duplicateCallIds = requestTrace.map((entry, index) => index === 1 ? { ...entry, call_id: requestTrace[0].call_id } : entry);
-  for (const providerOracle of [
-    { ...valid.provider_oracle, request_count: 7 },
-    { ...valid.provider_oracle, tool_sequence: wrongSequence, request_trace: requestTrace.map((entry, index) => ({ ...entry, tool: wrongSequence[index] })) },
-    { ...valid.provider_oracle, request_trace: duplicateCallIds },
-  ]) {
-    assert.throws(() => parseChildResult(JSON.stringify({ ...valid, provider_oracle: providerOracle }), 'client-happy'), (error) => error.evalCode === 'child_result_invalid');
+test('child-result parser rejects corpus and materialized payload digest mismatches before behavior verdict', () => {
+  const scenario = scenarioById.get('client-happy');
+  const expectedScenario = materializeScenario(scenario, { workspace: '/tmp/fixture/workspace' }).digest;
+  for (const expected of [{ scenarioDigest: fixedDigest('f') }, { corpusDigest: fixedDigest('f') }]) {
+    assert.throws(() => parseChildResult(encodedChildResult('client-happy'), 'client-happy', {
+      scenario, scenarioDigest: expected.scenarioDigest || expectedScenario, corpusDigest: expected.corpusDigest || corpusDigest,
+    }), (error) => error.evalCode === 'child_result_invalid');
   }
 });
 
 test('published evidence retains the normalized bounded provider route trace', async () => {
   let evidence;
   const result = await runEval({ scenarioId: 'client-happy', env: { CURSOR_EVAL_REAL_CODEX: '1' } }, {
-    mkdtemp: async () => '/tmp/fixture', runHarness: passHarness, rm: removed,
+    ...inertFixture, runHarness: passHarness,
     publishEvidence: async ({ makeEvidence }) => { evidence = makeEvidence('/tmp/provider-route.json'); return '/tmp/provider-route.json'; },
   });
   assert.equal(result.eval_status, 'pass');
   assert.deepEqual(evidence.provider_oracle.tool_sequence, toolSequence);
   assert.deepEqual(evidence.provider_oracle.request_trace, requestTrace);
-});
-
-test('transcript correlation accepts an answer only for a previously observed pending request', () => {
-  const correlated = [
-    transcript[0],
-    { direction: 'request', tool: 'cursor_wait', call_id: 'wait', request: { session_id: 'S', turn_id: 'T' }, response: { ok: true, session_id: 'S', turn_id: 'T', active_turn: { pending: [{ request_id: 'Q' }] } } },
-    { direction: 'request', tool: 'cursor_answer_question', call_id: 'answer', request: { session_id: 'S', turn_id: 'T', request_id: 'Q' }, response: { ok: true, session_id: 'S', turn_id: 'T' } },
-    transcript[2],
-  ];
-  assert.equal(transcriptIsCorrelated(correlated), true);
-});
-
-test('transcript correlation rejects malformed lifecycle shape and mismatched opaque IDs', () => {
-  const variants = [
-    null,
-    transcript.slice(0, 2),
-    [{ ...transcript[0], tool: 'cursor_wait' }, transcript[1], transcript[2]],
-    [transcript[0], transcript[1], { ...transcript[2], tool: 'cursor_wait' }],
-    [{ ...transcript[0], direction: 'response' }, transcript[1], transcript[2]],
-    [{ ...transcript[0], call_id: null }, transcript[1], transcript[2]],
-    [{ ...transcript[0], response: { ...transcript[0].response, ok: false } }, transcript[1], transcript[2]],
-    [{ ...transcript[0], response: { ok: true, session_id: '', turn_id: 'T' } }, transcript[1], transcript[2]],
-    [transcript[0], { ...transcript[1], request: { session_id: 'other', turn_id: 'T' } }, transcript[2]],
-    [transcript[0], { ...transcript[1], request: { session_id: 'S', turn_id: 'other' } }, transcript[2]],
-    [transcript[0], { ...transcript[1], response: { ok: true, session_id: 'other', turn_id: 'T' } }, transcript[2]],
-    [transcript[0], { ...transcript[1], response: { ok: true, session_id: 'S', turn_id: 'other' } }, transcript[2]],
-    [transcript[0], { direction: 'request', tool: 'cursor_answer_plan', call_id: 2, request: { session_id: 'S', turn_id: 'T', request_id: 'missing' }, response: { ok: true, session_id: 'S', turn_id: 'T' } }, transcript[2]],
-    [transcript[0], transcript[1], { ...transcript[2], request: { session_id: 'other' } }],
-  ];
-  for (const variant of variants) assert.equal(transcriptIsCorrelated(variant), false);
 });
 
 test('harness returns validated child evidence and bounded diagnostics after a successful child exit', async () => {
@@ -369,7 +649,7 @@ test('harness returns validated child evidence and bounded diagnostics after a s
     readFile: async () => encodedChildResult('client-happy'),
   });
   assert.equal(result.failure, null);
-  assert.deepEqual(result.childResult, childResult());
+  assert.deepEqual(result.childResult, childResult('client-happy'));
   assert.equal(Buffer.byteLength(result.diagnostics, 'utf8') <= 8_000, true);
 });
 
@@ -385,15 +665,16 @@ test('harness executes its configured Node test through the default process boun
     { ...process.env, CURSOR_EVAL_CHILD_RESULT: childResultPath, CURSOR_EVAL_SCENARIO_ID: 'client-happy' },
   );
   assert.equal(result.failure, null);
-  assert.deepEqual(result.childResult, childResult());
+  assert.deepEqual(result.childResult, childResult('client-happy'));
 });
 
-test('harness maps a semantic marker to scenario-contract mismatch with parsed outcomes', async () => {
+test('harness maps child scenario evidence to a scenario-contract mismatch', async () => {
   const result = await runHarness({ pattern: 'scenario', test: '/tmp/test.mjs' }, { CURSOR_EVAL_CHILD_RESULT: '/tmp/result.json', CURSOR_EVAL_SCENARIO_ID: 'model-semantic-failure' }, {
-    spawn: () => makeHarnessChild({ stdout: 'semantic_failure actual=failed reported=succeeded', code: 1 }),
-    readFile: async () => encodedChildResult('model-semantic-failure'),
+    spawn: () => makeHarnessChild({ code: 1 }),
+    readFile: async () => encodedChildResult('model-semantic-failure', { actual: 'failed', reported: 'succeeded', status: 'agent_behavior_mismatch' }),
   });
-  assert.deepEqual({ failure: result.failure, semantic: result.semantic }, { failure: 'scenario_contract_mismatch', semantic: { actual: 'failed', reported: 'succeeded' } });
+  assert.equal(result.failure, 'scenario_contract_mismatch');
+  assert.deepEqual({ actual: result.childResult.observations.actual_task_outcome, reported: result.childResult.observations.reported_task_outcome }, { actual: 'failed', reported: 'succeeded' });
 });
 
 test('harness distinguishes generic child failure from a scenario-contract mismatch', async () => {
@@ -401,7 +682,7 @@ test('harness distinguishes generic child failure from a scenario-contract misma
     spawn: () => makeHarnessChild({ code: 1 }), readFile: async () => encodedChildResult('client-happy'),
   });
   const mismatch = await runHarness({ pattern: 'scenario', test: '/tmp/test.mjs' }, { CURSOR_EVAL_CHILD_RESULT: '/tmp/result.json', CURSOR_EVAL_SCENARIO_ID: 'client-happy' }, {
-    spawn: () => makeHarnessChild({ stdout: 'hosted MCP transcript missing', code: 1 }), readFile: async () => encodedChildResult('client-happy'),
+    spawn: () => makeHarnessChild({ code: 1 }), readFile: async () => encodedChildResult('client-happy', { actual: 'failed', status: 'agent_behavior_mismatch' }),
   });
   assert.deepEqual([generic.failure, mismatch.failure], ['harness_failure', 'scenario_contract_mismatch']);
 });

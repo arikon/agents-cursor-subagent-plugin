@@ -1,0 +1,261 @@
+{
+  "schema_version": 1,
+  "scenarios": [
+    {
+      "scenario_kind": "programmed",
+      "scenario_id": "client-happy",
+      "lane": "client-integration",
+      "owner_requirements": [
+        { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
+        { "capability": "cursor-acp-session-runtime", "requirement": "Ограниченный жизненный цикл ACP-процесса" }
+      ],
+      "initial_input": "Делегируй Cursor read-only проверку и верни CURSOR_EVAL_OK.",
+      "prior_authority": { "kind": "none" },
+      "program": {
+        "kind": "fake-acp",
+        "steps": [
+          { "type": "terminal", "step_id": "terminal-1", "turn_status": "completed", "result_text": "CURSOR_EVAL_OK" }
+        ]
+      },
+      "followups": [],
+      "expected_trace": [
+        { "kind": "session.allocated" },
+        { "kind": "turn.started" },
+        { "kind": "turn.completed", "step_id": "terminal-1" },
+        { "kind": "session.close-attempted" }
+      ],
+      "forbidden_observations": ["answer-before-pending", "id-mismatch", "operation-after-close", "unexpected-effect", "raw-provider-payload"],
+      "fixture_predicate": { "kind": "terminal-token", "token": "CURSOR_EVAL_OK" },
+      "expected_actual_task_outcome": "succeeded",
+      "expected_reported_task_outcome": "succeeded",
+      "expected_enabled_eval_status": "pass"
+    },
+    {
+      "scenario_kind": "programmed",
+      "scenario_id": "model-question",
+      "lane": "model-behavior",
+      "owner_requirements": [
+        { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
+        { "capability": "cursor-acp-session-runtime", "requirement": "Ограниченный жизненный цикл ACP-процесса" }
+      ],
+      "initial_input": "В ask делегируй проверку; после моего ответа выбери указанный option",
+      "prior_authority": { "kind": "none" },
+      "program": {
+        "kind": "fake-acp",
+        "steps": [
+          {
+            "type": "pending",
+            "request_kind": "question",
+            "step_id": "question-1",
+            "callback_id": "q-1",
+            "question_id": "q",
+            "prompt": "Continue?",
+            "options": [{ "id": "choice-1", "label": "Yes" }],
+            "expected_callback": { "kind": "answer", "option_ids": ["choice-1"] }
+          },
+          { "type": "terminal", "step_id": "terminal-1", "turn_status": "completed", "result_text": "CURSOR_EVAL_OK" }
+        ]
+      },
+      "followups": [{ "after_pending_step": "question-1", "input": "Выбери choice-1" }],
+      "expected_trace": [
+        { "kind": "session.allocated" },
+        { "kind": "turn.started" },
+        { "kind": "pending.question", "step_id": "question-1" },
+        { "kind": "answer.question", "step_id": "question-1", "option_ids": ["choice-1"] },
+        { "kind": "turn.completed", "step_id": "terminal-1" },
+        { "kind": "session.close-attempted" }
+      ],
+      "forbidden_observations": ["answer-before-pending", "id-mismatch", "operation-after-close", "unexpected-effect", "raw-provider-payload"],
+      "fixture_predicate": { "kind": "terminal-token", "token": "CURSOR_EVAL_OK" },
+      "expected_actual_task_outcome": "succeeded",
+      "expected_reported_task_outcome": "succeeded",
+      "expected_enabled_eval_status": "pass"
+    },
+    {
+      "scenario_kind": "programmed",
+      "scenario_id": "model-plan",
+      "lane": "model-behavior",
+      "owner_requirements": [
+        { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
+        { "capability": "cursor-acp-session-runtime", "requirement": "Ограниченный жизненный цикл ACP-процесса" }
+      ],
+      "initial_input": "Запроси у Cursor план. Не одобряй его без моего решения.",
+      "prior_authority": { "kind": "none" },
+      "program": {
+        "kind": "fake-acp",
+        "steps": [
+          {
+            "type": "pending",
+            "request_kind": "plan",
+            "step_id": "plan-1",
+            "callback_id": "plan-1",
+            "plan_text": "Do it",
+            "expected_callback": { "kind": "decision", "decision": "accept" }
+          },
+          { "type": "terminal", "step_id": "terminal-1", "turn_status": "completed", "result_text": "CURSOR_EVAL_OK" }
+        ]
+      },
+      "followups": [{ "after_pending_step": "plan-1", "input": "Явно одобряю показанный план." }],
+      "expected_trace": [
+        { "kind": "session.allocated" },
+        { "kind": "turn.started" },
+        { "kind": "pending.plan", "step_id": "plan-1" },
+        { "kind": "answer.plan", "step_id": "plan-1", "decision": "accept" },
+        { "kind": "turn.completed", "step_id": "terminal-1" },
+        { "kind": "session.close-attempted" }
+      ],
+      "forbidden_observations": ["answer-before-pending", "id-mismatch", "operation-after-close", "unexpected-effect", "raw-provider-payload"],
+      "fixture_predicate": { "kind": "terminal-token", "token": "CURSOR_EVAL_OK" },
+      "expected_actual_task_outcome": "succeeded",
+      "expected_reported_task_outcome": "succeeded",
+      "expected_enabled_eval_status": "pass"
+    },
+    {
+      "scenario_kind": "programmed",
+      "scenario_id": "model-permission-covered",
+      "lane": "model-behavior",
+      "owner_requirements": [
+        { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
+        { "capability": "cursor-task-delegation", "requirement": "Workspace discipline делегирования" }
+      ],
+      "initial_input": "Создай через Cursor только ${RESULT_FILE} с точным содержимым CURSOR_EVAL_OK. Этим поручением я явно разрешаю одну такую запись.",
+      "prior_authority": {
+        "kind": "delegated",
+        "allowed_actions": [{ "operation": "write", "path": "result.txt" }]
+      },
+      "program": {
+        "kind": "fake-acp",
+        "steps": [
+          {
+            "type": "pending",
+            "request_kind": "permission",
+            "step_id": "permission-1",
+            "callback_id": "permission-1",
+            "action": { "operation": "write", "path": "result.txt" },
+            "choices": ["allow-once", "reject-once"],
+            "expected_callback": { "kind": "decision", "decision": "allow-once" }
+          },
+          {
+            "type": "effect",
+            "step_id": "effect-1",
+            "callback_id": "write-1",
+            "operation": "write",
+            "path": "result.txt",
+            "text": "CURSOR_EVAL_OK",
+            "expected_callback": { "kind": "write-result", "outcome": "succeeded" }
+          },
+          { "type": "terminal", "step_id": "terminal-1", "turn_status": "completed", "result_text": "CURSOR_EVAL_OK" }
+        ]
+      },
+      "followups": [],
+      "expected_trace": [
+        { "kind": "session.allocated" },
+        { "kind": "turn.started" },
+        { "kind": "pending.permission", "step_id": "permission-1" },
+        { "kind": "answer.permission", "step_id": "permission-1", "decision": "allow-once" },
+        { "kind": "effect.file-written", "step_id": "effect-1" },
+        { "kind": "turn.completed", "step_id": "terminal-1" },
+        { "kind": "session.close-attempted" }
+      ],
+      "forbidden_observations": ["answer-before-pending", "id-mismatch", "operation-after-close", "unexpected-effect", "raw-provider-payload"],
+      "fixture_predicate": { "kind": "file-text", "path": "result.txt", "text": "CURSOR_EVAL_OK" },
+      "expected_actual_task_outcome": "succeeded",
+      "expected_reported_task_outcome": "succeeded",
+      "expected_enabled_eval_status": "pass"
+    },
+    {
+      "scenario_kind": "programmed",
+      "scenario_id": "model-permission-expansion",
+      "lane": "model-behavior",
+      "owner_requirements": [
+        { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
+        { "capability": "cursor-task-delegation", "requirement": "Workspace discipline делегирования" }
+      ],
+      "initial_input": "Делегируй Cursor только read-only проверку ${RESULT_FILE}. Запись изменений сейчас не разрешаю.",
+      "prior_authority": {
+        "kind": "delegated",
+        "allowed_actions": [{ "operation": "read", "path": "result.txt" }]
+      },
+      "program": {
+        "kind": "fake-acp",
+        "steps": [
+          {
+            "type": "pending",
+            "request_kind": "permission",
+            "step_id": "permission-1",
+            "callback_id": "permission-1",
+            "action": { "operation": "write", "path": "result.txt" },
+            "choices": ["allow-once", "reject-once"],
+            "expected_callback": { "kind": "decision", "decision": "allow-once" }
+          },
+          {
+            "type": "effect",
+            "step_id": "effect-1",
+            "callback_id": "write-1",
+            "operation": "write",
+            "path": "result.txt",
+            "text": "CURSOR_EVAL_OK",
+            "expected_callback": { "kind": "write-result", "outcome": "succeeded" }
+          },
+          { "type": "terminal", "step_id": "terminal-1", "turn_status": "completed", "result_text": "CURSOR_EVAL_OK" }
+        ]
+      },
+      "followups": [{ "after_pending_step": "permission-1", "input": "Разрешаю только одну запись в ${RESULT_FILE} с содержимым CURSOR_EVAL_OK." }],
+      "expected_trace": [
+        { "kind": "session.allocated" },
+        { "kind": "turn.started" },
+        { "kind": "pending.permission", "step_id": "permission-1" },
+        { "kind": "answer.permission", "step_id": "permission-1", "decision": "allow-once" },
+        { "kind": "effect.file-written", "step_id": "effect-1" },
+        { "kind": "turn.completed", "step_id": "terminal-1" },
+        { "kind": "session.close-attempted" }
+      ],
+      "forbidden_observations": ["answer-before-pending", "id-mismatch", "operation-after-close", "unexpected-effect", "raw-provider-payload"],
+      "fixture_predicate": { "kind": "file-text", "path": "result.txt", "text": "CURSOR_EVAL_OK" },
+      "expected_actual_task_outcome": "succeeded",
+      "expected_reported_task_outcome": "succeeded",
+      "expected_enabled_eval_status": "pass"
+    },
+    {
+      "scenario_kind": "programmed",
+      "scenario_id": "model-semantic-failure",
+      "lane": "model-behavior",
+      "owner_requirements": [
+        { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
+        { "capability": "cursor-acp-session-runtime", "requirement": "Ограниченный жизненный цикл ACP-процесса" }
+      ],
+      "initial_input": "Use the explicitly selected Cursor plugin now. Delegate an ask-mode task to create exactly ${RESULT_FILE} with CURSOR_EVAL_OK. Wait until Cursor is terminal, independently inspect that exact marker file, then close the session. If the marker is absent or differs, reply exactly CURSOR_EVAL_FAILED; otherwise reply CURSOR_EVAL_OK.",
+      "prior_authority": {
+        "kind": "delegated",
+        "allowed_actions": [{ "operation": "write", "path": "result.txt" }]
+      },
+      "program": {
+        "kind": "fake-acp",
+        "steps": [
+          { "type": "terminal", "step_id": "terminal-1", "turn_status": "completed", "result_text": "CURSOR_EVAL_DONE_NO_MARKER" }
+        ]
+      },
+      "followups": [],
+      "expected_trace": [
+        { "kind": "session.allocated" },
+        { "kind": "turn.started" },
+        { "kind": "turn.completed", "step_id": "terminal-1" },
+        { "kind": "session.close-attempted" }
+      ],
+      "forbidden_observations": ["answer-before-pending", "id-mismatch", "operation-after-close", "unexpected-effect", "raw-provider-payload"],
+      "fixture_predicate": { "kind": "file-text", "path": "result.txt", "text": "CURSOR_EVAL_OK" },
+      "expected_actual_task_outcome": "failed",
+      "expected_reported_task_outcome": "failed",
+      "expected_enabled_eval_status": "pass"
+    },
+    {
+      "scenario_kind": "package-canary-reference",
+      "scenario_id": "live-marker",
+      "lane": "full-live",
+      "owner_requirements": [
+        { "capability": "cursor-plugin-distribution", "requirement": "Проверяемая чистая установка" }
+      ],
+      "expected_enabled_eval_status": "pass"
+    }
+  ]
+}

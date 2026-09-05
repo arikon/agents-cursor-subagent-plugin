@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { appendFileSync } from 'node:fs';
-import { stat } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 
 const VERSION = `codex-cli ${process.env.CURSOR_EVAL_ADMITTED_CODEX_VERSION || '0.152.1'}`;
@@ -45,7 +46,14 @@ const run = (args, options) => runExecutable(request.codex_executable, args, opt
 
 async function admission() {
   const observed = (await run(['--version'])).stdout;
-  return { admitted: observed === VERSION, adapter_version: observed === VERSION ? ADAPTER : null, codex_version: observed };
+  const implementation = await readFile(new URL(import.meta.url));
+  return {
+    admitted: observed === VERSION,
+    adapter_version: observed === VERSION ? ADAPTER : null,
+    codex_version: observed,
+    implementation_sha256: createHash('sha256').update(implementation).digest('hex'),
+    implementation_bytes: implementation.length,
+  };
 }
 
 async function admitted() {

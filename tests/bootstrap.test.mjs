@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { chmod, cp, lstat, mkdir, mkdtemp, readFile, realpath, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -343,7 +344,7 @@ test('canonical manifest normalization sorts objects recursively and preserves a
   assert.equal(canonicalJson({ b: [2, 1], a: true }), '{"a":true,"b":[2,1]}');
 });
 
-test('versioned Codex adapter help matches its checked-in golden operation and outcome surface', async (t) => {
+test('versioned Codex adapter admission and help match its checked-in golden surface', async (t) => {
   const context = await fixture(t); const golden = JSON.parse(await readFile(adapterGolden, 'utf8'));
   const codex = join(context.root, 'codex'); await cp(fakeCodexCli, codex); await chmod(codex, 0o755);
   const agent = join(context.root, 'agent'); await cp(fakeCursorAgentStatus, agent); await chmod(agent, 0o755);
@@ -356,6 +357,19 @@ test('versioned Codex adapter help matches its checked-in golden operation and o
     FAKE_CODEX_CLI_STATE: state,
     FAKE_CURSOR_AGENT_LOG: agentLog,
   };
+  const implementation = await readFile(versionedAdapter);
+  const implementationProof = {
+    implementation_sha256: createHash('sha256').update(implementation).digest('hex'),
+    implementation_bytes: implementation.length,
+  };
+  assert.deepEqual({ implementation_sha256: golden.implementation_sha256, implementation_bytes: golden.implementation_bytes }, implementationProof);
+  const admission = await adapterFixtureCall(context.executable, 'admit', { codex_executable: codex }, env, versionedAdapter);
+  assert.deepEqual(admission, {
+    admitted: true,
+    adapter_version: golden.adapter_version,
+    codex_version: golden.codex_version,
+    ...implementationProof,
+  });
   const help = await adapterFixtureCall(context.executable, 'help', { codex_executable: codex }, env, versionedAdapter);
   assert.deepEqual(help, { adapter_version: golden.adapter_version, codex_version: golden.codex_version, operations: golden.operations });
   const rendered = await adapterFixtureCall(context.executable, 'render', {

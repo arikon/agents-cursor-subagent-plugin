@@ -178,6 +178,20 @@ function run(root) {
   return checkOpenSpecSemantics(root, registry);
 }
 
+async function withCorpusOwnerRequirements(root, ownerRequirements) {
+  const corpusPath = 'evals/cursor-subagent-scenarios.v1.json';
+  await write(root, corpusPath, JSON.stringify({
+    schema_version: 1,
+    scenarios: [{ owner_requirements: ownerRequirements }],
+  }));
+  return {
+    ...registry,
+    changes: registry.changes.map((contract) => contract.id === evalChange
+      ? { ...contract, corpusPath }
+      : contract),
+  };
+}
+
 function assertRejected(result, expected) {
   assert.equal(result.ok, false);
   assert.ok(
@@ -260,6 +274,73 @@ test('semantic gate accepts a complete five-change contract tree', async (t) => 
   const result = run(root);
   assert.deepEqual(result, { ok: true, errors: [], checkedChanges: 5 });
 });
+
+test('semantic gate accepts corpus owner requirements from authoritative main specs', async (t) => {
+  const root = await fixture(t);
+  const corpusRegistry = await withCorpusOwnerRequirements(root, [{
+    capability: contracts[facadeChange].capability,
+    requirement: 'Skill workflow делегирования',
+  }]);
+  assert.deepEqual(checkOpenSpecSemantics(root, corpusRegistry), {
+    ok: true,
+    errors: [],
+    checkedChanges: 5,
+  });
+});
+
+test('semantic gate rejects drift in an exact owned requirement label', async (t) => {
+  const root = await fixture(t);
+  const exactLabelRegistry = {
+    ...registry,
+    changes: registry.changes.map((contract) => contract.id === evalChange
+      ? { ...contract, ownedRequirements: ['Eval fixture requirement'] }
+      : contract),
+  };
+  await replace(
+    root,
+    `openspec/changes/${evalChange}/specs/${contracts[evalChange].capability}/spec.md`,
+    'Eval fixture requirement',
+    'Renamed eval fixture requirement',
+  );
+  assertRejected(
+    checkOpenSpecSemantics(root, exactLabelRegistry),
+    'owned requirement labels differ from semantic-gate registry',
+  );
+});
+
+for (const { name, ownerRequirements } of [
+  {
+    name: 'unknown corpus owner capability',
+    ownerRequirements: [{ capability: 'missing-capability', requirement: 'Skill workflow делегирования' }],
+  },
+  {
+    name: 'unknown corpus owner requirement',
+    ownerRequirements: [{ capability: contracts[facadeChange].capability, requirement: 'Missing requirement' }],
+  },
+  {
+    name: 'expanded corpus owner reference shape',
+    ownerRequirements: [{ capability: contracts[facadeChange].capability, requirement: 'Skill workflow делегирования', scenario_id: 'not-semantic-owner-data' }],
+  },
+]) {
+  test(`semantic gate rejects ${name}`, async (t) => {
+    const root = await fixture(t);
+    const corpusRegistry = await withCorpusOwnerRequirements(root, ownerRequirements);
+    assertRejected(checkOpenSpecSemantics(root, corpusRegistry), 'invalid owner requirement');
+  });
+}
+
+for (const { name, content, expected } of [
+  { name: 'malformed corpus owner document', content: '{', expected: 'cannot read corpus owner requirements' },
+  { name: 'corpus without scenarios', content: JSON.stringify({ schema_version: 1 }), expected: 'cannot inspect corpus owner requirements' },
+  { name: 'corpus row without owner requirements', content: JSON.stringify({ schema_version: 1, scenarios: [{}] }), expected: 'lacks owner_requirements' },
+]) {
+  test(`semantic gate rejects ${name}`, async (t) => {
+    const root = await fixture(t);
+    const corpusRegistry = await withCorpusOwnerRequirements(root, []);
+    await write(root, 'evals/cursor-subagent-scenarios.v1.json', content);
+    assertRejected(checkOpenSpecSemantics(root, corpusRegistry), expected);
+  });
+}
 
 test('semantic gate accepts a registered skip-specs tooling change without a capability delta', async (t) => {
   const root = await fixture(t);

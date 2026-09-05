@@ -1,12 +1,15 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { cp, lstat, mkdir, mkdtemp, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import { createInterface } from 'node:readline';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { normalizeManifestBytes, runBootstrap } from '../scripts/cursor-subagent-bootstrap.mjs';
+import { MARKER_NAME, normalizeManifestBytes, runBootstrap } from '../scripts/cursor-subagent-bootstrap.mjs';
+import { materializeScenario } from '../scripts/cursor-eval-scenario.mjs';
+import { parseChildResult } from '../scripts/run-cursor-skill-eval.mjs';
 
 const repository = fileURLToPath(new URL('..', import.meta.url));
 const fakeAdapter = fileURLToPath(new URL('./fixtures/fake-codex-adapter.mjs', import.meta.url));
@@ -19,6 +22,40 @@ const EXPECTED_TOOLS = [
 const MARKER_BYTES = 'CURSOR_AGENT_E2E_OK\n';
 const RELEASE_PROCESS_LIMITS = Object.freeze({ timeoutMs: 10_000, outputBytes: 1_048_576 });
 const MANAGED_PLUGIN_ID = 'codex-cursor-subagent-plugin';
+const SHA256 = /^[0-9a-f]{64}$/;
+
+function digestBytes(content) {
+  const bytes = Buffer.isBuffer(content) ? content : Buffer.from(content);
+  return { sha256: createHash('sha256').update(bytes).digest('hex'), bytes: bytes.length };
+}
+
+function outerReleaseHandoff(env) {
+  if (!env.CURSOR_EVAL_SCENARIO_PAYLOAD) return null;
+  const required = ['CURSOR_EVAL_SCENARIO_SHA256', 'CURSOR_EVAL_SCENARIO_BYTES', 'CURSOR_EVAL_CORPUS_SHA256',
+    'CURSOR_EVAL_CORPUS_BYTES', 'CURSOR_EVAL_CHILD_RESULT'];
+  for (const name of required) if (!env[name]) throw new Error(`${name} is required with CURSOR_EVAL_SCENARIO_PAYLOAD`);
+  let scenario;
+  try { scenario = JSON.parse(env.CURSOR_EVAL_SCENARIO_PAYLOAD); }
+  catch { throw new Error('CURSOR_EVAL_SCENARIO_PAYLOAD must be valid JSON'); }
+  const materialized = materializeScenario(scenario);
+  const scenarioBytes = Number(env.CURSOR_EVAL_SCENARIO_BYTES); const corpusBytes = Number(env.CURSOR_EVAL_CORPUS_BYTES);
+  if (materialized.materializedScenario.scenario_kind !== 'package-canary-reference' || materialized.materializedScenario.scenario_id !== 'live-marker') throw new Error('release canary requires the live-marker package-canary-reference');
+  if (!SHA256.test(env.CURSOR_EVAL_SCENARIO_SHA256) || materialized.digest.sha256 !== env.CURSOR_EVAL_SCENARIO_SHA256 || materialized.digest.bytes !== scenarioBytes) throw new Error('outer scenario digest does not match the consumed package canary reference');
+  if (!SHA256.test(env.CURSOR_EVAL_CORPUS_SHA256) || !Number.isSafeInteger(corpusBytes) || corpusBytes < 1) throw new Error('outer corpus digest is invalid');
+  return {
+    scenario: materialized.materializedScenario, childResultPath: env.CURSOR_EVAL_CHILD_RESULT,
+    scenarioDigest: materialized.digest, corpusDigest: { sha256: env.CURSOR_EVAL_CORPUS_SHA256, bytes: corpusBytes },
+  };
+}
+
+async function writeReleaseChildResult(destination, result) {
+  const encoded = JSON.stringify({ schema_version: 1, ...result });
+  if (Buffer.byteLength(encoded, 'utf8') > 1_048_576) throw new Error('release child result exceeded 1 MiB');
+  const temporary = `${destination}.${process.pid}.tmp`;
+  await mkdir(join(destination, '..'), { recursive: true });
+  await writeFile(temporary, encoded, { encoding: 'utf8', flag: 'wx' });
+  await rename(temporary, destination);
+}
 
 async function copyPayload(destination) {
   await mkdir(destination);
@@ -207,6 +244,28 @@ async function inspectMarker(markerPath) {
   }
 }
 
+async function captureReleaseProof(layout, configuration, executables, childEnv) {
+  const preflight = await runBootstrap(['preflight', '--managed-marketplace-root', layout.managed,
+    '--node-executable', executables.node, '--codex-executable', executables.codex,
+    '--agent-executable', executables.agent], { env: childEnv });
+  if (preflight.exitCode !== 0 || preflight.envelope.state !== 'ready') throw new Error(`bootstrap preflight failed: ${JSON.stringify(preflight.envelope)}`);
+  const [skillBytes, marker, adapter] = await Promise.all([
+    readFile(join(layout.managed, 'plugins/codex-cursor-subagent-plugin/skills/cursor-subagent/SKILL.md')),
+    readFile(join(layout.managed, MARKER_NAME), 'utf8').then(JSON.parse),
+    invokeReleaseAdapter(configuration.adapterCommand, 'admit', { codex_executable: executables.codex }, childEnv),
+  ]);
+  if (!SHA256.test(adapter.implementation_sha256 || '') || !Number.isSafeInteger(adapter.implementation_bytes) || adapter.implementation_bytes < 1 || typeof adapter.codex_version !== 'string' || !adapter.codex_version) throw new Error('adapter admission omitted normalized implementation proof');
+  if (marker.format !== 1 || !SHA256.test(marker.payload_hash || '') || !SHA256.test(marker.artifact_hash || '') || typeof marker.manifest_version !== 'string' || !marker.manifest_version) throw new Error('installed package marker has invalid proof fields');
+  return {
+    adapter: { sha256: adapter.implementation_sha256, bytes: adapter.implementation_bytes },
+    managedInstalledSkill: digestBytes(skillBytes),
+    installedPayload: { marker_format: marker.format, payload_hash: marker.payload_hash,
+      artifact_hash: marker.artifact_hash, manifest_version: marker.manifest_version },
+    client: { name: 'codex-cli', version: adapter.codex_version },
+    model: { provider: 'cursor', name: 'agent-default' },
+  };
+}
+
 function exactPermission(turn, markerPath, alreadyAllowed) {
   const pending = turn.active_turn?.pending || [];
   if (alreadyAllowed || pending.length !== 1 || pending[0].kind !== 'permission') throw new Error('unexpected pending request');
@@ -235,32 +294,76 @@ export async function closeCanaryClient(client, turn) {
   return failures.length ? { ok: false, message: failures.join('; ') } : { ok: true, message: null };
 }
 
+async function finalizeReleaseRun({ layout, installed, handoff, proof, observations, outcome,
+  cleanupPackage, removeLayout = rm, writeChildResult = writeReleaseChildResult }) {
+  let cleanupStatus = layout ? 'succeeded' : 'not_required'; let cleanupMessage = null;
+  if (layout) {
+    if (installed) {
+      try { await cleanupPackage(); }
+      catch (error) { cleanupStatus = 'failed'; cleanupMessage = `package cleanup failed: ${error.message}`; }
+    }
+    if (cleanupStatus === 'succeeded') {
+      try { await removeLayout(layout.root, { recursive: true, force: true }); }
+      catch (error) { cleanupStatus = 'failed'; cleanupMessage = `temporary layout cleanup failed: ${error.message}`; }
+    }
+  }
+  if (cleanupStatus === 'failed') outcome = { status: 'integration_failure', message: cleanupMessage };
+  if (handoff) {
+    const childResult = {
+      scenario_id: handoff.scenario.scenario_id, lane: handoff.scenario.lane,
+      provenance: {
+        consumed_scenario: handoff.scenarioDigest, consumed_corpus: handoff.corpusDigest,
+        adapter: proof?.adapter || null, managed_installed_skill: proof?.managedInstalledSkill || null,
+        cache_loaded_skill: null, installed_payload: proof?.installedPayload || null,
+        client: proof?.client || null, model: proof?.model || null, cleanup_status: cleanupStatus,
+      },
+      observations, transcript: [], eval_status: outcome.status,
+      error_code: outcome.status === 'pass' ? null : outcome.status === 'agent_behavior_mismatch' ? 'canary_marker_mismatch' : 'live_canary_failure',
+      message: outcome.message || null,
+    };
+    await writeChildResult(handoff.childResultPath, childResult);
+  }
+  return outcome;
+}
+
 export async function runLiveCanary(env = process.env, hooks = {}) {
   if (env.CURSOR_SUBAGENT_LIVE_E2E !== '1') return { status: 'skipped' };
-  let layout; let client; let turn; let closeSucceeded = false; let completed = false; let failure = null; let permissionAllowed = false;
+  let handoff;
+  try { handoff = outerReleaseHandoff(env); }
+  catch (error) { return { status: 'integration_failure', message: error.message }; }
+  let layout; let client; let turn; let configuration; let executables; let childEnv; let proof; let installed = false;
+  let closeSucceeded = false; let completed = false; let failure = null; let permissionAllowed = false; let reportedTaskOutcome = 'not_reported';
+  const trace = []; const callbacks = []; const effects = [];
   try {
-    const configuration = liveConfiguration(env);
+    configuration = liveConfiguration(env);
     const make = hooks.makeLayout || (() => makeLayout('cursor-release-live-'));
     layout = await make();
     const node = await realpath(process.execPath); const codex = await realpath(configuration.codex); const agent = await realpath(configuration.agent);
-    const childEnv = { ...env, ...configuration.adapterEnvironment, CODEX_HOME: layout.configRoot,
-      CURSOR_SUBAGENT_ADAPTER_CONFIG_ROOT: layout.configRoot };
-    client = await installAndDiscover(layout, { node, codex, agent }, configuration.adapterCommand, childEnv);
+    executables = { node, codex, agent };
+    childEnv = { ...env, ...configuration.adapterEnvironment, CODEX_HOME: layout.configRoot,
+      CURSOR_SUBAGENT_ADAPTER_CONFIG_ROOT: layout.configRoot,
+      CURSOR_SUBAGENT_CODEX_ADAPTER_COMMAND: JSON.stringify(configuration.adapterCommand) };
+    client = await installAndDiscover(layout, executables, configuration.adapterCommand, childEnv); installed = true;
     const built = await invokeReleaseAdapter(configuration.adapterCommand, 'canary-prompt', {
       codex_executable: codex, marker_path: layout.markerPath, marker_bytes: MARKER_BYTES,
     }, childEnv);
     if (typeof built.prompt !== 'string' || !built.prompt || Buffer.byteLength(built.prompt) > 64_000) throw new Error('adapter canary prompt shape is invalid');
     turn = await client.tool('cursor_delegate', { cwd: layout.workspace, mode: 'agent', prompt: built.prompt });
     if (turn.session_state !== 'live' || !turn.session_id || !turn.turn_id) throw new Error('delegate did not allocate a live turn');
+    trace.push({ kind: 'session.allocated' }, { kind: 'turn.started' });
     for (let count = 0; count < 12; count += 1) {
       turn = await client.tool('cursor_wait', { session_id: turn.session_id, turn_id: turn.turn_id, after_event_id: turn.last_event_id, timeout_ms: 60_000 });
       if (turn.turn_status === 'completed') {
-        if (terminalAgentError(turn)) throw new Error('agent completed with an error');
+        trace.push({ kind: 'turn.completed' });
+        if (terminalAgentError(turn)) { reportedTaskOutcome = 'failed'; throw new Error('agent completed with an error'); }
+        reportedTaskOutcome = 'succeeded';
         completed = true; break;
       }
       if (turn.turn_status === 'waiting_for_input') {
         const pending = exactPermission(turn, layout.markerPath, permissionAllowed); permissionAllowed = true;
+        trace.push({ kind: 'pending.permission' });
         turn = await client.tool('cursor_answer_permission', { session_id: turn.session_id, turn_id: turn.turn_id, request_id: pending.request_id, decision: 'allow-once' });
+        callbacks.push({ kind: 'answer.permission', decision: 'allow-once' }); trace.push({ kind: 'answer.permission' });
       } else if (!['running'].includes(turn.turn_status)) throw new Error(`unexpected terminal turn: ${turn.turn_status}`);
     }
     if (!completed) throw new Error('live canary did not complete within bounded waits');
@@ -268,6 +371,7 @@ export async function runLiveCanary(env = process.env, hooks = {}) {
     failure = error;
   } finally {
     if (client) {
+      trace.push({ kind: 'session.close-attempted' });
       const closed = await closeCanaryClient(client, turn); closeSucceeded = closed.ok;
       if (!closed.ok && !failure) failure = new Error(closed.message);
     }
@@ -277,13 +381,23 @@ export async function runLiveCanary(env = process.env, hooks = {}) {
     try {
       const marker = await inspectMarker(layout.markerPath);
       markerMatches = marker.matches;
+      effects.push({ kind: 'marker.inspected', matches: marker.matches });
     } catch (error) { inspectionFailure = `marker inspection failed: ${error.message}`; }
   }
   let outcome = classifyLiveOutcome({ enabled: true, failure: failure?.message || inspectionFailure, closeSucceeded, markerMatches });
-  if (layout) await rm(layout.root, { recursive: true, force: true }).catch((error) => {
-    outcome = { status: 'integration_failure', message: `temporary layout cleanup failed: ${error.message}` };
-  });
-  return outcome;
+  if (handoff && installed) {
+    try { proof = await captureReleaseProof(layout, configuration, executables, childEnv); }
+    catch (error) { outcome = { status: 'integration_failure', message: `package proof failed: ${error.message}` }; }
+  }
+  const observations = { trace, callbacks, effects,
+    actual_task_outcome: markerMatches ? 'succeeded' : effects.length ? 'failed' : 'not_observed',
+    reported_task_outcome: reportedTaskOutcome };
+  return finalizeReleaseRun({ layout, installed, handoff, proof, observations, outcome,
+    cleanupPackage: async () => {
+      const cleaned = await (hooks.runBootstrap || runBootstrap)(['uninstall', '--managed-marketplace-root', layout.managed,
+        '--codex-executable', executables.codex], { env: childEnv });
+      if (cleaned.exitCode !== 0 || cleaned.envelope.state !== 'absent') throw new Error(JSON.stringify(cleaned.envelope));
+    }, removeLayout: hooks.removeLayout || rm, writeChildResult: hooks.writeChildResult || writeReleaseChildResult });
 }
 
 test('credential-free release gate installs, discovers and starts the published MCP payload', deterministicReleaseGate);
@@ -353,6 +467,54 @@ test('live result classifier covers every terminal outcome deterministically', (
   assert.deepEqual(classifyLiveOutcome({ enabled: true, closeSucceeded: true, markerMatches: true }), { status: 'pass' });
   assert.equal(terminalAgentError({ last_terminal_turn: { result: { text: '\nError: RetriableError' } } }), true);
   assert.equal(terminalAgentError({ last_terminal_turn: { result: { text: 'Created the marker.' } } }), false);
+});
+
+test('release handoff consumes only the exact outer package canary reference and digests', async () => {
+  const corpus = JSON.parse(await readFile(join(repository, 'evals/cursor-subagent-scenarios.v1.json'), 'utf8'));
+  const scenario = corpus.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'live-marker');
+  const materialized = materializeScenario(scenario); const corpusDigest = digestBytes(JSON.stringify(corpus));
+  const env = {
+    CURSOR_EVAL_SCENARIO_PAYLOAD: materialized.canonicalPayload,
+    CURSOR_EVAL_SCENARIO_SHA256: materialized.digest.sha256,
+    CURSOR_EVAL_SCENARIO_BYTES: String(materialized.digest.bytes),
+    CURSOR_EVAL_CORPUS_SHA256: corpusDigest.sha256,
+    CURSOR_EVAL_CORPUS_BYTES: String(corpusDigest.bytes),
+    CURSOR_EVAL_CHILD_RESULT: '/tmp/outer-child-result.json',
+  };
+  const handoff = outerReleaseHandoff(env);
+  assert.deepEqual({ id: handoff.scenario.scenario_id, kind: handoff.scenario.scenario_kind, scenario: handoff.scenarioDigest, corpus: handoff.corpusDigest },
+    { id: 'live-marker', kind: 'package-canary-reference', scenario: materialized.digest, corpus: corpusDigest });
+  assert.throws(() => outerReleaseHandoff({ ...env, CURSOR_EVAL_SCENARIO_SHA256: '0'.repeat(64) }), /does not match/);
+});
+
+test('release child finalizer cleans package layout before writing outer-owned evidence', async (t) => {
+  const outerRoot = await mkdtemp(join(tmpdir(), 'cursor-release-outer-')); const layoutRoot = await mkdtemp(join(tmpdir(), 'cursor-release-package-'));
+  t.after(() => rm(outerRoot, { recursive: true, force: true })); t.after(() => rm(layoutRoot, { recursive: true, force: true }));
+  const destination = join(outerRoot, 'child-result.json'); const order = [];
+  const digest = { sha256: 'a'.repeat(64), bytes: 123 }; const proof = {
+    adapter: { sha256: 'b'.repeat(64), bytes: 456 }, managedInstalledSkill: { sha256: 'c'.repeat(64), bytes: 789 },
+    installedPayload: { marker_format: 1, payload_hash: 'd'.repeat(64), artifact_hash: 'e'.repeat(64), manifest_version: `0.1.0+codex.${'d'.repeat(64)}` },
+    client: { name: 'codex-cli', version: 'codex-cli 0.152.1' }, model: { provider: 'cursor', name: 'agent-default' },
+  };
+  const outcome = await finalizeReleaseRun({ layout: { root: layoutRoot }, installed: true,
+    handoff: { scenario: { scenario_id: 'live-marker', lane: 'full-live' }, scenarioDigest: digest,
+      corpusDigest: { sha256: 'f'.repeat(64), bytes: 321 }, childResultPath: destination },
+    proof, observations: { trace: [], callbacks: [], effects: [], actual_task_outcome: 'succeeded', reported_task_outcome: 'succeeded' },
+    outcome: { status: 'pass' }, cleanupPackage: async () => { order.push('package-cleanup'); },
+    removeLayout: async (...args) => { order.push('layout-cleanup'); await rm(...args); },
+    writeChildResult: async (...args) => { order.push('child-result'); await writeReleaseChildResult(...args); } });
+  const child = JSON.parse(await readFile(destination, 'utf8'));
+  const parsed = parseChildResult(JSON.stringify(child), 'live-marker', {
+    scenario: { scenario_kind: 'package-canary-reference' }, scenarioDigest: digest,
+    corpusDigest: { sha256: 'f'.repeat(64), bytes: 321 },
+  });
+  assert.deepEqual(order, ['package-cleanup', 'layout-cleanup', 'child-result']); assert.deepEqual(outcome, { status: 'pass' });
+  assert.deepEqual({ schema: child.schema_version, scenario: child.scenario_id, status: child.eval_status,
+    consumed: child.provenance.consumed_scenario, installedSkill: child.provenance.managed_installed_skill,
+    cacheSkill: child.provenance.cache_loaded_skill, cleanup: child.provenance.cleanup_status },
+  { schema: 1, scenario: 'live-marker', status: 'pass', consumed: digest,
+    installedSkill: proof.managedInstalledSkill, cacheSkill: null, cleanup: 'succeeded' });
+  assert.deepEqual(parsed.manifest.installed_payload, proof.installedPayload);
 });
 
 test('enabled live canary rejects missing explicit adapter configuration before side effects', async () => {

@@ -132,10 +132,15 @@ Child не создаёт другой workspace и проверяет digest д
 programmed rows он после package preflight сравнивает cache-loaded и managed
 installed skill digests; для package reference сохраняет только managed skill
 digest без Codex skill-load claim. До разрушения layout child захватывает
-observations/proof, затем выполняет свой cleanup и всегда пишет child-result.
+observations/proof, затем на управляемых terminal branches через finalizer
+выполняет свой cleanup и пишет child-result; abrupt process loss остаётся
+pre-proof missing-result integration failure.
 Package-canary-reference передаётся release harness только как reference+digest;
-canary workspace/marker остаются package-owned. Outer сверяет digest, adapter и
-closed projection package-owned marker/tree hash, выполняет свой cleanup,
+canary workspace/marker остаются package-owned. Outer сверяет только свои exact
+scenario/raw-corpus digests и валидирует closed shape/bounds adapter и
+package-owned projection; фактическая adapter authenticity остаётся у
+fixture/golden, а package proof — у preflight, без повторной admission или
+tree traversal. Outer выполняет свой cleanup,
 формирует final result и только затем публикует evidence. Public bootstrap
 envelope не меняется.
 Golden остаётся отдельным
@@ -144,7 +149,9 @@ Adapter fixture отдаёт normalized digest собственных raw implem
 а golden независимо сверяет digest и Codex version; generic runner не угадывает
 source из command argv.
 
-Существующий evidence envelope получает одно closed поле `manifest`. Его
+Существующий evidence envelope после полного validated proof получает одно
+closed поле `manifest`; pre-proof failure не публикует durable evidence и
+возвращает существующий `EvalResultV1` с `not_attempted`/`null`. Его
 semantic-input map одинаково мал для всех lanes: exact installed `SKILL.md`, raw
 corpus, outer-materialized scenario, фактически выбранный version-specific
 adapter и projection package marker `{marker_format,payload_hash,artifact_hash,
@@ -158,13 +165,15 @@ generated `.mcp.json`; перечень внутренних harness modules н�
 materializes семь rows, вызывает oracle для шести programmed и проверяет
 reference plumbing для `live-marker` без oracle: exact counts
 `admission=7/materialization=7/oracle=6/package-reference=1`. Runaway bound не
-проверяется отдельным stopwatch assertion. Imports чистые; instrumentation
-видит ноль application spawns/network. Duration и row count — TAP diagnostics.
+проверяется отдельным stopwatch assertion. Body вызывает только pure scenario
+operations, без runner/harness и process-per-scenario. Duration и row count —
+TAP diagnostics.
 
 Supervisor mapping проверяется injected spawn/env contract без nested suites.
 Полные foreground unit и coverage запускаются по одному разу в acceptance.
-Tests с реальным I/O используют отдельные `mkdtemp` roots и не мутируют shared
-`process.env`; inert paths в no-I/O stubs допустимы.
+Новые или изменённые этим change eval/driver tests с реальным I/O используют
+отдельные `mkdtemp` roots и не мутируют shared `process.env`; inert paths в
+no-I/O stubs допустимы.
 
 ## Scenario Matrix
 
