@@ -12,6 +12,7 @@ import { runUnitCoverage } from '../scripts/run-unit-coverage.mjs';
 
 const projectRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const processTreeFixture = join(projectRoot, 'tests/fixtures/supervisor-process-tree.mjs');
+const coverageEntrypointLoader = join(projectRoot, 'tests/fixtures/run-unit-coverage-loader.mjs');
 
 async function artifactRoot(t) {
   const path = await mkdtemp(join(tmpdir(), 'node-supervisor-test-'));
@@ -206,14 +207,23 @@ test('lane matrix produces the exact child argv and keeps parent deadlines fixed
   }
 });
 
-test('unsupported platform and invalid lane fail closed before spawn', async () => {
+test('unsupported platform and invalid lane fail closed before spawn and publish completion markers', async (t) => {
   let spawnCount = 0;
   const dependencies = { platform: 'win32', spawn: () => { spawnCount += 1; } };
-  const unsupported = await runSupervisor({ laneName: 'unit', dependencies });
-  const invalid = await runSupervisor({ laneName: 'not-a-lane', dependencies: { ...dependencies, platform: 'linux' } });
+  const root = await artifactRoot(t);
+  const unsupported = await runSupervisor({ laneName: 'unit', artifactRoot: root, dependencies });
+  const invalid = await runSupervisor({ laneName: 'not-a-lane', artifactRoot: root, dependencies: { ...dependencies, platform: 'linux' } });
   assert.deepEqual({ verdict: unsupported.verdict, cause: unsupported.terminal_cause, stage: unsupported.infrastructure.stage },
     { verdict: 'runner_error', cause: 'unsupported_platform', stage: 'preflight' });
-  assert.deepEqual({ verdict: invalid.verdict, cause: invalid.terminal_cause }, { verdict: 'runner_error', cause: 'invalid_lane' });
+  assert.deepEqual({ verdict: invalid.verdict, cause: invalid.terminal_cause, stage: invalid.infrastructure.stage },
+    { verdict: 'runner_error', cause: 'invalid_lane', stage: 'preflight' });
+  for (const result of [unsupported, invalid]) {
+    const published = await publishedResult(result);
+    assert.equal(published.verdict, 'runner_error');
+    assert.equal(published.terminal_cause, result.terminal_cause);
+    assert.deepEqual(published.child, { code: null, signal: null });
+    assert.deepEqual(published.artifacts, { tap: 'tap.txt', stderr: 'stderr.txt', failures: 'failures.jsonl', result: 'result.json' });
+  }
   assert.equal(spawnCount, 0);
 });
 
@@ -226,6 +236,11 @@ test('synchronous spawn failure is reported with bounded artifacts and structure
   assert.equal(result.infrastructure.stage, 'spawn');
   assert.equal(result.infrastructure.error.code, 'EACCES');
   assert.deepEqual(result.artifacts, { tap: 'tap.txt', stderr: 'stderr.txt', failures: 'failures.jsonl', result: 'result.json' });
+  const published = await publishedResult(result);
+  assert.equal(published.verdict, 'runner_error');
+  assert.equal(published.terminal_cause, 'spawn_error');
+  assert.equal(published.infrastructure.stage, 'spawn');
+  assert.equal(published.infrastructure.error.code, 'EACCES');
 });
 
 test('non-Error spawn failure is normalized into the published infrastructure contract', async (t) => {
@@ -241,6 +256,23 @@ test('non-Error spawn failure is normalized into the published infrastructure co
     { name: result.infrastructure.error.name, message: result.infrastructure.error.message },
     { name: 'Error', message: 'spawn denied' },
   );
+});
+
+test('default paths and dependencies still publish a sanitized invalid-lane marker', async (t) => {
+  const previousRoot = process.env.NODE_TEST_ARTIFACT_ROOT;
+  delete process.env.NODE_TEST_ARTIFACT_ROOT;
+  t.after(() => {
+    if (previousRoot === undefined) delete process.env.NODE_TEST_ARTIFACT_ROOT;
+    else process.env.NODE_TEST_ARTIFACT_ROOT = previousRoot;
+  });
+
+  const result = await runSupervisor({ laneName: '' });
+  t.after(() => rm(result.artifactDir, { recursive: true, force: true }));
+
+  assert.equal(dirname(result.artifactDir), join(tmpdir(), 'codex-node-test-artifacts'));
+  assert.match(result.artifactDir, /-invalid-[0-9a-f-]+$/);
+  assert.equal(result.terminal_cause, 'invalid_lane');
+  assert.equal((await publishedResult(result)).lane, '');
 });
 
 test('clean close publishes a terminal passing result without failures', async (t) => {
@@ -409,6 +441,46 @@ test('coverage lane rejects product files with no executable counters', async (t
   assert.deepEqual(published.coverage.metrics, { lines: null, branches: null, functions: null });
   assert.deepEqual(published.coverage.diagnostics.filter((entry) => entry.code === 'coverage_below_threshold').map((entry) => entry.metric),
     ['lines', 'branches', 'functions']);
+});
+
+test('coverage lane rejects one manifest source missing from the line denominator despite a passing aggregate', async (t) => {
+  for (const invalidTotal of [undefined, Number.NaN, 0]) {
+    const coverage = await coverageSummary();
+    const excluded = coverage.files[0];
+    excluded.totalLineCount = invalidTotal;
+    excluded.coveredLineCount = 0;
+    const result = await runSupervisor({ laneName: 'coverage', artifactRoot: await artifactRoot(t), dependencies: {
+      platform: 'linux', spawn: fakeSpawn({ coverage }),
+    } });
+    const published = await publishedResult(result);
+
+    assert.equal(published.verdict, 'failed');
+    assert.equal(published.terminal_cause, 'coverage_gate');
+    assert.ok(published.coverage.metrics.lines === null || published.coverage.metrics.lines >= 90);
+    assert.deepEqual(
+      published.coverage.diagnostics.find((entry) => entry.code === 'coverage_invalid_line_denominator'),
+      { code: 'coverage_invalid_line_denominator', source: `scripts/${excluded.path.split('/').at(-1)}`, actual: Number.isFinite(invalidTotal) ? invalidTotal : null },
+    );
+  }
+});
+
+test('coverage lane classifies zero branch and function denominators per source without rejecting valid line coverage', async (t) => {
+  const coverage = await coverageSummary();
+  const source = coverage.files[0];
+  source.totalBranchCount = 0;
+  source.coveredBranchCount = 0;
+  source.totalFunctionCount = 0;
+  source.coveredFunctionCount = 0;
+  const result = await runSupervisor({ laneName: 'coverage', artifactRoot: await artifactRoot(t), dependencies: {
+    platform: 'linux', spawn: fakeSpawn({ coverage }),
+  } });
+  const published = await publishedResult(result);
+
+  assert.equal(published.verdict, 'passed');
+  assert.deepEqual(published.coverage.denominator_classifications, [
+    { source: `scripts/${source.path.split('/').at(-1)}`, metric: 'branches', classification: 'zero_total' },
+    { source: `scripts/${source.path.split('/').at(-1)}`, metric: 'functions', classification: 'zero_total' },
+  ]);
 });
 
 test('nonzero exit and signal termination produce failed verdicts with distinct terminal causes', async (t) => {
@@ -672,6 +744,11 @@ test('failure report formats each supported observable reporter shape', async (t
       failures: [{ name: 'direct failure', file: 'direct.mjs:4', message: 'direct boom' }],
       expected: 'direct failure: direct.mjs:4: direct boom',
     },
+    {
+      name: 'missing failure payload',
+      failures: [null],
+      expected: 'test failure',
+    },
   ];
 
   for (const scenario of cases) {
@@ -716,9 +793,25 @@ test('CLI rejects missing and invalid lanes with the stable usage contract', asy
   }
 });
 
+test('CLI usage falls back to the stable script name when argv has no entrypoint', async () => {
+  const entrypoint = process.argv[1];
+  let stderr = '';
+  process.argv[1] = '';
+  try {
+    assert.equal(await cli({ argv: [], processLike: {
+      stdout: { write: () => {} },
+      stderr: { write: (chunk) => { stderr += chunk; } },
+    } }), 2);
+  } finally {
+    process.argv[1] = entrypoint;
+  }
+  assert.equal(stderr, 'usage: run-node-tests.mjs <unit|coverage|release>\n');
+});
+
 test('CLI renders each terminal supervisor verdict with current-run diagnostics', async (t) => {
   const rawRoot = await artifactRoot(t);
   await writeFile(join(rawRoot, 'stderr.txt'), 'native runner crash\n');
+  await writeFile(join(rawRoot, 'stderr-no-newline.txt'), 'unterminated diagnostic');
   const cases = [
     [{ verdict: 'passed', lane: 'unit', duration_ms: 17, artifactDir: '/tmp/pass', failureDetails: [] }, 0, 'PASS unit: 17ms; artifacts: /tmp/pass\n', ''],
     [{ verdict: 'failed', terminal_cause: 'exit_nonzero', artifacts: { result: 'result.json' }, failureDetails: ['named failure: file.mjs: boom'] }, 1, '', 'failed (exit_nonzero); artifacts: result.json\nnamed failure: file.mjs: boom\n'],
@@ -730,6 +823,15 @@ test('CLI renders each terminal supervisor verdict with current-run diagnostics'
     [{ verdict: 'runner_error', terminal_cause: 'reporter_error', artifactDir: rawRoot, artifacts: { stderr: 'stderr.txt' },
       infrastructure: { stage: 'reporter', cause: 'reporter_error', error: { code: 'EBADMSG', message: 'malformed reporter' } }, failureDetails: [] }, 1, '',
     `runner_error (reporter_error); artifacts: ${rawRoot}\ninfrastructure: reporter; EBADMSG: malformed reporter\nstderr: ${join(rawRoot, 'stderr.txt')}\nraw stderr:\nnative runner crash\n`],
+    [{ verdict: 'failed', terminal_cause: 'exit_nonzero' }, 1, '', 'failed (exit_nonzero); artifacts: unavailable\n'],
+    [{ verdict: 'runner_error', terminal_cause: 'spawn_error', infrastructure: { stage: 'spawn', error: { message: 'plain diagnostic' } } }, 1, '',
+      'runner_error (spawn_error); artifacts: unavailable\ninfrastructure: spawn; plain diagnostic\n'],
+    [{ verdict: 'runner_error', terminal_cause: 'spawn_error', infrastructure: { stage: 'spawn', cause: 'spawn_error' } }, 1, '',
+      'runner_error (spawn_error); artifacts: unavailable\ninfrastructure: spawn; spawn_error\n'],
+    [{ verdict: 'runner_error', terminal_cause: 'stream_error', infrastructure: { stage: 'stream' } }, 1, '',
+      'runner_error (stream_error); artifacts: unavailable\ninfrastructure: stream\n'],
+    [{ verdict: 'failed', terminal_cause: 'child_signal', artifactDir: rawRoot, artifacts: { stderr: 'stderr-no-newline.txt' } }, 1, '',
+      `failed (child_signal); artifacts: ${rawRoot}\nstderr: ${join(rawRoot, 'stderr-no-newline.txt')}\nraw stderr:\nunterminated diagnostic\n`],
   ];
   for (const [result, expectedCode, expectedStdout, expectedStderr] of cases) {
     let stdout = ''; let stderr = '';
@@ -738,6 +840,23 @@ test('CLI renders each terminal supervisor verdict with current-run diagnostics'
     assert.equal(stdout, expectedStdout);
     assert.equal(stderr, expectedStderr);
   }
+});
+
+test('foreground supervisor entrypoint rejects an invalid lane with the public usage contract', async () => {
+  const child = spawnChildProcess(process.execPath, ['scripts/run-node-tests.mjs', 'invalid-lane'], {
+    cwd: projectRoot,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  const stdout = [];
+  const stderr = [];
+  child.stdout.on('data', (chunk) => stdout.push(chunk));
+  child.stderr.on('data', (chunk) => stderr.push(chunk));
+  const [code, signal] = await new Promise((resolve) => child.once('close', (exitCode, exitSignal) => resolve([exitCode, exitSignal])));
+
+  assert.equal(signal, null);
+  assert.equal(code, 2);
+  assert.equal(Buffer.concat(stdout).toString('utf8'), '');
+  assert.equal(Buffer.concat(stderr).toString('utf8'), 'usage: run-node-tests.mjs <unit|coverage|release>\n');
 });
 
 test('CLI reports an artifact storage failure and exits nonzero', async (t) => {
@@ -764,4 +883,17 @@ test('legacy coverage entrypoint delegates to the documented coverage lane', asy
   const exitCode = await runUnitCoverage(async (value) => { invocation = value; return 0; });
   assert.equal(exitCode, 0);
   assert.deepEqual(invocation, { argv: ['coverage'] });
+});
+
+test('legacy coverage entrypoint preserves its foreground CLI contract', async () => {
+  const child = spawnChildProcess(process.execPath, ['--experimental-loader', coverageEntrypointLoader, 'scripts/run-unit-coverage.mjs'], {
+    cwd: projectRoot, stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  const stdout = []; const stderr = [];
+  child.stdout.on('data', (chunk) => stdout.push(chunk));
+  child.stderr.on('data', (chunk) => stderr.push(chunk));
+  const [code, signal] = await new Promise((resolve) => child.once('close', (exitCode, exitSignal) => resolve([exitCode, exitSignal])));
+  assert.equal(signal, null);
+  assert.equal(code, 0, Buffer.concat(stderr).toString('utf8'));
+  assert.deepEqual(JSON.parse(Buffer.concat(stdout).toString('utf8')), { argv: ['coverage'] });
 });

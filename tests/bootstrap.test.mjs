@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { chmod, cp, lstat, mkdir, mkdtemp, readFile, realpath, rename, rm, symlink, writeFile } from 'node:fs/promises';
+import { chmod, cp, lstat, mkdir, mkdtemp, readFile, readdir, realpath, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import test from 'node:test';
@@ -207,6 +207,23 @@ test('CLI preflight rejects a managed root that is not a directory', async (t) =
   assert.equal(result.envelope.checks.find(({ name }) => name === 'managed_root').code, 'topology_invalid');
 });
 
+test('CLI preflight rejects a managed root reached through a symbolic link without mutating its target', async (t) => {
+  const context = await fixture(t);
+  const canonicalManaged = join(context.root, 'canonical-managed-marketplace');
+  await mkdir(canonicalManaged);
+  await symlink(canonicalManaged, context.managed);
+  const result = await bootstrapCli(['preflight', '--managed-marketplace-root', context.managed,
+    '--node-executable', context.executable, '--codex-executable', context.executable,
+    '--agent-executable', context.executable], context.env);
+  assert.equal(result.code, 1);
+  assert.equal(result.envelope.state, 'not_ready');
+  assert.deepEqual(result.envelope.checks.find(({ name }) => name === 'managed_root'), {
+    name: 'managed_root', status: 'fail', code: 'topology_invalid',
+    message: 'managed root must be absent or a canonical directory',
+  });
+  assert.deepEqual(await readdir(canonicalManaged), []);
+});
+
 test('CLI install exposes interrupted owned staging as recovery_required', async (t) => {
   const context = await fixture(t);
   let result = await bootstrapCli(['install', ...context.common], context.env);
@@ -342,6 +359,10 @@ test('canonical manifest normalization sorts objects recursively and preserves a
     assert.throws(() => normalizeManifestBytes(JSON.stringify({ version })), { code: 'invalid_manifest' }, version);
   }
   assert.equal(canonicalJson({ b: [2, 1], a: true }), '{"a":true,"b":[2,1]}');
+  assert.throws(() => canonicalJson(undefined), { code: 'invalid_json' });
+  assert.throws(() => normalizeManifestBytes('[]'), { code: 'invalid_manifest' });
+  assert.throws(() => normalizeManifestBytes('{}'), { code: 'invalid_manifest' });
+  assert.equal(normalizeManifestBytes('{"version":"1.2.3-rc.1"}').baseVersion, '1.2.3-rc.1');
 });
 
 test('versioned Codex adapter admission and help match its checked-in golden surface', async (t) => {
@@ -486,19 +507,107 @@ test('package command waits for child close after timeout and output overflow ki
   }
 });
 
+test('package command reports close timeout while a descendant retains the killed child output pipe', async () => {
+  const descendantScript = [
+    'const { spawn } = require("node:child_process");',
+    'spawn(process.execPath, ["-e", "setTimeout(() => {}, 750)"], { stdio: ["ignore", "inherit", "inherit"] });',
+    'setInterval(() => {}, 1_000);',
+  ].join(' ');
+  const result = await runPackageCommand(process.execPath, ['-e', descendantScript], {
+    timeoutMs: 100,
+    closeWaitMs: 100,
+  });
+  assert.deepEqual({ code: result.code, timeout: result.timeout, closeTimeout: result.closeTimeout },
+    { code: null, timeout: true, closeTimeout: true });
+});
+
+test('package command keeps the first kill reason when overflow precedes its timeout', async () => {
+  const descendantScript = [
+    'const { spawn } = require("node:child_process");',
+    'spawn(process.execPath, ["-e", "setTimeout(() => {}, 750)"], { stdio: ["ignore", "inherit", "inherit"] });',
+    'process.stdout.write("overflow");',
+    'setInterval(() => {}, 1_000);',
+  ].join(' ');
+  const result = await runPackageCommand(process.execPath, ['-e', descendantScript], {
+    timeoutMs: 150,
+    outputBytes: 1,
+    closeWaitMs: 300,
+  });
+  assert.deepEqual({ code: result.code, timeout: result.timeout, overflow: result.overflow, closeTimeout: result.closeTimeout },
+    { code: null, timeout: false, overflow: true, closeTimeout: true });
+});
+
+test('package command bounds simultaneous stdout and stderr overflow with one terminal outcome', async () => {
+  const script = [
+    'process.stdout.write("o".repeat(65536));',
+    'process.stderr.write("e".repeat(65536));',
+    'setInterval(() => {}, 1000);',
+  ].join(' ');
+  const result = await runPackageCommand(process.execPath, ['-e', script], {
+    timeoutMs: 2_000,
+    outputBytes: 1,
+    closeWaitMs: 1_000,
+  });
+  assert.deepEqual({ code: result.code, timeout: result.timeout, overflow: result.overflow },
+    { code: null, timeout: false, overflow: true });
+  assert.equal(result.closeTimeout, undefined);
+});
+
 test('treeHashV1 has a stable byte-framed golden vector', () => {
   assert.equal(treeHashV1([{ path: 'b', content: 'two' }, { path: 'a', content: 'one' }]), 'b7cfd8f25704e2e9e7d848116d1f8a90458415103d8972181996f5b8b815d1a7');
   assert.throws(() => treeHashV1([{ path: '../escape', content: '' }]), { code: 'invalid_hash_entry' });
+  assert.throws(() => treeHashV1([{ path: 'same', content: '' }, { path: 'same', content: '' }]), { code: 'invalid_hash_entry' });
 });
 
 test('strict parser separates malformed invocation from semantic topology failure', async (t) => {
+  assert.throws(() => parseArgs(['unknown']), { code: 'invalid_invocation', exitCode: 2 });
   assert.throws(() => parseArgs(['preflight', '--managed-marketplace-root', 'relative']), { code: 'invalid_invocation', exitCode: 2 });
+  assert.throws(() => parseArgs(['install', '--source-root', '/source', '--managed-marketplace-root', '/managed',
+    '--node-executable', '/node', '--codex-executable', '/codex', '--agent-executable', '/agent']),
+  { code: 'invalid_invocation', exitCode: 2 });
   const context = await fixture(t);
   await assert.rejects(validateTopology({
     managedRoot: join(context.source, 'nested-managed'), sourceRoot: context.source,
     nodeExecutable: context.executable, codexExecutable: context.executable, agentExecutable: context.executable,
     allowedWorkspaceRoots: [context.workspace],
   }, { requireSource: true, requireAgent: true }), { code: 'topology_invalid' });
+
+  const nestedExecutable = join(context.source, 'nested-node');
+  await cp(context.executable, nestedExecutable); await chmod(nestedExecutable, 0o755);
+  await assert.rejects(validateTopology({
+    managedRoot: context.managed, sourceRoot: context.source,
+    nodeExecutable: nestedExecutable, codexExecutable: context.executable, agentExecutable: context.executable,
+    allowedWorkspaceRoots: [context.workspace],
+  }, { requireSource: true, requireAgent: true }), { code: 'topology_invalid' });
+
+  await assert.rejects(validateTopology({
+    managedRoot: context.managed, sourceRoot: context.source,
+    nodeExecutable: context.workspace, codexExecutable: context.executable, agentExecutable: context.executable,
+    allowedWorkspaceRoots: [context.workspace],
+  }, { requireSource: true, requireAgent: true }), { code: 'missing_dependency' });
+
+  const copiedExecutable = join(context.root, 'copied-node');
+  await cp(context.executable, copiedExecutable); await chmod(copiedExecutable, 0o755);
+  await assert.rejects(validateTopology({
+    managedRoot: context.managed, sourceRoot: context.source,
+    nodeExecutable: `${context.workspace}/../copied-node`, codexExecutable: context.executable, agentExecutable: context.executable,
+    allowedWorkspaceRoots: [context.workspace],
+  }, { requireSource: true, requireAgent: true }), { code: 'missing_dependency' });
+});
+
+test('bootstrap rejects malformed adapter command configuration before publication', async (t) => {
+  for (const command of [undefined, '{', JSON.stringify([]), JSON.stringify(['relative-adapter'])]) {
+    const context = await fixture(t);
+    const env = { ...context.env };
+    if (command === undefined) delete env.CURSOR_SUBAGENT_CODEX_ADAPTER_COMMAND;
+    else env.CURSOR_SUBAGENT_CODEX_ADAPTER_COMMAND = command;
+    const result = await runBootstrap(['install', ...context.common], {
+      env,
+    });
+    assert.deepEqual({ exitCode: result.exitCode, state: result.envelope.state, errorCode: result.envelope.error_code },
+      { exitCode: 1, state: 'failed', errorCode: 'adapter_unavailable' }, command);
+    await assert.rejects(lstat(context.managed), { code: 'ENOENT' });
+  }
 });
 
 test('preflight is read-only, emits exactly eight checks and reports missing executable as not_ready', async (t) => {
@@ -522,6 +631,60 @@ test('preflight is read-only, emits exactly eight checks and reports missing exe
   assert.equal(result.envelope.checks.find(({ name }) => name === 'managed_root').status, 'pass');
   assert.equal(result.envelope.checks.find(({ name }) => name === 'agent_status').status, 'not_checked');
   assert.equal(calls.some((operation) => /(?:add|remove)$/.test(operation)), false);
+});
+
+test('preflight rejects an executable inside managed publication topology without executing it', async (t) => {
+  const context = await fixture(t);
+  await mkdir(context.managed);
+  const managedNode = join(context.managed, 'node');
+  await cp(context.executable, managedNode);
+  await chmod(managedNode, 0o755);
+  let managedNodeCalls = 0;
+  const result = await runBootstrap(['preflight', '--managed-marketplace-root', context.managed,
+    '--node-executable', managedNode, '--codex-executable', context.executable], {
+    env: context.env,
+    runCommand: async (command, args, options) => {
+      if (command === managedNode && args.length === 1 && args[0] === '--version') managedNodeCalls += 1;
+      return runPackageCommand(command, args, options);
+    },
+  });
+  assert.equal(result.exitCode, 1);
+  assert.deepEqual(result.envelope.checks.find(({ name }) => name === 'node'), {
+    name: 'node', status: 'fail', code: 'topology_invalid', message: 'node is inside managed publication topology',
+  });
+  assert.equal(managedNodeCalls, 0, 'rejected executable must not run');
+  await assert.rejects(lstat(context.state), { code: 'ENOENT' });
+});
+
+test('preflight classifies every unsuccessful Node version-command outcome as incompatible', async (t) => {
+  for (const scenario of [
+    { name: 'nonzero', commandResult: { code: 1, output: 'v22.0.0', timeout: false, overflow: false } },
+    { name: 'timeout', commandResult: { code: null, output: '', timeout: true, overflow: false } },
+    { name: 'overflow', commandResult: { code: null, output: '', timeout: false, overflow: true } },
+    { name: 'malformed version', commandResult: { code: 0, output: 'not-a-node-version', timeout: false, overflow: false } },
+    { name: 'unsupported major', commandResult: { code: 0, output: 'v17.9.1', timeout: false, overflow: false } },
+  ]) {
+    const context = await fixture(t);
+    let versionCalls = 0;
+    const result = await runBootstrap(['preflight', '--managed-marketplace-root', context.managed,
+      '--node-executable', context.executable, '--codex-executable', context.executable], {
+      env: context.env,
+      runCommand: async (command, args, options) => {
+        if (command === context.executable && args.length === 1 && args[0] === '--version') {
+          versionCalls += 1;
+          return scenario.commandResult;
+        }
+        return runPackageCommand(command, args, options);
+      },
+    });
+    assert.equal(result.exitCode, 1, scenario.name);
+    assert.deepEqual(result.envelope.checks.find(({ name }) => name === 'node'), {
+      name: 'node', status: 'fail', code: 'incompatible_version', message: 'Node 18 or newer is required',
+    }, scenario.name);
+    assert.equal(versionCalls, 1, scenario.name);
+    assert.equal(result.envelope.checks.find(({ name }) => name === 'codex_cli').status, 'pass', scenario.name);
+    await assert.rejects(lstat(context.state), { code: 'ENOENT' }, scenario.name);
+  }
 });
 
 test('fake adapter drives portable install, identical no-op, update, preflight and uninstall', async (t) => {
@@ -659,6 +822,89 @@ test('strict marker and registration tuples reject extra marker fields and dupli
   await writeFile(tupleContext.state, JSON.stringify(state));
   result = await runBootstrap(['install', ...tupleContext.common], { env: tupleContext.env });
   assert.equal(result.envelope.error_code, 'state_drift');
+});
+
+test('strict marker validation rejects every malformed owned identity before mutation', async (t) => {
+  const context = await fixture(t);
+  let result = await runBootstrap(['install', ...context.common], { env: context.env });
+  assert.equal(result.exitCode, 0, JSON.stringify(result));
+  const markerPath = join(context.managed, MARKER_NAME);
+  const marker = JSON.parse(await readFile(markerPath, 'utf8'));
+  const variants = [
+    ['format', { format: 2 }],
+    ['operation', { operation: 'uninstall' }],
+    ['marketplace id', { marketplace_id: 'foreign-marketplace' }],
+    ['plugin id', { plugin_id: 'foreign-plugin' }],
+    ['payload hash', { payload_hash: 'not-a-sha256' }],
+    ['artifact hash', { artifact_hash: 'not-a-sha256' }],
+    ['agent executable type', { agent_executable: 42 }],
+    ['agent executable relative path', { agent_executable: 'relative-agent' }],
+    ['agent executable noncanonical path', { agent_executable: `${context.root}/workspace/../agent` }],
+    ['manifest version', { manifest_version: 'not-semver' }],
+  ];
+  const mutationCount = JSON.parse(await readFile(context.state, 'utf8')).mutations.length;
+  for (const [name, patch] of variants) {
+    await writeFile(markerPath, JSON.stringify({ ...marker, ...patch }));
+    result = await runBootstrap(['install', ...context.common], { env: context.env });
+    assert.deepEqual({ exitCode: result.exitCode, state: result.envelope.state, errorCode: result.envelope.error_code },
+      { exitCode: 1, state: 'failed', errorCode: 'state_drift' }, name);
+    assert.equal(JSON.parse(await readFile(context.state, 'utf8')).mutations.length, mutationCount, name);
+  }
+});
+
+test('owned marker rejects post-publication payload drift before mutation', async (t) => {
+  const context = await fixture(t);
+  let result = await runBootstrap(['install', ...context.common], { env: context.env });
+  assert.equal(result.exitCode, 0, JSON.stringify(result));
+  const mutationCount = JSON.parse(await readFile(context.state, 'utf8')).mutations.length;
+  await writeFile(join(context.managed, 'plugins/codex-cursor-subagent-plugin/README.md'), 'foreign managed edit\n');
+  result = await runBootstrap(['install', ...context.common], { env: context.env });
+  assert.deepEqual({ exitCode: result.exitCode, state: result.envelope.state, errorCode: result.envelope.error_code },
+    { exitCode: 1, state: 'failed', errorCode: 'state_drift' });
+  assert.equal(JSON.parse(await readFile(context.state, 'utf8')).mutations.length, mutationCount);
+});
+
+test('publication remnant classification rejects conflicting, foreign and invalid paths', async (t) => {
+  for (const kind of ['stage-and-backup', 'foreign-stage', 'invalid-stage', 'foreign-active']) {
+    const context = await fixture(t);
+    const staging = `${context.managed}.codex-cursor-subagent-plugin.staging`;
+    const backup = `${context.managed}.codex-cursor-subagent-plugin.backup`;
+    if (kind === 'stage-and-backup') {
+      await mkdir(staging); await mkdir(backup);
+    } else if (kind === 'foreign-stage') {
+      await writeFile(staging, 'foreign staging artifact');
+    } else if (kind === 'invalid-stage') {
+      await mkdir(staging);
+    } else {
+      await writeFile(context.managed, 'foreign active artifact');
+    }
+    const result = await runBootstrap(['install', ...context.common], { env: context.env });
+    assert.deepEqual({ exitCode: result.exitCode, state: result.envelope.state, errorCode: result.envelope.error_code },
+      { exitCode: 1, state: 'failed', errorCode: 'state_drift' }, kind);
+    const mutationCount = await readFile(context.state, 'utf8').then(JSON.parse).then(({ mutations }) => mutations.length).catch(() => 0);
+    assert.equal(mutationCount, 0, kind);
+  }
+});
+
+test('preflight classifies foreign and duplicate owned registrations independently', async (t) => {
+  const context = await fixture(t);
+  const plugin = {
+    id: 'codex-cursor-subagent-plugin',
+    marketplace_id: 'codex-cursor-subagent-plugin',
+    source: join(context.managed, 'plugins/codex-cursor-subagent-plugin'),
+    version: '0.1.0+codex.foreign',
+  };
+  await writeFile(context.state, JSON.stringify({
+    marketplaces: [{ id: 'codex-cursor-subagent-plugin', path: join(context.root, 'foreign-marketplace') }],
+    plugins: [plugin, { ...plugin }],
+    mutations: [],
+  }));
+  const result = await runBootstrap(['preflight', '--managed-marketplace-root', context.managed,
+    '--node-executable', context.executable, '--codex-executable', context.executable], { env: context.env });
+  assert.equal(result.envelope.state, 'not_ready');
+  assert.equal(result.envelope.checks.find(({ name }) => name === 'marketplace_registration').code, 'foreign');
+  assert.equal(result.envelope.checks.find(({ name }) => name === 'plugin_registration').code, 'duplicate');
+  assert.deepEqual(JSON.parse(await readFile(context.state, 'utf8')).mutations, []);
 });
 
 test('preflight requires authenticated status and a version-bound admitted adapter', async (t) => {
@@ -864,6 +1110,61 @@ test('registration reread failure during compensation requires recovery without 
     await assert.rejects(realpath(`${context.managed}.codex-cursor-subagent-plugin.staging`), { code: 'ENOENT' });
     await assert.rejects(realpath(`${context.managed}.codex-cursor-subagent-plugin.backup`), { code: 'ENOENT' });
   }
+});
+
+test('install preserves recovery evidence when marketplace compensation cannot reread registrations', async (t) => {
+  const context = await fixture(t);
+  context.env.FAKE_CODEX_FAIL_OPERATION = 'plugin-add';
+  context.env.FAKE_CODEX_LIST_FAILURE_AFTER_MUTATION_COUNT = 'marketplace-remove:1';
+  const result = await runBootstrap(['install', ...context.common], { env: context.env });
+  assert.deepEqual({ exitCode: result.exitCode, state: result.envelope.state, lastCompletedStep: result.envelope.last_completed_step },
+    { exitCode: 1, state: 'recovery_required', lastCompletedStep: 'marketplace-remove' });
+  const registrations = JSON.parse(await readFile(context.state, 'utf8'));
+  assert.deepEqual({ marketplaces: registrations.marketplaces, plugins: registrations.plugins },
+    { marketplaces: [], plugins: [] });
+  assert.equal(await lstat(context.managed).then(() => true).catch(() => false), true);
+});
+
+test('uninstall preserves recovery evidence when publication plugin compensation cannot reread registrations', async (t) => {
+  const context = await fixture(t);
+  let result = await runBootstrap(['install', ...context.common], { env: context.env });
+  assert.equal(result.exitCode, 0);
+  context.env.FAKE_CODEX_LIST_FAILURE_AFTER_MUTATION_COUNT = 'plugin-add:2';
+  result = await runBootstrap(['uninstall', '--managed-marketplace-root', context.managed,
+    '--codex-executable', context.executable], {
+    env: context.env,
+    fault: async (step) => { if (step === 'publication:before-uninstall-active-to-backup') throw new Error(step); },
+  });
+  assert.deepEqual({ exitCode: result.exitCode, state: result.envelope.state, lastCompletedStep: result.envelope.last_completed_step },
+    { exitCode: 1, state: 'recovery_required', lastCompletedStep: 'plugin-add' });
+  const registrations = JSON.parse(await readFile(context.state, 'utf8'));
+  assert.equal(registrations.marketplaces[0].path, context.managed);
+  assert.equal(registrations.plugins[0].source, join(context.managed, 'plugins/codex-cursor-subagent-plugin'));
+});
+
+test('update reports recovery when publication rollback cannot rename the owned backup into place', async (t) => {
+  const context = await fixture(t);
+  let result = await runBootstrap(['install', ...context.common], { env: context.env });
+  assert.equal(result.exitCode, 0);
+  await writeFile(join(context.source, 'README.md'), 'rollback rename failure\n');
+  let restored;
+  result = await runBootstrap(['update', ...context.common], {
+    env: context.env,
+    fault: async (step) => {
+      if (step !== 'publication:after-update-active-to-backup') return;
+      await rm(`${context.managed}.codex-cursor-subagent-plugin.staging`, { recursive: true });
+      await chmod(context.root, 0o555);
+      restored = new Promise((resolveRestore) => setTimeout(async () => {
+        await chmod(context.root, 0o755);
+        resolveRestore();
+      }, 100));
+      throw new Error(step);
+    },
+  });
+  await restored;
+  assert.deepEqual({ exitCode: result.exitCode, state: result.envelope.state, backupPath: result.envelope.backup_path },
+    { exitCode: 1, state: 'recovery_required', backupPath: null });
+  assert.equal(await lstat(`${context.managed}.codex-cursor-subagent-plugin.backup`).then(() => true).catch(() => false), true);
 });
 
 test('rejected and timed-out compensation commands classify install, update and uninstall by observed state', async (t) => {

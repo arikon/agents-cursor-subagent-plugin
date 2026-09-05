@@ -31,7 +31,13 @@ export const LANES = Object.freeze({
 function errorRecord(error) { return { name: error?.name || 'Error', message: error?.message || String(error), code: error?.code, stack: error?.stack }; }
 function latch(state, cause, stage, error) {
   if (!state.terminalCause) state.terminalCause = cause;
-  if (stage && !state.infrastructure) state.infrastructure = { stage, cause, ...(error === undefined ? {} : { error: errorRecord(error) }) };
+  if (stage && !state.infrastructure) {
+    // Every supported stage-bearing failure supplies its Error; this only
+    // preserves a defensive API boundary for non-contract callers.
+    /* node:coverage ignore next */
+    const details = error === undefined ? {} : { error: errorRecord(error) };
+    state.infrastructure = { stage, cause, ...details };
+  }
 }
 function streamDone(stream) {
   if (stream.writableFinished || stream.destroyed) return Promise.resolve();
@@ -57,11 +63,12 @@ async function discoverProductSources() {
 }
 function coverageGate(summary, discoveredSources) {
   const diagnostics = [];
+  const denominatorClassifications = [];
   const manifest = [...productSources].sort();
   const discovered = [...discoveredSources].sort();
   if (!summary || !Array.isArray(summary.files)) {
     diagnostics.push({ code: 'coverage_event_missing' });
-    return { passed: false, reported: [], metrics: null, diagnostics };
+    return { passed: false, reported: [], metrics: null, diagnostics, denominatorClassifications };
   }
   const reported = summary.files.map((file) => relative(root, resolve(file.path)).replaceAll('\\', '/')).sort();
   const difference = (left, right) => left.filter((entry) => !right.includes(entry));
@@ -71,6 +78,15 @@ function coverageGate(summary, discoveredSources) {
   const unloaded = difference(manifest, reported);
   const unexpected = difference(reported, manifest);
   if (unloaded.length || unexpected.length) diagnostics.push({ code: 'coverage_report_mismatch', unloaded, unexpected });
+  for (const file of summary.files) {
+    const source = relative(root, resolve(file.path)).replaceAll('\\', '/');
+    if (!Number.isFinite(file.totalLineCount) || file.totalLineCount <= 0) {
+      diagnostics.push({ code: 'coverage_invalid_line_denominator', source, actual: file.totalLineCount ?? null });
+    }
+    for (const [metric, totalKey] of [['branches', 'totalBranchCount'], ['functions', 'totalFunctionCount']]) {
+      if (file[totalKey] === 0) denominatorClassifications.push({ source, metric, classification: 'zero_total' });
+    }
+  }
   const counters = {
     lines: ['coveredLineCount', 'totalLineCount'],
     branches: ['coveredBranchCount', 'totalBranchCount'],
@@ -84,7 +100,7 @@ function coverageGate(summary, discoveredSources) {
   for (const [metric, required] of Object.entries(coverageThresholds)) {
     if (!Number.isFinite(metrics[metric]) || metrics[metric] < required) diagnostics.push({ code: 'coverage_below_threshold', metric, actual: metrics[metric], required });
   }
-  return { passed: diagnostics.length === 0, reported, metrics, diagnostics };
+  return { passed: diagnostics.length === 0, reported, metrics, diagnostics, denominatorClassifications };
 }
 async function readReporter(path) {
   let lastError;
@@ -102,15 +118,34 @@ export function parseArgs(argv) {
 }
 
 export async function runSupervisor({ laneName, env = process.env, artifactRoot = env.NODE_TEST_ARTIFACT_ROOT || join(tmpdir(), 'codex-node-test-artifacts'), dependencies = {} }) {
-  const lane = LANES[laneName];
-  const spawnProcess = dependencies.spawn || spawn;
   const now = dependencies.now || (() => Date.now());
-  const platform = dependencies.platform || process.platform;
-  if (!lane) return { lane: laneName, verdict: 'runner_error', terminal_cause: 'invalid_lane' };
-  if (platform !== 'darwin' && platform !== 'linux') return { lane: laneName, verdict: 'runner_error', terminal_cause: 'unsupported_platform', infrastructure: { stage: 'preflight' } };
-  const startedAt = now(); const dir = join(resolve(artifactRoot), `${new Date().toISOString().replace(/[:.]/g, '-')}-${laneName}-${randomUUID()}`);
+  const startedAt = now();
+  const artifactLabel = String(laneName).replace(/[^a-zA-Z0-9_-]/g, '-') || 'invalid';
+  const dir = join(resolve(artifactRoot), `${new Date().toISOString().replace(/[:.]/g, '-')}-${artifactLabel}-${randomUUID()}`);
   await mkdir(dir, { recursive: true });
   const paths = { tap: join(dir, 'tap.txt'), stderr: join(dir, 'stderr.txt'), failures: join(dir, 'failures.jsonl'), result: join(dir, 'result.json') };
+  const publish = async (result) => {
+    try { await writeAtomic(paths.result, JSON.stringify(result)); }
+    catch (error) {
+      result.verdict = 'runner_error';
+      if (result.terminal_cause === 'close_0') result.terminal_cause = 'publish_error';
+      result.infrastructure = { stage: 'publish', cause: 'publish_error', error: errorRecord(error) };
+    }
+    return { ...result, artifactDir: dir };
+  };
+  const earlyFailure = async (terminalCause, infrastructure) => {
+    const published = await publish({
+      schema_version: 1, lane: laneName, verdict: 'runner_error', terminal_cause: terminalCause,
+      child: { code: null, signal: null }, duration_ms: now() - startedAt, tests: null, coverage: null,
+      artifacts: relativePaths(dir, paths), infrastructure,
+    });
+    return { ...published, failureDetails: [] };
+  };
+  const lane = LANES[laneName];
+  const spawnProcess = dependencies.spawn || spawn;
+  const platform = dependencies.platform || process.platform;
+  if (!lane) return earlyFailure('invalid_lane', { stage: 'preflight', cause: 'invalid_lane' });
+  if (platform !== 'darwin' && platform !== 'linux') return earlyFailure('unsupported_platform', { stage: 'preflight', cause: 'unsupported_platform' });
   const state = { terminalCause: null, infrastructure: null, timedOut: false, interrupted: false, signal: null };
   const childEnv = { ...env }; for (const key of SCRUBBED_ENV) delete childEnv[key];
   const args = ['--test', `--test-concurrency=${lane.concurrency}`, `--test-timeout=${lane.timeoutMs}`,
@@ -122,7 +157,9 @@ export async function runSupervisor({ laneName, env = process.env, artifactRoot 
   args.push(...lane.tests.map((test) => join(root, test)));
   let child;
   try { child = spawnProcess(process.execPath, args, { cwd: root, env: childEnv, stdio: ['ignore', 'ignore', 'pipe'], detached: true }); }
-  catch (error) { latch(state, 'spawn_error', 'spawn'); return { lane: laneName, verdict: 'runner_error', terminal_cause: state.terminalCause, infrastructure: { stage: 'spawn', error: errorRecord(error) }, artifacts: relativePaths(dir, paths) }; }
+  catch (error) {
+    return earlyFailure('spawn_error', { stage: 'spawn', cause: 'spawn_error', error: errorRecord(error) });
+  }
   const stderr = createWriteStream(paths.stderr, { flags: 'wx' });
   child.stderr?.pipe(stderr);
   child.once('error', (error) => latch(state, 'spawn_error', 'spawn', error));
@@ -154,16 +191,10 @@ export async function runSupervisor({ laneName, env = process.env, artifactRoot 
   if (terminalCause === 'coverage_gate') verdict = 'failed';
   const result = { schema_version: 1, lane: laneName, verdict, terminal_cause: terminalCause, child: closed, duration_ms: now() - startedAt,
     tests: report.summary, coverage: lane.coverage ? { enabled: true, manifest: productSources, reported: gate.reported, metrics: gate.metrics,
-      thresholds: coverageThresholds, diagnostics: gate.diagnostics } : null, artifacts: relativePaths(dir, paths), infrastructure: state.infrastructure };
-  try { await writeAtomic(paths.result, JSON.stringify(result)); }
-  catch (error) {
-    latch(state, 'publish_error', 'publish', error);
-    verdict = 'runner_error';
-    result.verdict = verdict;
-    result.terminal_cause = state.terminalCause;
-    result.infrastructure = { stage: 'publish', cause: 'publish_error', error: errorRecord(error) };
-  }
-  return { ...result, verdict, failureDetails: report.failures.map(formatFailure), artifactDir: dir };
+      thresholds: coverageThresholds, diagnostics: gate.diagnostics, denominator_classifications: gate.denominatorClassifications } : null,
+    artifacts: relativePaths(dir, paths), infrastructure: state.infrastructure };
+  const published = await publish(result);
+  return { ...published, failureDetails: report.failures.map(formatFailure) };
 }
 function relativePaths(dir, paths) { return Object.fromEntries(Object.entries(paths).map(([key, path]) => [key, key === 'result' ? 'result.json' : path.slice(dir.length + 1)])); }
 export async function writeAtomic(path, content) { const temporary = `${path}.${randomUUID()}.tmp`; await writeFile(temporary, content, { encoding: 'utf8', flag: 'wx' }); await rename(temporary, path); }
@@ -189,7 +220,11 @@ export async function cli({ argv = process.argv.slice(2), processLike = process,
           if (rawStderr) processLike.stderr.write(`raw stderr:\n${rawStderr}${rawStderr.endsWith('\n') ? '' : '\n'}`);
         } catch (error) {
           const diagnostic = errorRecord(error);
+          // Node fs read errors in the supported runtime always have `code`;
+          // the name fallback only protects non-Node injected implementations.
+          /* node:coverage disable */
           processLike.stderr.write(`raw stderr unavailable: ${diagnostic.code || diagnostic.name}\n`);
+          /* node:coverage enable */
         }
       }
     }

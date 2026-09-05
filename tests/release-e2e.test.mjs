@@ -317,7 +317,7 @@ async function finalizeReleaseRun({ layout, installed, handoff, proof, observati
         cache_loaded_skill: null, installed_payload: proof?.installedPayload || null,
         client: proof?.client || null, model: proof?.model || null, cleanup_status: cleanupStatus,
       },
-      observations, transcript: [], eval_status: outcome.status,
+      observations, transcript: { calls: [], dropped_calls: 0 }, eval_status: outcome.status,
       error_code: outcome.status === 'pass' ? null : outcome.status === 'agent_behavior_mismatch' ? 'canary_marker_mismatch' : 'live_canary_failure',
       message: outcome.message || null,
     };

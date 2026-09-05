@@ -11,6 +11,15 @@ import { assertEvalResultV1, classifyEval, classifyScenario, evalResult, publish
 
 const recorder = fileURLToPath(new URL('../scripts/recording-mcp-proxy.mjs', import.meta.url));
 
+test('recording MCP proxy rejects an omitted target before opening a child transport', async () => {
+  const child = spawn(process.execPath, [recorder], { stdio: ['ignore', 'ignore', 'pipe'] });
+  const stderr = [];
+  child.stderr.on('data', (chunk) => stderr.push(chunk));
+  const [code] = await once(child, 'close');
+  assert.notEqual(code, 0);
+  assert.match(Buffer.concat(stderr).toString('utf8'), /MCP proxy target is required/);
+});
+
 test('EvalResultV1 enforces its exact bounded public contract', () => {
   const result = evalResult({ scenario_id: 'client-happy', lane: 'client-integration', eval_status: 'pass', actual_task_outcome: 'succeeded', reported_task_outcome: 'succeeded', fixture_assertion_outcome: 'pass', evidence_publication_status: 'published', evidence_ref: '/evidence/run.json', cleanup_status: 'succeeded', failure_stage: null });
   assert.equal(result.schema_version, 1);
@@ -256,6 +265,8 @@ for (const [name, target, expectedCode] of [
     const lines = createInterface({ input: proxy.stdout });
     const [pidLine] = await once(lines, 'line'); const targetPid = Number(pidLine);
     assert.ok(Number.isSafeInteger(targetPid));
+    proxy.kill('SIGTERM');
+    // Repeated ownership-loss signals are a real parent/terminal race.
     proxy.kill('SIGTERM');
     const [code, signal] = await once(proxy, 'close');
     assert.equal(signal, null);

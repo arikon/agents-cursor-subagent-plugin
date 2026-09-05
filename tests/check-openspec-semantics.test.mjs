@@ -321,6 +321,10 @@ for (const { name, ownerRequirements } of [
     name: 'expanded corpus owner reference shape',
     ownerRequirements: [{ capability: contracts[facadeChange].capability, requirement: 'Skill workflow делегирования', scenario_id: 'not-semantic-owner-data' }],
   },
+  {
+    name: 'non-object corpus owner reference',
+    ownerRequirements: ['not-an-owner-reference'],
+  },
 ]) {
   test(`semantic gate rejects ${name}`, async (t) => {
     const root = await fixture(t);
@@ -350,6 +354,62 @@ test('semantic gate accepts a registered skip-specs tooling change without a cap
     errors: [],
     checkedChanges: 6,
   });
+});
+
+test('semantic gate limits capability claims to the Capabilities section', async (t) => {
+  const root = await fixture(t);
+  const toolingRegistry = await addReferenceOnlyToolingChange(root);
+  await append(
+    root,
+    'openspec/changes/fixture-tooling/proposal.md',
+    '\n## Impact\n\n- `fixture-tooling-capability` is mentioned only as impact context.\n',
+  );
+  assert.deepEqual(checkOpenSpecSemantics(root, toolingRegistry), {
+    ok: true,
+    errors: [],
+    checkedChanges: 6,
+  });
+});
+
+test('semantic gate rejects a missing public-invariant index', async (t) => {
+  const root = await fixture(t);
+  await replace(
+    root,
+    `openspec/changes/${supervisorChange}/design.md`,
+    '**Public-invariant index.** `NTS-3` → «Supervisor fixture requirement»\n',
+  );
+  assertRejected(run(root), 'baseline missing \\*\\*Public-invariant index|Public-invariant index must equal');
+});
+
+test('semantic gate rejects an owner reference when the owner has no requirement-id mapping', async (t) => {
+  const root = await fixture(t);
+  const toolingRegistry = await addReferenceOnlyToolingChange(root);
+  await replace(
+    root,
+    `openspec/changes/${supervisorChange}/design.md`,
+    '**Public-invariant index.** `NTS-3` → «Supervisor fixture requirement»\n',
+  );
+  assertRejected(checkOpenSpecSemantics(root, toolingRegistry), 'invalid owner reference');
+});
+
+test('semantic gate reads only the requested requirement block from a multi-requirement main spec', async (t) => {
+  const root = await fixture(t);
+  await append(
+    root,
+    `openspec/specs/${contracts[facadeChange].capability}/spec.md`,
+    '\n### Requirement: Unrelated main requirement\nIndependent contract.\n',
+  );
+  assert.deepEqual(run(root), { ok: true, errors: [], checkedChanges: 5 });
+});
+
+test('semantic gate treats a main-spec directory without spec.md as having no owner requirements', async (t) => {
+  const root = await fixture(t);
+  await write(root, 'openspec/specs/missing-capability/README.md', 'No normative requirements.\n');
+  const corpusRegistry = await withCorpusOwnerRequirements(root, [{
+    capability: 'missing-capability',
+    requirement: 'Missing requirement',
+  }]);
+  assertRejected(checkOpenSpecSemantics(root, corpusRegistry), 'invalid owner requirement');
 });
 
 for (const { name, options, expected } of [

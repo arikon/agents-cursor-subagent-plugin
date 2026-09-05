@@ -126,6 +126,31 @@ test('runtime reports spawn failure when ACP disappears after its admitted versi
   assert.equal(envelope.failure_kind, 'spawn');
 });
 
+test('runtime tombstones initialization when the admitted ACP process exits before replying', async (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'cursor-exiting-agent-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const program = join(root, 'exiting-agent.mjs');
+  writeFileSync(program, `
+import { spawn } from 'node:child_process';
+if (process.argv.includes('--version')) {
+  process.stdout.write('2026.08.25-3e8eec8\\n');
+  process.exit(0);
+}
+const stdoutKeeper = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 500)'], {
+  stdio: ['ignore', 'inherit', 'ignore'],
+});
+stdoutKeeper.unref();
+process.exit(7);
+`, 'utf8');
+
+  const runtime = withInjectedFake(t, {
+    env: { CURSOR_SUBAGENT_ADAPTER_ARGS: JSON.stringify([program]) },
+  });
+  const envelope = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
+  assert.equal(envelope.session_state, 'tombstone');
+  assert.equal(envelope.failure_kind, 'init');
+});
+
 test('adapter admission failure is an allocated init tombstone and releases capacity', async (t) => {
   const runtime = withFake(t, { env: { FAKE_ACP_BAD_ADMISSION: '1' } });
   const failed = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
@@ -661,6 +686,143 @@ test('malformed ACP callbacks are rejected before a pending request is published
   });
 });
 
+test('programmed ACP question normalizes empty prompt and option label', async (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'cursor-runtime-empty-derived-fields-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const programPath = join(root, 'program.json');
+  writeFileSync(programPath, JSON.stringify({
+    kind: 'fake-acp',
+    steps: [
+      {
+        type: 'pending', request_kind: 'question', step_id: 'question-1', callback_id: 'q-1',
+        question_id: 'q', prompt: '', options: [{ id: 'yes', label: '' }],
+      },
+      { type: 'terminal', step_id: 'terminal-1', turn_status: 'completed', result_text: 'done' },
+    ],
+  }));
+  const runtime = withInjectedFake(t, {
+    roots: [realpathSync(root)],
+    env: { CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH: programPath },
+  });
+  const session = await runtime.call('cursor_start_session', { cwd: root, mode: 'ask' });
+  const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'normalize empty fields' });
+  const waiting = await runtime.call('cursor_wait', {
+    session_id: session.session_id,
+    turn_id: turn.turn_id,
+    after_event_id: turn.last_event_id,
+    timeout_ms: 1_000,
+  });
+  assert.equal(waiting.active_turn.pending[0].context.questions[0].prompt.text, '');
+  assert.equal(waiting.active_turn.pending[0].context.questions[0].options[0].label.text, '');
+  const answered = await runtime.call('cursor_answer_question', {
+    session_id: session.session_id,
+    turn_id: turn.turn_id,
+    request_id: 'q-1',
+    outcome: 'cancelled',
+  });
+  assert.equal((await waitTerminal(runtime, session.session_id, turn.turn_id, answered.last_event_id)).turn_status, 'completed');
+  await runtime.call('cursor_close_session', { session_id: session.session_id });
+});
+
+test('ACP question callbacks reject duplicates and normalize explicit multiplicity', async (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'cursor-runtime-question-shape-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const emitter = join(root, 'question-emitter.mjs');
+  writeFileSync(emitter, `
+import { createInterface } from 'node:readline';
+if (process.argv.includes('--version')) {
+  process.stdout.write('2026.08.25-3e8eec8\\n');
+  process.exit(0);
+}
+const send = (message) => process.stdout.write(JSON.stringify(message) + '\\n');
+const input = createInterface({ input: process.stdin });
+let promptId = null;
+input.on('line', (line) => {
+  const request = JSON.parse(line);
+  if (!request.method && request.id !== undefined) {
+    if (promptId !== null) {
+      send({ jsonrpc: '2.0', id: promptId, result: { stopReason: 'end_turn' } });
+      promptId = null;
+    }
+    return;
+  }
+  if (request.method === 'initialize') return send({ jsonrpc: '2.0', id: request.id, result: {
+    protocolVersion: 1,
+    authMethods: [{ id: 'cursor_login' }],
+    agentCapabilities: {
+      loadSession: true,
+      mcpCapabilities: { http: true, sse: true },
+      promptCapabilities: { audio: false, embeddedContext: false, image: true },
+      sessionCapabilities: { list: {} },
+    },
+  } });
+  if (request.method === 'session/new') return send({ jsonrpc: '2.0', id: request.id, result: {
+    sessionId: 'fake',
+    modes: { currentModeId: 'agent', availableModes: ['ask', 'plan', 'agent'].map((id) => ({ id })) },
+  } });
+  if (request.method === 'session/prompt') {
+    promptId = request.id;
+    return send({ jsonrpc: '2.0', id: 'q1', method: 'cursor/ask_question', params: JSON.parse(process.env.FAKE_QUESTION_PARAMS) });
+  }
+  if (request.method === 'session/cancel') process.exit(0);
+  if (request.id !== undefined) send({ jsonrpc: '2.0', id: request.id, result: {} });
+});
+`);
+
+  const run = async (caseT, params) => {
+    const runtime = withInjectedFake(caseT, {
+      roots: [realpathSync(root)],
+      env: {
+        CURSOR_SUBAGENT_ADAPTER_ARGS: JSON.stringify([emitter]),
+        FAKE_QUESTION_PARAMS: JSON.stringify(params),
+      },
+    });
+    const session = await runtime.call('cursor_start_session', { cwd: root, mode: 'ask' });
+    const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'validate question shape' });
+    return { runtime, session, turn };
+  };
+
+  await t.test('duplicate question IDs', async (caseT) => {
+    const question = { id: 'q', question: 'Continue?', options: [{ id: 'yes', label: 'Yes' }] };
+    const { runtime, session, turn } = await run(caseT, { questions: [question, { ...question }] });
+    const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id);
+    assert.equal(terminal.turn_status, 'completed');
+    assert.deepEqual(terminal.last_terminal_turn.pending, []);
+    await runtime.call('cursor_close_session', { session_id: session.session_id });
+  });
+
+  await t.test('invalid multiplicity', async (caseT) => {
+    const { runtime, session, turn } = await run(caseT, { questions: [{
+      id: 'q', question: 'Continue?', allowMultiple: 'sometimes', options: [{ id: 'yes', label: 'Yes' }],
+    }] });
+    const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id);
+    assert.equal(terminal.turn_status, 'completed');
+    assert.deepEqual(terminal.last_terminal_turn.pending, []);
+    await runtime.call('cursor_close_session', { session_id: session.session_id });
+  });
+
+  await t.test('explicit single selection', async (caseT) => {
+    const { runtime, session, turn } = await run(caseT, { questions: [{
+      id: 'q', question: 'Continue?', allowMultiple: false, options: [{ id: 'yes', label: 'Yes' }],
+    }] });
+    const waiting = await runtime.call('cursor_wait', {
+      session_id: session.session_id,
+      turn_id: turn.turn_id,
+      after_event_id: turn.last_event_id,
+      timeout_ms: 1_000,
+    });
+    assert.equal(waiting.active_turn.pending[0].context.questions[0].allow_multiple, false);
+    const answered = await runtime.call('cursor_answer_question', {
+      session_id: session.session_id,
+      turn_id: turn.turn_id,
+      request_id: 'q1',
+      outcome: 'cancelled',
+    });
+    assert.equal((await waitTerminal(runtime, session.session_id, turn.turn_id, answered.last_event_id)).turn_status, 'completed');
+    await runtime.call('cursor_close_session', { session_id: session.session_id });
+  });
+});
+
 test('optional ACP callback fields are normalized into stable public pending forms', async (t) => {
   const questionRuntime = withFake(t, { pending: 'question-optional' });
   const questionSession = await questionRuntime.call('cursor_start_session', { cwd, mode: 'ask' });
@@ -791,6 +953,133 @@ test('filesystem callbacks normalize public failures without escaping the sessio
     assert.equal(terminal.turn_status, 'completed');
     assert.equal(JSON.parse(readFileSync(log, 'utf8').trim()).error.data.error_code, scenario.error);
     await runtime.call('cursor_close_session', { session_id: session.session_id });
+  });
+});
+
+test('ACP callback transport handles notifications, default read ranges and a closed request channel', async (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'cursor-runtime-callback-transport-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const emitter = join(root, 'callback-transport-emitter.mjs');
+  writeFileSync(emitter, `
+import { appendFileSync, closeSync } from 'node:fs';
+import { createInterface } from 'node:readline';
+if (process.argv.includes('--version')) {
+  process.stdout.write('2026.08.25-3e8eec8\\n');
+  process.exit(0);
+}
+const send = (message) => process.stdout.write(JSON.stringify(message) + '\\n');
+const record = (message) => appendFileSync(process.env.CALLBACK_LOG, JSON.stringify(message) + '\\n');
+const finish = (id) => {
+  send({ jsonrpc: '2.0', method: 'session/update', params: { sessionId: 'fake', update: { sessionUpdate: 'agent_message_chunk', content: { text: 'done' } } } });
+  send({ jsonrpc: '2.0', id, result: { stopReason: 'end_turn' } });
+};
+const input = createInterface({ input: process.stdin });
+let promptId = null;
+input.on('line', (line) => {
+  const request = JSON.parse(line);
+  if (!request.method) {
+    record(request);
+    if (process.env.CALLBACK_SCENARIO === 'default-read' && request.id === 'fs-default') finish(promptId);
+    return;
+  }
+  if (request.method === 'initialize') return send({ jsonrpc: '2.0', id: request.id, result: {
+    protocolVersion: 1,
+    authMethods: [{ id: 'cursor_login' }],
+    agentCapabilities: {
+      loadSession: true,
+      mcpCapabilities: { http: true, sse: true },
+      promptCapabilities: { audio: false, embeddedContext: false, image: true },
+      sessionCapabilities: { list: {} },
+    },
+  } });
+  if (request.method === 'session/new') {
+    send({ jsonrpc: '2.0', id: request.id, result: {
+      sessionId: 'fake',
+      modes: { currentModeId: 'ask', availableModes: ['ask', 'plan', 'agent'].map((id) => ({ id })) },
+    } });
+    return;
+  }
+  if (request.method === 'session/prompt') {
+    promptId = request.id;
+    if (process.env.CALLBACK_SCENARIO === 'notifications') {
+      send({ jsonrpc: '2.0', method: 'cursor/ask_question', params: { questions: [{ id: 'q', question: 'Ignored?', options: [{ id: 'yes', label: 'Yes' }] }] } });
+      send({ jsonrpc: '2.0', method: 'fs/read_text_file', params: { sessionId: 'fake', path: process.env.CALLBACK_PATH } });
+      return finish(request.id);
+    }
+    if (process.env.CALLBACK_SCENARIO === 'default-read') {
+      return send({ jsonrpc: '2.0', id: 'fs-default', method: 'fs/read_text_file', params: { sessionId: 'fake', path: process.env.CALLBACK_PATH } });
+    }
+    if (process.env.CALLBACK_SCENARIO === 'late-read') {
+      finish(request.id);
+      return setTimeout(() => send({ jsonrpc: '2.0', id: 'fs-late', method: 'fs/read_text_file', params: { sessionId: 'fake', path: process.env.CALLBACK_PATH } }), 20);
+    }
+    if (process.env.CALLBACK_SCENARIO === 'closed-channel') {
+      closeSync(0);
+      return setTimeout(() => {
+        send({ jsonrpc: '2.0', id: 'fs-closed', method: 'fs/read_text_file', params: { sessionId: 'fake', path: process.env.CALLBACK_PATH } });
+        setTimeout(() => process.exit(7), 100);
+      }, 20);
+    }
+    return;
+  }
+  if (request.method === 'session/cancel') process.exit(0);
+  if (request.id !== undefined) send({ jsonrpc: '2.0', id: request.id, result: {} });
+});
+`, 'utf8');
+
+  const source = join(root, 'source.txt');
+  writeFileSync(source, 'one\ntwo', 'utf8');
+  const run = async (caseT, scenario) => {
+    const log = join(root, `${scenario}.jsonl`);
+    const runtime = withInjectedFake(caseT, { roots: [realpathSync(root)], env: {
+      CURSOR_SUBAGENT_ADAPTER_ARGS: JSON.stringify([emitter]),
+      CALLBACK_SCENARIO: scenario,
+      CALLBACK_PATH: source,
+      CALLBACK_LOG: log,
+    } });
+    const session = await runtime.call('cursor_start_session', { cwd: root, mode: 'ask' });
+    return { log, runtime, session };
+  };
+
+  await t.test('callback notifications do not publish pending work or responses', async (caseT) => {
+    const { log, runtime, session } = await run(caseT, 'notifications');
+    const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'notifications' });
+    const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id);
+    assert.equal(terminal.turn_status, 'completed');
+    assert.deepEqual(terminal.last_terminal_turn.pending, []);
+    assert.throws(() => readFileSync(log, 'utf8'));
+    await runtime.call('cursor_close_session', { session_id: session.session_id });
+  });
+
+  await t.test('omitted read range returns the complete file', async (caseT) => {
+    const { log, runtime, session } = await run(caseT, 'default-read');
+    const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'default read' });
+    assert.equal((await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id)).turn_status, 'completed');
+    assert.deepEqual(readJsonLines(log)[0].result, { content: 'one\ntwo' });
+    await runtime.call('cursor_close_session', { session_id: session.session_id });
+  });
+
+  await t.test('filesystem callback after turn completion is rejected', async (caseT) => {
+    const { log, runtime, session } = await run(caseT, 'late-read');
+    const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'late read' });
+    assert.equal((await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id)).turn_status, 'completed');
+    let response;
+    for (let attempts = 0; attempts < 100 && !response; attempts += 1) {
+      try { response = readJsonLines(log).find(({ id }) => id === 'fs-late'); } catch {}
+      if (!response) await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+    assert.equal(response.error.data.error_code, 'protocol_error');
+    assert.equal((await runtime.call('cursor_session_status', { session_id: session.session_id })).session_state, 'live');
+    await runtime.call('cursor_close_session', { session_id: session.session_id });
+  });
+
+  await t.test('closed ACP request channel fails an allocated turn', async (caseT) => {
+    const { runtime, session } = await run(caseT, 'closed-channel');
+    const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'closed channel' });
+    const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id);
+    assert.equal(terminal.turn_status, 'failed');
+    assert.match(terminal.last_terminal_turn.terminal_reason.text, /stdin EPIPE/);
+    assert.equal((await waitSessionState(runtime, session.session_id, 'tombstone')).session_state, 'tombstone');
   });
 });
 

@@ -6,8 +6,8 @@
 import { createServer } from 'node:http';
 import { rename, writeFile } from 'node:fs/promises';
 
-const port = Number(process.env.CURSOR_EVAL_PROVIDER_PORT || '11434');
-const state = { requests: 0, tool_sequence: [], declared_tool_names: [], declared_tool_types: [], request_trace: [], skill_context_seen: false, terminal_result_matched: false };
+const port = Number(process.env.CURSOR_EVAL_PROVIDER_PORT || '0');
+const state = { requests: 0, tool_sequence: [], declared_tool_names: [], declared_tool_types: [], request_trace: [], rejected_requests: [], skill_context_seen: false, terminal_result_matched: false };
 
 async function publishSafeState() {
   if (process.env.CURSOR_EVAL_PROVIDER_EVIDENCE) {
@@ -16,7 +16,7 @@ async function publishSafeState() {
     await writeFile(temporary, JSON.stringify({
       provider_request_seen: state.requests > 0, requests: state.requests, tool_sequence: state.tool_sequence, declared_tool_names: state.declared_tool_names,
       declared_tool_types: state.declared_tool_types,
-      request_trace: state.request_trace,
+      request_trace: state.request_trace, rejected_requests: state.rejected_requests,
       skill_context_seen: state.skill_context_seen, terminal_result_matched: state.terminal_result_matched,
     }), 'utf8');
     await rename(temporary, destination);
@@ -105,6 +105,9 @@ function namespacedToolCall(namespace, name, args, index) {
   for (const event of events) {
     if (event.item) event.item.namespace = namespace;
     if (event.response?.output?.[0]) event.response.output[0].namespace = namespace;
+    // Codex resolves an MCP tool namespace from the completed argument event.
+    // Keeping it only on the output item loses that binding on app-server 0.152.
+    if (event.type === 'response.function_call_arguments.done') event.namespace = namespace;
   }
   return events;
 }
@@ -167,7 +170,10 @@ const server = createServer(async (request, response) => {
   }
   const protocolStep = state.requests - (warmup ? 1 : 0);
   const deferred = process.env.CURSOR_EVAL_DEFERRED_TOOL_SEARCH === '1';
-  if (protocolStep === 1) state.skill_context_seen = Boolean(process.env.CURSOR_EVAL_SKILL_SENTINEL && serialized.includes(process.env.CURSOR_EVAL_SKILL_SENTINEL));
+  // The warmup turn is the only request guaranteed to include the explicit
+  // skill text on app-server 0.152. Preserve that observed proof for the
+  // following model turn instead of treating its compacted context as absent.
+  if (protocolStep === 1) state.skill_context_seen ||= Boolean(process.env.CURSOR_EVAL_SKILL_SENTINEL && serialized.includes(process.env.CURSOR_EVAL_SKILL_SENTINEL));
   if (protocolStep === (deferred ? 5 : 3)) state.terminal_result_matched = serialized.includes('CURSOR_EVAL_OK');
   const ids = findOpaqueIds(body) || findOpaqueIdsInText(body);
   const delegate = findExposedToolName(body, 'cursor_delegate');
@@ -179,21 +185,25 @@ const server = createServer(async (request, response) => {
   let events;
   if (deferred && protocolStep === 1 && state.skill_context_seen && body.tools?.some(({ type }) => type === 'tool_search')) {
     events = toolSearchCall('delegate task to Cursor', state.requests);
-  } else if (protocolStep === (deferred ? 2 : 1) && state.skill_context_seen && delegate) {
+  } else if (protocolStep === (deferred ? 2 : 1) && delegate) {
     const args = { cwd: process.env.CURSOR_EVAL_WORKSPACE, mode: 'ask', prompt: 'Return CURSOR_EVAL_OK.' };
-    events = deferred ? namespacedToolCall(delegateNamespace, delegate, args, state.requests) : toolCall(delegate, args, state.requests);
+    events = delegateNamespace ? namespacedToolCall(delegateNamespace, delegate, args, state.requests) : toolCall(delegate, args, state.requests);
   } else if (deferred && protocolStep === 3 && ids && body.tools?.some(({ type }) => type === 'tool_search')) {
     events = toolSearchCall('wait for delegated Cursor turn terminal result', state.requests);
   } else if (protocolStep === (deferred ? 4 : 2) && ids && wait) {
     const args = { ...ids, after_event_id: 0, timeout_ms: 1000 };
-    events = deferred ? namespacedToolCall(waitNamespace, wait, args, state.requests) : toolCall(wait, args, state.requests);
+    events = waitNamespace ? namespacedToolCall(waitNamespace, wait, args, state.requests) : toolCall(wait, args, state.requests);
   } else if (deferred && protocolStep === 5 && ids && body.tools?.some(({ type }) => type === 'tool_search')) {
     events = toolSearchCall('close Cursor session', state.requests);
   } else if (protocolStep === (deferred ? 6 : 3) && ids && close) {
     const args = { session_id: ids.session_id };
-    events = deferred ? namespacedToolCall(closeNamespace, close, args, state.requests) : toolCall(close, args, state.requests);
+    events = closeNamespace ? namespacedToolCall(closeNamespace, close, args, state.requests) : toolCall(close, args, state.requests);
   } else if (protocolStep === (deferred ? 7 : 4) && state.terminal_result_matched) events = finalText(state.requests);
-  else { await publishSafeState(); response.writeHead(422); return response.end(); }
+  else {
+    state.rejected_requests.push({ step: protocolStep, has_ids: Boolean(ids), has_tool_search: Boolean(body.tools?.some(({ type }) => type === 'tool_search')),
+      has_delegate: Boolean(delegate), has_wait: Boolean(wait), has_close: Boolean(close), skill_context_seen: state.skill_context_seen });
+    await publishSafeState(); response.writeHead(422); return response.end();
+  }
   const emitted = events[1].item;
   const emittedTool = emitted?.type === 'tool_search_call' ? 'tool_search' : emitted?.name || 'final';
   state.tool_sequence.push(emittedTool);

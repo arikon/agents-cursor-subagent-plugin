@@ -15,11 +15,11 @@ import { cli, parseChildResult, publishFinalEvidence, runEval, runHarness } from
 
 const run = fileURLToPath(new URL('../scripts/run-cursor-skill-eval.mjs', import.meta.url));
 const execute = promisify(execFile);
-const transcript = [
+const transcript = { calls: [
   { direction: 'request', tool: 'cursor_delegate', call_id: 1, request: { mode: 'ask' }, response: { ok: true, session_id: 'S', turn_id: 'T' } },
   { direction: 'request', tool: 'cursor_wait', call_id: 2, request: { session_id: 'S', turn_id: 'T' }, response: { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'completed' } },
   { direction: 'request', tool: 'cursor_close_session', call_id: 3, request: { session_id: 'S' }, response: { ok: true, session_id: 'S', session_state: 'tombstone' } },
-];
+], dropped_calls: 0 };
 const toolSequence = ['tool_search', 'cursor_delegate', 'tool_search', 'cursor_wait', 'tool_search', 'cursor_close_session', 'final'];
 const requestTrace = toolSequence.map((tool, index) => ({ step: index + 1, tool, call_id: tool === 'final' ? null : `call_${index + 2}` }));
 const rawCorpus = await readFile(fileURLToPath(new URL('../evals/cursor-subagent-scenarios.v1.json', import.meta.url)));
@@ -107,6 +107,7 @@ test('exact-seven corpus admission, materialization and pure oracle stay in one 
   assert.deepEqual(counts, { admission: 7, materialization: 7, oracle: 6, packageReference: 1 });
 
   const question = byId.get('model-question');
+  assert.throws(() => evaluateScenario({ scenario_kind: 'package-canary-reference' }), /only programmed scenarios/);
   const questionObserved = observed(question);
   const answerIndex = questionObserved.trace.findIndex(({ kind }) => kind === 'answer.question');
   const pendingIndex = questionObserved.trace.findIndex(({ kind }) => kind === 'pending.question');
@@ -325,7 +326,9 @@ test('eval runner emits exactly one bounded lane-specific skipped EvalResultV1',
 });
 
 test('eval runner returns a bounded machine-readable integration failure for an unknown scenario', async () => {
-  const { stdout, stderr } = await execute(process.execPath, [run, 'unknown'], { env: process.env });
+  const failure = await execute(process.execPath, [run, 'unknown'], { env: process.env }).then(() => assert.fail('unknown scenario must fail the process'), (error) => error);
+  const { stdout, stderr } = failure;
+  assert.equal(failure.code, 1);
   assert.equal(stderr, '');
   const result = assertEvalResultV1(JSON.parse(stdout));
   assert.deepEqual({ status: result.eval_status, stage: result.failure_stage, code: result.error_code }, { status: 'integration_failure', stage: 'runner', code: 'unknown_scenario' });
@@ -344,7 +347,9 @@ test('eval runner defaults to the credential-free client scenario when no scenar
 });
 
 test('eval runner bounds an untrusted unknown scenario name in its public result', async () => {
-  const { stdout, stderr } = await execute(process.execPath, [run, 'x'.repeat(4_096)], { env: process.env });
+  const failure = await execute(process.execPath, [run, 'x'.repeat(4_096)], { env: process.env }).then(() => assert.fail('unknown scenario must fail the process'), (error) => error);
+  const { stdout, stderr } = failure;
+  assert.equal(failure.code, 1);
   assert.equal(stderr, '');
   const result = assertEvalResultV1(JSON.parse(stdout));
   assert.equal(result.eval_status, 'integration_failure');
@@ -431,6 +436,42 @@ test('runner and fixture setup catches always return valid stage-specific EvalRe
     { status: 'integration_failure', stage: 'runner', code: 'runner_failure', cleanup: 'succeeded' },
   );
   assertEvalResultV1(generic);
+});
+
+test('runner admits string corpus input and rejects empty or oversized corpus bytes before fixture setup', async () => {
+  const admitted = await runEval({ scenarioId: 'client-happy', env: { CURSOR_EVAL_REAL_CODEX: '1' } }, {
+    ...inertFixture,
+    readFile: async () => rawCorpus.toString('utf8'),
+    runHarness: passHarness,
+    publishEvidence: published,
+  });
+  assert.equal(assertEvalResultV1(admitted).eval_status, 'pass');
+
+  for (const contents of ['', 'x'.repeat(1_048_577)]) {
+    let fixtureCreated = false;
+    const rejected = await runEval({ scenarioId: 'client-happy', env: { CURSOR_EVAL_REAL_CODEX: '1' } }, {
+      readFile: async () => contents,
+      mkdtemp: async () => { fixtureCreated = true; return '/tmp/unexpected-fixture'; },
+    });
+    assert.deepEqual(
+      { status: rejected.eval_status, stage: rejected.failure_stage, code: rejected.error_code },
+      { status: 'integration_failure', stage: 'adapter_admission', code: 'adapter_admission' },
+    );
+    assert.equal(fixtureCreated, false);
+    assertEvalResultV1(rejected);
+  }
+});
+
+test('runner preserves adapter-admission classification from an enabled harness boundary', async () => {
+  const result = await runEval({ scenarioId: 'model-question', env: { CURSOR_EVAL_HOSTED_CODEX: '1' } }, {
+    ...inertFixture,
+    runHarness: async () => { throw Object.assign(new Error('unsupported adapter payload'), { evalCode: 'adapter_admission' }); },
+  });
+  assert.deepEqual(
+    { status: result.eval_status, stage: result.failure_stage, code: result.error_code, cleanup: result.cleanup_status },
+    { status: 'integration_failure', stage: 'adapter_admission', code: 'adapter_admission', cleanup: 'succeeded' },
+  );
+  assertEvalResultV1(result);
 });
 
 test('runner owns the disposable fixture lifecycle by default', async () => {
@@ -573,6 +614,83 @@ test('cleanup failure remains the primary stage when failure-artifact publicatio
   assertEvalResultV1(result);
 });
 
+test('child cleanup failure takes precedence over otherwise successful scenario evidence', async () => {
+  const result = await runEval({ scenarioId: 'model-question', env: { CURSOR_EVAL_HOSTED_CODEX: '1' } }, {
+    ...inertFixture,
+    publishEvidence: published,
+    runHarness: async (config, harnessEnv) => ({
+      code: 0,
+      signal: null,
+      failure: null,
+      childResult: childResult(config.scenario.scenario_id, {
+        cleanup: 'failed',
+        scenarioDigest: { sha256: harnessEnv.CURSOR_EVAL_SCENARIO_SHA256, bytes: Number(harnessEnv.CURSOR_EVAL_SCENARIO_BYTES) },
+        corpusDigest,
+      }),
+      diagnostics: '',
+    }),
+  });
+  assert.deepEqual(
+    { status: result.eval_status, stage: result.failure_stage, code: result.error_code, message: result.message },
+    { status: 'integration_failure', stage: 'cleanup', code: 'cleanup_failed', message: 'child cleanup failed' },
+  );
+  assertEvalResultV1(result);
+});
+
+test('package integration failure without a harness code uses the stable child failure fallback', async () => {
+  const result = await runEval({ scenarioId: 'live-marker', env: { CURSOR_SUBAGENT_LIVE_E2E: '1' } }, {
+    ...inertFixture,
+    publishEvidence: published,
+    runHarness: async (config, harnessEnv) => ({
+      code: 0,
+      signal: null,
+      failure: null,
+      childResult: childResult(config.scenario.scenario_id, {
+        status: 'integration_failure',
+        scenarioDigest: { sha256: harnessEnv.CURSOR_EVAL_SCENARIO_SHA256, bytes: Number(harnessEnv.CURSOR_EVAL_SCENARIO_BYTES) },
+        corpusDigest,
+      }),
+      diagnostics: '',
+    }),
+  });
+  assert.deepEqual(
+    { status: result.eval_status, stage: result.failure_stage, code: result.error_code, message: result.message },
+    { status: 'integration_failure', stage: 'runner', code: 'child_integration_failure', message: 'eval harness failed' },
+  );
+  assertEvalResultV1(result);
+});
+
+test('published evidence safely normalizes optional child sections from a partial harness result', async () => {
+  let evidence;
+  const partialChild = { manifest: { schema_version: 1 }, provenance: { cleanup_status: 'succeeded' } };
+  const result = await runEval({ scenarioId: 'live-marker', env: { CURSOR_SUBAGENT_LIVE_E2E: '1' } }, {
+    ...inertFixture,
+    runHarness: async () => ({ code: 0, signal: null, failure: null, childResult: partialChild, diagnostics: '' }),
+    publishEvidence: async ({ makeEvidence }) => {
+      evidence = makeEvidence('/tmp/partial-evidence.json');
+      return '/tmp/partial-evidence.json';
+    },
+  });
+  assert.equal(result.eval_status, 'agent_behavior_mismatch');
+  assert.deepEqual(
+    {
+      skill: evidence.skill,
+      transcript: evidence.transcript,
+      provider: evidence.provider_oracle,
+      fixture: evidence.fixture_oracle,
+      manifest: evidence.manifest,
+    },
+    {
+      skill: null,
+      transcript: { calls: [], dropped_calls: 0 },
+      provider: null,
+      fixture: null,
+      manifest: partialChild.manifest,
+    },
+  );
+  assertEvalResultV1(result);
+});
+
 test('child-result parser normalizes exact provenance and builds the closed private manifest', () => {
   const parsed = parseChildResult(encodedChildResult('model-question'), 'model-question', { scenario: scenarioById.get('model-question') });
   assert.deepEqual(parsed.manifest, {
@@ -583,6 +701,44 @@ test('child-result parser normalizes exact provenance and builds the closed priv
     installed_payload: { marker_format: 1, payload_hash: 'c'.repeat(64), artifact_hash: 'd'.repeat(64), manifest_version: '0.1.0+codex.fixture' },
     client: { name: 'codex-app-server', version: '0.152.1' }, model: { provider: null, name: null },
   });
+});
+
+test('child-result parser preserves the explicit compatibility defaults for partial observations and package references', () => {
+  const programmed = JSON.parse(encodedChildResult('model-question'));
+  delete programmed.observations.assertion_outcome;
+  delete programmed.observations.eval_status;
+  programmed.eval_status = 'pass';
+  const normalized = parseChildResult(JSON.stringify(programmed), 'model-question', { scenario: scenarioById.get('model-question') });
+  assert.equal(normalized.observations.assertion_outcome, 'pass');
+  assert.equal(normalized.observations.eval_status, 'pass');
+
+  for (const [status, assertion] of [['agent_behavior_mismatch', 'fail'], ['integration_failure', 'not_observed']]) {
+    const partial = JSON.parse(encodedChildResult('model-question'));
+    delete partial.observations.assertion_outcome;
+    delete partial.observations.eval_status;
+    partial.eval_status = status;
+    const parsed = parseChildResult(JSON.stringify(partial), 'model-question', { scenario: scenarioById.get('model-question') });
+    assert.equal(parsed.observations.assertion_outcome, assertion);
+    assert.equal(parsed.observations.eval_status, status);
+  }
+
+  const reference = JSON.parse(encodedChildResult('model-question'));
+  reference.scenario_id = 'package-canary-reference';
+  reference.provenance.cache_loaded_skill = null;
+  reference.provider_oracle = null;
+  const parsedReference = parseChildResult(JSON.stringify(reference), 'package-canary-reference', { scenario: { scenario_kind: 'package-canary-reference' } });
+  assert.equal(parsedReference.provider_oracle, null);
+
+  reference.provider_oracle = { release_canary: 'observed' };
+  assert.deepEqual(
+    parseChildResult(JSON.stringify(reference), 'package-canary-reference', { scenario: { scenario_kind: 'package-canary-reference' } }).provider_oracle,
+    { release_canary: 'observed' },
+  );
+  reference.provider_oracle = [];
+  assert.throws(
+    () => parseChildResult(JSON.stringify(reference), 'package-canary-reference', { scenario: { scenario_kind: 'package-canary-reference' } }),
+    (error) => error.evalCode === 'child_result_invalid',
+  );
 });
 
 test('child-result parser rejects malformed JSON and oversized evidence', () => {
@@ -613,6 +769,10 @@ test('child-result parser rejects every required evidence-contract violation', (
     { ...valid, observations: { ...valid.observations, reported_task_outcome: 'unknown' } },
     { ...valid, observations: { ...valid.observations, assertion_outcome: 'unknown' } },
     { ...valid, observations: { ...valid.observations, eval_status: 'skipped' } },
+    { ...valid, transcript: undefined },
+    { ...valid, transcript: [] },
+    { ...valid, transcript: { calls: valid.transcript.calls, dropped_calls: -1 } },
+    { ...valid, transcript: { ...valid.transcript, extra: true } },
     { ...valid, provider_oracle: null },
     { ...valid, provider_oracle: [] },
   ];
@@ -651,6 +811,29 @@ test('harness returns validated child evidence and bounded diagnostics after a s
   assert.equal(result.failure, null);
   assert.deepEqual(result.childResult, childResult('client-happy'));
   assert.equal(Buffer.byteLength(result.diagnostics, 'utf8') <= 8_000, true);
+});
+
+test('harness validates configured scenario and corpus digests at the process boundary', async () => {
+  const scenario = scenarioById.get('client-happy');
+  const scenarioDigest = materializeScenario(scenario, { workspace: '/tmp/fixture/workspace' }).digest;
+  const result = await runHarness(
+    { pattern: 'scenario', test: '/tmp/test.mjs', scenario },
+    {
+      CURSOR_EVAL_CHILD_RESULT: '/tmp/result.json',
+      CURSOR_EVAL_SCENARIO_ID: 'client-happy',
+      CURSOR_EVAL_SCENARIO_SHA256: scenarioDigest.sha256,
+      CURSOR_EVAL_SCENARIO_BYTES: String(scenarioDigest.bytes),
+      CURSOR_EVAL_CORPUS_SHA256: corpusDigest.sha256,
+      CURSOR_EVAL_CORPUS_BYTES: String(corpusDigest.bytes),
+    },
+    {
+      spawn: () => makeHarnessChild(),
+      readFile: async () => encodedChildResult('client-happy'),
+    },
+  );
+  assert.equal(result.failure, null);
+  assert.deepEqual(result.childResult.manifest.materialized_scenario, scenarioDigest);
+  assert.deepEqual(result.childResult.manifest.corpus, corpusDigest);
 });
 
 test('harness executes its configured Node test through the default process boundary', async (t) => {
@@ -762,10 +945,23 @@ test('CLI converts an unhandled evaluation rejection to EvalResultV1', async () 
   const written = [];
   await cli({ argv: ['node', 'runner', 'live-marker'], processLike, evaluate: async () => { throw new Error('unexpected'); }, write: (value) => written.push(value) });
   assert.deepEqual({ count: written.length, lane: written[0].lane, code: written[0].error_code }, { count: 1, lane: 'full-live', code: 'unhandled_runner_failure' });
+  assert.equal(processLike.exitCode, 1);
   assertEvalResultV1(written[0]);
 
   const fallback = [];
   await cli({ argv: ['node', 'runner', 'unknown'], processLike: new EventEmitter(), evaluate: async () => { throw new Error('unexpected'); }, write: (value) => fallback.push(value) });
   assert.deepEqual({ count: fallback.length, lane: fallback[0].lane, code: fallback[0].error_code }, { count: 1, lane: 'model-behavior', code: 'unhandled_runner_failure' });
   assertEvalResultV1(fallback[0]);
+});
+
+test('CLI exit code reflects every enabled eval classifier while preserving one result', async () => {
+  for (const [status, exitCode] of [['pass', undefined], ['skipped', undefined], ['agent_behavior_mismatch', 1], ['integration_failure', 1]]) {
+    const processLike = new EventEmitter();
+    const written = [];
+    const result = childResult('client-happy').observations;
+    await cli({ argv: ['node', 'runner', 'client-happy'], processLike,
+      evaluate: async () => ({ ...result, eval_status: status }), write: (value) => written.push(value) });
+    assert.equal(written.length, 1, status);
+    assert.equal(processLike.exitCode, exitCode, status);
+  }
 });

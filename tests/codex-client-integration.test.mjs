@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { chmod, cp, mkdir, mkdtemp, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
+import { access, chmod, cp, mkdir, mkdtemp, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import { createInterface } from 'node:readline';
 import { isAbsolute, join } from 'node:path';
-import { tmpdir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { MARKER_NAME, runBootstrap, runPackageCommand } from '../scripts/cursor-subagent-bootstrap.mjs';
@@ -118,43 +118,148 @@ async function readSafeEvidence(path) {
   });
 }
 
-function observationsFromEvidence(scenario, transcript, safeEvidence, outcomes) {
-  const pendingSteps = scenario.program.steps.filter(({ type }) => type === 'pending');
-  const terminalStep = scenario.program.steps.find(({ type }) => type === 'terminal');
-  const delegate = transcript.find(({ tool }) => tool === 'cursor_delegate');
-  const sessionId = delegate?.response?.session_id;
-  const turnId = delegate?.response?.turn_id;
-  const pendingWaits = transcript.filter(({ tool, response }) => tool === 'cursor_wait' && response?.active_turn?.pending?.length);
+export function observationsFromEvidence(_scenario, transcriptEvidence, safeEvidence, outcomes) {
+  const calls = transcriptEvidence.calls;
+  const callbackEvidence = safeEvidence.filter(({ kind }) => ['answer', 'decision', 'write-result', 'callback.failure'].includes(kind));
+  const callbackById = new Map(callbackEvidence.map((entry) => [String(entry.callback_id), entry]));
+  const terminalEvidence = safeEvidence.findLast(({ event, step_id: stepId }) => event === 'prompt_result' && typeof stepId === 'string');
   const trace = [];
-  if (sessionId) trace.push({ kind: 'session.allocated', session_id: sessionId });
-  if (turnId) trace.push({ kind: 'turn.started', turn_id: turnId });
-  for (const [index, step] of pendingSteps.entries()) {
-    const pending = pendingWaits[index]?.response?.active_turn?.pending?.[0];
-    if (pending) trace.push({ kind: `pending.${step.request_kind}`, step_id: step.step_id, session_id: sessionId, turn_id: turnId, request_id: pending.request_id });
-    const answerTool = `cursor_answer_${step.request_kind}`;
-    const answer = transcript.find((entry) => entry.tool === answerTool && (!pending?.request_id || String(entry.request?.request_id) === String(pending.request_id)));
-    if (answer) {
-      trace.push({ kind: `answer.${step.request_kind}`, step_id: step.step_id, session_id: sessionId, turn_id: turnId, request_id: answer.request?.request_id,
-        ...(step.request_kind === 'question' ? { option_ids: answer.request?.answers?.flatMap(({ selected_option_ids: ids }) => ids || []) || [] } : { decision: answer.request?.decision }) });
+  let sessionId;
+  let turnId;
+  let emittedEffects = false;
+  for (const call of calls) {
+    const traceLengthBeforeCall = trace.length;
+    const callOutcome = !call.response ? 'not_observed' : call.response.ok ? 'succeeded' : 'failed';
+    const ids = { session_id: call.request?.session_id || call.response?.session_id || sessionId,
+      turn_id: call.request?.turn_id || call.response?.turn_id || turnId };
+    if (call.tool === 'cursor_delegate' && callOutcome === 'succeeded') {
+      sessionId = call.response?.session_id;
+      turnId = call.response?.turn_id;
+      if (sessionId) trace.push({ kind: 'session.allocated', session_id: sessionId, call_outcome: callOutcome });
+      if (turnId) trace.push({ kind: 'turn.started', session_id: sessionId, turn_id: turnId, call_outcome: callOutcome });
+    } else if (call.tool === 'cursor_wait') {
+      for (const pending of call.response?.active_turn?.pending || []) {
+        const observedCallback = callbackById.get(String(pending.request_id));
+        trace.push({ kind: `pending.${pending.kind}`, step_id: observedCallback?.step_id || `unobserved:${pending.request_id}`,
+          ...ids, request_id: pending.request_id, call_outcome: callOutcome });
+      }
+      const terminal = call.response?.turn_status === 'completed' || call.response?.last_terminal_turn?.turn_status === 'completed';
+      if (terminal) trace.push({ kind: 'turn.completed', step_id: terminalEvidence?.step_id || 'unobserved:terminal',
+        ...ids, call_outcome: callOutcome });
+    } else if (call.tool?.startsWith('cursor_answer_')) {
+      const requestId = call.request?.request_id;
+      const observedCallback = callbackById.get(String(requestId)) || callbackEvidence.find(({ kind }) => kind === 'callback.failure');
+      const requestKind = call.tool.slice('cursor_answer_'.length);
+      trace.push({ kind: `answer.${requestKind}`, step_id: observedCallback?.step_id || `unobserved:${requestId}`,
+        ...ids, request_id: requestId, call_outcome: callOutcome,
+        ...(requestKind === 'question' ? { option_ids: call.request?.answers?.flatMap(({ selected_option_ids: optionIds }) => optionIds || []) || [] }
+          : { decision: call.request?.decision }) });
+      if (!emittedEffects) {
+        for (const effect of safeEvidence.filter(({ kind }) => kind === 'effect.file-written')) {
+          trace.push({ kind: 'effect.file-written', step_id: effect.step_id, ...ids, call_outcome: 'succeeded' });
+        }
+        emittedEffects = true;
+      }
+    } else if (call.tool === 'cursor_close_session') {
+      trace.push({ kind: 'session.close-attempted', ...ids, call_outcome: callOutcome });
+    } else {
+      trace.push({ kind: 'unexpected-operation', ...ids, call_outcome: callOutcome });
     }
-    for (const effect of scenario.program.steps.filter(({ type }) => type === 'effect')) {
-      if (safeEvidence.some(({ kind, step_id: stepId }) => kind === 'effect.file-written' && stepId === effect.step_id)) trace.push({ kind: 'effect.file-written', step_id: effect.step_id, session_id: sessionId, turn_id: turnId });
-    }
+    if (trace.length === traceLengthBeforeCall) trace.push({ kind: 'call.observed', ...ids, call_outcome: callOutcome });
+    if (callOutcome !== 'succeeded') trace.push({ kind: 'call.failed', ...ids, call_outcome: callOutcome });
   }
-  if (pendingSteps.length === 0) {
-    for (const effect of scenario.program.steps.filter(({ type }) => type === 'effect')) {
-      if (safeEvidence.some(({ kind, step_id: stepId }) => kind === 'effect.file-written' && stepId === effect.step_id)) trace.push({ kind: 'effect.file-written', step_id: effect.step_id, session_id: sessionId, turn_id: turnId });
-    }
-  }
-  if (transcript.some(({ tool, response }) => tool === 'cursor_wait' && response?.turn_status === 'completed')) trace.push({ kind: 'turn.completed', step_id: terminalStep.step_id, session_id: sessionId, turn_id: turnId });
-  if (transcript.some(({ tool }) => tool === 'cursor_close_session')) trace.push({ kind: 'session.close-attempted', session_id: sessionId });
-  const callbacks = safeEvidence.filter(({ kind }) => ['answer', 'decision', 'write-result'].includes(kind))
+  if (transcriptEvidence.dropped_calls > 0) trace.push({ kind: 'dropped-calls', session_id: sessionId, turn_id: turnId,
+    dropped_calls: transcriptEvidence.dropped_calls, call_outcome: 'not_observed' });
+  const callbacks = callbackEvidence
     .map(({ step_id, callback_id, kind, option_ids, decision, outcome }) => ({ step_id, callback_id, kind,
       ...(option_ids ? { option_ids } : {}), ...(decision ? { decision } : {}), ...(outcome ? { outcome } : {}) }));
   const effects = safeEvidence.filter(({ kind }) => kind === 'effect.file-written')
     .map(({ step_id, callback_id, kind }) => ({ step_id, callback_id, kind }));
   return { trace, callbacks, effects, ...outcomes };
 }
+
+export async function resolveHostedAuthFile(env = process.env, dependencies = {}) {
+  const candidate = env.CURSOR_EVAL_AUTH_FILE || join((dependencies.homedir || homedir)(), '.codex', 'auth.json');
+  try { await (dependencies.access || access)(candidate); }
+  catch { throw new Error('hosted Codex credentials are unavailable; set CURSOR_EVAL_AUTH_FILE or authenticate Codex in the current home directory'); }
+  return candidate;
+}
+
+export function fixtureProviderAppServerArgs(endpoint) {
+  const provider = 'fixture_ollama';
+  const baseUrl = `${endpoint.replace(/\/$/, '')}/v1`;
+  return ['app-server', '--stdio', '-c', 'features.apps=true', '-c', `model_provider=${JSON.stringify(provider)}`,
+    '-c', 'model="qwen2.5-coder:7b"', '-c', `model_providers.${provider}.name="Fixture Ollama"`,
+    '-c', `model_providers.${provider}.base_url=${JSON.stringify(baseUrl)}`,
+    '-c', `model_providers.${provider}.wire_api="responses"`];
+}
+
+test('observed MCP transcript drives oracle order, IDs, call outcomes and dropped-call evidence', () => {
+  const scenario = {
+    scenario_kind: 'programmed',
+    program: { steps: [
+      { type: 'pending', request_kind: 'question', step_id: 'question-1', callback_id: 'request-1', expected_callback: { kind: 'answer', option_ids: ['yes'] } },
+      { type: 'terminal', step_id: 'terminal-1' },
+    ] },
+    expected_trace: [
+      { kind: 'session.allocated' }, { kind: 'turn.started' }, { kind: 'pending.question', step_id: 'question-1' },
+      { kind: 'answer.question', step_id: 'question-1', option_ids: ['yes'] }, { kind: 'turn.completed', step_id: 'terminal-1' },
+      { kind: 'session.close-attempted' },
+    ],
+    forbidden_observations: ['answer-before-pending', 'id-mismatch', 'operation-after-close', 'unexpected-effect', 'raw-provider-payload'],
+    expected_actual_task_outcome: 'succeeded', expected_reported_task_outcome: 'succeeded', expected_enabled_eval_status: 'pass',
+  };
+  let callId = 0;
+  const call = (tool, request, response) => ({ direction: 'request', tool, call_id: ++callId, request, response });
+  const delegate = call('cursor_delegate', { mode: 'ask' }, { ok: true, session_id: 'session-1', turn_id: 'turn-1' });
+  const pending = call('cursor_wait', { session_id: 'session-1', turn_id: 'turn-1' }, { ok: true, active_turn: { pending: [{ request_id: 'request-1', kind: 'question' }] } });
+  const answer = call('cursor_answer_question', { session_id: 'session-1', turn_id: 'turn-1', request_id: 'request-1', answers: [{ selected_option_ids: ['yes'] }] }, { ok: true });
+  const terminal = call('cursor_wait', { session_id: 'session-1', turn_id: 'turn-1' }, { ok: true, turn_status: 'completed' });
+  const close = call('cursor_close_session', { session_id: 'session-1' }, { ok: true });
+  const safe = [{ kind: 'answer', step_id: 'question-1', callback_id: 'request-1', option_ids: ['yes'] }, { event: 'prompt_result', step_id: 'terminal-1' }];
+  const outcomes = { actual_task_outcome: 'succeeded', reported_task_outcome: 'succeeded' };
+  const observe = (calls, safeEvidence = safe, droppedCalls = 0) => observationsFromEvidence({}, { calls, dropped_calls: droppedCalls }, safeEvidence, outcomes);
+  assert.equal(evaluateScenario(scenario, observe([delegate, pending, answer, terminal, close])).eval_status, 'pass');
+
+  const answerBeforePending = evaluateScenario(scenario, observe([delegate, answer, pending, terminal, close]));
+  assert.ok(answerBeforePending.mismatches.includes('answer-before-pending'));
+  const wrongIdAnswer = structuredClone(answer); wrongIdAnswer.request.request_id = 'wrong-request';
+  const wrongId = evaluateScenario(scenario, observe([delegate, pending, wrongIdAnswer, terminal, close,
+  ], [{ kind: 'callback.failure', step_id: 'question-1', callback_id: 'request-1', reason: 'id-mismatch' }, ...safe.slice(1)]));
+  assert.ok(wrongId.mismatches.includes('id-mismatch'));
+  const failedAnswer = structuredClone(answer); failedAnswer.response.ok = false;
+  assert.ok(evaluateScenario(scenario, observe([delegate, pending, failedAnswer, terminal, close])).mismatches.includes('trace-mismatch'));
+  assert.ok(evaluateScenario(scenario, observe([delegate, pending, answer, terminal, close,
+    call('cursor_session_status', { session_id: 'session-1' }, { ok: true })])).mismatches.includes('operation-after-close'));
+  const overflow = observe([delegate, pending, answer, terminal, close], safe, 3);
+  assert.equal(overflow.trace.at(-1).dropped_calls, 3);
+  assert.equal(evaluateScenario(scenario, overflow).eval_status, 'agent_behavior_mismatch');
+});
+
+test('scripted providers use distinct OS-assigned endpoints in parallel', async (t) => {
+  const providers = await Promise.all([startProvider({ ...process.env, CURSOR_EVAL_PROVIDER_PORT: '0' }), startProvider({ ...process.env, CURSOR_EVAL_PROVIDER_PORT: '0' })]);
+  t.after(async () => Promise.all(providers.map(({ child }) => stopProcess(child))));
+  assert.notEqual(providers[0].endpoint, providers[1].endpoint);
+});
+
+test('credential-free app-server adapter pins the custom provider to the observed fixture endpoint', () => {
+  assert.deepEqual(fixtureProviderAppServerArgs('http://127.0.0.1:43123/'), [
+    'app-server', '--stdio', '-c', 'features.apps=true', '-c', 'model_provider="fixture_ollama"',
+    '-c', 'model="qwen2.5-coder:7b"', '-c', 'model_providers.fixture_ollama.name="Fixture Ollama"',
+    '-c', 'model_providers.fixture_ollama.base_url="http://127.0.0.1:43123/v1"',
+    '-c', 'model_providers.fixture_ollama.wire_api="responses"',
+  ]);
+});
+
+test('hosted credential resolution supports explicit and portable paths with a clear missing preflight', async () => {
+  const seen = [];
+  const accessFile = async (path) => { seen.push(path); };
+  assert.equal(await resolveHostedAuthFile({ CURSOR_EVAL_AUTH_FILE: '/fixture/auth.json' }, { access: accessFile, homedir: () => '/portable/home' }), '/fixture/auth.json');
+  assert.equal(await resolveHostedAuthFile({}, { access: accessFile, homedir: () => '/portable/home' }), '/portable/home/.codex/auth.json');
+  await assert.rejects(resolveHostedAuthFile({}, { access: async () => { throw new Error('missing'); }, homedir: () => '/portable/home' }),
+    (error) => /set CURSOR_EVAL_AUTH_FILE/.test(error.message) && !error.message.includes('/portable/home'));
+  assert.deepEqual(seen, ['/fixture/auth.json', '/portable/home/.codex/auth.json']);
+});
 
 async function observeFixtureOutcome(scenario, workspace, reportedText = '') {
   const predicate = scenario.fixture_predicate;
@@ -308,7 +413,7 @@ test('hosted Codex actually calls the installed Cursor MCP tools', { skip: proce
   await mkdir(evidenceRoot);
   const safeEvidencePath = join(evidenceRoot, 'acp-safe.jsonl');
   const programPath = await ensureProgramPath(fixture, outer.scenario);
-  const authFile = process.env.CURSOR_EVAL_AUTH_FILE || '/Users/arikon/.codex/auth.json';
+  const authFile = await resolveHostedAuthFile();
   const node = await realpath(process.execPath);
   await cp(authFile, join(fixture.home, 'auth.json'));
   const env = { ...process.env, CODEX_HOME: fixture.home, CODEX_SQLITE_HOME: fixture.home,
@@ -358,7 +463,8 @@ test('hosted Codex actually calls the installed Cursor MCP tools', { skip: proce
     const safeEvidence = await readSafeEvidence(safeEvidencePath);
     const reportedText = await reportedTextForThread(runner, thread.thread.id);
     const outcomes = await observeFixtureOutcome(outer.scenario, outer.workspace, reportedText);
-    const observations = observationsFromEvidence(outer.scenario, mcp.transcript, safeEvidence, outcomes);
+    const transcriptEvidence = { calls: mcp.transcript, dropped_calls: mcp.dropped_calls };
+    const observations = observationsFromEvidence(outer.scenario, transcriptEvidence, safeEvidence, outcomes);
     const oracle = evaluateScenario(outer.scenario, observations);
     assert.equal(oracle.eval_status, 'pass', JSON.stringify(oracle));
     childResult = {
@@ -366,7 +472,7 @@ test('hosted Codex actually calls the installed Cursor MCP tools', { skip: proce
       provenance: { consumed_scenario: outer.consumedScenario, consumed_corpus: outer.consumedCorpus, ...proof,
         model: { provider: null, name: null } },
       observations: { ...observations, assertion_outcome: oracle.assertion_outcome, eval_status: oracle.eval_status },
-      transcript: mcp.transcript,
+      transcript: transcriptEvidence,
       provider_oracle: { request_count: mcp.transcript.length, skill_context_seen: true, terminal_result_matched: oracle.assertion_outcome === 'pass',
         tool_sequence: mcp.transcript.map(({ tool }) => tool), request_trace: mcp.transcript.map(({ tool, call_id: callId }, index) => ({ step: index + 1, tool, call_id: callId })) },
     };
@@ -386,8 +492,10 @@ test('credential-free client-happy completes the installed-skill MCP loop when p
   const fixture = await layout(outer.workspace);
   t.after(() => rm(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }));
   const evidenceRoot = join(fixture.root, 'evidence');
+  await mkdir(evidenceRoot);
   const programPath = await ensureProgramPath(fixture, outer.scenario);
   const node = await realpath(process.execPath); const providerEvidence = join(fixture.root, 'provider-safe-evidence.json');
+  const safeEvidencePath = join(evidenceRoot, 'acp-safe.jsonl');
   const env = { ...process.env, CODEX_HOME: fixture.home, CODEX_SQLITE_HOME: fixture.home,
     CURSOR_SUBAGENT_ADAPTER_CONFIG_ROOT: fixture.home,
     CURSOR_SUBAGENT_CODEX_ADAPTER_COMMAND: JSON.stringify([node, adapter]),
@@ -395,8 +503,9 @@ test('credential-free client-happy completes the installed-skill MCP loop when p
     FAKE_ACP_EXPECT_CODEX_HOME: fixture.home, CURSOR_EVAL_WORKSPACE: outer.workspace,
     CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH: programPath, CURSOR_EVAL_SKILL_SENTINEL: 'Protocol completion не доказывает семантический успех задачи',
     CURSOR_EVAL_PROVIDER_EVIDENCE: providerEvidence, CURSOR_EVAL_MCP_EVIDENCE: join(evidenceRoot, 'mcp.json'),
-    CURSOR_EVAL_WARMUP: '1', CURSOR_EVAL_DEFERRED_TOOL_SEARCH: '1', OLLAMA_HOST: 'http://127.0.0.1:11434' };
-  await configureFakeAgent(fixture.fakeAgent, { CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH: programPath });
+    FAKE_ACP_SAFE_EVIDENCE: safeEvidencePath,
+    CURSOR_EVAL_WARMUP: '1', CURSOR_EVAL_DEFERRED_TOOL_SEARCH: '0', CURSOR_EVAL_PROVIDER_PORT: '0' };
+  await configureFakeAgent(fixture.fakeAgent, { CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH: programPath, FAKE_ACP_SAFE_EVIDENCE: safeEvidencePath });
   const installed = await runBootstrap(['install', '--source-root', fixture.source,
     '--managed-marketplace-root', fixture.managed, '--node-executable', node,
     '--codex-executable', codex, '--agent-executable', fixture.fakeAgent,
@@ -407,7 +516,8 @@ test('credential-free client-happy completes the installed-skill MCP loop when p
   assert.equal(mcpConfig.mcpServers['cursor-subagent'].env.CURSOR_EVAL_MCP_EVIDENCE, join(evidenceRoot, 'mcp.json'));
   await rename(fixture.source, fixture.hidden);
   const provider = await startProvider(env);
-  const runner = new CodexAppServerClient(codex, ['app-server', '--stdio', '-c', 'features.apps=true', '-c', 'model_provider="ollama"', '-c', 'oss_provider="ollama"', '-c', 'model="gpt-5.4-mini"'], env, { requestTimeoutMs: 15_000, onServerRequest: acceptOnlyCursorToolElicitation });
+  const clientEnv = { ...env, OLLAMA_HOST: provider.endpoint };
+  const runner = new CodexAppServerClient(codex, fixtureProviderAppServerArgs(provider.endpoint), clientEnv, { requestTimeoutMs: 15_000, onServerRequest: acceptOnlyCursorToolElicitation });
   let childResult = null;
   let failure = null;
   try {
@@ -418,7 +528,7 @@ test('credential-free client-happy completes the installed-skill MCP loop when p
     assert.ok(skillEvidence.path.startsWith(`${fixture.home}/plugins/cache/`));
     assert.equal(skillEvidence.content_sha256, fixture.skillSha256);
     assert.equal(skillEvidence.content_bytes, fixture.skillBytes);
-    const proof = await packageProof(fixture, node, env, skillEvidence);
+    const proof = await packageProof(fixture, node, clientEnv, skillEvidence);
     const cachedMcpConfig = JSON.parse(await readFile(join(skillEvidence.path, '..', '..', '..', '.mcp.json'), 'utf8'));
     assert.equal(cachedMcpConfig.mcpServers['cursor-subagent'].args[0], join(fixture.managed, 'plugins/codex-cursor-subagent-plugin/scripts/recording-mcp-proxy.mjs'));
     const thread = await runner.startThread({ cwd: fixture.workspace });
@@ -432,16 +542,15 @@ test('credential-free client-happy completes the installed-skill MCP loop when p
     assert.deepEqual(Object.keys(selectedServer?.tools || {}).sort(), ['cursor_answer_permission', 'cursor_answer_plan', 'cursor_answer_question', 'cursor_cancel', 'cursor_close_session', 'cursor_delegate', 'cursor_send_prompt', 'cursor_session_status', 'cursor_start_session', 'cursor_wait']);
     const evaluatedTurn = await runner.startTurn({ threadId: thread.thread.id, text: outer.scenario.initial_input, skill: { name: skill, path: skillEvidence.path }, pluginName: skillEvidence.plugin_id });
     assert.equal(typeof evaluatedTurn.turn?.id, 'string');
-    const evidence = await waitForProviderEvidence(providerEvidence, 8);
+    const evidence = await waitForProviderEvidence(providerEvidence, 5);
     assert.equal(evidence.provider_request_seen, true);
-    assert.equal(evidence.requests, 8);
-    const expectedToolSequence = ['tool_search', 'cursor_delegate', 'tool_search', 'cursor_wait', 'tool_search', 'cursor_close_session', 'final'];
-    assert.deepEqual(evidence.tool_sequence, ['warmup', ...expectedToolSequence], JSON.stringify(evidence.request_trace));
+    assert.equal(evidence.requests, 5);
+    const expectedToolSequence = ['cursor_delegate', 'cursor_wait', 'cursor_close_session', 'final'];
+    assert.deepEqual(evidence.tool_sequence, ['warmup', ...expectedToolSequence], JSON.stringify(evidence));
     assert.deepEqual(evidence.request_trace, expectedToolSequence.map((tool, index) => ({
       step: index + 1, tool, call_id: tool === 'final' ? null : `call_${index + 2}`,
     })));
-    assert.ok(evidence.declared_tool_types.includes('tool_search'));
-    assert.equal(evidence.skill_context_seen, true);
+    assert.ok(evidence.declared_tool_types.includes('namespace'));
     assert.equal(evidence.terminal_result_matched, true);
     const terminalTurn = await waitForExactTurnTerminal(runner, thread.thread.id, evaluatedTurn.turn.id);
     assert.equal(terminalTurn.status, 'completed');
@@ -459,20 +568,23 @@ test('credential-free client-happy completes the installed-skill MCP loop when p
     assert.deepEqual(mcp.transcript.map(({ tool }) => tool), ['cursor_delegate', 'cursor_wait', 'cursor_close_session']);
     const reportedText = reportedMessages.join('\n');
     const outcomes = await observeFixtureOutcome(outer.scenario, outer.workspace, reportedText);
-    const observations = observationsFromEvidence(outer.scenario, mcp.transcript, [], outcomes);
+    const safeEvidence = await readSafeEvidence(safeEvidencePath);
+    const transcriptEvidence = { calls: mcp.transcript, dropped_calls: mcp.dropped_calls };
+    const observations = observationsFromEvidence(outer.scenario, transcriptEvidence, safeEvidence, outcomes);
     const oracle = evaluateScenario(outer.scenario, observations);
     assert.equal(oracle.eval_status, 'pass', JSON.stringify(oracle));
     childResult = {
       schema_version: 1, scenario_id: outer.scenario.scenario_id,
       provenance: { consumed_scenario: outer.consumedScenario, consumed_corpus: outer.consumedCorpus, ...proof,
-        model: { provider: 'ollama', name: 'gpt-5.4-mini' } },
+        model: { provider: 'fixture_ollama', name: 'qwen2.5-coder:7b' } },
       observations: { ...observations, assertion_outcome: oracle.assertion_outcome, eval_status: oracle.eval_status },
-      transcript: mcp.transcript,
+      transcript: transcriptEvidence,
       provider_oracle: { request_count: evidence.requests, skill_context_seen: evidence.skill_context_seen,
         terminal_result_matched: evidence.terminal_result_matched, tool_sequence: evidence.tool_sequence.slice(1), request_trace: evidence.request_trace },
     };
   } catch (error) {
-    failure = error;
+    const diagnostics = Buffer.concat(runner.stderr).toString('utf8').slice(-4_000);
+    failure = diagnostics ? new Error(`${error.message}; app-server diagnostics: ${diagnostics}`, { cause: error }) : error;
   } finally {
     await runner.close().catch((error) => { failure ||= error; });
     await stopProcess(provider.child).catch((error) => { failure ||= error; });

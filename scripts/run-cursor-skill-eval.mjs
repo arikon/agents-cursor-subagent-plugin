@@ -47,6 +47,11 @@ function sameDigest(left, right) {
   return left?.sha256 === right?.sha256 && left?.bytes === right?.bytes;
 }
 
+function transcriptEvidence(value) {
+  return exactObject(value, ['calls', 'dropped_calls']) && Array.isArray(value.calls)
+    && Number.isSafeInteger(value.dropped_calls) && value.dropped_calls >= 0;
+}
+
 function manifestFrom(provenance) {
   if (!digest(provenance.managed_installed_skill) || !digest(provenance.adapter) || !provenance.installed_payload || !provenance.client || !provenance.model) return null;
   return {
@@ -78,7 +83,7 @@ export function parseChildResult(encoded, scenarioId, expected = {}) {
   const validClient = exactObject(client, ['name', 'version']) && boundedNullable(client.name) && client.name !== null && boundedNullable(client.version) && client.version !== null;
   const validModel = exactObject(model, ['name', 'provider']) && boundedNullable(model.name) && boundedNullable(model.provider);
   const childStatus = result?.eval_status || observations?.eval_status;
-  const normalizedTranscript = result?.transcript || [];
+  const normalizedTranscript = result?.transcript;
   const normalizedObservations = observations && {
     ...observations,
     assertion_outcome: observations.assertion_outcome || (childStatus === 'pass' ? 'pass' : childStatus === 'agent_behavior_mismatch' ? 'fail' : 'not_observed'),
@@ -99,7 +104,7 @@ export function parseChildResult(encoded, scenarioId, expected = {}) {
     || !digest(provenance?.consumed_scenario) || !digest(provenance?.consumed_corpus)
     || !digest(provenance?.adapter) || !validSkillProof || !validProjection || !validClient || !validModel
     || !['succeeded', 'failed', 'not_required'].includes(provenance?.cleanup_status)
-    || !expectedDigestsMatch || !validObservations || !Array.isArray(normalizedTranscript)
+    || !expectedDigestsMatch || !validObservations || !transcriptEvidence(normalizedTranscript)
     || (programmed && (!result.provider_oracle || Array.isArray(result.provider_oracle) || typeof result.provider_oracle !== 'object'))
     || (!programmed && result.provider_oracle !== undefined && result.provider_oracle !== null && (Array.isArray(result.provider_oracle) || typeof result.provider_oracle !== 'object'))) {
     throw Object.assign(new Error('child result has an invalid evidence contract'), { evalCode: 'child_result_invalid' });
@@ -247,7 +252,8 @@ export async function runEval({ scenarioId = 'client-happy', env = process.env }
     await publish({ evidenceRoot, fixtureRoot, makeEvidence: (ref) => {
       publishedResult = evalResult({ ...fields, evidence_publication_status: 'published', evidence_ref: ref });
       return { schema_version: 1, scenario_id: scenarioId, lane: scenario.lane, failure_artifact: !childResult,
-        skill: childResult?.provenance.managed_installed_skill || null, transcript: childResult?.transcript || [], provider_oracle: childResult?.provider_oracle || null,
+        skill: childResult?.provenance.managed_installed_skill || null,
+        transcript: childResult?.transcript || { calls: [], dropped_calls: 0 }, provider_oracle: childResult?.provider_oracle || null,
         fixture_oracle: childResult?.observations || null, harness: harnessEvidence, final_result: publishedResult,
         manifest: childResult?.manifest || null };
     } });
@@ -262,19 +268,27 @@ export async function runEval({ scenarioId = 'client-happy', env = process.env }
 export async function cli({ argv = process.argv, processLike = process, evaluate = runEval, write = writeEvalResult } = {}) {
   const scenarioId = argv[2] || 'client-happy';
   let emitted = false;
-  const emit = (result) => { if (!emitted) { emitted = true; write(result); } };
+  const emit = (result) => {
+    if (emitted) return false;
+    emitted = true;
+    write(result);
+    return true;
+  };
   processLike.once('SIGTERM', () => {
     emit(evalResult(failureFields(bounded(scenarioId, 128), 'model-behavior', 'runner', 'runner_terminated', 'runner received SIGTERM before completing the scenario', { cleanup_status: 'failed' })));
     processLike.exitCode = 143;
   });
-  try { emit(await evaluate({ scenarioId })); }
+  try {
+    const result = await evaluate({ scenarioId });
+    if (emit(result) && result.eval_status !== 'pass' && result.eval_status !== 'skipped') processLike.exitCode = 1;
+  }
   catch (error) {
     let lane = 'model-behavior';
     try {
       const corpus = parseScenarioCorpus(await readFile(corpusPath));
       lane = corpus.scenarios.find(({ scenario_id: id }) => id === scenarioId)?.lane || lane;
     } catch {}
-    emit(evalResult(failureFields(bounded(scenarioId, 128), lane, 'runner', 'unhandled_runner_failure', error.message, { cleanup_status: 'failed' })));
+    if (emit(evalResult(failureFields(bounded(scenarioId, 128), lane, 'runner', 'unhandled_runner_failure', error.message, { cleanup_status: 'failed' })))) processLike.exitCode = 1;
   }
 }
 

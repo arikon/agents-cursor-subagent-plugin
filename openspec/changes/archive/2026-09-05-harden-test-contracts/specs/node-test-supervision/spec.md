@@ -1,52 +1,4 @@
-## Purpose
-
-Определяет надёжный и диагностируемый запуск всех поддерживаемых Node.js test
-lanes без ложного успеха от неполного console output или оставшихся процессов.
-
-## Requirements
-
-### Requirement: Терминальный foreground verdict
-Test supervisor MUST запускать выбранный Node test lane как foreground run.
-Один `terminal_cause` latch MUST принимать первый deadline, SIGINT, SIGTERM,
-reporter-error или artifact-error; последующий `close`, включая exit code `0`,
-не может его отменить. Supervisor MUST возвращать `passed` только после
-`close(0)`, полного reporter summary, успешного coverage gate (если применим),
-flush streams и атомарной публикации `result.json`. Supervisor MUST различать
-`failed`, `timed_out`, `interrupted` и `runner_error`; CLI exit code MUST быть
-`0` только для `passed` и `1` для каждого иного verdict. Supervisor MUST NOT
-использовать принудительный выход Node test runner как нормальный путь
-завершения.
-
-| Наблюдение | Verdict | `terminal_cause` |
-| --- | --- | --- |
-| clean `close(0)` плюс successful reporter/gate/flush/publish | `passed` | `close_0` |
-| nonzero exit | `failed` | `exit_nonzero` |
-| unsolicited child signal | `failed` | `child_signal` |
-| coverage manifest/threshold failure | `failed` | `coverage_gate` |
-| deadline инициировал остановку | `timed_out` | `deadline` |
-| SIGINT/SIGTERM инициировал остановку | `interrupted` | received signal |
-| preflight/spawn failure | `runner_error` | infrastructure stage |
-| reporter/stream/artifact/flush/publish failure | `runner_error` | первый cause сохраняется; infrastructure stage записан отдельно |
-
-Infrastructure error имеет абсолютный verdict precedence, но не стирает
-первоначальный `terminal_cause`. Если атомарная публикация `result.json` сама
-не удалась, отсутствие completion marker ожидаемо: console обязан вывести
-stage/path/error и вернуть CLI exit `1`.
-
-#### Scenario: Все тесты завершились успешно
-- **WHEN** выбранный lane завершает test runner с exit code `0`
-- **THEN** supervisor после `close` публикует компактный success summary и
-  возвращает success
-
-#### Scenario: Test runner вернул failure
-- **WHEN** test runner завершился с ненулевым exit code
-- **THEN** supervisor публикует `failed`, возвращает failure и не требует
-  повторного запуска для показа обнаруженных ошибок
-
-#### Scenario: Истёк общий deadline
-- **WHEN** test runner не завершился до deadline выбранного lane
-- **THEN** supervisor на POSIX завершает только принадлежащее этому run process
-  tree, ожидает его terminal state и возвращает `timed_out`
+## MODIFIED Requirements
 
 ### Requirement: Диагностика текущего прогона без console шума
 Для каждого run supervisor MUST сохранять полный raw output и machine-readable
@@ -68,9 +20,9 @@ artifacts. Успешные individual tests MUST NOT заполнять console
 
 #### Scenario: Runner аварийно завершился до test failure event
 - **WHEN** Node test runner завершился ошибкой или сигналом без нормального
-failure report
+  failure report
 - **THEN** supervisor выводит terminal reason и captured raw diagnostics,
-сохраняя полный raw output в artifacts
+  сохраняя полный raw output в artifacts
 
 Preflight и synchronous spawn failure MUST также публиковать этот `result.json`
 с `runner_error`, infrastructure stage и доступными текущему прогону
@@ -80,7 +32,7 @@ diagnostics. Исключение возможно только если сам�
 #### Scenario: Synchronous spawn error оставляет completion marker
 - **WHEN** создание дочернего test process завершается синхронной ошибкой
 - **THEN** supervisor возвращает `runner_error` и атомарно публикует текущий
-`result.json` с `spawn` infrastructure stage до вывода failure diagnostics
+  `result.json` с `spawn` infrastructure stage до вывода failure diagnostics
 
 ### Requirement: Lane selection и coverage scope
 Supervisor MUST предоставлять документированные lanes `unit`, `coverage` и
@@ -106,7 +58,7 @@ contract evidence. Требования к качеству тестов опр�
 #### Scenario: Release lane не смешивается с unit coverage
 - **WHEN** пользователь запускает `release` lane
 - **THEN** supervisor выполняет его отдельный тестовый набор и не приписывает
-его результат unit/coverage verdict
+  его результат unit/coverage verdict
 
 Каждый manifest source MUST иметь валидный положительный line denominator в
 своём per-file report; агрегированные counters MUST NOT компенсировать
@@ -118,9 +70,9 @@ guard исключается из unit coverage; импорт exported helper н
 
 #### Scenario: Source исчез из line denominator
 - **WHEN** per-file report содержит manifest source с отсутствующим,
-нечисловым или нулевым line denominator
+  нечисловым или нулевым line denominator
 - **THEN** supervisor возвращает coverage gate failure независимо от
-агрегированных metrics
+  агрегированных metrics
 
 #### Scenario: Compatibility CLI проверен как процесс
 - **WHEN** compatibility entrypoint сохраняется в продукте

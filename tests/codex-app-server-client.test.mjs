@@ -14,6 +14,15 @@ test('versioned golden fixes the admitted persistent-turn and skill-load surface
   assert.deepEqual(contract.methods, ['initialize', 'notifications/initialized', 'skills/list', 'thread/start', 'thread/resume', 'thread/archive', 'turn/start', 'mcpServer/elicitation/request']);
   assert.deepEqual(contract.server_request, { method: 'mcpServer/elicitation/request', response: { action: 'accept | decline | cancel' } });
   assert.deepEqual(contract.skill_load_evidence, ['name', 'path', 'plugin_id', 'enabled']);
+  assert.deepEqual(contract.credential_free_mcp_route, {
+    model_metadata: { slug: 'qwen2.5-coder:7b', supports_search_tool: false },
+    provider_capability: { namespace_tools: true }, model_visible_tool: { type: 'namespace' },
+    loaded_call: { type: 'function_call', fields: ['namespace', 'name', 'arguments', 'call_id'], namespace_source: 'declared_namespace' },
+    confirmed_sequence: ['cursor_delegate', 'cursor_wait', 'cursor_close_session'],
+    reported_outcome_evidence: { turn_status: 'completed', turn_identity: 'exact turn/start id', agent_messages: ['CURSOR_EVAL_OK'] },
+    unrelated_features: ['tool_search', 'tool_suggest', 'deferred_executor', 'deferred_tool_world_state'],
+    unsupported_config_keys: ['tools.deferred_namespaces'],
+  });
   assert.deepEqual(contract.turn_start_input, [
     { type: 'text', fields: ['text', 'text_elements'] },
     { type: 'skill', fields: ['name', 'path'] },
