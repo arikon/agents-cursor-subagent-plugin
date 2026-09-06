@@ -1,0 +1,199 @@
+{
+  "schema_version": 1,
+  "kind": "cursor-skill-eval-baseline",
+  "captured_at": "2026-09-06T13:41:21.395Z",
+  "note": "Descriptive snapshot of the frozen 24-scenario corpus. Luna/medium integration failures occurred during intermittent network connectivity.",
+  "plan": "evals/cursor-skill-eval-matrix.plan.v1.json",
+  "row_concurrency": 8,
+  "rows": [
+    {
+      "model": "gpt-5.6-sol",
+      "effort": "low",
+      "started_at": "2026-09-06T12:54:20.491Z",
+      "finished_at": "2026-09-06T12:59:16.799Z",
+      "duration_ms": 296307,
+      "counts": {
+        "total": 24,
+        "pass": 24,
+        "agent_behavior_mismatch": 0,
+        "integration_failure": 0,
+        "skipped": 0
+      },
+      "pass_rate": 1,
+      "attempted_runs": 24,
+      "digest_stable": true,
+      "input": {
+        "corpus": {
+          "sha256": "7df8fc8d6799d2eaabed026940fdaaabcd4d16e9829b96e18a40673021699d4d",
+          "bytes": 69496
+        },
+        "skill": {
+          "sha256": "7757b187feb4b24d94c3f57b0743633163bb31b93a2afa7972e4c2c8f914b092",
+          "bytes": 18679
+        }
+      }
+    },
+    {
+      "model": "gpt-5.6-terra",
+      "effort": "low",
+      "started_at": "2026-09-06T13:04:20.155Z",
+      "finished_at": "2026-09-06T13:08:37.305Z",
+      "duration_ms": 257149,
+      "counts": {
+        "total": 24,
+        "pass": 14,
+        "agent_behavior_mismatch": 7,
+        "integration_failure": 3,
+        "skipped": 0
+      },
+      "pass_rate": 0.5833333333333334,
+      "attempted_runs": 30,
+      "digest_stable": true,
+      "input": {
+        "corpus": {
+          "sha256": "7df8fc8d6799d2eaabed026940fdaaabcd4d16e9829b96e18a40673021699d4d",
+          "bytes": 69496
+        },
+        "skill": {
+          "sha256": "7757b187feb4b24d94c3f57b0743633163bb31b93a2afa7972e4c2c8f914b092",
+          "bytes": 18679
+        }
+      }
+    },
+    {
+      "model": "gpt-5.6-terra",
+      "effort": "medium",
+      "started_at": "2026-09-06T13:08:57.475Z",
+      "finished_at": "2026-09-06T13:13:21.169Z",
+      "duration_ms": 263693,
+      "counts": {
+        "total": 24,
+        "pass": 15,
+        "agent_behavior_mismatch": 6,
+        "integration_failure": 3,
+        "skipped": 0
+      },
+      "pass_rate": 0.625,
+      "attempted_runs": 28,
+      "digest_stable": true,
+      "input": {
+        "corpus": {
+          "sha256": "7df8fc8d6799d2eaabed026940fdaaabcd4d16e9829b96e18a40673021699d4d",
+          "bytes": 69496
+        },
+        "skill": {
+          "sha256": "7757b187feb4b24d94c3f57b0743633163bb31b93a2afa7972e4c2c8f914b092",
+          "bytes": 18679
+        }
+      }
+    },
+    {
+      "model": "gpt-5.6-terra",
+      "effort": "high",
+      "started_at": "2026-09-06T13:13:56.048Z",
+      "finished_at": "2026-09-06T13:18:45.428Z",
+      "duration_ms": 289379,
+      "counts": {
+        "total": 24,
+        "pass": 21,
+        "agent_behavior_mismatch": 3,
+        "integration_failure": 0,
+        "skipped": 0
+      },
+      "pass_rate": 0.875,
+      "attempted_runs": 25,
+      "digest_stable": true,
+      "input": {
+        "corpus": {
+          "sha256": "7df8fc8d6799d2eaabed026940fdaaabcd4d16e9829b96e18a40673021699d4d",
+          "bytes": 69496
+        },
+        "skill": {
+          "sha256": "7757b187feb4b24d94c3f57b0743633163bb31b93a2afa7972e4c2c8f914b092",
+          "bytes": 18679
+        }
+      }
+    },
+    {
+      "model": "gpt-5.6-luna",
+      "effort": "low",
+      "started_at": "2026-09-06T13:18:58.866Z",
+      "finished_at": "2026-09-06T13:22:28.343Z",
+      "duration_ms": 209477,
+      "counts": {
+        "total": 24,
+        "pass": 13,
+        "agent_behavior_mismatch": 11,
+        "integration_failure": 0,
+        "skipped": 0
+      },
+      "pass_rate": 0.5416666666666666,
+      "attempted_runs": 24,
+      "digest_stable": true,
+      "input": {
+        "corpus": {
+          "sha256": "7df8fc8d6799d2eaabed026940fdaaabcd4d16e9829b96e18a40673021699d4d",
+          "bytes": 69496
+        },
+        "skill": {
+          "sha256": "7757b187feb4b24d94c3f57b0743633163bb31b93a2afa7972e4c2c8f914b092",
+          "bytes": 18679
+        }
+      }
+    },
+    {
+      "model": "gpt-5.6-luna",
+      "effort": "medium",
+      "started_at": "2026-09-06T13:22:54.051Z",
+      "finished_at": "2026-09-06T13:31:34.091Z",
+      "duration_ms": 520039,
+      "counts": {
+        "total": 24,
+        "pass": 12,
+        "agent_behavior_mismatch": 10,
+        "integration_failure": 2,
+        "skipped": 0
+      },
+      "pass_rate": 0.5,
+      "attempted_runs": 33,
+      "digest_stable": true,
+      "input": {
+        "corpus": {
+          "sha256": "7df8fc8d6799d2eaabed026940fdaaabcd4d16e9829b96e18a40673021699d4d",
+          "bytes": 69496
+        },
+        "skill": {
+          "sha256": "7757b187feb4b24d94c3f57b0743633163bb31b93a2afa7972e4c2c8f914b092",
+          "bytes": 18679
+        }
+      }
+    },
+    {
+      "model": "gpt-5.6-luna",
+      "effort": "high",
+      "started_at": "2026-09-06T13:35:09.937Z",
+      "finished_at": "2026-09-06T13:41:21.394Z",
+      "duration_ms": 371455,
+      "counts": {
+        "total": 24,
+        "pass": 15,
+        "agent_behavior_mismatch": 9,
+        "integration_failure": 0,
+        "skipped": 0
+      },
+      "pass_rate": 0.625,
+      "attempted_runs": 24,
+      "digest_stable": true,
+      "input": {
+        "corpus": {
+          "sha256": "7df8fc8d6799d2eaabed026940fdaaabcd4d16e9829b96e18a40673021699d4d",
+          "bytes": 69496
+        },
+        "skill": {
+          "sha256": "7757b187feb4b24d94c3f57b0743633163bb31b93a2afa7972e4c2c8f914b092",
+          "bytes": 18679
+        }
+      }
+    }
+  ]
+}

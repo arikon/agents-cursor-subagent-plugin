@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { once } from 'node:events';
 import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
 import { createInterface } from 'node:readline';
@@ -65,18 +66,21 @@ test('stdio recording proxy atomically publishes bounded lifecycle evidence with
   const evidence = join(root, 'mcp.json');
   const fake = `
     const readline = require('node:readline');
-    const terminal = { turn_id: 'T', turn_status: 'completed', pending: [], result: { text: 'CURSOR_EVAL_OK', truncated: false } };
     readline.createInterface({ input: process.stdin }).on('line', (line) => {
       const call = JSON.parse(line); const tool = call.params.name;
       const payload = tool === 'cursor_delegate'
         ? { session_id: 'S', turn_id: 'T', turn_status: 'running', last_event_id: 3 }
         : tool === 'cursor_answer_permission'
-          ? { session_id: 'S', turn_id: 'T', turn_status: 'running', last_event_id: 7, active_turn: { turn_id: 'T', turn_status: 'running', pending: [] } }
+          ? { session_id: 'S', turn_id: 'T', turn_status: 'running', last_event_id: 7 }
           : tool === 'cursor_close_session'
-            ? { session_id: 'S', session_state: 'tombstone', last_event_id: 11, last_terminal_turn: terminal }
+            ? { session_id: 'S', session_state: 'tombstone', last_event_id: 11 }
             : call.params.arguments.after_event_id === 3
-              ? { session_id: 'S', turn_id: 'T', turn_status: 'waiting_for_input', last_event_id: 6, active_turn: { turn_id: 'T', turn_status: 'waiting_for_input', pending: [{ request_id: 'R', kind: 'permission', context: { secret: 'not-recorded' } }] } }
-              : { session_id: 'S', turn_id: 'T', turn_status: 'completed', last_event_id: 10, timed_out: false, last_terminal_turn: terminal };
+              ? { session_id: 'S', turn_id: 'T', turn_status: 'waiting_for_input', last_event_id: 6, resume_after_event_id: 6, wait_timeout: false, pending: [{ request_id: 'R', kind: 'permission', context: { secret: 'not-recorded' } }] }
+              : { session_id: 'S', turn_id: 'T', turn_status: 'completed', last_event_id: 10, resume_after_event_id: 10, wait_timeout: false,
+                  events: [{ kind: 'task', payload: { secret: true } }, { kind: { private: true } }],
+                  terminal_reason: { text: 'provider stopped', truncated: false },
+                  terminal_receipt: { session_id: 'S', turn_id: 'T', turn_status: 'completed', last_event_id: 10, result_sha256: 'a'.repeat(64), result_truncated: false, secret: true },
+                  result: { text: 'CURSOR_EVAL_OK', truncated: false } };
       process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id: call.id, result: { isError: false, content: [{ type: 'text', text: JSON.stringify(payload) }] } }) + '\\n');
     });`;
   const child = spawn(process.execPath, [recorder, '-e', `process.stderr.write('adapter diagnostic');${fake}`], {
@@ -98,14 +102,230 @@ test('stdio recording proxy atomically publishes bounded lifecycle evidence with
   assert.equal(Buffer.byteLength(raw), raw.length);
   assert.deepEqual(published, { schema_version: 1, dropped_calls: 0, transcript: [
     { direction: 'request', tool: 'cursor_delegate', call_id: 1, request: { mode: 'agent' }, response: { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'running', last_event_id: 3 } },
-    { direction: 'request', tool: 'cursor_wait', call_id: 2, request: { session_id: 'S', turn_id: 'T', after_event_id: 3, timeout_ms: 1_000 }, response: { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'waiting_for_input', last_event_id: 6, active_turn: { turn_id: 'T', turn_status: 'waiting_for_input', pending: [{ request_id: 'R', kind: 'permission' }] } } },
-    { direction: 'request', tool: 'cursor_answer_permission', call_id: 3, request: { session_id: 'S', turn_id: 'T', request_id: 'R', decision: 'allow-once' }, response: { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'running', last_event_id: 7, active_turn: { turn_id: 'T', turn_status: 'running', pending: [] } } },
-    { direction: 'request', tool: 'cursor_wait', call_id: 4, request: { session_id: 'S', turn_id: 'T', after_event_id: 7, timeout_ms: 1_000 }, response: { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'completed', last_event_id: 10, timed_out: false, last_terminal_turn: { turn_id: 'T', turn_status: 'completed', pending: [], result: { text_bytes: 14, text_sha256: '65eb05dc0fa59c8ac6150c3fe6d3d7634471290d68fa38ae770b18c2ec2cc4cf', truncated: false } } } },
-    { direction: 'request', tool: 'cursor_close_session', call_id: 5, request: { session_id: 'S' }, response: { ok: true, session_id: 'S', session_state: 'tombstone', last_event_id: 11, last_terminal_turn: { turn_id: 'T', turn_status: 'completed', pending: [], result: { text_bytes: 14, text_sha256: '65eb05dc0fa59c8ac6150c3fe6d3d7634471290d68fa38ae770b18c2ec2cc4cf', truncated: false } } } },
+    { direction: 'request', tool: 'cursor_wait', call_id: 2, request: { session_id: 'S', turn_id: 'T', after_event_id: 3, timeout_ms: 1_000 }, response: { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'waiting_for_input', last_event_id: 6, resume_after_event_id: 6, wait_timeout: false, pending: [{ request_id: 'R', kind: 'permission' }] } },
+    { direction: 'request', tool: 'cursor_answer_permission', call_id: 3, request: { session_id: 'S', turn_id: 'T', request_id: 'R', decision: 'allow-once' }, response: { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'running', last_event_id: 7 } },
+    { direction: 'request', tool: 'cursor_wait', call_id: 4, request: { session_id: 'S', turn_id: 'T', after_event_id: 7, timeout_ms: 1_000 }, response: { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'completed', last_event_id: 10, resume_after_event_id: 10, wait_timeout: false, events: [{ kind: 'task' }], terminal_reason: { text: 'provider stopped', truncated: false }, terminal_receipt: { session_id: 'S', turn_id: 'T', turn_status: 'completed', last_event_id: 10, result_sha256: 'a'.repeat(64), result_truncated: false }, result: { text_bytes: 14, text_sha256: '65eb05dc0fa59c8ac6150c3fe6d3d7634471290d68fa38ae770b18c2ec2cc4cf', truncated: false } } },
+    { direction: 'request', tool: 'cursor_close_session', call_id: 5, request: { session_id: 'S' }, response: { ok: true, session_id: 'S', session_state: 'tombstone', last_event_id: 11 } },
   ] });
   assert.doesNotMatch(raw, /secret|workspace|prompt|context/);
   assert.equal(Buffer.concat(diagnostics).toString('utf8'), 'adapter diagnostic');
   assert.deepEqual((await readdir(root)).sort(), ['mcp.json']);
+});
+
+test('recording MCP proxy preserves UTF-8 split across transport chunks in both directions', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'cursor-eval-proxy-utf8-')); t.after(() => rm(root, { recursive: true, force: true }));
+  const evidence = join(root, 'mcp.json');
+  const fake = `
+    const readline = require('node:readline');
+    readline.createInterface({ input: process.stdin }).on('line', (line) => {
+      const call = JSON.parse(line);
+      const exact = call.params.arguments.prompt === 'проверка-🙂';
+      const frame = Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: call.id, result: { isError: false,
+        content: [{ type: 'text', text: JSON.stringify({ session_id: exact ? 'сессия-🙂' : 'corrupted', turn_id: 'T' }) }] } }) + '\\n');
+      const marker = Buffer.from('🙂'); const split = frame.indexOf(marker) + 1;
+      process.stdout.write(frame.subarray(0, split));
+      setImmediate(() => process.stdout.write(frame.subarray(split)));
+    });`;
+  const child = spawn(process.execPath, [recorder, '-e', fake], {
+    env: { ...process.env, CURSOR_EVAL_MCP_EVIDENCE: evidence }, stdio: ['pipe', 'pipe', 'pipe'],
+  });
+  const stdout = []; const stderr = [];
+  child.stdout.on('data', (chunk) => stdout.push(chunk)); child.stderr.on('data', (chunk) => stderr.push(chunk));
+  const request = Buffer.from(`${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: {
+    name: 'cursor_delegate', arguments: { mode: 'agent', prompt: 'проверка-🙂' },
+  } })}\n`);
+  const marker = Buffer.from('🙂'); const split = request.indexOf(marker) + 1;
+  child.stdin.write(request.subarray(0, split)); child.stdin.end(request.subarray(split));
+  const [code] = await once(child, 'close');
+  assert.equal(code, 0, Buffer.concat(stderr).toString('utf8'));
+  const response = JSON.parse(Buffer.concat(stdout).toString('utf8'));
+  assert.equal(JSON.parse(response.result.content[0].text).session_id, 'сессия-🙂');
+  assert.equal(JSON.parse(await readFile(evidence, 'utf8')).transcript[0].response.session_id, 'сессия-🙂');
+});
+
+test('recording MCP proxy observes final request and response frames without trailing newlines', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'cursor-eval-proxy-final-frame-')); t.after(() => rm(root, { recursive: true, force: true }));
+  const evidence = join(root, 'mcp.json');
+  const fake = `
+    let input = '';
+    process.stdin.setEncoding('utf8');
+    process.stdin.on('data', (chunk) => { input += chunk; });
+    process.stdin.on('end', () => {
+      const call = JSON.parse(input);
+      process.stdout.end(JSON.stringify({ jsonrpc: '2.0', id: call.id, result: { isError: false,
+        content: [{ type: 'text', text: JSON.stringify({ session_id: 'S', session_state: 'tombstone' }) }] } }));
+    });`;
+  const child = spawn(process.execPath, [recorder, '-e', fake], {
+    env: { ...process.env, CURSOR_EVAL_MCP_EVIDENCE: evidence }, stdio: ['pipe', 'pipe', 'pipe'],
+  });
+  const stdout = []; const stderr = [];
+  child.stdout.on('data', (chunk) => stdout.push(chunk)); child.stderr.on('data', (chunk) => stderr.push(chunk));
+  child.stdin.end(JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: {
+    name: 'cursor_close_session', arguments: { session_id: 'S' },
+  } }));
+  const [code] = await once(child, 'close');
+  assert.equal(code, 0, Buffer.concat(stderr).toString('utf8'));
+  assert.equal(JSON.parse(Buffer.concat(stdout).toString('utf8')).id, 1);
+  assert.deepEqual(JSON.parse(await readFile(evidence, 'utf8')).transcript, [
+    { direction: 'request', tool: 'cursor_close_session', call_id: 1, request: { session_id: 'S' },
+      response: { ok: true, session_id: 'S', session_state: 'tombstone' } },
+  ]);
+});
+
+test('recording MCP proxy drains accepted output before exiting under stdout backpressure', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'cursor-eval-proxy-backpressure-')); t.after(() => rm(root, { recursive: true, force: true }));
+  const evidence = join(root, 'mcp.json');
+  const fake = `
+    const readline = require('node:readline');
+    readline.createInterface({ input: process.stdin }).once('line', (line) => {
+      const call = JSON.parse(line);
+      const payload = { session_id: 'S', padding: 'x'.repeat(800000) };
+      process.stdout.end(JSON.stringify({ jsonrpc: '2.0', id: call.id, result: { isError: false,
+        content: [{ type: 'text', text: JSON.stringify(payload) }] } }) + '\\n');
+    });`;
+  const child = spawn(process.execPath, [recorder, '-e', fake], {
+    env: { ...process.env, CURSOR_EVAL_MCP_EVIDENCE: evidence }, stdio: ['pipe', 'pipe', 'pipe'],
+  });
+  const closed = once(child, 'close');
+  child.stdout.pause();
+  child.stdin.end(`${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: {
+    name: 'cursor_delegate', arguments: { mode: 'ask', prompt: 'bounded' },
+  } })}\n`);
+  await new Promise((resolveWait) => setTimeout(resolveWait, 50));
+  assert.equal(child.exitCode, null, 'proxy exited before its backpressured output could be consumed');
+  let outputBytes = 0;
+  child.stdout.resume();
+  child.stdout.on('data', (chunk) => { outputBytes += chunk.length; });
+  const [code] = await closed;
+  assert.equal(code, 0);
+  assert.ok(outputBytes > 750_000);
+  assert.equal(JSON.parse(await readFile(evidence, 'utf8')).transcript[0].response.session_id, 'S');
+});
+
+test('recording proxy preserves only bounded public provider error fields', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'cursor-eval-proxy-provider-error-')); t.after(() => rm(root, { recursive: true, force: true }));
+  const evidence = join(root, 'mcp.json');
+  const fake = `
+    const readline = require('node:readline');
+    readline.createInterface({ input: process.stdin }).on('line', (line) => {
+      const call = JSON.parse(line);
+      const payload = { session_id: 'S', session_state: 'tombstone', failure_kind: 'init',
+        provider_error: { code: -32001, message: { text: 'authentication required', truncated: false }, data: { secret: 'private' } } };
+      process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id: call.id, result: { isError: false,
+        content: [{ type: 'text', text: JSON.stringify(payload) }] } }) + '\\n');
+    });`;
+  const child = spawn(process.execPath, [recorder, '-e', fake], {
+    env: { ...process.env, CURSOR_EVAL_MCP_EVIDENCE: evidence }, stdio: ['pipe', 'ignore', 'pipe'],
+  });
+  child.stdin.end(`${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: {
+    name: 'cursor_delegate', arguments: { cwd: '/secret/workspace', mode: 'ask', prompt: 'private prompt' },
+  } })}\n`);
+  const [code] = await once(child, 'close'); assert.equal(code, 0);
+  const raw = await readFile(evidence, 'utf8');
+  const published = JSON.parse(raw);
+  assert.deepEqual(published.transcript[0].response, {
+    ok: true, session_id: 'S', session_state: 'tombstone', failure_kind: 'init',
+    provider_error: { code: -32001, message: { text: 'authentication required', truncated: false } },
+  });
+  assert.doesNotMatch(raw, /private|secret|workspace|prompt/);
+});
+
+test('recording MCP proxy proves the exact plugin roots by digest without retaining paths', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'cursor-eval-proxy-plugin-roots-')); t.after(() => rm(root, { recursive: true, force: true }));
+  const evidence = join(root, 'mcp.json');
+  const expectedRoots = ['/private/expected/plugin'];
+  const expectedDigest = createHash('sha256').update(JSON.stringify(expectedRoots)).digest('hex');
+  const fake = `
+    const readline = require('node:readline');
+    readline.createInterface({ input: process.stdin }).on('line', (line) => {
+      const call = JSON.parse(line);
+      process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id: call.id, result: { isError: false, content: [{ type: 'text', text: JSON.stringify({ session_id: 'S', turn_id: 'T' }) }] } }) + '\\n');
+    });`;
+  const child = spawn(process.execPath, [recorder, '-e', fake], {
+    env: { ...process.env, CURSOR_EVAL_MCP_EVIDENCE: evidence, CURSOR_EVAL_EXPECTED_PLUGIN_DIRS_SHA256: expectedDigest },
+    stdio: ['pipe', 'ignore', 'pipe'],
+  });
+  child.stdin.end([
+    { id: 1, name: 'cursor_delegate', roots: expectedRoots, launch: { model: 'sonnet-4.0', effort: 'high', fast: false } },
+    { id: 2, name: 'cursor_delegate', roots: ['/private/wrong/plugin'], launch: {} },
+    { id: 3, name: 'cursor_resume_session', roots: expectedRoots, launch: { cursor_session_id: 'cursor-session', model: 'grok-4.6', effort: 'low', fast: true } },
+  ].map(({ id, name, roots, launch }) => JSON.stringify({ jsonrpc: '2.0', id, method: 'tools/call', params: {
+    name, arguments: { mode: 'agent', plugin_dirs: roots, ...launch },
+  } })).join('\n') + '\n');
+  const [code] = await once(child, 'close');
+  assert.equal(code, 0);
+  const raw = await readFile(evidence, 'utf8');
+  assert.deepEqual(JSON.parse(raw).transcript.map(({ request }) => request), [
+    { mode: 'agent', model: 'sonnet-4.0', effort: 'high', fast: false, plugin_dirs_count: 1, plugin_dirs_matched: true },
+    { mode: 'agent', plugin_dirs_count: 1, plugin_dirs_matched: false },
+    { cursor_session_id: 'cursor-session', model: 'grok-4.6', effort: 'low', fast: true, plugin_dirs_count: 1, plugin_dirs_matched: true },
+  ]);
+  assert.doesNotMatch(raw, /\/private\/|expected|wrong/);
+});
+
+test('recording proxy injects one stale question ID as fixture behavior, not user instruction', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'cursor-eval-proxy-stale-')); t.after(() => rm(root, { recursive: true, force: true }));
+  const evidence = join(root, 'mcp.json');
+  const fake = `
+    const readline = require('node:readline');
+    readline.createInterface({ input: process.stdin }).on('line', (line) => {
+      const call = JSON.parse(line);
+      process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id: call.id, result: { isError: false, content: [{ type: 'text', text: JSON.stringify({ session_id: 'S', turn_id: 'T' }) }] } }) + '\\n');
+    });`;
+  const child = spawn(process.execPath, [recorder, '-e', fake], {
+    env: { ...process.env, CURSOR_EVAL_MCP_EVIDENCE: evidence, CURSOR_EVAL_SCENARIO_ID: 'stale-fixture',
+      CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH: join(root, 'program.json'), CURSOR_EVAL_INJECT_STALE_QUESTION_ONCE: '1' },
+    stdio: ['pipe', 'ignore', 'ignore'],
+  });
+  const calls = [1, 2].map((id) => JSON.stringify({ jsonrpc: '2.0', id, method: 'tools/call', params: {
+    name: 'cursor_answer_question', arguments: { session_id: 'S', turn_id: 'T', request_id: 'current-request', outcome: 'answered', answers: [] },
+  } }));
+  child.stdin.end(`${calls.join('\n')}\n`);
+  const [code] = await once(child, 'close'); assert.equal(code, 0);
+  const requests = JSON.parse(await readFile(evidence, 'utf8')).transcript.map(({ request }) => request.request_id);
+  assert.deepEqual(requests, ['eval-stale-1', 'current-request']);
+
+  const ambientEvidence = join(root, 'ambient-mcp.json');
+  const ambient = spawn(process.execPath, [recorder, '-e', fake], {
+    env: { ...process.env, CURSOR_EVAL_MCP_EVIDENCE: ambientEvidence, CURSOR_EVAL_INJECT_STALE_QUESTION_ONCE: '1' },
+    stdio: ['pipe', 'ignore', 'ignore'],
+  });
+  ambient.stdin.end(`${calls.join('\n')}\n`);
+  const [ambientCode] = await once(ambient, 'close'); assert.equal(ambientCode, 0);
+  const ambientRequests = JSON.parse(await readFile(ambientEvidence, 'utf8')).transcript.map(({ request }) => request.request_id);
+  assert.deepEqual(ambientRequests, ['current-request', 'current-request']);
+});
+
+test('recording proxy injects a handshaken mode protocol error while preserving live status', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'cursor-eval-proxy-mode-')); t.after(() => rm(root, { recursive: true, force: true }));
+  const evidence = join(root, 'mcp.json');
+  const fake = `
+    const readline = require('node:readline');
+    readline.createInterface({ input: process.stdin }).on('line', (line) => {
+      const call = JSON.parse(line);
+      process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id: call.id, result: { isError: false, content: [{ type: 'text', text: JSON.stringify({ session_id: 'S', session_state: 'live', active_turn: null }) }] } }) + '\\n');
+    });`;
+  const child = spawn(process.execPath, [recorder, '-e', fake], {
+    env: { ...process.env, CURSOR_EVAL_MCP_EVIDENCE: evidence, CURSOR_EVAL_SCENARIO_ID: 'mode-recovery-fixture',
+      CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH: join(root, 'program.json'), CURSOR_EVAL_INJECT_MODE_PROTOCOL_ERROR_ONCE: '1' },
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
+  const output = []; child.stdout.on('data', (chunk) => output.push(chunk));
+  const calls = [
+    { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'cursor_set_mode', arguments: { session_id: 'S', mode: 'agent' } } },
+    { jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'cursor_session_status', arguments: { session_id: 'S' } } },
+  ];
+  child.stdin.end(`${calls.map(JSON.stringify).join('\n')}\n`);
+  const [code] = await once(child, 'close'); assert.equal(code, 0);
+  const responses = Buffer.concat(output).toString('utf8').trim().split('\n').map(JSON.parse);
+  assert.equal(JSON.parse(responses[0].result.content[0].text).error_code, 'protocol_error');
+  assert.equal(JSON.parse(responses[1].result.content[0].text).session_state, 'live');
+  const transcript = JSON.parse(await readFile(evidence, 'utf8')).transcript;
+  assert.deepEqual(transcript.map(({ tool }) => tool), ['cursor_set_mode', 'cursor_session_status']);
+  assert.deepEqual(transcript.map(({ response }) => response), [
+    { ok: false, error_code: 'protocol_error' },
+    { ok: true, session_id: 'S', session_state: 'live', active_turn_present: false },
+  ]);
 });
 
 test('stdio recording proxy caps call count and evidence bytes', async (t) => {
@@ -143,6 +363,32 @@ test('stdio recording proxy rejects oversized bounded-field evidence without a p
   assert.notEqual(code, 0);
   assert.match(Buffer.concat(diagnostics).toString('utf8'), /evidence exceeded its publication limit/);
   assert.deepEqual(await readdir(root), []);
+});
+
+test('stdio recording proxy controls an immediate publication failure and closes a live child', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'cursor-eval-proxy-publication-failure-')); t.after(() => rm(root, { recursive: true, force: true }));
+  const closedMarker = join(root, 'child-closed');
+  const fake = `
+    const { writeFileSync } = require('node:fs');
+    const readline = require('node:readline');
+    process.on('exit', () => writeFileSync(${JSON.stringify(closedMarker)}, 'closed'));
+    process.on('SIGTERM', () => process.exit(0));
+    readline.createInterface({ input: process.stdin }).on('line', (line) => {
+      const call = JSON.parse(line);
+      process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id: call.id, result: { isError: false, content: [{ type: 'text', text: '{}' }] } }) + '\\n');
+    });`;
+  const child = spawn(process.execPath, [recorder, '-e', fake], {
+    env: { ...process.env, CURSOR_EVAL_MCP_EVIDENCE: '/dev/null/mcp.json' }, stdio: ['pipe', 'ignore', 'pipe'],
+  });
+  const diagnostics = []; child.stderr.on('data', (chunk) => diagnostics.push(chunk));
+  child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'cursor_wait', arguments: { session_id: 'S', turn_id: 'T' } } })}\n`);
+  const [code] = await once(child, 'close');
+  assert.notEqual(code, 0);
+  const stderr = Buffer.concat(diagnostics).toString('utf8');
+  assert.match(stderr, /^recording MCP proxy failed: /);
+  assert.doesNotMatch(stderr, /Unhandled|node:events|throw er/);
+  assert.equal(await readFile(closedMarker, 'utf8'), 'closed');
+  assert.deepEqual(await readdir(root), ['child-closed']);
 });
 
 test('stdio recording proxy bounds public question answers and option IDs', async (t) => {
@@ -197,6 +443,54 @@ test('stdio recording proxy ignores malformed and unrelated frames', async (t) =
   ]);
 });
 
+test('stdio recording proxy preserves invalid UTF-8 and large numeric IDs byte-for-byte', async (t) => {
+  const child = spawn(process.execPath, [recorder, '-e', 'process.stdin.pipe(process.stdout)'], { stdio: ['pipe', 'pipe', 'pipe'] });
+  t.after(() => { if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL'); });
+  const numeric = Buffer.from('{"jsonrpc":"2.0","id":9007199254740993123,"method":"notifications/initialized"}\n');
+  const invalid = Buffer.concat([Buffer.from('{"jsonrpc":"2.0","id":"'), Buffer.from([0xff]), Buffer.from('"}\n')]);
+  const expected = Buffer.concat([numeric, invalid]);
+  const chunks = []; child.stdout.on('data', (chunk) => chunks.push(chunk));
+  child.stdin.end(expected);
+  const [code] = await once(child, 'close');
+  assert.equal(code, 0);
+  assert.deepEqual(Buffer.concat(chunks), expected);
+});
+
+test('stdio recording proxy fails closed on an oversized no-newline frame', async (t) => {
+  const child = spawn(process.execPath, [recorder, '-e', 'process.stdin.resume()'], { stdio: ['pipe', 'ignore', 'pipe'] });
+  t.after(() => { if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL'); });
+  const diagnostics = []; child.stderr.on('data', (chunk) => diagnostics.push(chunk));
+  child.stdin.end(Buffer.alloc(1_048_577, 0x78));
+  const [code] = await once(child, 'close');
+  assert.notEqual(code, 0);
+  assert.match(Buffer.concat(diagnostics).toString('utf8'), /frame exceeded 1 MiB limit/);
+});
+
+test('stdio recording proxy publishes no partial oversized provider frame', async (t) => {
+  const target = 'process.stdout.write(Buffer.alloc(1048577, 0x78));';
+  const child = spawn(process.execPath, [recorder, '-e', target], { stdio: ['ignore', 'pipe', 'pipe'] });
+  t.after(() => { if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL'); });
+  const output = []; const diagnostics = [];
+  child.stdout.on('data', (chunk) => output.push(chunk));
+  child.stderr.on('data', (chunk) => diagnostics.push(chunk));
+  const [code] = await once(child, 'close');
+  assert.notEqual(code, 0);
+  assert.equal(Buffer.concat(output).length, 0);
+  assert.match(Buffer.concat(diagnostics).toString('utf8'), /frame exceeded 1 MiB limit/);
+});
+
+test('stdio recording proxy flushes a backpressured final response before exit', { timeout: 10_000 }, async (t) => {
+  const target = `process.stdout.write(JSON.stringify({jsonrpc:'2.0',id:1,result:{content:[{type:'text',text:'x'.repeat(900000)}]}})+'\\n');`;
+  const child = spawn(process.execPath, [recorder, '-e', target], { stdio: ['ignore', 'pipe', 'pipe'] });
+  t.after(() => { if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL'); });
+  await new Promise((resolveWait) => setTimeout(resolveWait, 50));
+  const chunks = []; child.stdout.on('data', (chunk) => chunks.push(chunk));
+  const [code] = await once(child, 'close');
+  assert.equal(code, 0);
+  const response = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  assert.equal(response.result.content[0].text.length, 900_000);
+});
+
 test('stdio recording proxy publishes only bounded public fields from malformed lifecycle values', async (t) => {
   const root = await mkdtemp(join(tmpdir(), 'cursor-eval-proxy-untrusted-')); t.after(() => rm(root, { recursive: true, force: true }));
   const evidence = join(root, 'mcp.json');
@@ -239,7 +533,7 @@ test('stdio recording proxy publishes only bounded public fields from malformed 
     { direction: 'request', tool: 'cursor_wait', call_id: 'null', request: {}, response: { ok: false } },
     { direction: 'request', tool: 'cursor_wait', call_id: 'array', request: {}, response: { ok: false } },
     { direction: 'request', tool: 'cursor_wait', call_id: 'scalar', request: {}, response: { ok: false } },
-    { direction: 'request', tool: 'cursor_wait', call_id: 'payload', request: {}, response: { ok: true, request_id: 9, turn_status: 'waiting_for_input', active_turn: { turn_id: 'T', pending: [] }, last_terminal_turn: { turn_id: 'T', pending: [{}, { request_id: 'R' }] } } },
+    { direction: 'request', tool: 'cursor_wait', call_id: 'payload', request: {}, response: { ok: true, request_id: 9, turn_status: 'waiting_for_input', active_turn_present: true } },
   ]);
   assert.doesNotMatch(JSON.stringify(published), /private|x{100}|k{100}/);
 });

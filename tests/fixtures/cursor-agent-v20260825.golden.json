@@ -1,0 +1,97 @@
+{
+  "cursor_version": "2026.08.25-3e8eec8",
+  "provenance": {
+    "source_commands": ["agent --version", "agent --help"],
+    "method_literal_source": "4943.index.js webpack module ./src/acp/agent-session.ts sendToolExtensionNotification",
+    "bundle_artifacts": [
+      { "path": "4943.index.js", "sha256": "85f42b950ca3d6e7875c8d9055f008a99934c2616da4877c68bf0c77fc4ffc21" },
+      { "path": "8096.index.js", "sha256": "56efebb2a0bc575de1c2eb22360c06074a8661bedfc5e10a5d0286938226337c" }
+    ],
+    "absent_method_literals": ["_session/steering", "prompt-blocks"]
+  },
+  "help_contract": {
+    "model_option": "--model <model>",
+    "standalone_effort_option": false,
+    "standalone_fast_option": false,
+    "force_option": "Run Everything boundary; intentionally not admitted by the plugin adapter"
+  },
+  "acp_contract": {
+    "initialize": {
+      "protocolVersion": 1,
+      "clientInfo": { "name": "codex-cursor-subagent-plugin", "version": "0.1.0" },
+      "authMethodIds": ["cursor_login"],
+      "loadSession": true,
+      "steeringAdvertised": false
+    },
+    "sessionNew": {
+      "currentModeId": "agent",
+      "availableModeIds": ["agent", "plan", "ask"]
+    },
+    "sessionSetModeResult": {},
+    "sessionLoadAfterTerminal": {
+      "sessionIdOmitted": true,
+      "currentModeId": "ask",
+      "availableModeIds": ["agent", "plan", "ask"]
+    }
+  },
+  "method_literals": ["cursor/update_todos", "cursor/task", "cursor/generate_image", "session/load", "session/set_mode"],
+  "subagent_type_contract": {
+    "known": ["computer_use", "explore", "video_review", "browser_use", "shell", "vm_setup_helper", "unspecified"],
+    "custom_example": { "custom": "critic" }
+  },
+  "collaboration_requests": [
+    {
+      "method": "cursor/update_todos",
+      "required_keys": ["toolCallId", "merge", "todos"],
+      "optional_keys": [],
+      "item_required_keys": ["id", "content", "status"],
+      "input": { "toolCallId": "tool-1", "merge": true, "todos": [{ "id": "todo-1", "content": "Review", "status": "in_progress" }] },
+      "projection": { "merge": true, "todos": [{ "id": "todo-1", "content": { "text": "Review", "truncated": false }, "status": "in_progress" }] }
+    },
+    {
+      "method": "cursor/task",
+      "required_keys": ["toolCallId", "description", "prompt", "subagentType"],
+      "optional_keys": ["model", "agentId", "durationMs"],
+      "input": { "toolCallId": "tool-2", "description": "Subreview", "prompt": "private prompt", "subagentType": "explore", "model": "fixture", "agentId": "agent-1", "durationMs": 1 },
+      "projection": { "description": { "text": "Subreview", "truncated": false }, "type": { "text": "explore", "truncated": false }, "model": { "text": "fixture", "truncated": false }, "duration": 1 }
+    },
+    {
+      "method": "cursor/task",
+      "required_keys": ["toolCallId", "description", "prompt", "subagentType"],
+      "optional_keys": ["model", "agentId", "durationMs"],
+      "input": { "toolCallId": "tool-2-custom", "description": "Critique", "prompt": "private prompt", "subagentType": { "custom": "critic" } },
+      "projection": { "description": { "text": "Critique", "truncated": false }, "type": { "text": "critic", "truncated": false } }
+    },
+    {
+      "method": "cursor/generate_image",
+      "required_keys": ["toolCallId", "description"],
+      "optional_keys": ["filePath", "referenceImagePaths"],
+      "input": { "toolCallId": "tool-3", "description": "Preview", "filePath": "preview.png", "referenceImagePaths": ["reference.png"] },
+      "projection": { "description": { "text": "Preview", "truncated": false }, "path": { "text": "preview.png", "truncated": false } }
+    }
+  ],
+  "argv_cases": [
+    {
+      "input": { "model": "auto", "effort": null, "fast": null },
+      "expected": ["--model", "auto"]
+    },
+    {
+      "input": { "model": "grok-4.6", "effort": "high", "fast": true },
+      "expected": ["--model", "grok-4.6[effort=high,fast=true]"]
+    },
+    {
+      "input": { "model": "grok-4.6", "effort": null, "fast": false },
+      "expected": ["--model", "grok-4.6[fast=false]"]
+    }
+  ],
+  "launch_argv_cases": [
+    {
+      "input": { "model": "auto", "effort": null, "fast": null, "plugin_dirs": [] },
+      "expected": ["--auto-review", "--sandbox", "enabled", "--model", "auto", "acp"]
+    },
+    {
+      "input": { "model": "grok-4.6", "effort": "high", "fast": true, "plugin_dirs": ["/fixture/first", "/fixture/second"] },
+      "expected": ["--auto-review", "--sandbox", "enabled", "--model", "grok-4.6[effort=high,fast=true]", "--plugin-dir", "/fixture/first", "--plugin-dir", "/fixture/second", "acp"]
+    }
+  ]
+}

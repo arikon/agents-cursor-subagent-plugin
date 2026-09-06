@@ -13,19 +13,22 @@ const root = resolve(here, '..');
 export const SCRUBBED_ENV = Object.freeze(['CURSOR_EVAL_REAL_CODEX', 'CURSOR_EVAL_HOSTED_CODEX', 'CURSOR_SUBAGENT_LIVE_E2E']);
 const unitTests = Object.freeze([
   'tests/bootstrap.test.mjs', 'tests/check-openspec-semantics.test.mjs', 'tests/claude-marketplace-canary.test.mjs', 'tests/codex-app-server-client.test.mjs',
-  'tests/cursor-skill-eval.test.mjs', 'tests/facade.test.mjs', 'tests/mcp-smoke.test.mjs', 'tests/mcp-transport.test.mjs',
+  'tests/cursor-skill-eval.test.mjs', 'tests/eval-matrix.test.mjs', 'tests/facade.test.mjs', 'tests/mcp-smoke.test.mjs', 'tests/mcp-transport.test.mjs',
   'tests/node-test-reporter-v22.test.mjs', 'tests/run-cursor-skill-eval.test.mjs', 'tests/runtime.test.mjs', 'tests/node-test-supervisor.test.mjs',
 ]);
 const productSources = Object.freeze([
   'scripts/check-openspec-semantics.mjs', 'scripts/codex-app-server-client.mjs', 'scripts/cursor-eval-scenario.mjs', 'scripts/cursor-skill-eval.mjs', 'scripts/openspec-semantic-registry.mjs',
   'scripts/cursor-subagent-bootstrap.mjs', 'scripts/cursor-subagent-mcp.mjs', 'scripts/node-test-reporter-v22.mjs',
   'scripts/recording-mcp-proxy.mjs', 'scripts/run-cursor-skill-eval.mjs', 'scripts/run-node-tests.mjs', 'scripts/run-unit-coverage.mjs',
+  'scripts/eval/run-cursor-skill-eval-matrix.mjs', 'scripts/eval/run-cursor-skill-eval-suite.mjs',
 ]);
 const coverageThresholds = Object.freeze({ lines: 90, branches: 90, functions: 90 });
+const focusedTestPath = /^tests\/[A-Za-z0-9_.-]+\.test\.mjs$/;
 export const LANES = Object.freeze({
   unit: Object.freeze({ tests: unitTests, concurrency: 2, timeoutMs: 120_000, deadlineMs: 600_000 }),
   coverage: Object.freeze({ tests: unitTests, concurrency: 2, timeoutMs: 120_000, deadlineMs: 900_000, coverage: true }),
   release: Object.freeze({ tests: Object.freeze(['tests/release-e2e.test.mjs']), concurrency: 1, timeoutMs: 120_000, deadlineMs: 300_000 }),
+  eval: Object.freeze({ tests: Object.freeze(['tests/codex-client-integration.test.mjs', 'tests/release-e2e.test.mjs']), concurrency: 1, timeoutMs: 420_000, deadlineMs: 600_000, preserveEvalOptIns: true }),
 });
 
 function errorRecord(error) { return { name: error?.name || 'Error', message: error?.message || String(error), code: error?.code, stack: error?.stack }; }
@@ -45,10 +48,16 @@ function streamDone(stream) {
 }
 function parseEvents(content) {
   const events = content.trim() ? content.trim().split('\n').map((line) => JSON.parse(line)) : [];
-  const summary = events.filter((entry) => entry.type === 'test:summary').at(-1)?.data || null;
+  const summaries = events.filter((entry) => entry.type === 'test:summary').map((entry) => entry.data);
+  const summary = summaries.at(-1) || null;
+  const fileSummaries = summaries.filter((entry) => typeof entry?.file === 'string');
+  const countTests = (entry) => entry?.counts?.tests ?? entry?.tests;
+  const executedTests = fileSummaries.length
+    ? fileSummaries.reduce((total, entry) => total + (Number.isInteger(countTests(entry)) ? countTests(entry) : 0), 0)
+    : countTests(summary);
   const failures = events.filter((entry) => entry.type === 'test:fail').map((entry) => entry.data);
   const coverage = events.filter((entry) => entry.type === 'test:coverage').at(-1)?.data?.summary || null;
-  return { events, summary, failures, coverage, complete: Boolean(summary) };
+  return { events, summary, executedTests, failures, coverage, complete: Boolean(summary) };
 }
 function formatFailure(failure) {
   const details = failure?.details || failure;
@@ -56,10 +65,14 @@ function formatFailure(failure) {
   return [details?.name || failure?.name || 'test failure', details?.file || details?.location || '', error?.message || String(error || '')].filter(Boolean).join(': ');
 }
 async function discoverProductSources() {
-  return (await readdir(here, { withFileTypes: true }))
+  const topLevel = (await readdir(here, { withFileTypes: true }))
     .filter((entry) => entry.isFile() && entry.name.endsWith('.mjs'))
-    .map((entry) => `scripts/${entry.name}`)
-    .sort();
+    .map((entry) => `scripts/${entry.name}`);
+  const evalDirectory = join(here, 'eval');
+  const evalSources = (await readdir(evalDirectory, { withFileTypes: true }))
+    .filter((entry) => entry.isFile() && entry.name.endsWith('.mjs'))
+    .map((entry) => `scripts/eval/${entry.name}`);
+  return [...topLevel, ...evalSources].sort();
 }
 function coverageGate(summary, discoveredSources) {
   const diagnostics = [];
@@ -113,11 +126,24 @@ async function readReporter(path) {
 }
 
 export function parseArgs(argv) {
-  if (argv.length !== 1 || !Object.hasOwn(LANES, argv[0])) throw Object.assign(new Error(`usage: ${basename(process.argv[1] || 'run-node-tests.mjs')} <${Object.keys(LANES).join('|')}>`), { code: 'invalid_invocation' });
-  return argv[0];
+  const usage = `usage: ${basename(process.argv[1] || 'run-node-tests.mjs')} <${Object.keys(LANES).join('|')}> [--test <test-file>]... [--test-name-pattern <pattern>]`;
+  const [laneName, ...rest] = argv;
+  if (!Object.hasOwn(LANES, laneName)) throw Object.assign(new Error(usage), { code: 'invalid_invocation' });
+  const tests = []; let testNamePattern = null;
+  for (let index = 0; index < rest.length; index += 1) {
+    const option = rest[index]; const value = rest[index + 1];
+    if ((option !== '--test' && option !== '--test-name-pattern') || typeof value !== 'string' || !value) throw Object.assign(new Error(usage), { code: 'invalid_invocation' });
+    if (option === '--test') { if (!focusedTestPath.test(value)) throw Object.assign(new Error(usage), { code: 'invalid_invocation' }); tests.push(value); }
+    else if (testNamePattern !== null) throw Object.assign(new Error(usage), { code: 'invalid_invocation' });
+    else testNamePattern = value;
+    index += 1;
+  }
+  if (laneName === 'coverage' && (tests.length || testNamePattern !== null)) throw Object.assign(new Error(usage), { code: 'invalid_invocation' });
+  if (tests.some((test) => !LANES[laneName].tests.includes(test))) throw Object.assign(new Error(usage), { code: 'invalid_invocation' });
+  return { laneName, tests: tests.length ? tests : null, testNamePattern };
 }
 
-export async function runSupervisor({ laneName, env = process.env, artifactRoot = env.NODE_TEST_ARTIFACT_ROOT || join(tmpdir(), 'codex-node-test-artifacts'), dependencies = {} }) {
+export async function runSupervisor({ laneName, tests = null, testNamePattern = null, env = process.env, artifactRoot = env.NODE_TEST_ARTIFACT_ROOT || join(tmpdir(), 'codex-node-test-artifacts'), dependencies = {} }) {
   const now = dependencies.now || (() => Date.now());
   const startedAt = now();
   const artifactLabel = String(laneName).replace(/[^a-zA-Z0-9_-]/g, '-') || 'invalid';
@@ -146,15 +172,22 @@ export async function runSupervisor({ laneName, env = process.env, artifactRoot 
   const platform = dependencies.platform || process.platform;
   if (!lane) return earlyFailure('invalid_lane', { stage: 'preflight', cause: 'invalid_lane' });
   if (platform !== 'darwin' && platform !== 'linux') return earlyFailure('unsupported_platform', { stage: 'preflight', cause: 'unsupported_platform' });
+  const validFocusedTests = tests === null || (Array.isArray(tests) && tests.length > 0 && tests.every((test) => typeof test === 'string' && focusedTestPath.test(test) && lane.tests.includes(test)));
+  const validPattern = testNamePattern === null || (typeof testNamePattern === 'string' && testNamePattern.length > 0);
+  if (!validFocusedTests || !validPattern || (lane.coverage && (tests !== null || testNamePattern !== null))) {
+    return earlyFailure('invalid_invocation', { stage: 'preflight', cause: 'invalid_invocation' });
+  }
   const state = { terminalCause: null, infrastructure: null, timedOut: false, interrupted: false, signal: null };
-  const childEnv = { ...env }; for (const key of SCRUBBED_ENV) delete childEnv[key];
+  const childEnv = { ...env };
+  if (!lane.preserveEvalOptIns) for (const key of SCRUBBED_ENV) delete childEnv[key];
   const args = ['--test', `--test-concurrency=${lane.concurrency}`, `--test-timeout=${lane.timeoutMs}`,
     '--test-reporter=tap', `--test-reporter-destination=${paths.tap}`, `--test-reporter=${join(root, 'scripts/node-test-reporter-v22.mjs')}`, `--test-reporter-destination=${paths.failures}`];
   if (lane.coverage) {
     args.push('--experimental-test-coverage', `--test-coverage-lines=${coverageThresholds.lines}`, `--test-coverage-branches=${coverageThresholds.branches}`, `--test-coverage-functions=${coverageThresholds.functions}`);
     for (const source of productSources) args.push(`--test-coverage-include=${source}`);
   }
-  args.push(...lane.tests.map((test) => join(root, test)));
+  if (testNamePattern !== null) args.push(`--test-name-pattern=${testNamePattern}`);
+  args.push(...(tests || lane.tests).map((test) => join(root, test)));
   let child;
   try { child = spawnProcess(process.execPath, args, { cwd: root, env: childEnv, stdio: ['ignore', 'ignore', 'pipe'], detached: true }); }
   catch (error) {
@@ -177,9 +210,10 @@ export async function runSupervisor({ laneName, env = process.env, artifactRoot 
   const closed = await new Promise((resolveClose) => child.once('close', (code, signal) => resolveClose({ code, signal })));
   clearTimeout(deadline); if (killTimer) clearTimeout(killTimer); process.removeListener('SIGINT', onInterrupt); process.removeListener('SIGTERM', onInterrupt);
   try { await streamDone(stderr); } catch (error) { latch(state, 'stream_error', 'stream', error); }
-  let report = { summary: null, failures: [], coverage: null, complete: false };
+  let report = { summary: null, executedTests: null, failures: [], coverage: null, complete: false };
   try { report = await readReporter(paths.failures); }
   catch (error) { latch(state, error.message === 'reporter summary is incomplete' ? 'reporter_incomplete' : 'reporter_error', 'reporter', error); }
+  if (!state.terminalCause && report.executedTests === 0) latch(state, 'no_tests');
   const gate = lane.coverage
     ? coverageGate(report.coverage, await (dependencies.discoverProductSources || discoverProductSources)())
     : null;
@@ -188,7 +222,7 @@ export async function runSupervisor({ laneName, env = process.env, artifactRoot 
   if (!state.terminalCause && closed.code !== 0) latch(state, 'exit_nonzero');
   const terminalCause = state.terminalCause || 'close_0';
   let verdict = state.infrastructure ? 'runner_error' : state.timedOut ? 'timed_out' : state.interrupted ? 'interrupted' : closed.code === 0 && !closed.signal ? 'passed' : 'failed';
-  if (terminalCause === 'coverage_gate') verdict = 'failed';
+  if (terminalCause === 'coverage_gate' || terminalCause === 'no_tests') verdict = 'failed';
   const result = { schema_version: 1, lane: laneName, verdict, terminal_cause: terminalCause, child: closed, duration_ms: now() - startedAt,
     tests: report.summary, coverage: lane.coverage ? { enabled: true, manifest: productSources, reported: gate.reported, metrics: gate.metrics,
       thresholds: coverageThresholds, diagnostics: gate.diagnostics, denominator_classifications: gate.denominatorClassifications } : null,
@@ -199,10 +233,10 @@ export async function runSupervisor({ laneName, env = process.env, artifactRoot 
 function relativePaths(dir, paths) { return Object.fromEntries(Object.entries(paths).map(([key, path]) => [key, key === 'result' ? 'result.json' : path.slice(dir.length + 1)])); }
 export async function writeAtomic(path, content) { const temporary = `${path}.${randomUUID()}.tmp`; await writeFile(temporary, content, { encoding: 'utf8', flag: 'wx' }); await rename(temporary, path); }
 export async function cli({ argv = process.argv.slice(2), processLike = process, run = runSupervisor } = {}) {
-  let lane; try { lane = parseArgs(argv); } catch (error) { processLike.stderr.write(`${error.message}\n`); return 2; }
-  let result; try { result = await run({ laneName: lane }); } catch (error) { processLike.stderr.write(`runner_error: ${error.message}\n`); return 1; }
+  let invocation; try { invocation = parseArgs(argv); } catch (error) { processLike.stderr.write(`${error.message}\n`); return 2; }
+  let result; try { result = await run(invocation); } catch (error) { processLike.stderr.write(`runner_error: ${error.message}\n`); return 1; }
   const artifact = result.artifactDir || result.artifacts?.result || 'unavailable';
-  if (result.verdict === 'passed') processLike.stdout.write(`PASS ${lane}: ${result.duration_ms}ms; artifacts: ${artifact}\n`);
+  if (result.verdict === 'passed') processLike.stdout.write(`PASS ${invocation.laneName}: ${result.duration_ms}ms; artifacts: ${artifact}\n`);
   else {
     processLike.stderr.write(`${result.verdict} (${result.terminal_cause}); artifacts: ${artifact}\n`);
     if (result.infrastructure) {

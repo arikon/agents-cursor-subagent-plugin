@@ -1,8 +1,8 @@
 {
   "adapter_version": "codex-cli-0.152.1-fixture-v1",
   "codex_version": "codex-cli 0.152.1",
-  "implementation_sha256": "b210a17cce9a2df5d3902e2124491f7b16b134d6c629d5f28be25c37dd007f11",
-  "implementation_bytes": 8917,
+  "implementation_sha256": "b73bde0dec555e4ce88ff9a95a9a46379c874e0300a73a74f37880f3232b19d9",
+  "implementation_bytes": 10182,
   "operations": [
     "admit",
     "help",

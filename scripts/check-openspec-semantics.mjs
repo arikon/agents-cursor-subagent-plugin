@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,6 +13,28 @@ const baselineFields = [
   "**Implementation-ready exit.**",
   "**Future-change candidates.**",
 ];
+
+export function replacementLineageReaches(registry, capability, requirement, fromDigest, targetDigest) {
+  const edges = registry.changes.flatMap(({ modified = [] }) => modified)
+    .filter((entry) => entry.capability === capability && entry.requirement === requirement
+      && typeof entry.sourceDigest === "string" && /^[a-f0-9]{64}$/.test(entry.sourceDigest)
+      && typeof entry.replacementDigest === "string" && /^[a-f0-9]{64}$/.test(entry.replacementDigest));
+  const pending = [fromDigest];
+  const seen = new Set();
+  while (pending.length) {
+    const digest = pending.shift();
+    if (digest === targetDigest) return true;
+    if (seen.has(digest)) continue;
+    seen.add(digest);
+    for (const edge of edges) if (edge.sourceDigest === digest) pending.push(edge.replacementDigest);
+  }
+  return false;
+}
+
+export function hasFixedEvalCorpusCount(requirement, block) {
+  if (!['Разделённые eval lanes и evidence загрузки skill', 'Cost-aware execution policy'].includes(requirement)) return false;
+  return /(?:\b\d+\b|\b(?:six|seven)\b|(?:шест|сем)[а-яё]*)\s+`?(?:programmed|runs?|rows?)/iu.test(block);
+}
 
 export function checkOpenSpecSemantics(rootPath = process.cwd(), registry = PROJECT_SEMANTIC_REGISTRY) {
   const root = resolve(rootPath);
@@ -77,6 +100,13 @@ export function checkOpenSpecSemantics(rootPath = process.cwd(), registry = PROJ
       : [];
   }
 
+  function indexedInvariantIds(design, admittedIds) {
+    const match = design.match(/^\*\*Public-invariant index\.\*\* (.+)$/m);
+    if (!match) return [];
+    const admitted = new Set(admittedIds);
+    return [...match[1].matchAll(/`([^`]+)`/g)].map(([, id]) => id).filter((id) => admitted.has(id));
+  }
+
   function requirementBlock(contents, requirement) {
     const marker = `### Requirement: ${requirement}`;
     const start = contents.indexOf(marker);
@@ -96,9 +126,9 @@ export function checkOpenSpecSemantics(rootPath = process.cwd(), registry = PROJ
     return cursor === sourceLines.length;
   }
 
-  function authoritativeRequirements() {
+  function authoritativeRequirements(contract) {
     const specsRoot = resolve(root, "openspec/specs");
-    return new Map(readdirSync(specsRoot, { withFileTypes: true })
+    const requirementsByCapability = new Map(readdirSync(specsRoot, { withFileTypes: true })
       .filter((entry) => entry.isDirectory())
       .map((entry) => {
         const specPath = `openspec/specs/${entry.name}/spec.md`;
@@ -107,6 +137,21 @@ export function checkOpenSpecSemantics(rootPath = process.cwd(), registry = PROJ
           : [];
         return [entry.name, new Set(requirements)];
       }));
+    for (const ownerChange of [contract.id]) {
+      const ownerRoot = changeRoot(ownerChange);
+      const deltaRoot = ownerRoot && resolve(root, `${ownerRoot}/specs`);
+      if (deltaRoot && existsSync(deltaRoot)) {
+        for (const entry of readdirSync(deltaRoot, { withFileTypes: true }).filter((candidate) => candidate.isDirectory())) {
+          const deltaPath = `${ownerRoot}/specs/${entry.name}/spec.md`;
+          if (!existsSync(resolve(root, deltaPath))) continue;
+          const names = [...read(deltaPath).matchAll(/^### Requirement: (.+)$/gm)].map(([, name]) => name);
+          const admitted = requirementsByCapability.get(entry.name) ?? new Set();
+          names.forEach((name) => admitted.add(name));
+          requirementsByCapability.set(entry.name, admitted);
+        }
+      }
+    }
+    return requirementsByCapability;
   }
 
   function validateCorpusOwnerRequirements(contract) {
@@ -122,11 +167,91 @@ export function checkOpenSpecSemantics(rootPath = process.cwd(), registry = PROJ
       errors.push(`${contract.corpusPath}: cannot inspect corpus owner requirements`);
       return;
     }
-    const mainRequirements = authoritativeRequirements();
+    const contractSpecsRoot = `${changeRoot(contract.id)}/specs`;
+    const contractSpecs = readdirSync(resolve(root, contractSpecsRoot), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => `${contractSpecsRoot}/${entry.name}/spec.md`)
+      .filter((path) => existsSync(resolve(root, path)))
+      .map(read);
+    for (const field of ['harness_faults', 'skill_sensitivity']) {
+      if (corpus.scenarios.some((scenario) => Object.hasOwn(scenario ?? {}, field)) &&
+          !contractSpecs.some((spec) => spec.includes(`\`${field}\``))) {
+        errors.push(`${contract.corpusPath}: programmed optional field ${field} lacks an owner-spec grammar`);
+      }
+    }
+    const mainRequirements = authoritativeRequirements(contract);
     for (const [rowIndex, scenario] of corpus.scenarios.entries()) {
       if (!Array.isArray(scenario?.owner_requirements)) {
         errors.push(`${contract.corpusPath}: scenario row ${rowIndex} lacks owner_requirements`);
         continue;
+      }
+      const hasOwner = (capability, requirement) => scenario.owner_requirements.some((reference) =>
+        reference?.capability === capability && reference?.requirement === requirement);
+      const ownerKey = (capability, requirement) => `${capability}\0${requirement}`;
+      const expectedOwners = new Set();
+      const expectOwner = (capability, requirement) => expectedOwners.add(ownerKey(capability, requirement));
+      const requireOwner = (capability, requirement, reason) => {
+        if (!hasOwner(capability, requirement)) {
+          errors.push(`${contract.corpusPath}: scenario row ${rowIndex} lacks ${requirement} owner for ${reason}`);
+        }
+      };
+      if (scenario.scenario_kind === 'programmed') {
+        expectOwner(changeContracts[facadeChange].capability, 'Skill workflow делегирования');
+        if (hasOwner(changeContracts[runtimeChange].capability, 'Ограниченный жизненный цикл ACP-процесса')) {
+          errors.push(`${contract.corpusPath}: scenario row ${rowIndex} repeats the uniform lifecycle owner`);
+        }
+      }
+      const boundedFileEffectScenario = scenario?.program?.steps?.some(({ type }) => type === 'effect');
+      if (boundedFileEffectScenario) {
+        expectOwner(changeContracts[facadeChange].capability, 'Workspace discipline делегирования');
+        expectOwner(changeContracts[runtimeChange].capability, 'Режимы Cursor и ACP callbacks');
+      }
+      const trace = Array.isArray(scenario?.expected_trace) ? scenario.expected_trace : [];
+      const runtimeCapability = changeContracts[runtimeChange].capability;
+      if (trace.some(({ kind }) => kind?.startsWith('session.mode-') || kind?.startsWith('progress.'))) {
+        expectOwner(runtimeCapability, 'Role-neutral mode and collaboration surface');
+      }
+      if (trace.some(({ kind }) => ['session.resumed', 'session.resume-failed'].includes(kind))) {
+        expectOwner(runtimeCapability, 'Продолжение Cursor-сессии');
+      }
+      if (trace.some((entry) => ['session.allocated', 'session.resumed'].includes(entry.kind)
+          && ['model', 'effort', 'fast', 'plugin_dirs_count', 'plugin_dirs_matched'].some((key) => Object.hasOwn(entry, key)))
+          || scenario?.initial_input?.includes('${MISSING_PLUGIN_DIR}')) {
+        expectOwner(runtimeCapability, 'Seamless per-session launch');
+      }
+      if (trace.some(({ kind }) => ['turn.wait-timeout', 'turn.wait-recovered'].includes(kind))) {
+        expectOwner(runtimeCapability, 'Адресуемое ожидание состояния сессии');
+      }
+      if (trace.some(({ kind }) => kind === 'turn.timed-out')) {
+        expectOwner(runtimeCapability, 'Нормативные limits runtime');
+      }
+      if (trace.some(({ kind }) => kind === 'turn.events-lost')) {
+        expectOwner(runtimeCapability, 'Sparse wait and bounded progress');
+      }
+      if (scenario?.harness_faults?.some((fault) => ['reject-initialize', 'reject-mode', 'reject-prompt', 'reject-resume'].includes(fault))) {
+        expectOwner(runtimeCapability, 'Provider errors are bounded and classified');
+      }
+      const reasonByRequirement = new Map([
+        ['Skill workflow делегирования', 'programmed workflow'],
+        ['Workspace discipline делегирования', 'file effect'],
+        ['Режимы Cursor и ACP callbacks', 'file callback trace'],
+        ['Role-neutral mode and collaboration surface', 'mode or collaboration trace'],
+        ['Продолжение Cursor-сессии', 'session resume trace'],
+        ['Seamless per-session launch', 'per-session launch semantics'],
+        ['Адресуемое ожидание состояния сессии', 'addressed wait trace'],
+        ['Нормативные limits runtime', 'turn deadline trace'],
+        ['Sparse wait and bounded progress', 'retention-gap trace'],
+        ['Provider errors are bounded and classified', 'provider rejection fault'],
+      ]);
+      for (const key of expectedOwners) {
+        const [capability, requirement] = key.split('\0');
+        requireOwner(capability, requirement, reasonByRequirement.get(requirement));
+      }
+      for (const reference of scenario.owner_requirements) {
+        if (scenario.scenario_kind === 'programmed'
+            && !expectedOwners.has(ownerKey(reference.capability, reference.requirement))) {
+          errors.push(`${contract.corpusPath}: scenario row ${rowIndex} has unexpected ${reference.requirement} owner`);
+        }
       }
       for (const [referenceIndex, reference] of scenario.owner_requirements.entries()) {
         const keys = reference && typeof reference === "object" && !Array.isArray(reference)
@@ -240,9 +365,18 @@ for (const change of changes) {
     ...modified.map(({ requirement }) => requirement),
     ...references.map(({ requirement }) => requirement),
   ];
-  if (new Set(index).size !== index.length || index.length !== expectedIndex.length ||
-      expectedIndex.some((requirement) => !index.includes(requirement))) {
+  const indexedRequirementSet = new Set(index);
+  const expectedRequirementSet = new Set(expectedIndex);
+  if (indexedRequirementSet.size !== expectedRequirementSet.size ||
+      [...expectedRequirementSet].some((requirement) => !indexedRequirementSet.has(requirement))) {
     errors.push(`${designPath}: Public-invariant index must equal this change's requirement set`);
+  }
+  if (contract.invariantIds) {
+    const ids = indexedInvariantIds(design, contract.invariantIds);
+    if (ids.length !== contract.invariantIds.length || new Set(ids).size !== ids.length
+      || contract.invariantIds.some((id) => !ids.includes(id))) {
+      errors.push(`${designPath}: Public-invariant index must map every registered invariant ID exactly once`);
+    }
   }
   for (const requirement of requirements) {
     const previousOwner = requirementOwners.get(requirement);
@@ -258,14 +392,35 @@ for (const change of changes) {
       errors.push(`${rootPath}/tasks.md: no task references requirement «${requirement}»`);
     }
   }
-  for (const { capability, requirement } of modified) {
+  for (const modification of modified) {
+    const { capability, requirement, replacementReason, sourceDigest, replacementDigest } = modification;
+    const replacement = typeof replacementReason === "string" && replacementReason.trim().length >= 20
+      && typeof sourceDigest === "string" && /^[a-f0-9]{64}$/.test(sourceDigest)
+      && typeof replacementDigest === "string" && /^[a-f0-9]{64}$/.test(replacementDigest);
     const deltaPath = `${rootPath}/specs/${capability}/spec.md`;
     const mainPath = `openspec/specs/${capability}/spec.md`;
     const deltaSpec = read(deltaPath);
     const mainSpec = read(mainPath);
-    if (!proposal.includes(`- \`${capability}\``) || !deltaSpec.includes("## MODIFIED Requirements") ||
+    const sourceBlock = requirementBlock(mainSpec, requirement);
+    const deltaBlock = requirementBlock(deltaSpec, requirement);
+    const archived = rootPath.startsWith("openspec/changes/archive/");
+    const currentMainDigest = createHash("sha256").update(sourceBlock).digest("hex");
+    const sourceDigestMatches = !replacement || (archived
+      ? replacementLineageReaches(registry, capability, requirement, replacementDigest, currentMainDigest)
+      : currentMainDigest === sourceDigest);
+    const replacementDigestMatches = !replacement
+      || createHash("sha256").update(deltaBlock).digest("hex") === replacementDigest;
+    const fixedEvalCorpusCount = change === registry.roles.interactiveAcpUx
+      && capability === 'cursor-subagent-skill-evals'
+      && hasFixedEvalCorpusCount(requirement, deltaBlock);
+    if (Object.hasOwn(modification, "replacement") ||
+        (replacementReason !== undefined && !replacement) ||
+        !sourceDigestMatches ||
+        !replacementDigestMatches ||
+        fixedEvalCorpusCount ||
+        !proposal.includes(`- \`${capability}\``) || !deltaSpec.includes("## MODIFIED Requirements") ||
         !deltaSpec.includes(`### Requirement: ${requirement}`) || !mainSpec.includes(`### Requirement: ${requirement}`) ||
-        !preservesRequirement(requirementBlock(mainSpec, requirement), requirementBlock(deltaSpec, requirement))) {
+        (!replacement && !preservesRequirement(sourceBlock, deltaBlock))) {
       errors.push(`${rootPath}: invalid modified capability ${capability}/${requirement}`);
     }
     if (!design.includes(`«${requirement}»`) || !tasks.includes(`«${requirement}»`)) {
@@ -386,6 +541,9 @@ export function runOpenSpecSemanticsCli(rootPath = process.cwd(), output = conso
   return 0;
 }
 
+// The coverage lane imports this module; the same CLI entrypoint is exercised
+// separately by the foreground semantic-gate verification command.
+/* node:coverage ignore next 3 */
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   process.exitCode = runOpenSpecSemanticsCli();
 }

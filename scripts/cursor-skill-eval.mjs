@@ -13,6 +13,8 @@ const CLEANUP = new Set(['succeeded', 'failed', 'not_required']);
 const STAGES = new Set([null, 'runner', 'adapter_admission', 'discovery', 'skill_load', 'transport', 'scenario', 'inspection', 'publication', 'cleanup']);
 const KEYS = ['schema_version', 'scenario_id', 'lane', 'eval_status', 'actual_task_outcome', 'reported_task_outcome', 'fixture_assertion_outcome', 'evidence_publication_status', 'evidence_ref', 'cleanup_status', 'failure_stage', 'error_code', 'message'];
 const bytes = (value) => Buffer.byteLength(value, 'utf8');
+const EVENTS_LOST_INSTRUCTION = 'If `events_lost:true`, disclose the observation gap and\n   continue only from returned cursors and current normalized state; never\n   reconstruct or guess omitted history. If that current evidence is\n   insufficient, report it as unverifiable; use `cursor_session_status` only as\n   advanced current-state diagnostics, never as lost-history reconstruction.\n   In the final evidence summary\'s parseable JSON object include the exact\n   typed fields `"observation_gap":true`, `"history_reconstructed":false`, and\n   `"evidence_scope":"current_normalized_state"`; do not translate or omit\n   those keys. Add `"verification":"unverifiable"`\n   only when the retained current evidence cannot verify the requested result.';
+const EVENTS_LOST_MUTATION = 'If `events_lost:true`, continue from the currently returned normalized state.';
 
 function text(value, name, limit, nullable = false) {
   if (value === null && nullable) return;
@@ -32,6 +34,13 @@ export function assertEvalResultV1(result) {
 }
 
 export function evalResult(input) { return assertEvalResultV1({ schema_version: 1, error_code: null, message: null, evidence_ref: null, ...input }); }
+
+export function applySkillSensitivity(source, mutation) {
+  if (mutation !== 'omit-events-lost' || typeof source !== 'string' || source.split(EVENTS_LOST_INSTRUCTION).length !== 2) {
+    throw Object.assign(new Error('skill sensitivity mutation target drifted'), { evalCode: 'adapter_admission' });
+  }
+  return source.replace(EVENTS_LOST_INSTRUCTION, EVENTS_LOST_MUTATION);
+}
 
 export function writeEvalResult(result, output = process.stdout) {
   const encoded = JSON.stringify(assertEvalResultV1(result));

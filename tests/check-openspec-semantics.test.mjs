@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import test from 'node:test';
 import {
   checkOpenSpecSemantics,
+  hasFixedEvalCorpusCount,
+  replacementLineageReaches,
   runOpenSpecSemanticsCli,
 } from '../scripts/check-openspec-semantics.mjs';
 
@@ -19,7 +22,17 @@ const contracts = {
   [runtimeChange]: {
     capability: 'fixture-runtime-capability',
     ownerClaim: 'Этот change owns runtime requirements',
-    requirements: ['Runtime fixture requirement'],
+    requirements: [
+      'Runtime fixture requirement',
+      'Role-neutral mode and collaboration surface',
+      'Продолжение Cursor-сессии',
+      'Seamless per-session launch',
+      'Адресуемое ожидание состояния сессии',
+      'Режимы Cursor и ACP callbacks',
+      'Provider errors are bounded and classified',
+      'Sparse wait and bounded progress',
+      'Нормативные limits runtime',
+    ],
   },
   [facadeChange]: {
     capability: 'fixture-facade-capability',
@@ -50,6 +63,7 @@ const contracts = {
     capability: 'fixture-supervisor-capability',
     ownerClaim: '`fixture-supervisor-capability` owns runner lifecycle, artifacts, reporting and coverage gate',
     requirementIds: ['NTS-3'],
+    invariantIds: ['NTS-3'],
     requirements: [
       'Supervisor fixture requirement',
     ],
@@ -62,6 +76,7 @@ const registry = {
     capability: contract.capability,
     specDirectory: contract.capability,
     ownerClaim: contract.ownerClaim,
+    ...(contract.invariantIds ? { invariantIds: contract.invariantIds } : {}),
     modified: contract.modifiedRequirements
       ? contract.modifiedRequirements.map((requirement) => ({
         capability: contracts[facadeChange].capability,
@@ -87,6 +102,15 @@ async function write(root, relativePath, contents) {
 async function append(root, relativePath, suffix) {
   const target = join(root, relativePath);
   await writeFile(target, `${await readFile(target, 'utf8')}${suffix}`);
+}
+
+function requirementBlock(contents, requirement) {
+  const marker = `### Requirement: ${requirement}`;
+  const start = contents.indexOf(marker);
+  if (start === -1) return '';
+  const remainder = contents.slice(start);
+  const next = remainder.slice(marker.length).search(/\n(?:### Requirement:|## (?:ADDED|MODIFIED|REMOVED|RENAMED) Requirements)/);
+  return (next === -1 ? remainder : remainder.slice(0, marker.length + next)).trim();
 }
 
 function designFor(contract) {
@@ -288,6 +312,145 @@ test('semantic gate accepts corpus owner requirements from authoritative main sp
   });
 });
 
+test('semantic gate rejects a programmed corpus row without its facade owner', async (t) => {
+  const root = await fixture(t);
+  const corpusRegistry = await withCorpusOwnerRequirements(root, [{
+    capability: contracts[runtimeChange].capability,
+    requirement: 'Runtime fixture requirement',
+  }]);
+  const corpusPath = join(root, 'evals/cursor-subagent-scenarios.v1.json');
+  const corpus = JSON.parse(await readFile(corpusPath, 'utf8'));
+  corpus.scenarios[0].scenario_kind = 'programmed';
+  await writeFile(corpusPath, JSON.stringify(corpus));
+  assertRejected(checkOpenSpecSemantics(root, corpusRegistry), 'lacks Skill workflow делегирования owner');
+});
+
+test('semantic gate rejects a row-level copy of the uniform lifecycle owner', async (t) => {
+  const root = await fixture(t);
+  const corpusRegistry = await withCorpusOwnerRequirements(root, [
+    { capability: contracts[facadeChange].capability, requirement: 'Skill workflow делегирования' },
+    { capability: contracts[runtimeChange].capability, requirement: 'Ограниченный жизненный цикл ACP-процесса' },
+  ]);
+  const corpusPath = join(root, 'evals/cursor-subagent-scenarios.v1.json');
+  const corpus = JSON.parse(await readFile(corpusPath, 'utf8'));
+  corpus.scenarios[0].scenario_kind = 'programmed';
+  await writeFile(corpusPath, JSON.stringify(corpus));
+  assertRejected(checkOpenSpecSemantics(root, corpusRegistry), 'repeats the uniform lifecycle owner');
+});
+
+test('semantic gate rejects any extra authoritative owner not implied by row semantics', async (t) => {
+  const root = await fixture(t);
+  const corpusRegistry = await withCorpusOwnerRequirements(root, [
+    { capability: contracts[facadeChange].capability, requirement: 'Skill workflow делегирования' },
+    { capability: contracts[runtimeChange].capability, requirement: 'Runtime fixture requirement' },
+  ]);
+  const corpusPath = join(root, 'evals/cursor-subagent-scenarios.v1.json');
+  const corpus = JSON.parse(await readFile(corpusPath, 'utf8'));
+  corpus.scenarios[0].scenario_kind = 'programmed';
+  await writeFile(corpusPath, JSON.stringify(corpus));
+  assertRejected(checkOpenSpecSemantics(root, corpusRegistry), 'has unexpected Runtime fixture requirement owner');
+});
+
+for (const operation of ['read', 'write']) test(`semantic gate rejects a ${operation} effect corpus row without Workspace discipline owner`, async (t) => {
+  const root = await fixture(t);
+  const corpusRegistry = await withCorpusOwnerRequirements(root, [{
+    capability: contracts[facadeChange].capability,
+    requirement: 'Skill workflow делегирования',
+  }]);
+  const corpusPath = join(root, 'evals/cursor-subagent-scenarios.v1.json');
+  const corpus = JSON.parse(await readFile(corpusPath, 'utf8'));
+  Object.assign(corpus.scenarios[0], {
+    scenario_kind: 'programmed',
+    program: { steps: [{ type: 'effect', operation, path: 'result.txt' }] },
+  });
+  await writeFile(corpusPath, JSON.stringify(corpus));
+  assertRejected(checkOpenSpecSemantics(root, corpusRegistry), 'lacks Workspace discipline делегирования owner');
+});
+
+test('semantic gate rejects composite launch progress without every exercised owner', async (t) => {
+  const root = await fixture(t);
+  const corpusRegistry = await withCorpusOwnerRequirements(root, [
+    { capability: contracts[facadeChange].capability, requirement: 'Skill workflow делегирования' },
+    { capability: contracts[facadeChange].capability, requirement: 'Workspace discipline делегирования' },
+    { capability: contracts[runtimeChange].capability, requirement: 'Seamless per-session launch' },
+  ]);
+  const corpusPath = join(root, 'evals/cursor-subagent-scenarios.v1.json');
+  const corpus = JSON.parse(await readFile(corpusPath, 'utf8'));
+  Object.assign(corpus.scenarios[0], {
+    scenario_kind: 'programmed',
+    program: { steps: [{ type: 'effect', operation: 'write', path: 'result.txt' }] },
+    expected_trace: [
+      { kind: 'session.allocated', model: 'sonnet-4.0' },
+      { kind: 'progress.todos' },
+    ],
+  });
+  await writeFile(corpusPath, JSON.stringify(corpus));
+  assertRejected(checkOpenSpecSemantics(root, corpusRegistry), 'lacks Role-neutral mode and collaboration surface owner');
+});
+
+for (const { name, trace, requirement } of [
+  { name: 'resume trace', trace: [{ kind: 'session.resumed' }], requirement: 'Продолжение Cursor-сессии' },
+  { name: 'addressed wait trace', trace: [{ kind: 'turn.wait-timeout' }], requirement: 'Адресуемое ожидание состояния сессии' },
+]) test(`semantic gate rejects ${name} without its runtime owner`, async (t) => {
+  const root = await fixture(t);
+  const corpusRegistry = await withCorpusOwnerRequirements(root, [{
+    capability: contracts[facadeChange].capability,
+    requirement: 'Skill workflow делегирования',
+  }]);
+  const corpusPath = join(root, 'evals/cursor-subagent-scenarios.v1.json');
+  const corpus = JSON.parse(await readFile(corpusPath, 'utf8'));
+  Object.assign(corpus.scenarios[0], { scenario_kind: 'programmed', expected_trace: trace });
+  await writeFile(corpusPath, JSON.stringify(corpus));
+  assertRejected(checkOpenSpecSemantics(root, corpusRegistry), `lacks ${requirement} owner`);
+});
+
+for (const { name, ownerRequirements, scenarioFields, requirement } of [
+  {
+    name: 'file callback',
+    ownerRequirements: [
+      { capability: contracts[facadeChange].capability, requirement: 'Skill workflow делегирования' },
+      { capability: contracts[facadeChange].capability, requirement: 'Workspace discipline делегирования' },
+    ],
+    scenarioFields: { program: { steps: [{ type: 'effect', operation: 'read', path: 'result.txt' }] } },
+    requirement: 'Режимы Cursor и ACP callbacks',
+  },
+  { name: 'failed mode transition', scenarioFields: { expected_trace: [{ kind: 'session.mode-change-failed' }] }, requirement: 'Role-neutral mode and collaboration surface' },
+  { name: 'provider rejection', scenarioFields: { harness_faults: ['reject-prompt'] }, requirement: 'Provider errors are bounded and classified' },
+  { name: 'retention gap', scenarioFields: { expected_trace: [{ kind: 'turn.events-lost' }] }, requirement: 'Sparse wait and bounded progress' },
+  { name: 'turn deadline', scenarioFields: { expected_trace: [{ kind: 'turn.timed-out' }] }, requirement: 'Нормативные limits runtime' },
+  { name: 'missing plugin directory', scenarioFields: { initial_input: 'Use ${MISSING_PLUGIN_DIR}' }, requirement: 'Seamless per-session launch' },
+]) test(`semantic gate rejects ${name} without its derived owner`, async (t) => {
+  const root = await fixture(t);
+  const owners = ownerRequirements || [{ capability: contracts[facadeChange].capability, requirement: 'Skill workflow делегирования' }];
+  const corpusRegistry = await withCorpusOwnerRequirements(root, owners);
+  const corpusPath = join(root, 'evals/cursor-subagent-scenarios.v1.json');
+  const corpus = JSON.parse(await readFile(corpusPath, 'utf8'));
+  Object.assign(corpus.scenarios[0], { scenario_kind: 'programmed', ...scenarioFields });
+  await writeFile(corpusPath, JSON.stringify(corpus));
+  assertRejected(checkOpenSpecSemantics(root, corpusRegistry), `lacks ${requirement} owner`);
+});
+
+for (const [field, value] of [
+  ['harness_faults', ['inject-stale-question-once']],
+  ['skill_sensitivity', { mutation: 'omit-events-lost', expected_mismatch: 'reported-outcome-mismatch' }],
+]) {
+  test(`semantic gate rejects corpus ${field} missing from its owner spec`, async (t) => {
+    const root = await fixture(t);
+    const corpusRegistry = await withCorpusOwnerRequirements(root, [{
+      capability: contracts[facadeChange].capability,
+      requirement: 'Skill workflow делегирования',
+    }]);
+    const corpusPath = join(root, 'evals/cursor-subagent-scenarios.v1.json');
+    const corpus = JSON.parse(await readFile(corpusPath, 'utf8'));
+    corpus.scenarios[0][field] = value;
+    await writeFile(corpusPath, JSON.stringify(corpus));
+    assertRejected(
+      checkOpenSpecSemantics(root, corpusRegistry),
+      `programmed optional field ${field} lacks an owner-spec grammar`,
+    );
+  });
+}
+
 test('semantic gate rejects drift in an exact owned requirement label', async (t) => {
   const root = await fixture(t);
   const exactLabelRegistry = {
@@ -408,6 +571,30 @@ test('semantic gate treats a main-spec directory without spec.md as having no ow
   const corpusRegistry = await withCorpusOwnerRequirements(root, [{
     capability: 'missing-capability',
     requirement: 'Missing requirement',
+  }]);
+  assertRejected(checkOpenSpecSemantics(root, corpusRegistry), 'invalid owner requirement');
+});
+
+test('semantic gate admits a corpus owner requirement declared by the same active change delta', async (t) => {
+  const root = await fixture(t);
+  const requirement = 'Current delta-owned requirement';
+  await write(root, `openspec/changes/${evalChange}/specs/${contracts[runtimeChange].capability}/spec.md`,
+    `## ADDED Requirements\n### Requirement: ${requirement}\nCurrent change contract.\n`);
+  const corpusRegistry = await withCorpusOwnerRequirements(root, [{
+    capability: contracts[runtimeChange].capability,
+    requirement,
+  }]);
+  assert.deepEqual(checkOpenSpecSemantics(root, corpusRegistry).errors, []);
+});
+
+test('semantic gate rejects a corpus owner requirement declared only by another change delta', async (t) => {
+  const root = await fixture(t);
+  const requirement = 'Other delta-owned requirement';
+  await append(root, `openspec/changes/${runtimeChange}/specs/${contracts[runtimeChange].capability}/spec.md`,
+    `\n## ADDED Requirements\n### Requirement: ${requirement}\nOther change contract.\n`);
+  const corpusRegistry = await withCorpusOwnerRequirements(root, [{
+    capability: contracts[runtimeChange].capability,
+    requirement,
   }]);
   assertRejected(checkOpenSpecSemantics(root, corpusRegistry), 'invalid owner requirement');
 });
@@ -551,6 +738,104 @@ test('semantic gate rejects an empty capability spec', async (t) => {
     '',
   );
   assertRejected(run(root), 'capability fixture-supervisor-capability has no expected spec path');
+});
+
+test('semantic gate admits an owner-approved complete replacement without requiring stale source lines', async (t) => {
+  const root = await fixture(t);
+  const mainSpec = await readFile(join(root, `openspec/specs/${contracts[facadeChange].capability}/spec.md`), 'utf8');
+  const sourceBlock = mainSpec.slice(mainSpec.indexOf('### Requirement: Skill workflow делегирования')).trim();
+  const deltaPath = `openspec/changes/${evalChange}/specs/${contracts[facadeChange].capability}/spec.md`;
+  await replace(
+    root,
+    deltaPath,
+    'Main capability contract.\nModified contract.',
+    'Replacement contract with no copied source sentence.',
+  );
+  const replacementBlock = requirementBlock(await readFile(join(root, deltaPath), 'utf8'), 'Skill workflow делегирования');
+  const replacementRegistry = {
+    ...registry,
+    changes: registry.changes.map((contract) => contract.id === evalChange
+      ? { ...contract, modified: contract.modified.map((entry) => ({ ...entry,
+        replacementReason: 'Owner-approved complete replacement for the fixture contract.',
+        sourceDigest: createHash('sha256').update(sourceBlock).digest('hex'),
+        replacementDigest: createHash('sha256').update(replacementBlock).digest('hex') })) }
+      : contract),
+  };
+  assert.deepEqual(checkOpenSpecSemantics(root, replacementRegistry).errors, []);
+});
+
+test('semantic gate admits an archived replacement only after its exact delta is synced to main', async (t) => {
+  const root = await fixture(t);
+  const mainPath = join(root, `openspec/specs/${contracts[facadeChange].capability}/spec.md`);
+  const mainSpec = await readFile(mainPath, 'utf8');
+  const sourceBlock = mainSpec.slice(mainSpec.indexOf('### Requirement: Skill workflow делегирования')).trim();
+  const deltaPath = `openspec/changes/${evalChange}/specs/${contracts[facadeChange].capability}/spec.md`;
+  await replace(root, deltaPath, 'Main capability contract.\nModified contract.', 'Replacement contract after sync.');
+  const replacementBlock = requirementBlock(await readFile(join(root, deltaPath), 'utf8'), 'Skill workflow делегирования');
+  const replacementRegistry = {
+    ...registry,
+    changes: registry.changes.map((contract) => contract.id === evalChange
+      ? { ...contract, modified: contract.modified.map((entry) => ({ ...entry,
+        replacementReason: 'Owner-approved complete replacement for the fixture contract.',
+        sourceDigest: createHash('sha256').update(sourceBlock).digest('hex'),
+        replacementDigest: createHash('sha256').update(replacementBlock).digest('hex') })) }
+      : contract),
+  };
+  await writeFile(mainPath, '### Requirement: Skill workflow делегирования\nReplacement contract after sync.\n');
+  const active = join(root, `openspec/changes/${evalChange}`);
+  const archived = join(root, `openspec/changes/archive/2026-09-06-${evalChange}`);
+  await mkdir(dirname(archived), { recursive: true });
+  await rename(active, archived);
+  await writeFile(mainPath, '### Requirement: Skill workflow делегирования\nMain capability contract.\n');
+  assertRejected(checkOpenSpecSemantics(root, replacementRegistry), 'invalid modified capability');
+  await writeFile(mainPath, '### Requirement: Skill workflow делегирования\nReplacement contract after sync.\n');
+  assert.deepEqual(checkOpenSpecSemantics(root, replacementRegistry).errors, []);
+  await writeFile(mainPath, '### Requirement: Skill workflow делегирования\nPost-archive drift.\n');
+  assertRejected(checkOpenSpecSemantics(root, replacementRegistry), 'invalid modified capability');
+  await append(root, `openspec/changes/archive/2026-09-06-${evalChange}/specs/${contracts[facadeChange].capability}/spec.md`, '\nArchived delta drift.\n');
+  assertRejected(checkOpenSpecSemantics(root, replacementRegistry), 'invalid modified capability');
+});
+
+test('replacement lineage admits a registered future supersession without trusting mutable current text', () => {
+  const first = '1'.repeat(64); const second = '2'.repeat(64); const third = '3'.repeat(64);
+  const lineageRegistry = { changes: [
+    { modified: [{ capability: 'fixture', requirement: 'Requirement', sourceDigest: '0'.repeat(64), replacementDigest: first }] },
+    { modified: [{ capability: 'fixture', requirement: 'Requirement', sourceDigest: first, replacementDigest: second }] },
+    { modified: [{ capability: 'fixture', requirement: 'Requirement', sourceDigest: second, replacementDigest: third }] },
+  ] };
+  assert.equal(replacementLineageReaches(lineageRegistry, 'fixture', 'Requirement', first, third), true);
+  assert.equal(replacementLineageReaches(lineageRegistry, 'fixture', 'Requirement', first, '4'.repeat(64)), false);
+});
+
+test('eval replacement rejects stale hardcoded corpus counts outside the corpus', () => {
+  assert.equal(hasFixedEvalCorpusCount('Cost-aware execution policy', 'evaluate 19 programmed rows'), true);
+  assert.equal(hasFixedEvalCorpusCount('Разделённые eval lanes и evidence загрузки skill', 'each of six programmed runs'), true);
+  assert.equal(hasFixedEvalCorpusCount('Cost-aware execution policy', 'семи rows'), true);
+  assert.equal(hasFixedEvalCorpusCount('Cost-aware execution policy', 'evaluate every admitted programmed row'), false);
+});
+
+test('semantic gate rejects an unreasoned replacement bypass', async (t) => {
+  const root = await fixture(t);
+  const replacementRegistry = {
+    ...registry,
+    changes: registry.changes.map((contract) => contract.id === evalChange
+      ? { ...contract, modified: contract.modified.map((entry) => ({ ...entry, replacement: true })) }
+      : contract),
+  };
+  assertRejected(checkOpenSpecSemantics(root, replacementRegistry), 'invalid modified capability');
+});
+
+test('semantic gate rejects a replacement when the frozen source digest drifts', async (t) => {
+  const root = await fixture(t);
+  const replacementRegistry = {
+    ...registry,
+    changes: registry.changes.map((contract) => contract.id === evalChange
+      ? { ...contract, modified: contract.modified.map((entry) => ({ ...entry,
+        replacementReason: 'Owner-approved complete replacement for the fixture contract.',
+        sourceDigest: '0'.repeat(64), replacementDigest: '0'.repeat(64) })) }
+      : contract),
+  };
+  assertRejected(checkOpenSpecSemantics(root, replacementRegistry), 'invalid modified capability');
 });
 
 for (const { name, path, from, to = '', expected } of [

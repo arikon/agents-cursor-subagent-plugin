@@ -3,11 +3,11 @@ import { spawn as spawnChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 import { PassThrough } from 'node:stream';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { cli, LANES, runSupervisor } from '../scripts/run-node-tests.mjs';
+import { cli, LANES, parseArgs, runSupervisor } from '../scripts/run-node-tests.mjs';
 import { runUnitCoverage } from '../scripts/run-unit-coverage.mjs';
 
 const projectRoot = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -25,7 +25,7 @@ function reporterPath(args) {
   return args.filter((arg) => arg.startsWith(prefix)).at(-1).slice(prefix.length);
 }
 
-function fakeSpawn({ code = 0, signal = null, report = 'complete', coverage = null, failures = null, childError = null, stderr = '', stderrError = null, closeDelayMs = 0, stderrDelayMs = 0, preventResultPublication = false } = {}) {
+function fakeSpawn({ code = 0, signal = null, report = 'complete', coverage = null, failures = null, childError = null, stderr = '', stderrError = null, closeDelayMs = 0, stderrDelayMs = 0, preventResultPublication = false, testCount = 3 } = {}) {
   return (command, args, options) => {
     const child = new EventEmitter();
     child.pid = 424242;
@@ -37,7 +37,12 @@ function fakeSpawn({ code = 0, signal = null, report = 'complete', coverage = nu
           const events = [];
           const reportedFailures = failures ?? (code !== 0 ? [{ name: 'broken test', details: { error: { message: 'boom' } } }] : []);
           events.push(...reportedFailures.map((data) => JSON.stringify({ type: 'test:fail', data })));
-          events.push(JSON.stringify({ type: 'test:summary', data: { tests: 3, passed: code === 0 ? 3 : 2, failed: code === 0 ? 0 : 1 } }));
+          events.push(JSON.stringify({ type: 'test:summary', data: {
+            success: code === 0,
+            counts: { tests: testCount, passed: code === 0 ? testCount : Math.max(0, testCount - 1), failed: code === 0 ? 0 : 1 },
+            file: args.find((arg) => arg.endsWith('.test.mjs')) || 'tests/fixture.test.mjs',
+          } }));
+          events.push(JSON.stringify({ type: 'test:summary', data: { tests: testCount, passed: code === 0 ? testCount : Math.max(0, testCount - 1), failed: code === 0 ? 0 : 1 } }));
           if (coverage) events.push(JSON.stringify({ type: 'test:coverage', data: { summary: coverage } }));
           await writeFile(path, `${events.join('\n')}\n`);
         } else if (report === 'incomplete') {
@@ -64,10 +69,13 @@ function fakeSpawn({ code = 0, signal = null, report = 'complete', coverage = nu
 }
 
 async function coverageSummary(percent = 100, omitted = []) {
-  const names = (await readdir(join(projectRoot, 'scripts')))
-    .filter((name) => name.endsWith('.mjs') && !omitted.includes(`scripts/${name}`));
-  return { files: names.map((name) => ({
-    path: join(projectRoot, 'scripts', name),
+  const topLevel = (await readdir(join(projectRoot, 'scripts')))
+    .filter((name) => name.endsWith('.mjs')).map((name) => `scripts/${name}`);
+  const evalSources = (await readdir(join(projectRoot, 'scripts', 'eval')))
+    .filter((name) => name.endsWith('.mjs')).map((name) => `scripts/eval/${name}`);
+  const sources = [...topLevel, ...evalSources].filter((source) => !omitted.includes(source));
+  return { files: sources.map((source) => ({
+    path: join(projectRoot, source),
     totalLineCount: 100, coveredLineCount: percent,
     totalBranchCount: 100, coveredBranchCount: percent,
     totalFunctionCount: 100, coveredFunctionCount: percent,
@@ -151,6 +159,7 @@ test('lane matrix produces the exact child argv and keeps parent deadlines fixed
     'tests/claude-marketplace-canary.test.mjs',
     'tests/codex-app-server-client.test.mjs',
     'tests/cursor-skill-eval.test.mjs',
+    'tests/eval-matrix.test.mjs',
     'tests/facade.test.mjs',
     'tests/mcp-smoke.test.mjs',
     'tests/mcp-transport.test.mjs',
@@ -163,11 +172,13 @@ test('lane matrix produces the exact child argv and keeps parent deadlines fixed
     'scripts/check-openspec-semantics.mjs', 'scripts/codex-app-server-client.mjs', 'scripts/cursor-eval-scenario.mjs', 'scripts/cursor-skill-eval.mjs', 'scripts/openspec-semantic-registry.mjs',
     'scripts/cursor-subagent-bootstrap.mjs', 'scripts/cursor-subagent-mcp.mjs', 'scripts/node-test-reporter-v22.mjs',
     'scripts/recording-mcp-proxy.mjs', 'scripts/run-cursor-skill-eval.mjs', 'scripts/run-node-tests.mjs', 'scripts/run-unit-coverage.mjs',
+    'scripts/eval/run-cursor-skill-eval-matrix.mjs', 'scripts/eval/run-cursor-skill-eval-suite.mjs',
   ];
   const cases = [
     { lane: 'unit', concurrency: 2, tests: unitTests, timeoutMs: 120_000, deadlineMs: 600_000, coverage: false },
     { lane: 'coverage', concurrency: 2, tests: unitTests, timeoutMs: 120_000, deadlineMs: 900_000, coverage: true },
     { lane: 'release', concurrency: 1, tests: ['tests/release-e2e.test.mjs'], timeoutMs: 120_000, deadlineMs: 300_000, coverage: false },
+    { lane: 'eval', concurrency: 1, tests: ['tests/codex-client-integration.test.mjs', 'tests/release-e2e.test.mjs'], timeoutMs: 420_000, deadlineMs: 600_000, coverage: false },
   ];
   const coverage = await coverageSummary();
 
@@ -202,9 +213,92 @@ test('lane matrix produces the exact child argv and keeps parent deadlines fixed
           ...scenario.tests.map((path) => join(projectRoot, path)),
         ],
       );
-      for (const name of ['CURSOR_EVAL_REAL_CODEX', 'CURSOR_EVAL_HOSTED_CODEX', 'CURSOR_SUBAGENT_LIVE_E2E']) assert.equal(invocation.options.env[name], undefined);
+      for (const name of ['CURSOR_EVAL_REAL_CODEX', 'CURSOR_EVAL_HOSTED_CODEX', 'CURSOR_SUBAGENT_LIVE_E2E']) {
+        assert.equal(invocation.options.env[name], scenario.lane === 'eval' ? '1' : undefined);
+      }
       assert.equal(LANES[scenario.lane].deadlineMs, scenario.deadlineMs);
     });
+  }
+});
+
+test('focused selection keeps the unit process and artifact contract', async (t) => {
+  let invocation;
+  const delegate = fakeSpawn();
+  const result = await runSupervisor({
+    laneName: 'unit',
+    tests: ['tests/runtime.test.mjs'],
+    testNamePattern: 'compact wait',
+    artifactRoot: await artifactRoot(t),
+    dependencies: {
+      platform: 'linux',
+      spawn: (command, args, options) => {
+        invocation = { command, args, options };
+        return delegate(command, args, options);
+      },
+    },
+  });
+
+  assert.equal(result.verdict, 'passed');
+  assert.equal(invocation.command, process.execPath);
+  assert.ok(invocation.args.includes('--test-name-pattern=compact wait'));
+  assert.deepEqual(invocation.args.filter((arg) => arg.endsWith('.test.mjs')), [join(projectRoot, 'tests/runtime.test.mjs')]);
+  assert.equal(invocation.options.detached, true);
+  assert.equal(await readFile(join(result.artifactDir, 'result.json'), 'utf8').then(JSON.parse).then((published) => published.lane), 'unit');
+});
+
+test('zero executed tests fail even when Node exits successfully', async (t) => {
+  const result = await runSupervisor({
+    laneName: 'unit', tests: ['tests/runtime.test.mjs'], testNamePattern: 'does not exist',
+    artifactRoot: await artifactRoot(t), dependencies: { platform: 'linux', spawn: fakeSpawn({ testCount: 0 }) },
+  });
+  assert.equal(result.verdict, 'failed');
+  assert.equal(result.terminal_cause, 'no_tests');
+});
+
+test('foreground focused invocation fails when the real Node reporter executes zero tests', async (t) => {
+  const root = await artifactRoot(t);
+  const env = { ...process.env, NODE_TEST_ARTIFACT_ROOT: root };
+  delete env.NODE_TEST_CONTEXT;
+  delete env.NODE_V8_COVERAGE;
+  const child = spawnChildProcess(process.execPath, [
+    'scripts/run-node-tests.mjs', 'unit',
+    '--test', 'tests/cursor-skill-eval.test.mjs',
+    '--test-name-pattern', '__NO_SUCH_TEST_9f13d6__',
+  ], { cwd: projectRoot, env, stdio: ['ignore', 'pipe', 'pipe'] });
+  const stdout = []; const stderr = [];
+  child.stdout.on('data', (chunk) => stdout.push(chunk));
+  child.stderr.on('data', (chunk) => stderr.push(chunk));
+  const [code, signal] = await new Promise((resolve) => child.once('close', (exitCode, exitSignal) => resolve([exitCode, exitSignal])));
+
+  assert.equal(signal, null);
+  assert.equal(code, 1);
+  assert.equal(Buffer.concat(stdout).toString('utf8'), '');
+  assert.match(Buffer.concat(stderr).toString('utf8'), /^failed \(no_tests\); artifacts: /);
+  const artifactDirectories = await readdir(root);
+  assert.equal(artifactDirectories.length, 1);
+  const result = JSON.parse(await readFile(join(root, artifactDirectories[0], 'result.json'), 'utf8'));
+  assert.equal(result.verdict, 'failed');
+  assert.equal(result.terminal_cause, 'no_tests');
+  assert.equal(result.tests.counts.tests, 1);
+});
+
+test('supervisor rejects bypasses of the full coverage manifest', async (t) => {
+  for (const selection of [
+    { tests: ['tests/runtime.test.mjs'], laneName: 'coverage' },
+    { testNamePattern: 'compact wait', laneName: 'coverage' },
+    { tests: ['../runtime.test.mjs'], laneName: 'unit' },
+    { tests: ['tests/runtime.test.mjs'], laneName: 'eval' },
+    { tests: ['tests/codex-client-integration.test.mjs'], laneName: 'release' },
+  ]) {
+    const result = await runSupervisor({
+      ...selection,
+      artifactRoot: await artifactRoot(t),
+      dependencies: { platform: 'linux', spawn: () => { throw new Error('must not spawn'); } },
+    });
+    assert.deepEqual(
+      { verdict: result.verdict, cause: result.terminal_cause, stage: result.infrastructure.stage },
+      { verdict: 'runner_error', cause: 'invalid_invocation', stage: 'preflight' },
+    );
   }
 });
 
@@ -373,7 +467,7 @@ test('coverage lane fails closed when the reporter publishes a malformed coverag
 
 test('coverage lane reports new, missing, and unloaded product sources', async (t) => {
   const full = await coverageSummary();
-  const manifest = full.files.map((file) => `scripts/${file.path.split('/').at(-1)}`).sort();
+  const manifest = full.files.map((file) => relative(projectRoot, file.path)).sort();
   const unexpected = { files: [...full.files, {
     path: join(projectRoot, 'unexpected-product.mjs'),
     totalLineCount: 1, coveredLineCount: 1,
@@ -780,6 +874,18 @@ test('empty or summary-less reporter streams are incomplete, while malformed JSO
     { verdict: 'runner_error', cause: 'reporter_error', stage: 'reporter' });
 });
 
+test('CLI parses focused files and name filters through the supervisor contract', () => {
+  assert.deepEqual(parseArgs(['unit', '--test', 'tests/runtime.test.mjs', '--test-name-pattern', 'compact wait']), {
+    laneName: 'unit', tests: ['tests/runtime.test.mjs'], testNamePattern: 'compact wait',
+  });
+  assert.deepEqual(parseArgs(['eval', '--test', 'tests/codex-client-integration.test.mjs', '--test-name-pattern', 'hosted Codex']), {
+    laneName: 'eval', tests: ['tests/codex-client-integration.test.mjs'], testNamePattern: 'hosted Codex',
+  });
+  for (const argv of [['coverage', '--test', 'tests/runtime.test.mjs'], ['coverage', '--test-name-pattern', 'compact wait'], ['unit', '--test'], ['unit', '--test', '../runtime.test.mjs'], ['eval', '--test', 'tests/runtime.test.mjs'], ['release', '--test', 'tests/codex-client-integration.test.mjs'], ['unit', '--unknown', 'value'], ['unit', '--test-name-pattern', 'a', '--test-name-pattern', 'b']]) {
+    assert.throws(() => parseArgs(argv), { code: 'invalid_invocation' });
+  }
+});
+
 test('CLI rejects missing and invalid lanes with the stable usage contract', async (t) => {
   for (const [name, argv] of [['missing lane', []], ['invalid lane', ['nope']]]) {
     await t.test(name, async () => {
@@ -789,7 +895,7 @@ test('CLI rejects missing and invalid lanes with the stable usage contract', asy
 
       assert.equal(await cli({ argv, processLike }), 2);
       assert.equal(stdout, '');
-      assert.match(stderr, /^usage: \S+\.mjs <unit\|coverage\|release>\n$/);
+      assert.match(stderr, /^usage: \S+\.mjs <unit\|coverage\|release\|eval> \[--test <test-file>]\.\.\. \[--test-name-pattern <pattern>]\n$/);
     });
   }
 });
@@ -806,7 +912,7 @@ test('CLI usage falls back to the stable script name when argv has no entrypoint
   } finally {
     process.argv[1] = entrypoint;
   }
-  assert.equal(stderr, 'usage: run-node-tests.mjs <unit|coverage|release>\n');
+  assert.equal(stderr, 'usage: run-node-tests.mjs <unit|coverage|release|eval> [--test <test-file>]... [--test-name-pattern <pattern>]\n');
 });
 
 test('CLI renders each terminal supervisor verdict with current-run diagnostics', async (t) => {
@@ -857,7 +963,7 @@ test('foreground supervisor entrypoint rejects an invalid lane with the public u
   assert.equal(signal, null);
   assert.equal(code, 2);
   assert.equal(Buffer.concat(stdout).toString('utf8'), '');
-  assert.equal(Buffer.concat(stderr).toString('utf8'), 'usage: run-node-tests.mjs <unit|coverage|release>\n');
+  assert.equal(Buffer.concat(stderr).toString('utf8'), 'usage: run-node-tests.mjs <unit|coverage|release|eval> [--test <test-file>]... [--test-name-pattern <pattern>]\n');
 });
 
 test('CLI reports an artifact storage failure and exits nonzero', async (t) => {

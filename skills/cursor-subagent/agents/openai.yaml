@@ -4,4 +4,4 @@ interface:
   default_prompt: "Use $cursor-subagent to delegate a task to Cursor Agent through ACP."
 
 policy:
-  allow_implicit_invocation: true
+  allow_implicit_invocation: false

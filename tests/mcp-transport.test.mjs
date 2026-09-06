@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { ADAPTER } from '../scripts/cursor-subagent-mcp.mjs';
 
 const server = fileURLToPath(new URL('../scripts/cursor-subagent-mcp.mjs', import.meta.url));
 const fakeAcp = fileURLToPath(new URL('./fixtures/fake-acp.mjs', import.meta.url));
@@ -60,6 +61,7 @@ test('MCP startup negotiates the public protocol and exposes no resources or pro
   const initialized = await client.request('initialize');
   assert.equal(initialized.result.protocolVersion, '2024-11-05');
   assert.equal(initialized.result.serverInfo.name, 'cursor-subagent');
+  assert.equal(initialized.result.serverInfo.version, ADAPTER.initialize().clientInfo.version);
   assert.deepEqual((await client.request('resources/list')).result, { resources: [] });
   assert.deepEqual((await client.request('resources/templates/list')).result, { resourceTemplates: [] });
   assert.deepEqual((await client.request('prompts/list')).result, { prompts: [] });
@@ -72,7 +74,9 @@ test('MCP tools/list publishes the stable tool names and answer schemas', async 
   assert.deepEqual(tools.map((item) => item.name), [
     'cursor_delegate',
     'cursor_start_session',
+    'cursor_resume_session',
     'cursor_send_prompt',
+    'cursor_set_mode',
     'cursor_session_status',
     'cursor_wait',
     'cursor_answer_question',
@@ -83,7 +87,17 @@ test('MCP tools/list publishes the stable tool names and answer schemas', async 
   ]);
   const byName = Object.fromEntries(tools.map((item) => [item.name, item.inputSchema]));
   assert.deepEqual(byName.cursor_wait.required, ['session_id', 'turn_id']);
-  assert.deepEqual(byName.cursor_wait.properties.timeout_ms, { type: 'integer', minimum: 1_000, maximum: 60_000 });
+  assert.deepEqual(byName.cursor_wait.properties.timeout_ms, { type: 'integer', minimum: 1_000, maximum: 180_000 });
+  assert.deepEqual(byName.cursor_wait.properties.after_progress_revision, { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER });
+  for (const name of ['cursor_delegate', 'cursor_start_session', 'cursor_resume_session']) {
+    assert.equal(byName[name].additionalProperties, false);
+    assert.equal(byName[name].properties.model.pattern, '^[^\\[\\]]+$');
+    assert.equal(byName[name].properties.effort.pattern, '^[A-Za-z0-9._-]+$');
+  }
+  assert.deepEqual(byName.cursor_start_session.properties.plugin_dirs, { type: 'array', minItems: 1, items: { type: 'string', minLength: 1, maxLength: 64_000 } });
+  assert.deepEqual(byName.cursor_set_mode.required, ['session_id', 'mode']);
+  assert.deepEqual(byName.cursor_set_mode.properties.mode, { type: 'string', enum: ['ask', 'plan', 'agent'] });
+  assert.equal(byName.cursor_resume_session.required.includes('cursor_session_id'), true);
   assert.deepEqual(byName.cursor_answer_question.properties.outcome.enum, ['answered', 'skipped', 'cancelled']);
   assert.deepEqual(byName.cursor_answer_plan.properties.decision.enum, ['accept', 'reject']);
   assert.deepEqual(byName.cursor_answer_permission.properties.decision.enum, ['allow-once', 'reject-once']);
@@ -117,7 +131,7 @@ test('MCP maps requests and notifications to standard JSON-RPC outcomes', async 
 
   client.sendRaw(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }));
   client.sendRaw(JSON.stringify({ jsonrpc: '1.0', method: 'tools/list' }));
-  assert.equal((await client.request('tools/list')).result.tools.length, 10);
+  assert.equal((await client.request('tools/list')).result.tools.length, 12);
   assert.deepEqual(client.messages, []);
 });
 
@@ -128,7 +142,7 @@ test('MCP keeps notifications silent and bounds untrusted tool errors', async (t
   client.sendRaw(JSON.stringify({ jsonrpc: '2.0', method: 'not/admitted' }));
   client.sendRaw(JSON.stringify({ jsonrpc: '1.0', method: 'tools/list' }));
   client.sendRaw(JSON.stringify({ jsonrpc: '2.0', method: '\ud800' }));
-  assert.equal((await client.request('tools/list')).result.tools.length, 10);
+  assert.equal((await client.request('tools/list')).result.tools.length, 12);
   assert.deepEqual(client.messages, []);
 
   const response = await client.request('tools/call', {
@@ -169,7 +183,8 @@ test('MCP tools/call wires interactive answers, status and cancellation', async 
       timeout_ms: 1_000,
     });
     assert.equal(waiting.turn_status, 'waiting_for_input');
-    assert.equal(waiting.active_turn.pending[0].kind, scenario.kind);
+    assert.equal(waiting.pending[0].kind, scenario.kind);
+    assert.ok(waiting.pending[0].context, 'primary wait result must include normalized pending context');
     const unknownPending = await client.request('tools/call', {
       name: scenario.answer,
       arguments: {
@@ -226,12 +241,12 @@ test('MCP framing rejects malformed and oversized input, then resumes at frame b
 
   client.child.stdin.write(Buffer.from(`${'x'.repeat(1_048_577)}\n${JSON.stringify({ jsonrpc: '2.0', id: 'after-complete-limit', method: 'tools/list' })}\n`));
   assert.equal((await client.waitFor((message) => message.id === null)).error.code, -32700);
-  assert.equal((await client.waitFor((message) => message.id === 'after-complete-limit')).result.tools.length, 10);
+  assert.equal((await client.waitFor((message) => message.id === 'after-complete-limit')).result.tools.length, 12);
 
   client.child.stdin.write(Buffer.alloc(1_048_577, 0x61));
   assert.equal((await client.waitFor((message) => message.id === null)).error.code, -32700);
   client.child.stdin.write(Buffer.from(`discarded remainder\n${JSON.stringify({ jsonrpc: '2.0', id: 'after-limit', method: 'tools/list' })}\r\n`));
-  assert.equal((await client.waitFor((message) => message.id === 'after-limit')).result.tools.length, 10);
+  assert.equal((await client.waitFor((message) => message.id === 'after-limit')).result.tools.length, 12);
 });
 
 test('MCP server fails closed when its packaged manifest version is corrupted', async (t) => {

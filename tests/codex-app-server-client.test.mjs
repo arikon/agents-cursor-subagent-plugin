@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { once } from 'node:events';
+import { EventEmitter, once } from 'node:events';
 import { fileURLToPath } from 'node:url';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
@@ -19,7 +19,9 @@ test('versioned golden fixes the admitted persistent-turn and skill-load surface
     provider_capability: { namespace_tools: true }, model_visible_tool: { type: 'namespace' },
     loaded_call: { type: 'function_call', fields: ['namespace', 'name', 'arguments', 'call_id'], namespace_source: 'declared_namespace' },
     confirmed_sequence: ['cursor_delegate', 'cursor_wait', 'cursor_close_session'],
-    reported_outcome_evidence: { turn_status: 'completed', turn_identity: 'exact turn/start id', agent_messages: ['CURSOR_EVAL_OK'] },
+    reported_outcome_evidence: { turn_status: 'completed', turn_identity: 'exact turn/start id',
+      agent_message_phase: ['commentary', 'final_answer', null],
+      selection: 'last final_answer; otherwise last phase-null message in the exact terminal turn', terminal_text: 'CURSOR_EVAL_OK' },
     unrelated_features: ['tool_search', 'tool_suggest', 'deferred_executor', 'deferred_tool_world_state'],
     unsupported_config_keys: ['tools.deferred_namespaces'],
   });
@@ -263,8 +265,30 @@ test('app-server client closes a cooperative process gracefully', async () => {
 });
 
 test('app-server client escalates shutdown when the process ignores TERM', { timeout: 1_000 }, async () => {
-  const hung = new CodexAppServerClient(process.execPath, [fake], { ...process.env, FAKE_APP_SERVER_MODE: 'hang-close' }, { closeGraceMs: 10, killGraceMs: 10 });
+  const hung = new CodexAppServerClient(process.execPath, [fake], { ...process.env, FAKE_APP_SERVER_MODE: 'hang-close' }, { closeGraceMs: 10, killGraceMs: 10, closeConfirmMs: 100 });
+  let observedClose = false;
+  hung.child.once('close', () => { observedClose = true; });
   await hung.close();
+  assert.equal(observedClose, true);
+  assert.ok(hung.child.exitCode !== null || hung.child.signalCode !== null);
+});
+
+test('app-server client rejects shutdown when close is not observed after SIGKILL', async () => {
+  const client = new CodexAppServerClient(process.execPath, [fake]);
+  const spawned = client.child;
+  spawned.kill('SIGKILL');
+  if (spawned.exitCode === null && spawned.signalCode === null) await once(spawned, 'close');
+  const inert = new EventEmitter();
+  inert.stdin = { end() {} };
+  inert.kill = () => true;
+  inert.exitCode = null;
+  inert.signalCode = null;
+  client.child = inert;
+  client.closeGraceMs = 1;
+  client.killGraceMs = 1;
+  client.closeConfirmMs = 5;
+  await assert.rejects(client.close(), /did not close after SIGKILL/);
+  await assert.rejects(client.close(), /did not close after SIGKILL/);
 });
 
 test('app-server client rejects requests after shutdown', async () => {

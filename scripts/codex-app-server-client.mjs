@@ -12,6 +12,7 @@ export class CodexAppServerClient {
     this.requestTimeoutMs = options.requestTimeoutMs ?? 10_000;
     this.closeGraceMs = options.closeGraceMs ?? 1_000;
     this.killGraceMs = options.killGraceMs ?? 1_000;
+    this.closeConfirmMs = options.closeConfirmMs ?? 1_000;
     this.nextId = 1;
     this.pending = new Map();
     this.notifications = [];
@@ -21,6 +22,7 @@ export class CodexAppServerClient {
     this.stderr = [];
     this.outputBytes = 0;
     this.closed = false;
+    this.closePromise = null;
     this.child.stderr.on('data', (chunk) => this.stderr.push(chunk));
     const rejectAll = (error) => {
       for (const { reject, timer } of this.pending.values()) { clearTimeout(timer); reject(error); }
@@ -115,16 +117,27 @@ export class CodexAppServerClient {
   }
 
   async close() {
-    if (this.closed) return;
+    if (this.closePromise) return this.closePromise;
     this.closed = true;
     this.child.stdin.end();
-    await new Promise((resolve) => {
-      let killTimer;
+    this.closePromise = new Promise((resolve, reject) => {
+      let killTimer; let confirmTimer;
+      const finish = (result) => {
+        clearTimeout(termTimer); clearTimeout(killTimer); clearTimeout(confirmTimer);
+        this.child.removeListener('close', onClose);
+        result();
+      };
+      const onClose = () => finish(resolve);
       const termTimer = setTimeout(() => {
         this.child.kill('SIGTERM');
-        killTimer = setTimeout(() => { this.child.kill('SIGKILL'); resolve(); }, this.killGraceMs);
+        killTimer = setTimeout(() => {
+          this.child.kill('SIGKILL');
+          confirmTimer = setTimeout(() => finish(() => reject(new Error('Codex app-server did not close after SIGKILL'))), this.closeConfirmMs);
+        }, this.killGraceMs);
       }, this.closeGraceMs);
-      this.child.once('close', () => { clearTimeout(termTimer); clearTimeout(killTimer); resolve(); });
+      this.child.once('close', onClose);
+      if (this.child.exitCode !== null || this.child.signalCode !== null) finish(resolve);
     });
+    return this.closePromise;
   }
 }

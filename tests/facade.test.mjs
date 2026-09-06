@@ -28,6 +28,29 @@ function facadeHarness({ startResult, startError, promptResult, promptError } = 
   return { runtime, transcript };
 }
 
+test('cursor_delegate forwards optional launch parameters exactly once', async () => {
+  const startResult = { session_id: 'session-full-id', session_state: 'live', cursor_session_id: 'cursor-full-id', model: 'grok-4.6', effort: 'high', fast: true };
+  const promptResult = { ...startResult, turn_id: 'turn-full-id', turn_status: 'running' };
+  const { runtime, transcript } = facadeHarness({ startResult, promptResult });
+
+  const result = await runtime.call('cursor_delegate', {
+    cwd, mode: 'agent', prompt: 'Implement the task', model: 'grok-4.6', effort: 'high', fast: true,
+    plugin_dirs: [cwd],
+  });
+
+  assert.deepEqual(result, {
+    ...promptResult,
+    cursor_session_id: 'cursor-full-id',
+    model: 'grok-4.6',
+    effort: 'high',
+    fast: true,
+  });
+  assert.deepEqual(transcript, [
+    { tool: 'cursor_start_session', args: { cwd, mode: 'agent', model: 'grok-4.6', effort: 'high', fast: true, plugin_dirs: [cwd] } },
+    { tool: 'cursor_send_prompt', args: { session_id: 'session-full-id', prompt: 'Implement the task' } },
+  ]);
+});
+
 test('cursor_delegate performs exactly one start and one first prompt without wait or retry', async () => {
   const startResult = { session_id: 'session-full-id', session_state: 'live' };
   const promptResult = { ...startResult, turn_id: 'turn-full-id', turn_status: 'running' };

@@ -112,9 +112,18 @@ async function main() {
     { path: `plugins/${ID}/.mcp.json`, content_base64: Buffer.from(JSON.stringify({ mcpServers: { 'cursor-subagent': { command: request.node_executable,
       args: [join(request.install_root, 'scripts/recording-mcp-proxy.mjs'), join(request.install_root, 'scripts/cursor-subagent-mcp.mjs')], env: { CURSOR_AGENT_COMMAND: request.agent_executable,
         AGENT_CLI_CREDENTIAL_STORE: 'file', CURSOR_SUBAGENT_ALLOWED_ROOTS: JSON.stringify(request.allowed_workspace_roots),
-        ...(process.env.CURSOR_EVAL_MCP_EVIDENCE ? { CURSOR_EVAL_MCP_EVIDENCE: process.env.CURSOR_EVAL_MCP_EVIDENCE } : {}) } } } })).toString('base64') },
+        ...(process.env.CURSOR_EVAL_MCP_EVIDENCE ? { CURSOR_EVAL_MCP_EVIDENCE: process.env.CURSOR_EVAL_MCP_EVIDENCE } : {}),
+        ...(process.env.CURSOR_EVAL_SCENARIO_ID ? { CURSOR_EVAL_SCENARIO_ID: process.env.CURSOR_EVAL_SCENARIO_ID } : {}),
+        ...(process.env.CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH ? { CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH: process.env.CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH } : {}),
+        ...(process.env.CURSOR_EVAL_INJECT_STALE_QUESTION_ONCE === '1' ? { CURSOR_EVAL_INJECT_STALE_QUESTION_ONCE: '1' } : {}),
+        ...(process.env.CURSOR_EVAL_INJECT_MODE_PROTOCOL_ERROR_ONCE === '1' ? { CURSOR_EVAL_INJECT_MODE_PROTOCOL_ERROR_ONCE: '1' } : {}),
+        ...(process.env.CURSOR_EVAL_TIMEOUT_PRELOAD ? { NODE_OPTIONS: `--import=${process.env.CURSOR_EVAL_TIMEOUT_PRELOAD}` } : {}),
+        ...(process.env.FAKE_ACP_ACCELERATE_TURN_TIMEOUT === '1' ? { FAKE_ACP_ACCELERATE_TURN_TIMEOUT: '1' } : {}),
+        ...(process.env.FAKE_ACP_ACCELERATE_MODE_TIMEOUT === '1' ? { FAKE_ACP_ACCELERATE_MODE_TIMEOUT: '1' } : {}),
+        ...(process.env.FAKE_ACP_ACCELERATE_WAIT_TIMEOUT === '1' ? { FAKE_ACP_ACCELERATE_WAIT_TIMEOUT: '1' } : {}),
+        ...(process.env.CURSOR_EVAL_EXPECTED_PLUGIN_DIRS_SHA256 ? { CURSOR_EVAL_EXPECTED_PLUGIN_DIRS_SHA256: process.env.CURSOR_EVAL_EXPECTED_PLUGIN_DIRS_SHA256 } : {}) } } } })).toString('base64') },
   ] };
-  if (operation === 'canary-prompt') return { prompt: `Create or replace only ${request.marker_path} with ${JSON.stringify(request.marker_bytes)} and do not modify anything else.` };
+  if (operation === 'canary-prompt') return { prompt: `AUTHORIZED_ACTIONS: write ${request.marker_path} with exact content ${JSON.stringify(request.marker_bytes)} only.\nNO_SCOPE_EXPANSION: make no other changes; stop and report any required expansion.` };
   if (operation === 'marketplace-add') { const result = await json(['plugin', 'marketplace', 'add', request.path, '--json']); if (result.marketplaceName !== request.id) throw new Error('marketplace add schema drift'); return { ok: true }; }
   if (operation === 'marketplace-remove') { const result = await json(['plugin', 'marketplace', 'remove', request.id, '--json']); if (result.marketplaceName !== request.id) throw new Error('marketplace remove schema drift'); return { ok: true }; }
   const selector = `${request.id}@${request.marketplace_id}`;

@@ -113,7 +113,7 @@ if (operation === 'admit') {
   const auth_state = verified && authenticated ? 'authenticated' : verified && required ? 'required' : 'unknown';
   reply({ ok: verified, verified, auth_state, message: `cursor agent status: ${authenticated ? 'authenticated' : required ? 'authentication required' : 'unknown'}` });
 } else if (operation === 'canary-prompt') {
-  reply({ prompt: `Create or replace only the regular file ${request.marker_path} with the exact UTF-8 bytes ${JSON.stringify(request.marker_bytes)}. Do not modify any other path.` });
+  reply({ prompt: `AUTHORIZED_ACTIONS: write ${request.marker_path} with exact content ${JSON.stringify(request.marker_bytes)} only.\nNO_SCOPE_EXPANSION: make no other changes; stop and report any required expansion.` });
 } else if (operation === 'marketplace-add') {
   state.mutations.push(operation);
   if (process.env.FAKE_CODEX_NOOP_OPERATION !== operation) {

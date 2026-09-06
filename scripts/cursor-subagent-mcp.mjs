@@ -1,30 +1,50 @@
 #!/usr/bin/env node
 import { spawn } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { lstatSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, relative, resolve } from 'node:path';
 
 // Runtime-owned, fixed bounds. They deliberately are not operator settings.
-export const LIMITS = Object.freeze({ initMs: 15_000, turnMs: 600_000, idleMs: 900_000,
-  waitDefaultMs: 30_000, waitMinMs: 1_000, waitMaxMs: 60_000, live: 8, pending: 8,
+export const LIMITS = Object.freeze({ initMs: 15_000, turnMs: 3_600_000, idleMs: 900_000,
+  waitDefaultMs: 30_000, waitMinMs: 1_000, waitMaxMs: 180_000, live: 8, pending: 8,
   waiters: 8, tombstones: 64, events: 256, graceMs: 5_000, retentionMs: 300_000,
-  inputBytes: 64_000, textBytes: 8_000, fsBytes: 1_048_576, frameBytes: 1_048_576 });
+  inputBytes: 64_000, textBytes: 8_000, progressBytes: 512, fsBytes: 1_048_576, frameBytes: 1_048_576 });
 const MCP_VERSION = '2024-11-05';
+const ADMITTED_TASK_SUBAGENT_TYPES = new Set(['computer_use', 'explore', 'video_review', 'browser_use', 'shell', 'vm_setup_helper', 'unspecified']);
 
 export class DomainError extends Error {
-  constructor(error_code, message) { super(message); this.error_code = error_code; }
+  constructor(error_code, message, extras = {}) { super(message); this.error_code = error_code; Object.assign(this, extras); }
 }
-const fail = (code, message) => { throw new DomainError(code, message); };
+const fail = (code, message, extras = {}) => { throw new DomainError(code, message, extras); };
 const bytes = (value) => Buffer.byteLength(value, 'utf8');
 const validText = (value) => typeof value === 'string' && Buffer.from(value, 'utf8').toString('utf8') === value;
+const exactKeys = (value, allowed) => Object.keys(value).every((key) => allowed.includes(key));
 const decoder = new TextDecoder('utf-8', { fatal: true });
 function bounded(value, limit = LIMITS.textBytes) {
-  const source = String(value ?? '');
+  const source = Buffer.from(String(value ?? ''), 'utf8').toString('utf8');
   if (bytes(source) <= limit) return { text: source, truncated: false };
-  let end = Math.min(source.length, limit);
-  while (end && bytes(source.slice(0, end)) > limit - 3) end -= 1;
-  return { text: `${source.slice(0, end)}…`, truncated: true };
+  const suffix = '…';
+  const contentLimit = limit - bytes(suffix);
+  let text = '';
+  let textBytes = 0;
+  for (const character of source) {
+    const characterBytes = bytes(character);
+    if (textBytes + characterBytes > contentLimit) break;
+    text += character;
+    textBytes += characterBytes;
+  }
+  return { text: `${text}${suffix}`, truncated: true };
 }
+function providerError(error) {
+  if (!error || Array.isArray(error) || typeof error !== 'object'
+    || !Number.isSafeInteger(error.code)) return new DomainError('protocol_error', 'invalid ACP provider error');
+  const message = typeof error.message === 'string' && validText(error.message) && error.message
+    ? bounded(error.message) : bounded('ACP provider error');
+  return new DomainError('protocol_error', 'ACP provider error', {
+    provider_error: { code: error.code, message },
+  });
+}
+const hasProviderError = (error) => error instanceof DomainError && Boolean(error.provider_error);
 function assertObject(value, keys, required) {
   if (!value || Array.isArray(value) || typeof value !== 'object') fail('invalid_args', 'arguments must be an object');
   for (const key of Object.keys(value)) if (!keys.includes(key)) fail('invalid_args', `unknown argument: ${key}`);
@@ -52,12 +72,14 @@ function readRoots(env) {
   }))];
 }
 const cursorCommand = (env) => env.CURSOR_AGENT_COMMAND || 'agent';
-function cursorArgs(env) {
-  if (!env.CURSOR_SUBAGENT_ADAPTER_ARGS) return ADAPTER.argv;
+function cursorArgs(env, launch = DEFAULT_LAUNCH) {
+  const modelArgv = ADAPTER.modelArgv(launch);
+  const pluginArgv = ADAPTER.pluginArgv(launch.plugin_dirs);
+  if (!env.CURSOR_SUBAGENT_ADAPTER_ARGS) return ADAPTER.sessionArgv(modelArgv, pluginArgv);
   try {
     const args = JSON.parse(env.CURSOR_SUBAGENT_ADAPTER_ARGS);
     if (!Array.isArray(args) || !args.every((value) => typeof value === 'string')) throw new Error();
-    return [...args, ...ADAPTER.fixturePolicyArgv];
+    return [...args, ...ADAPTER.fixturePolicyArgv, ...modelArgv, ...pluginArgv];
   } catch { throw new Error('invalid adapter fixture arguments'); }
 }
 function cursorVersionArgs(env) {
@@ -69,26 +91,107 @@ function cursorVersionArgs(env) {
   } catch { throw new Error('invalid adapter fixture arguments'); }
 }
 
+function manifestVersion() {
+  const manifest = JSON.parse(readFileSync(new URL('../.codex-plugin/plugin.json', import.meta.url), 'utf8'));
+  if (!validText(manifest?.version) || !/^\d+\.\d+\.\d+(?:[+-][0-9A-Za-z.-]+)?$/.test(manifest.version)) throw new Error('plugin manifest has no valid version');
+  return manifest.version.replace(/\+codex\.[\da-f]+$/, '');
+}
+export const MANIFEST_VERSION = manifestVersion();
+
 // Version-specific ACP wire adapter. Product tools never expose these forms.
-const CURSOR_ADAPTER_VERSION = '2026.08.25-3e8eec8';
-const ADAPTER = Object.freeze({
+export const CURSOR_ADAPTER_VERSION = '2026.08.25-3e8eec8';
+const DEFAULT_MODEL = Object.freeze({ model: 'auto', effort: null, fast: null });
+const DEFAULT_LAUNCH = Object.freeze({ ...DEFAULT_MODEL, plugin_dirs: [] });
+const admittedModeState = (result) => {
+  const current = result?.modes?.currentModeId;
+  const available = result?.modes?.availableModes;
+  return ['ask', 'plan', 'agent'].includes(current)
+    && Array.isArray(available)
+    && ['ask', 'plan', 'agent'].every((mode) => available.some((entry) => entry?.id === mode));
+};
+export const ADAPTER = Object.freeze({
   cursorVersion: CURSOR_ADAPTER_VERSION,
-  argv: ['--auto-review', '--sandbox', 'enabled', 'acp'],
   fixturePolicyArgv: ['--auto-review', '--sandbox', 'enabled'],
-  initialize: (mode) => ({ protocolVersion: 1, clientCapabilities: { fs: { readTextFile: true, writeTextFile: mode === 'agent' }, terminal: false }, clientInfo: { name: 'codex-cursor-subagent-plugin', version: '0.1.0' } }),
-  methods: { auth: 'authenticate', sessionNew: 'session/new', setMode: 'session/set_mode', prompt: 'session/prompt', cancel: 'session/cancel', read: 'fs/read_text_file', write: 'fs/write_text_file' },
+  modelArgv: ({ model, effort, fast }) => {
+    const parameters = [
+      ...(effort == null ? [] : [`effort=${effort}`]),
+      ...(fast == null ? [] : [`fast=${fast}`]),
+    ];
+    return ['--model', parameters.length ? `${model}[${parameters.join(',')}]` : model];
+  },
+  pluginArgv: (roots) => roots.flatMap((root) => ['--plugin-dir', root]),
+  sessionArgv: (modelArgv, pluginArgv = []) => ['--auto-review', '--sandbox', 'enabled', ...modelArgv, ...pluginArgv, 'acp'],
+  initialize: () => ({ protocolVersion: 1, clientCapabilities: { fs: { readTextFile: true, writeTextFile: true }, terminal: false }, clientInfo: { name: 'codex-cursor-subagent-plugin', version: MANIFEST_VERSION } }),
+  methods: { auth: 'authenticate', sessionNew: 'session/new', sessionLoad: 'session/load', setMode: 'session/set_mode', prompt: 'session/prompt', cancel: 'session/cancel', todos: 'cursor/update_todos', task: 'cursor/task', image: 'cursor/generate_image', read: 'fs/read_text_file', write: 'fs/write_text_file' },
+  loadParams: (sessionId, cwd) => ({ sessionId, cwd, mcpServers: [] }),
+  admitModeState: admittedModeState,
+  admitLoadResult: (result) => !Object.hasOwn(result || {}, 'sessionId') && admittedModeState(result),
+  admitSetModeResult: (result) => result === undefined || (result && typeof result === 'object' && !Array.isArray(result) && Object.keys(result).length === 0),
+  admitTodos(params) {
+    if (!params || Array.isArray(params) || typeof params !== 'object') return null;
+    if (!exactKeys(params, ['toolCallId', 'todos', 'merge'])
+      || !validText(params.toolCallId) || !params.toolCallId) return null;
+    if (typeof params.merge !== 'boolean') return null;
+    if (!Array.isArray(params.todos) || params.todos.length === 0) return null;
+    const seen = new Set();
+    const todos = [];
+    for (const item of params.todos) {
+      if (!item || Array.isArray(item) || typeof item !== 'object') return null;
+      if (!exactKeys(item, ['id', 'content', 'status'])) return null;
+      if (!validText(item.id) || !item.id || seen.has(item.id)) return null;
+      seen.add(item.id);
+      if (typeof item.content !== 'string' || !validText(item.content)) return null;
+      if (!['pending', 'in_progress', 'completed', 'cancelled'].includes(item.status)) return null;
+      todos.push({ id: item.id, content: bounded(item.content), status: item.status });
+    }
+    return { merge: params.merge === true, todos };
+  },
+  admitTask(params) {
+    if (!params || Array.isArray(params) || typeof params !== 'object') return null;
+    if (!exactKeys(params, ['toolCallId', 'description', 'prompt', 'subagentType', 'model', 'agentId', 'durationMs'])
+      || !validText(params.toolCallId) || !params.toolCallId) return null;
+    const description = params.description;
+    if (typeof description !== 'string' || !validText(description)) return null;
+    if (typeof params.prompt !== 'string' || !validText(params.prompt)) return null;
+    const rawType = params.subagentType;
+    const customType = rawType && !Array.isArray(rawType) && typeof rawType === 'object'
+      && Object.keys(rawType).length === 1 ? rawType.custom : undefined;
+    const type = typeof rawType === 'string' && ADMITTED_TASK_SUBAGENT_TYPES.has(rawType) ? rawType : customType;
+    if (type !== undefined && (!validText(type) || !type)) return null;
+    if (rawType === undefined || type === undefined) return null;
+    const model = params.model;
+    if (model !== undefined && (typeof model !== 'string' || !validText(model))) return null;
+    if (params.agentId !== undefined && (typeof params.agentId !== 'string' || !validText(params.agentId))) return null;
+    const duration = params.durationMs;
+    if (duration !== undefined && (!Number.isFinite(duration) || duration < 0)) return null;
+    return {
+      description: bounded(description),
+      ...(type !== undefined ? { type: bounded(type) } : {}),
+      ...(model !== undefined ? { model: bounded(model) } : {}),
+      ...(duration !== undefined ? { duration } : {}),
+    };
+  },
+  admitImage(params) {
+    if (!params || Array.isArray(params) || typeof params !== 'object') return null;
+    if (!exactKeys(params, ['toolCallId', 'description', 'filePath', 'referenceImagePaths'])
+      || !validText(params.toolCallId) || !params.toolCallId) return null;
+    const description = params.description;
+    const path = params.filePath;
+    if (typeof description !== 'string' || !validText(description)) return null;
+    if (path !== undefined && (typeof path !== 'string' || !validText(path) || !path)) return null;
+    if (params.referenceImagePaths !== undefined && (!Array.isArray(params.referenceImagePaths)
+      || !params.referenceImagePaths.every((value) => typeof value === 'string' && validText(value)))) return null;
+    if (!description && path === undefined) return null;
+    return {
+      ...(description ? { description: bounded(description) } : {}),
+      ...(path !== undefined ? { path: bounded(path) } : {}),
+    };
+  },
   admitInitialize: (result, installedVersion) => result?.protocolVersion === 1
     && installedVersion === CURSOR_ADAPTER_VERSION
     && Array.isArray(result.authMethods)
     && result.authMethods.some((method) => method?.id === 'cursor_login')
-    && result.agentCapabilities?.loadSession === true
-    && result.agentCapabilities?.mcpCapabilities?.http === true
-    && result.agentCapabilities?.mcpCapabilities?.sse === true
-    && result.agentCapabilities?.promptCapabilities?.audio === false
-    && result.agentCapabilities?.promptCapabilities?.embeddedContext === false
-    && result.agentCapabilities?.promptCapabilities?.image === true
-    && result.agentCapabilities?.sessionCapabilities?.list
-    && typeof result.agentCapabilities.sessionCapabilities.list === 'object',
+    && result.agentCapabilities?.loadSession === true,
   permissionChoices(options) {
     if (!Array.isArray(options)) return null;
     const bySemantic = new Map();
@@ -136,15 +239,51 @@ function normalizePending(kind, params = {}) {
 }
 function derivedId(value) { if (!validText(value) || !value || bytes(value) > LIMITS.inputBytes) throw new Error('invalid opaque id'); return value; }
 function derivedText(value) { if (!validText(value)) throw new Error('invalid UTF-8 text'); return bounded(value); }
+function admitModelParams(args) {
+  const model = args.model === undefined ? 'auto' : text(args.model, 'model');
+  const effort = args.effort === undefined ? null : text(args.effort, 'effort');
+  const fast = args.fast === undefined ? null : typeof args.fast === 'boolean' ? args.fast : fail('invalid_args', 'invalid fast');
+  if (effort !== null && !/^[A-Za-z0-9._-]+$/.test(effort)) fail('invalid_args', 'invalid effort token');
+  if (/[\[\]]/.test(model)) fail('invalid_args', 'model must not contain parameter brackets');
+  return { model, effort, fast };
+}
+function admitLaunchParams(args, canonicalPluginDir) {
+  if (args.plugin_dirs === undefined) return { ...admitModelParams(args), plugin_dirs: [] };
+  if (!Array.isArray(args.plugin_dirs) || !args.plugin_dirs.length) fail('invalid_args', 'plugin_dirs must be a nonempty array');
+  const plugin_dirs = [];
+  for (const root of args.plugin_dirs) {
+    const canonical = canonicalPluginDir(root);
+    if (!plugin_dirs.includes(canonical)) plugin_dirs.push(canonical);
+  }
+  return { ...admitModelParams(args), plugin_dirs };
+}
+function captureTerminalReceipt(session, turn) {
+  turn.terminal_receipt = {
+    session_id: session.id, turn_id: turn.turn_id, turn_status: turn.turn_status, last_event_id: session.nextEvent - 1,
+    result_sha256: turn.result == null ? null : createHash('sha256').update(turn.result.text, 'utf8').digest('hex'),
+    result_truncated: Boolean(turn.result?.truncated),
+  };
+  return turn.terminal_receipt;
+}
+function terminalReceipt(_session, turn) {
+  return turn?.terminal_receipt ?? undefined;
+}
+const MODEL_KEYS = ['model', 'effort', 'fast'];
+const LAUNCH_KEYS = [...MODEL_KEYS, 'plugin_dirs'];
 
 class SessionRecord {
-  constructor(runtime, cwd, mode) {
+  constructor(runtime, cwd, mode, launch = DEFAULT_LAUNCH) {
     this.runtime = runtime; this.id = randomUUID(); this.cwd = cwd; this.mode = mode;
+    this.model = launch.model; this.effort = launch.effort; this.fast = launch.fast;
+    this.plugin_dirs = launch.plugin_dirs;
     this.run_mode = 'auto_review'; this.sandbox = 'enabled'; this.session_state = 'starting';
     this.failure_kind = null; this.terminal_reason = null; this.active = null; this.last = null;
+    this.provider_error = null;
     this.events = []; this.nextEvent = 1; this.waiters = new Set(); this.rpc = new Map(); this.rpcId = 1;
     this.child = null; this.shutdownPromise = null; this.tombstonedAt = null; this.idleTimer = null;
-    this.admissionOpen = false; this.adapterCancelSent = false;
+    this.admissionOpen = false; this.adapterCancelSent = false; this.modeTransition = false;
+    this.cursor_session_id = null; this.resumeCursorSessionId = null;
+    this.terminalWaitDelivered = false;
   }
   emit(kind, turn_id, payload) {
     const event = { event_id: this.nextEvent++, kind, turn_id, payload };
@@ -153,18 +292,73 @@ class SessionRecord {
   sessionState(to) { const from = this.session_state; if (from === to) return; this.session_state = to; this.emit('lifecycle', null, { scope: 'session', from, to }); }
   turnState(turn, to) { const from = turn.turn_status; if (from === to) return; turn.turn_status = to; this.emit('lifecycle', turn.turn_id, { scope: 'turn', from, to }); }
   snapshot(turn) { return !turn ? null : { turn_id: turn.turn_id, turn_status: turn.turn_status, result: turn.result, terminal_reason: turn.terminal_reason, pending: [...turn.pending.values()].map((pending) => ({ request_id: pending.request_id, kind: pending.kind, context: pending.context })) }; }
-  envelope(turn = null) { return { session_id: this.id, session_state: this.session_state, cwd: this.cwd, mode: this.mode, run_mode: this.run_mode, sandbox: this.sandbox, failure_kind: this.failure_kind, terminal_reason: this.terminal_reason, last_event_id: this.nextEvent - 1, active_turn: this.snapshot(this.active), last_terminal_turn: this.snapshot(this.last), ...(turn ? { turn_id: turn.turn_id, turn_status: turn.turn_status } : {}) }; }
-  waitEnvelope(turn, after, wait_timeout) {
+  deliveredReceipt() { return this.last && this.terminalWaitDelivered ? terminalReceipt(this, this.last) : undefined; }
+  envelope(turn = null, { redactLast = false, includeReceipt = false } = {}) {
+    const last = redactLast ? null : this.snapshot(this.last);
+    const receipt = includeReceipt && this.last ? terminalReceipt(this, this.last) : undefined;
+    return {
+      session_id: this.id, session_state: this.session_state, cwd: this.cwd, mode: this.mode,
+      model: this.model, effort: this.effort, fast: this.fast,
+      plugin_dirs: this.plugin_dirs,
+      cursor_session_id: this.cursor_session_id, run_mode: this.run_mode, sandbox: this.sandbox,
+      failure_kind: this.failure_kind, terminal_reason: this.terminal_reason, last_event_id: this.nextEvent - 1,
+      ...(this.provider_error ? { provider_error: this.provider_error } : {}),
+      active_turn: this.snapshot(this.active), last_terminal_turn: last,
+      ...(receipt ? { terminal_receipt: receipt } : {}),
+      ...(turn ? { turn_id: turn.turn_id, turn_status: turn.turn_status } : {}),
+    };
+  }
+  actionEnvelope(turn = null, extra = {}) {
+    const terminal = turn && ['completed', 'failed', 'timed_out', 'cancelled'].includes(turn.turn_status) ? terminalReceipt(this, turn) : this.deliveredReceipt();
+    return {
+      session_id: this.id,
+      session_state: this.session_state,
+      last_event_id: this.nextEvent - 1,
+      ...(turn ? { turn_id: turn.turn_id, turn_status: turn.turn_status } : {}),
+      ...(terminal ? { terminal_receipt: terminal } : {}),
+      ...extra,
+    };
+  }
+  waitEnvelope(turn, after, wait_timeout, after_progress_revision = 0) {
     const earliest = this.events.length ? this.events[0].event_id : null;
     const events_lost = Boolean(earliest && after < earliest - 1);
     const events = this.events.filter((event) => event.event_id > after && (event.turn_id === turn.turn_id || event.turn_id === null));
-    return { ...this.envelope(turn), events, earliest_event_id: earliest, events_lost, wait_timeout };
+    const last_event_id = this.nextEvent - 1;
+    const terminal = ['completed', 'failed', 'timed_out', 'cancelled'].includes(turn.turn_status);
+    const deliverTerminal = terminal && this.last === turn && !this.terminalWaitDelivered;
+    if (deliverTerminal) this.terminalWaitDelivered = true;
+    const envelope = {
+      session_id: this.id, turn_id: turn.turn_id, turn_status: turn.turn_status,
+      session_state: this.session_state, last_event_id, resume_after_event_id: last_event_id,
+      wait_timeout, events_lost,
+    };
+    if (events.length) envelope.events = events;
+    if (events_lost) envelope.earliest_event_id = earliest;
+    if (turn.pending.size) {
+      envelope.pending = [...turn.pending.values()].map(({ request_id, kind, context }) => ({ request_id, kind, context }));
+    }
+    if (deliverTerminal) {
+      if (turn.result) envelope.result = turn.result;
+      if (turn.terminal_reason) envelope.terminal_reason = turn.terminal_reason;
+      envelope.terminal_receipt = terminalReceipt(this, turn);
+      if (this.provider_error) envelope.provider_error = this.provider_error;
+    }
+    if (wait_timeout) {
+      const revision = turn.progress_revision || 0;
+      if (revision > after_progress_revision) {
+        envelope.progress_revision = revision;
+        if (turn.progress_excerpt) envelope.progress_excerpt = turn.progress_excerpt;
+      }
+    }
+    return envelope;
   }
   async start() {
     const initStartedAt = Date.now();
     try {
       this.installedCursorVersion = await this.withTimeout(this.probeCursorVersion(), LIMITS.initMs, 'init_timeout');
-      this.child = spawn(cursorCommand(this.runtime.env), cursorArgs(this.runtime.env), { cwd: this.cwd, stdio: ['pipe', 'pipe', 'pipe'], env: this.runtime.env });
+      this.child = spawn(cursorCommand(this.runtime.env), cursorArgs(this.runtime.env, {
+        model: this.model, effort: this.effort, fast: this.fast, plugin_dirs: this.plugin_dirs,
+      }), { cwd: this.cwd, stdio: ['pipe', 'pipe', 'pipe'], env: this.runtime.env });
       this.child.stderr.resume();
       this.child.stdin.on('error', () => this.transportFailure('child stdin EPIPE'));
       this.attachStdout();
@@ -175,7 +369,7 @@ class SessionRecord {
       await this.withTimeout(this.initialize(), remaining, 'init_timeout');
       if (this.session_state === 'starting') { this.admissionOpen = true; this.sessionState('live'); this.armIdle(); }
     } catch (error) {
-      if (this.session_state === 'starting') await this.initFailure(error instanceof DomainError ? error.error_code : 'init');
+      if (this.session_state === 'starting') await this.initFailure(error);
       else if (this.shutdownPromise) await this.shutdownPromise;
     }
   }
@@ -221,12 +415,30 @@ class SessionRecord {
     const initialized = await this.request('initialize', ADAPTER.initialize(this.mode));
     if (!ADAPTER.admitInitialize(initialized, this.installedCursorVersion)) fail('protocol_error', 'ACP adapter admission failed');
     await this.request(ADAPTER.methods.auth, { methodId: 'cursor_login' });
+    if (this.resumeCursorSessionId) {
+      const loaded = await this.request(ADAPTER.methods.sessionLoad, ADAPTER.loadParams(this.resumeCursorSessionId, this.cwd));
+      if (!ADAPTER.admitLoadResult(loaded, this.resumeCursorSessionId)) fail('protocol_error', 'ACP session/load result is not admitted');
+      this.cursorSessionId = this.resumeCursorSessionId;
+      this.cursor_session_id = this.resumeCursorSessionId;
+      if (loaded.modes?.currentModeId && loaded.modes.currentModeId !== this.mode) {
+        await this.applyProviderMode(this.mode);
+      }
+      return;
+    }
     const created = await this.request(ADAPTER.methods.sessionNew, { cwd: this.cwd, mcpServers: [] });
     if (!validText(created?.sessionId) || !created.sessionId) fail('protocol_error', 'ACP session/new returned invalid session ID');
-    const admittedModes = created.modes?.availableModes?.map((mode) => mode.id);
-    if (!Array.isArray(admittedModes) || !['ask', 'plan', 'agent'].every((mode) => admittedModes.includes(mode))) fail('protocol_error', 'ACP adapter mode admission failed');
+    if (!ADAPTER.admitModeState(created)) fail('protocol_error', 'ACP adapter mode admission failed');
     this.cursorSessionId = created.sessionId;
-    if (created.modes.currentModeId !== this.mode) await this.request(ADAPTER.methods.setMode, { sessionId: this.cursorSessionId, modeId: this.mode });
+    this.cursor_session_id = created.sessionId;
+    if (created.modes.currentModeId !== this.mode) await this.applyProviderMode(this.mode);
+  }
+  async applyProviderMode(mode) {
+    const result = await this.withTimeout(
+      this.request(ADAPTER.methods.setMode, { sessionId: this.cursorSessionId, modeId: mode }),
+      LIMITS.initMs,
+      'mode_timeout',
+    );
+    if (!ADAPTER.admitSetModeResult(result)) fail('protocol_error', 'ACP session/set_mode response is not admitted');
   }
   send(message) { if (!this.child?.stdin.writable) fail('protocol_error', 'ACP stdin is closed'); this.child.stdin.write(`${JSON.stringify(message)}\n`, (error) => { if (error) this.transportFailure('child stdin EPIPE'); }); }
   sendConfirmed(message) {
@@ -249,17 +461,23 @@ class SessionRecord {
   }
   respond(id, result) { this.send({ jsonrpc: '2.0', id, result }); }
   respondError(id, error_code, message) { try { this.send({ jsonrpc: '2.0', id, error: { code: -32602, message, data: { error_code } } }); } catch { /* shutdown abandons closed transport */ } }
+  acknowledgeCollaboration(id) { try { this.respond(id, {}); } catch { /* shutdown abandons closed transport */ } }
   receive(line) {
     let message; try { message = JSON.parse(line); } catch { return this.transportFailure('invalid ACP JSON'); }
     if (!message || Array.isArray(message) || typeof message !== 'object' || message.jsonrpc !== '2.0') return this.transportFailure('invalid ACP JSON-RPC frame');
     if (Object.hasOwn(message, 'id') && !message.method) {
-      if (!Object.hasOwn(message, 'result') && !Object.hasOwn(message, 'error')) return this.transportFailure('invalid ACP response');
-      const waiter = this.rpc.get(String(message.id)); if (!waiter) return; this.rpc.delete(String(message.id)); message.error ? waiter.reject(new Error(message.error.message || 'ACP error')) : waiter.resolve(message.result); return;
+      const hasResult = Object.hasOwn(message, 'result'); const hasError = Object.hasOwn(message, 'error');
+      if (hasResult === hasError) return this.transportFailure('invalid ACP response');
+      const waiter = this.rpc.get(String(message.id)); if (!waiter) return; this.rpc.delete(String(message.id));
+      if (hasError) waiter.reject(providerError(message.error)); else waiter.resolve(message.result); return;
     }
     if (typeof message.method === 'string' && message.method) this.callback(message); else this.transportFailure('invalid ACP JSON-RPC frame');
   }
   callback(message) {
     if (message.method === 'session/update') return this.sessionUpdate(message);
+    if (message.method === ADAPTER.methods.todos || message.method === ADAPTER.methods.task || message.method === ADAPTER.methods.image) {
+      return this.collaborationRequest(message);
+    }
     const mapping = { 'cursor/ask_question': 'question', 'cursor/create_plan': 'plan', 'session/request_permission': 'permission' };
     const kind = mapping[message.method];
     if (!kind) {
@@ -289,12 +507,30 @@ class SessionRecord {
     if (!turn || message.params?.sessionId !== this.cursorSessionId || update?.sessionUpdate !== 'agent_message_chunk') return;
     const chunk = update.content?.text;
     if (!validText(chunk)) return this.transportFailure('invalid ACP agent message');
-    const previous = turn.agent_text || '';
     // Keep only the runtime-owned bounded diagnostic representation; raw ACP
-    // updates never become a public trace.
-    const aggregate = bounded(`${previous}${chunk}`);
+    // updates never become a public trace. Thinking/tool/archive payloads are ignored.
+    const aggregate = bounded(`${turn.agent_text || ''}${chunk}`);
+    if (chunk) {
+      turn.progress_revision = (turn.progress_revision || 0) + 1;
+      turn.progress_excerpt = bounded(chunk, LIMITS.progressBytes);
+    }
     turn.agent_text = aggregate.text;
     turn.agent_text_truncated = Boolean(turn.agent_text_truncated || aggregate.truncated);
+  }
+  collaborationRequest(message) {
+    if (message.id === undefined) return;
+    try {
+      const turn = this.active;
+      const params = message.params;
+      if (!this.admissionOpen || !turn) return;
+      let kind; let payload;
+      if (message.method === ADAPTER.methods.todos) { kind = 'todos'; payload = ADAPTER.admitTodos(params); }
+      else if (message.method === ADAPTER.methods.task) { kind = 'task'; payload = ADAPTER.admitTask(params); }
+      else { kind = 'image'; payload = ADAPTER.admitImage(params); }
+      if (!payload || bytes(JSON.stringify(payload)) > LIMITS.inputBytes) return;
+      this.emit(kind, turn.turn_id, payload);
+    } catch { /* malformed nonblocking extension data is ignored */ }
+    finally { this.acknowledgeCollaboration(message.id); }
   }
   filesystemCallback(message) {
     if (message.id === undefined) return;
@@ -315,6 +551,11 @@ class SessionRecord {
       }
       if (this.mode !== 'agent') fail('scope_rejected', 'write callback is disabled for this mode');
       if (!validText(params.content)) fail('invalid_text_encoding', 'write content is not valid UTF-8');
+      // The admitted frame limit equals fsBytes, so JSON framing makes an
+      // above-cap write unreachable today; retain this local defense if those
+      // limits diverge. The transport-level no-mutation path is regression-tested.
+      /* node:coverage ignore next */
+      if (bytes(params.content) > LIMITS.fsBytes) fail('resource_limit', 'filesystem file limit');
       this.checkedWriteTarget(path); writeFileSync(path, params.content, 'utf8'); this.respond(message.id, {});
     } catch (error) { this.respondError(message.id, error instanceof DomainError ? error.error_code : 'protocol_error', error.message); }
   }
@@ -331,8 +572,9 @@ class SessionRecord {
   }
   async prompt(prompt) {
     if (this.session_state !== 'live') fail('protocol_error', 'session is not live');
+    if (this.modeTransition) fail('protocol_error', 'session mode transition is in progress');
     if (this.active) fail('protocol_error', 'session already has an active turn');
-    this.clearIdle(); const turn = { turn_id: randomUUID(), turn_status: 'running', result: null, terminal_reason: null, pending: new Map(), timer: null, agent_text: '', agent_text_truncated: false };
+    this.clearIdle(); const turn = { turn_id: randomUUID(), turn_status: 'running', result: null, terminal_reason: null, terminal_receipt: null, pending: new Map(), timer: null, agent_text: '', agent_text_truncated: false, progress_revision: 0, progress_excerpt: null };
     this.active = turn; this.emit('lifecycle', turn.turn_id, { scope: 'turn', from: null, to: 'running' });
     turn.timer = setTimeout(() => this.terminalize(turn, 'timed_out', 'turn deadline exceeded'), LIMITS.turnMs);
     let dispatched;
@@ -341,22 +583,31 @@ class SessionRecord {
     dispatched.then((result) => {
       if (turn.pending.size) this.terminalize(turn, 'failed', 'ACP result with pending request');
       else { try { this.complete(turn, result); } catch (error) { void this.terminalize(turn, 'failed', error.message); } }
-    }).catch((error) => { if (this.active === turn) this.terminalize(turn, 'failed', error.message); });
+    }).catch((error) => {
+      if (hasProviderError(error)) this.provider_error = error.provider_error;
+      if (this.active === turn) this.terminalize(turn, 'failed', error.message);
+    });
     return turn;
   }
   complete(turn, result) {
     if (!ADAPTER.admitPromptResult(result)) fail('protocol_error', 'ACP prompt response is not admitted');
-    clearTimeout(turn.timer); turn.result = { text: turn.agent_text, truncated: turn.agent_text_truncated }; turn.turn_status = 'completed'; this.emit('result', turn.turn_id, { turn_status: 'completed' }); this.active = null; this.last = turn; this.armIdle();
+    clearTimeout(turn.timer); turn.result = { text: turn.agent_text, truncated: turn.agent_text_truncated }; turn.turn_status = 'completed'; this.emit('result', turn.turn_id, { turn_status: 'completed' }); captureTerminalReceipt(this, turn); this.active = null; this.last = turn; this.terminalWaitDelivered = false; this.armIdle();
   }
   async answer(turn, requestId, response) {
     const pending = turn.pending.get(requestId); if (!pending) fail('unknown_request', 'unknown pending request');
+    turn.pending.delete(requestId);
+    this.emit('pending', turn.turn_id, { action: 'removed', request_id: requestId, request_kind: pending.kind });
     try { await this.sendConfirmed({ jsonrpc: '2.0', id: pending.rawId, result: response }); }
     catch (error) { await this.terminalize(turn, 'failed', error.message); return turn; }
     if (this.active !== turn) return turn;
-    turn.pending.delete(requestId); this.emit('pending', turn.turn_id, { action: 'removed', request_id: requestId, request_kind: pending.kind });
     if (!turn.pending.size) this.turnState(turn, 'running'); return turn;
   }
-  initFailure(kind) { this.failure_kind = ['spawn', 'init_timeout'].includes(kind) ? kind : 'init'; return this.shutdown(null, null); }
+  initFailure(error) {
+    if (hasProviderError(error)) this.provider_error = error.provider_error;
+    const kind = error instanceof DomainError ? error.error_code : error;
+    this.failure_kind = ['spawn', 'init_timeout'].includes(kind) ? kind : 'init';
+    return this.shutdown(null, error instanceof Error ? error.message : null);
+  }
   transportFailure(reason, startingKind = 'init') {
     if (this.session_state === 'starting') void this.initFailure(startingKind);
     else if (this.active) void this.terminalize(this.active, 'failed', reason);
@@ -375,7 +626,7 @@ class SessionRecord {
       try { this.respond(pending.rawId, ADAPTER.cancelResponse(pending.kind)); } catch { /* shutdown abandons closed transport */ }
     }
     this.requestAdapterCancel();
-    turn.terminal_reason = bounded(reason); turn.turn_status = status; this.emit('result', turn.turn_id, { turn_status: status }); this.active = null; this.last = turn; await this.shutdown(turn, reason);
+    turn.terminal_reason = bounded(reason); turn.turn_status = status; this.emit('result', turn.turn_id, { turn_status: status }); captureTerminalReceipt(this, turn); this.active = null; this.last = turn; this.terminalWaitDelivered = false; await this.shutdown(turn, reason);
   }
   shutdown(_turn, reason) {
     if (this.shutdownPromise) return this.shutdownPromise;
@@ -403,17 +654,49 @@ class SessionRecord {
 export class Runtime {
   constructor({ env = process.env, roots = readRoots(env) } = {}) { this.env = env; this.roots = roots; this.sessions = new Map(); this.live = new Set(); }
   canonicalCwd(cwd) { if (!validText(cwd) || !isAbsolute(cwd)) fail('invalid_args', 'cwd must be an absolute string'); let canonical; try { canonical = realpathSync(cwd); } catch { fail('scope_rejected', 'cwd does not exist'); } if (!lstatSync(canonical).isDirectory()) fail('scope_rejected', 'cwd is not a directory'); if (this.roots && !this.roots.some((root) => inside(canonical, root))) fail('scope_rejected', 'cwd is outside allowed roots'); return canonical; }
+  canonicalPluginDir(root) { if (!validText(root) || !isAbsolute(root)) fail('invalid_args', 'plugin_dir must be an absolute string'); let canonical; try { canonical = realpathSync(root); } catch { fail('scope_rejected', 'plugin_dir does not exist'); } if (!lstatSync(canonical).isDirectory()) fail('scope_rejected', 'plugin_dir is not a directory'); if (this.roots && !this.roots.some((allowed) => inside(canonical, allowed))) fail('scope_rejected', 'plugin_dir is outside allowed roots'); return canonical; }
   evict() { const now = Date.now(); for (const [id, session] of this.sessions) if (session.session_state === 'tombstone' && now - session.tombstonedAt >= LIMITS.retentionMs) this.sessions.delete(id); const tombs = [...this.sessions.values()].filter((session) => session.session_state === 'tombstone').sort((a, b) => a.tombstonedAt - b.tombstonedAt || a.id.localeCompare(b.id)); while (tombs.length > LIMITS.tombstones) this.sessions.delete(tombs.shift().id); }
   session(id) { this.evict(); const session = this.sessions.get(id); if (!session) fail('unknown_session', 'unknown session'); return session; }
-  async start(args) { assertObject(args, ['cwd', 'mode'], ['cwd', 'mode']); const cwd = this.canonicalCwd(args.cwd); if (!['ask', 'plan', 'agent'].includes(args.mode)) fail('invalid_args', 'invalid mode'); if (this.live.size >= LIMITS.live) fail('resource_limit', 'live session limit'); const session = new SessionRecord(this, cwd, args.mode); this.sessions.set(session.id, session); this.live.add(session.id); await session.start(); return session.envelope(); }
+  async start(args) {
+    assertObject(args, ['cwd', 'mode', ...LAUNCH_KEYS], ['cwd', 'mode']);
+    if (!['ask', 'plan', 'agent'].includes(args.mode)) fail('invalid_args', 'invalid mode: ask|plan|agent');
+    const cwd = this.canonicalCwd(args.cwd);
+    const launch = admitLaunchParams(args, (root) => this.canonicalPluginDir(root));
+    if (this.live.size >= LIMITS.live) fail('resource_limit', 'live session limit');
+    const session = new SessionRecord(this, cwd, args.mode, launch);
+    this.sessions.set(session.id, session); this.live.add(session.id); await session.start(); return session.envelope();
+  }
+  async resume(args) {
+    assertObject(args, ['cwd', 'cursor_session_id', 'mode', ...LAUNCH_KEYS], ['cwd', 'cursor_session_id', 'mode']);
+    if (!['ask', 'plan', 'agent'].includes(args.mode)) fail('invalid_args', 'invalid mode: ask|plan|agent');
+    const cwd = this.canonicalCwd(args.cwd);
+    const launch = admitLaunchParams(args, (root) => this.canonicalPluginDir(root));
+    if (this.live.size >= LIMITS.live) fail('resource_limit', 'live session limit');
+    const session = new SessionRecord(this, cwd, args.mode, launch);
+    session.resumeCursorSessionId = text(args.cursor_session_id, 'cursor_session_id');
+    session.cursor_session_id = session.resumeCursorSessionId;
+    this.sessions.set(session.id, session); this.live.add(session.id); await session.start(); return session.envelope();
+  }
   turn(session, id) { if (session.active?.turn_id === id) return session.active; if (session.last?.turn_id === id) return session.last; fail('unknown_turn', 'unknown turn'); }
   async call(name, args) {
     assertAggregate(args);
     if (name === 'cursor_delegate') {
-      assertObject(args, ['cwd', 'mode', 'prompt'], ['cwd', 'mode', 'prompt']);
-      const sessionEnvelope = await this.start({ cwd: args.cwd, mode: args.mode });
+      assertObject(args, ['cwd', 'mode', 'prompt', ...LAUNCH_KEYS], ['cwd', 'mode', 'prompt']);
+      const startArgs = { cwd: args.cwd, mode: args.mode };
+      for (const key of LAUNCH_KEYS) if (key in args) startArgs[key] = args[key];
+      const sessionEnvelope = await this.start(startArgs);
       if (sessionEnvelope.session_state !== 'live') return sessionEnvelope;
-      try { return await this.call('cursor_send_prompt', { session_id: sessionEnvelope.session_id, prompt: args.prompt }); }
+      try {
+        const dispatched = await this.call('cursor_send_prompt', { session_id: sessionEnvelope.session_id, prompt: args.prompt });
+        if (!Object.hasOwn(sessionEnvelope, 'cursor_session_id')) return dispatched;
+        return {
+          ...dispatched,
+          cursor_session_id: sessionEnvelope.cursor_session_id,
+          model: sessionEnvelope.model,
+          ...(sessionEnvelope.effort != null ? { effort: sessionEnvelope.effort } : {}),
+          ...(sessionEnvelope.fast != null ? { fast: sessionEnvelope.fast } : {}),
+        };
+      }
       catch (error) {
         // A live session with a rejected first prompt is the sole facade-owned
         // cleanup case. It does not reinterpret the runtime error.
@@ -422,26 +705,44 @@ export class Runtime {
       }
     }
     if (name === 'cursor_start_session') return this.start(args);
-    if (name === 'cursor_send_prompt') { assertObject(args, ['session_id', 'prompt'], ['session_id', 'prompt']); const session = this.session(text(args.session_id, 'session_id')); const turn = await session.prompt(text(args.prompt, 'prompt')); return session.envelope(turn); }
+    if (name === 'cursor_resume_session') return this.resume(args);
+    if (name === 'cursor_send_prompt') { assertObject(args, ['session_id', 'prompt'], ['session_id', 'prompt']); const session = this.session(text(args.session_id, 'session_id')); const turn = await session.prompt(text(args.prompt, 'prompt')); return session.actionEnvelope(turn); }
+    if (name === 'cursor_set_mode') return this.setMode(args);
     if (name === 'cursor_session_status') { assertObject(args, ['session_id'], ['session_id']); return this.session(text(args.session_id, 'session_id')).envelope(); }
     if (name === 'cursor_wait') return this.wait(args);
-    if (name === 'cursor_cancel') { assertObject(args, ['session_id', 'turn_id'], ['session_id', 'turn_id']); const session = this.session(text(args.session_id, 'session_id')); const turn = this.turn(session, text(args.turn_id, 'turn_id')); if (turn === session.active) await session.terminalize(turn, 'cancelled', 'cancelled'); return session.envelope(turn); }
-    if (name === 'cursor_close_session') { assertObject(args, ['session_id'], ['session_id']); const session = this.session(text(args.session_id, 'session_id')); if (session.active) await session.terminalize(session.active, 'cancelled', 'closed'); else { session.requestAdapterCancel(); await session.shutdown(null, null); } return session.envelope(); }
+    if (name === 'cursor_cancel') {
+      assertObject(args, ['session_id', 'turn_id'], ['session_id', 'turn_id']);
+      const session = this.session(text(args.session_id, 'session_id'));
+      const turn = this.turn(session, text(args.turn_id, 'turn_id'));
+      if (turn === session.active) await session.terminalize(turn, 'cancelled', 'cancelled');
+      return session.actionEnvelope(turn);
+    }
+    if (name === 'cursor_close_session') {
+      assertObject(args, ['session_id'], ['session_id']);
+      const session = this.session(text(args.session_id, 'session_id'));
+      const closedTurn = session.active;
+      if (closedTurn) await session.terminalize(closedTurn, 'cancelled', 'closed');
+      else { session.requestAdapterCancel(); await session.shutdown(null, null); }
+      return session.actionEnvelope(closedTurn, !closedTurn && session.last
+        ? { terminal_receipt: terminalReceipt(session, session.last) }
+        : {});
+    }
     if (ANSWER_TOOLS.has(name)) return this.answer(name, args);
     fail('invalid_args', `unknown tool: ${name}`);
   }
   async wait(args) {
-    assertObject(args, ['session_id', 'turn_id', 'after_event_id', 'timeout_ms'], ['session_id', 'turn_id']); const session = this.session(text(args.session_id, 'session_id')); const turn = this.turn(session, text(args.turn_id, 'turn_id')); const after = args.after_event_id ?? 0; const timeout = args.timeout_ms ?? LIMITS.waitDefaultMs;
+    assertObject(args, ['session_id', 'turn_id', 'after_event_id', 'timeout_ms', 'after_progress_revision'], ['session_id', 'turn_id']); const session = this.session(text(args.session_id, 'session_id')); const turn = this.turn(session, text(args.turn_id, 'turn_id')); const after = args.after_event_id ?? 0; const timeout = args.timeout_ms ?? LIMITS.waitDefaultMs; const afterProgress = args.after_progress_revision ?? 0;
     if (!Number.isSafeInteger(after) || after < 0 || after > session.nextEvent - 1) fail('invalid_args', 'invalid after_event_id');
     if (!Number.isInteger(timeout) || timeout < LIMITS.waitMinMs || timeout > LIMITS.waitMaxMs) fail('invalid_args', 'invalid timeout_ms');
-    if (turn !== session.active || session.events.some((event) => event.event_id > after && (event.turn_id === turn.turn_id || event.turn_id === null))) return session.waitEnvelope(turn, after, false);
+    if (!Number.isSafeInteger(afterProgress) || afterProgress < 0 || afterProgress > (turn.progress_revision || 0)) fail('invalid_args', 'invalid after_progress_revision');
+    if (turn !== session.active || session.events.some((event) => event.event_id > after && (event.turn_id === turn.turn_id || event.turn_id === null))) return session.waitEnvelope(turn, after, false, afterProgress);
     if (session.waiters.size >= LIMITS.waiters) fail('resource_limit', 'waiter limit');
     const changed = await new Promise((resolveWait) => { const timer = setTimeout(() => { session.waiters.delete(done); resolveWait(false); }, timeout); const done = () => { clearTimeout(timer); resolveWait(true); }; session.waiters.add(done); });
-    return session.waitEnvelope(turn, after, !changed);
+    return session.waitEnvelope(turn, after, !changed, afterProgress);
   }
   async answer(name, args) {
     const question = name === 'cursor_answer_question'; const keys = question ? ['session_id', 'turn_id', 'request_id', 'outcome', 'answers'] : ['session_id', 'turn_id', 'request_id', 'decision']; const required = question ? ['session_id', 'turn_id', 'request_id', 'outcome'] : ['session_id', 'turn_id', 'request_id', 'decision'];
-    assertObject(args, keys, required); const session = this.session(text(args.session_id, 'session_id')); const turn = this.turn(session, text(args.turn_id, 'turn_id')); if (turn !== session.active) fail('unknown_request', 'turn has no live pending requests'); const requestId = text(args.request_id, 'request_id'); const pending = turn.pending.get(requestId); if (!pending) fail('unknown_request', 'unknown pending request'); let response;
+    assertObject(args, keys, required); const session = this.session(text(args.session_id, 'session_id')); const turn = this.turn(session, text(args.turn_id, 'turn_id')); if (turn !== session.active) fail('unknown_request', 'turn has no live pending requests'); const requestId = text(args.request_id, 'request_id'); const pending = turn.pending.get(requestId); if (!pending) this.unknownRequest(session, turn, 'unknown pending request'); let response;
     if (question) {
       if (pending.kind !== 'question' || !['answered', 'skipped', 'cancelled'].includes(args.outcome)) fail('invalid_args', 'invalid question answer');
       if (args.outcome !== 'answered') { if ('answers' in args) fail('invalid_args', 'answers are only valid for answered outcome'); response = ADAPTER.questionResponse(args.outcome); }
@@ -452,7 +753,41 @@ export class Runtime {
       if (pending.kind !== 'permission' || !['allow-once', 'reject-once'].includes(args.decision)) fail('invalid_args', 'invalid permission decision');
       const option = pending.permissionChoices.get(args.decision); if (!option) fail('invalid_args', 'permission decision was not advertised'); response = ADAPTER.permissionResponse(option.id);
     }
-    await session.answer(turn, requestId, response); return session.envelope(turn);
+    await session.answer(turn, requestId, response); return session.actionEnvelope(turn);
+  }
+  unknownRequest(session, turn, message) {
+    fail('unknown_request', message, {
+      recovery: {
+        session_id: session.id, turn_id: turn.turn_id, last_event_id: session.nextEvent - 1,
+        pending: [...turn.pending.values()].map((pending) => ({ request_id: pending.request_id, kind: pending.kind })),
+      },
+    });
+  }
+  async setMode(args) {
+    assertObject(args, ['session_id', 'mode'], ['session_id', 'mode']);
+    if (!['ask', 'plan', 'agent'].includes(args.mode)) fail('invalid_args', 'invalid mode: ask|plan|agent');
+    const session = this.session(text(args.session_id, 'session_id'));
+    if (session.session_state !== 'live') fail('protocol_error', 'session is not live');
+    if (session.active) fail('protocol_error', 'session already has an active turn');
+    if (session.modeTransition) fail('protocol_error', 'session mode transition is already in progress');
+    if (session.mode === args.mode) return session.actionEnvelope(null, { mode: session.mode });
+    session.clearIdle();
+    session.modeTransition = true;
+    try { await session.applyProviderMode(args.mode); }
+    catch (error) {
+      if (hasProviderError(error)) {
+        session.provider_error = error.provider_error;
+        await session.shutdown(null, error.message);
+        throw error;
+      }
+      await session.shutdown(null, error.message);
+      if (error instanceof DomainError) throw error;
+      fail('protocol_error', 'ACP session/set_mode failed');
+    }
+    finally { session.modeTransition = false; }
+    session.mode = args.mode;
+    session.armIdle();
+    return session.actionEnvelope(null, { mode: session.mode });
   }
   validateAnswers(pending, answers) {
     if (!Array.isArray(answers)) fail('invalid_args', 'answers must be an array');
@@ -473,15 +808,24 @@ const ANSWER_TOOLS = new Set(['cursor_answer_question', 'cursor_answer_plan', 'c
 
 const schema = (properties, required) => ({ type: 'object', properties, required, additionalProperties: false });
 const string = { type: 'string', minLength: 1, maxLength: LIMITS.inputBytes };
+const modelString = { ...string, pattern: '^[^\\[\\]]+$' };
+const effortString = { ...string, pattern: '^[A-Za-z0-9._-]+$' };
 const idFields = (...keys) => Object.fromEntries(keys.map((key) => [key, string]));
+const modeEnum = { type: 'string', enum: ['ask', 'plan', 'agent'] };
+const modelFields = {
+  model: modelString, effort: effortString, fast: { type: 'boolean' },
+  plugin_dirs: { type: 'array', minItems: 1, items: string },
+};
 const answerItem = schema({ question_id: string, selected_option_ids: { type: 'array', minItems: 1, items: string } }, ['question_id', 'selected_option_ids']);
 const tool = (name, properties, required) => ({ name, description: name, inputSchema: schema(properties, required) });
 export const tools = [
-  tool('cursor_delegate', { cwd: string, mode: { type: 'string', enum: ['ask', 'plan', 'agent'] }, prompt: string }, ['cwd', 'mode', 'prompt']),
-  tool('cursor_start_session', { cwd: string, mode: { type: 'string', enum: ['ask', 'plan', 'agent'] } }, ['cwd', 'mode']),
+  tool('cursor_delegate', { cwd: string, mode: modeEnum, prompt: string, ...modelFields }, ['cwd', 'mode', 'prompt']),
+  tool('cursor_start_session', { cwd: string, mode: modeEnum, ...modelFields }, ['cwd', 'mode']),
+  tool('cursor_resume_session', { cwd: string, cursor_session_id: string, mode: modeEnum, ...modelFields }, ['cwd', 'cursor_session_id', 'mode']),
   tool('cursor_send_prompt', idFields('session_id', 'prompt'), ['session_id', 'prompt']),
+  tool('cursor_set_mode', { ...idFields('session_id'), mode: modeEnum }, ['session_id', 'mode']),
   tool('cursor_session_status', idFields('session_id'), ['session_id']),
-  tool('cursor_wait', { ...idFields('session_id', 'turn_id'), after_event_id: { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER }, timeout_ms: { type: 'integer', minimum: LIMITS.waitMinMs, maximum: LIMITS.waitMaxMs } }, ['session_id', 'turn_id']),
+  tool('cursor_wait', { ...idFields('session_id', 'turn_id'), after_event_id: { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER }, after_progress_revision: { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER }, timeout_ms: { type: 'integer', minimum: LIMITS.waitMinMs, maximum: LIMITS.waitMaxMs } }, ['session_id', 'turn_id']),
   tool('cursor_answer_question', { ...idFields('session_id', 'turn_id', 'request_id'), outcome: { type: 'string', enum: ['answered', 'skipped', 'cancelled'] }, answers: { type: 'array', items: answerItem } }, ['session_id', 'turn_id', 'request_id', 'outcome']),
   tool('cursor_answer_plan', { ...idFields('session_id', 'turn_id', 'request_id'), decision: { type: 'string', enum: ['accept', 'reject'] } }, ['session_id', 'turn_id', 'request_id', 'decision']),
   tool('cursor_answer_permission', { ...idFields('session_id', 'turn_id', 'request_id'), decision: { type: 'string', enum: ['allow-once', 'reject-once'] } }, ['session_id', 'turn_id', 'request_id', 'decision']),
@@ -489,12 +833,6 @@ export const tools = [
   tool('cursor_close_session', idFields('session_id'), ['session_id']),
 ];
 const toolResult = (value, isError = false) => ({ isError, content: [{ type: 'text', text: JSON.stringify(value) }] });
-function manifestVersion() {
-  const manifest = JSON.parse(readFileSync(new URL('../.codex-plugin/plugin.json', import.meta.url), 'utf8'));
-  if (!validText(manifest?.version) || !/^\d+\.\d+\.\d+(?:[+-][0-9A-Za-z.-]+)?$/.test(manifest.version)) throw new Error('plugin manifest has no valid version');
-  return manifest.version.replace(/\+codex\.[\da-f]+$/, '');
-}
-const MANIFEST_VERSION = manifestVersion();
 function readBoundedLines(stream, onLine, onInvalid) {
   let buffered = Buffer.alloc(0); let discarding = false;
   stream.on('data', (incoming) => {
@@ -530,7 +868,14 @@ export async function serve() {
       else { if (request.id !== undefined) write({ jsonrpc: '2.0', id: request.id, error: { code: -32601, message: 'Method not found' } }); return; }
       if (request.id !== undefined) write({ jsonrpc: '2.0', id: request.id, result: payload });
     }
-    catch (error) { if (request.id !== undefined) write({ jsonrpc: '2.0', id: request.id, result: toolResult({ error_code: error instanceof DomainError ? error.error_code : 'protocol_error', message: bounded(error.message).text }, true) }); }
+    catch (error) {
+      if (request.id !== undefined) {
+        const payload = { error_code: error instanceof DomainError ? error.error_code : 'protocol_error', message: bounded(error.message).text };
+        if (error instanceof DomainError && error.recovery) payload.recovery = error.recovery;
+        if (error instanceof DomainError && error.provider_error) payload.provider_error = error.provider_error;
+        write({ jsonrpc: '2.0', id: request.id, result: toolResult(payload, true) });
+      }
+    }
   };
   readBoundedLines(process.stdin, (line) => { void handleLine(line); }, invalidFrame);
 }

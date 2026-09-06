@@ -68,9 +68,10 @@ test('CLI returns one machine-readable invalid-invocation envelope', async () =>
 });
 
 test('CLI bounds diagnostics in its machine-readable failure envelope', async () => {
-  const result = await bootstrapCli(['install', `--${'x'.repeat(9_000)}`, '/unused']);
+  const result = await bootstrapCli(['install', `--${'a'.repeat(7_976)}😀xyz`, '/unused']);
   assert.equal(result.code, 2);
-  assert.equal(Buffer.byteLength(result.envelope.message), 8_000);
+  assert.ok(Buffer.byteLength(result.envelope.message) <= 8_000);
+  assert.equal(Buffer.from(result.envelope.message, 'utf8').toString('utf8'), result.envelope.message);
   assert.equal(result.envelope.message.endsWith('...'), true);
 });
 
@@ -125,6 +126,15 @@ test('CLI install rejects an incomplete package payload without publishing artif
   assert.equal(result.envelope.error_code, 'invalid_payload');
   await assert.rejects(lstat(context.managed), { code: 'ENOENT' });
   await assert.rejects(lstat(`${context.managed}.codex-cursor-subagent-plugin.staging`), { code: 'ENOENT' });
+});
+
+test('CLI install requires the recording proxy as a managed payload owner entry', async (t) => {
+  const context = await fixture(t);
+  await rm(join(context.source, 'scripts/recording-mcp-proxy.mjs'));
+  const result = await bootstrapCli(['install', ...context.common], context.env);
+  assert.equal(result.code, 1);
+  assert.equal(result.envelope.error_code, 'invalid_payload');
+  await assert.rejects(lstat(context.managed), { code: 'ENOENT' });
 });
 
 test('CLI install rejects a package without its required skill tree', async (t) => {
@@ -398,6 +408,23 @@ test('versioned Codex adapter admission and help match its checked-in golden sur
     install_root: join(context.managed, 'plugins/codex-cursor-subagent-plugin'), allowed_workspace_roots: [context.workspace],
   }, env, versionedAdapter);
   assert.deepEqual(rendered.files.map(({ path }) => path), ['.agents/plugins/marketplace.json', 'plugins/codex-cursor-subagent-plugin/.mcp.json']);
+  const timeoutPreload = join(context.root, 'accelerate-turn-timeout.mjs');
+  const timeoutRendered = await adapterFixtureCall(context.executable, 'render', {
+    codex_executable: codex, node_executable: context.executable, agent_executable: agent,
+    install_root: join(context.managed, 'plugins/codex-cursor-subagent-plugin'), allowed_workspace_roots: [context.workspace],
+  }, { ...env, CURSOR_EVAL_TIMEOUT_PRELOAD: timeoutPreload, FAKE_ACP_ACCELERATE_TURN_TIMEOUT: '1',
+    FAKE_ACP_ACCELERATE_MODE_TIMEOUT: '1', FAKE_ACP_ACCELERATE_WAIT_TIMEOUT: '1' }, versionedAdapter);
+  const mcpFile = timeoutRendered.files.find(({ path }) => path.endsWith('/.mcp.json'));
+  const mcpDocument = JSON.parse(Buffer.from(mcpFile.content_base64, 'base64').toString('utf8'));
+  assert.deepEqual(mcpDocument.mcpServers['cursor-subagent'].env, {
+    CURSOR_AGENT_COMMAND: agent,
+    AGENT_CLI_CREDENTIAL_STORE: 'file',
+    CURSOR_SUBAGENT_ALLOWED_ROOTS: JSON.stringify([context.workspace]),
+    NODE_OPTIONS: `--import=${timeoutPreload}`,
+    FAKE_ACP_ACCELERATE_TURN_TIMEOUT: '1',
+    FAKE_ACP_ACCELERATE_MODE_TIMEOUT: '1',
+    FAKE_ACP_ACCELERATE_WAIT_TIMEOUT: '1',
+  });
   assert.deepEqual(golden.covered_outcomes, ['success', 'nonzero', 'partial', 'timeout', 'output_overflow', 'reread_failure']);
   assert.deepEqual(golden.cli_forms, {
     version: ['--version'], help: ['plugin', '--help'], agent_version: ['--version'], agent_status: ['status', '--format', 'json'],
@@ -698,6 +725,8 @@ test('fake adapter drives portable install, identical no-op, update, preflight a
   assert.equal(config.env.AGENT_CLI_CREDENTIAL_STORE, 'file');
   const marker = JSON.parse(await readFile(join(context.managed, MARKER_NAME), 'utf8'));
   assert.match(marker.manifest_version, /^0\.1\.0\+codex\.[0-9a-f]{64}$/);
+  assert.equal(await readFile(join(pluginRoot, 'scripts/recording-mcp-proxy.mjs'), 'utf8'),
+    await readFile(join(context.source, 'scripts/recording-mcp-proxy.mjs'), 'utf8'));
 
   result = await runBootstrap(['install', ...context.common], { env: context.env });
   assert.equal(result.envelope.state, 'installed');
@@ -705,6 +734,13 @@ test('fake adapter drives portable install, identical no-op, update, preflight a
   result = await runBootstrap(['update', ...context.common], { env: context.env });
   assert.deepEqual({ exitCode: result.exitCode, state: result.envelope.state }, { exitCode: 0, state: 'installed' }, JSON.stringify(result));
   assert.equal(await readFile(join(pluginRoot, 'README.md'), 'utf8'), 'changed payload\n');
+  const updatedMarker = JSON.parse(await readFile(join(context.managed, MARKER_NAME), 'utf8'));
+  assert.notEqual(updatedMarker.payload_hash, marker.payload_hash);
+  assert.notEqual(updatedMarker.artifact_hash, marker.artifact_hash);
+  assert.notEqual(updatedMarker.manifest_version, marker.manifest_version);
+  const registrations = JSON.parse(await readFile(context.state, 'utf8'));
+  assert.deepEqual(registrations.plugins.map(({ version }) => version), [updatedMarker.manifest_version],
+    'the adapter-visible installed cache must reference the updated payload version');
 
   result = await runBootstrap(['preflight', '--managed-marketplace-root', context.managed,
     '--node-executable', context.executable, '--codex-executable', context.executable,
@@ -714,6 +750,19 @@ test('fake adapter drives portable install, identical no-op, update, preflight a
   result = await runBootstrap(['uninstall', '--managed-marketplace-root', context.managed,
     '--codex-executable', context.executable], { env: context.env });
   assert.deepEqual({ exitCode: result.exitCode, state: result.envelope.state }, { exitCode: 0, state: 'absent' });
+});
+
+test('README documents the verified Codex cache refresh and reinstall sequence', async () => {
+  const readme = await readFile(join(repository, 'README.md'), 'utf8');
+  const commands = [
+    'codex plugin marketplace upgrade codex-cursor-subagent-plugin',
+    'codex plugin remove codex-cursor-subagent-plugin@codex-cursor-subagent-plugin',
+    'codex plugin add codex-cursor-subagent-plugin@codex-cursor-subagent-plugin',
+  ];
+  const positions = commands.map((command) => readme.indexOf(command, readme.indexOf('Updating an existing installation')));
+  assert.ok(positions.every((position) => position >= 0), 'README must include every verified update command');
+  assert.ok(positions[0] < positions[1] && positions[1] < positions[2], 'README update commands must preserve the verified order');
+  assert.match(readme, /Start a new Codex task only after the final `plugin add` succeeds\./);
 });
 
 test('unknown adapter version is rejected before fake mutation', async (t) => {
@@ -1193,7 +1242,10 @@ test('rejected and timed-out compensation commands classify install, update and 
         : repeatedCompensation ? 'FAKE_CODEX_TIMEOUT_OPERATION_AFTER_PRIOR_MUTATION' : 'FAKE_CODEX_TIMEOUT_OPERATION';
       context.env[faultName] = scenario.compensation;
       const overrides = { env: context.env, ...(outcome === 'timed_out' ? {
-        runCommand: (command, args, options) => runPackageCommand(command, args, { ...options, timeoutMs: 100 }),
+        // Coverage instrumentation can make an otherwise immediate adapter
+        // process exceed 100 ms. Keep the injected hung operation bounded
+        // without allowing startup overhead to masquerade as another timeout.
+        runCommand: (command, args, options) => runPackageCommand(command, args, { ...options, timeoutMs: 500 }),
       } : {}) };
       const result = scenario.lifecycle === 'install'
         ? await runBootstrap(['install', ...context.common], overrides)

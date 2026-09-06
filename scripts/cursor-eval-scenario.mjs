@@ -1,21 +1,27 @@
 import { createHash } from 'node:crypto';
 import { isAbsolute, resolve } from 'node:path';
 
-const EXACT_SCENARIOS = Object.freeze(new Map([
-  ['client-happy', 'client-integration'],
-  ['model-question', 'model-behavior'],
-  ['model-plan', 'model-behavior'],
-  ['model-permission-covered', 'model-behavior'],
-  ['model-permission-expansion', 'model-behavior'],
-  ['model-semantic-failure', 'model-behavior'],
-  ['live-marker', 'full-live'],
-]));
-const PROGRAMMED_KEYS = ['expected_actual_task_outcome', 'expected_enabled_eval_status', 'expected_reported_task_outcome', 'expected_trace', 'fixture_predicate', 'followups', 'forbidden_observations', 'initial_input', 'lane', 'owner_requirements', 'prior_authority', 'program', 'scenario_id', 'scenario_kind'];
+const PROGRAMMED_KEYS = ['expected_actual_task_outcome', 'expected_enabled_eval_status', 'expected_reported_task_outcome', 'expected_trace', 'fixture_predicate', 'followups', 'harness_faults', 'initial_input', 'lane', 'owner_requirements', 'prior_authority', 'program', 'report_checks', 'scenario_id', 'scenario_kind', 'skill_sensitivity'];
 const REFERENCE_KEYS = ['expected_enabled_eval_status', 'lane', 'owner_requirements', 'scenario_id', 'scenario_kind'];
-const FORBIDDEN = new Set(['answer-before-pending', 'id-mismatch', 'operation-after-close', 'unexpected-effect', 'raw-provider-payload']);
+const FORBIDDEN = new Set(['answer-before-pending', 'id-mismatch', 'operation-after-close', 'unexpected-effect']);
+const HARNESS_FAULTS = new Set(['accelerate-mode-timeout', 'accelerate-turn-timeout', 'accelerate-wait-timeout', 'exit-after-result', 'hold-terminal-until-followup', 'inject-mode-protocol-error-once', 'inject-stale-question-once', 'reject-initialize', 'reject-mode', 'reject-prompt', 'reject-resume']);
 const OUTCOMES = new Set(['succeeded', 'failed']);
-const TRACE_KINDS = new Set(['session.allocated', 'turn.started', 'session.close-attempted', 'pending.question', 'pending.plan', 'pending.permission', 'effect.file-written', 'turn.completed', 'answer.question', 'answer.plan', 'answer.permission']);
+const REPORT_BINDINGS = new Set(['cursor_session_id', 'effort', 'error_code', 'evidence_scope', 'failure_kind', 'fast', 'history_reconstructed', 'model', 'next_provider_operation_requires_new_user_decision', 'observation_gap', 'pending_request_id', 'plugin_dir', 'provider_error', 'resume_after_event_id', 'session_id', 'terminal_reason', 'terminal_receipt', 'terminal_result_sha256', 'turn_id', 'work_in_progress']);
+const TRACE_KINDS = new Set(['session.allocated', 'session.start-rejected', 'session.resumed', 'session.resume-failed', 'session.tombstoned', 'session.mode-changed', 'session.mode-change-failed', 'session.mode-recovery-status', 'turn.started', 'turn.wait-timeout', 'turn.wait-recovered', 'turn.events-lost', 'turn.followup-received-active', 'turn.receipt', 'session.close-attempted', 'prompt.contract', 'pending.question', 'pending.plan', 'pending.permission', 'effect.file-read', 'effect.file-written', 'progress.todos', 'progress.task', 'progress.image', 'turn.completed', 'turn.failed', 'turn.timed-out', 'answer.question', 'answer.plan', 'answer.permission', 'answer.rejected-stale']);
 const PLACEHOLDER = /\$\{([^}]+)\}/g;
+const PUBLIC_MCP_TOOL_NAMES = Object.freeze([
+  'cursor_delegate', 'cursor_start_session', 'cursor_resume_session', 'cursor_send_prompt',
+  'cursor_set_mode', 'cursor_session_status', 'cursor_wait', 'cursor_answer_question',
+  'cursor_answer_plan', 'cursor_answer_permission', 'cursor_cancel', 'cursor_close_session',
+]);
+const FORBIDDEN_MODEL_PROMPT_FRAGMENTS = Object.freeze([
+  ...PUBLIC_MCP_TOOL_NAMES, 'after_event_id', 'after_progress_revision', 'resume_after_event_id',
+  'last_event_id', 'timeout_ms', 'wait_timeout', 'events_lost', 'observation_gap',
+  'history_reconstructed', 'evidence_scope', 'verification:unverifiable', 'unknown_request',
+  'turn_id', 'session_id', 'cursor_session_id', 'закрой runtime session',
+  'не повторяй операцию', 'не создавай замену', 'close the runtime session', 'do not retry',
+  'do not create a replacement',
+]);
 
 function admission(message) {
   throw Object.assign(new Error(message), { code: 'adapter_admission', evalCode: 'adapter_admission' });
@@ -38,6 +44,13 @@ function text(value, label, min = 1, max = 8_000) {
   const bytes = Buffer.byteLength(value, 'utf8');
   if (bytes < min || bytes > max) admission(`${label} is outside its byte bound`);
   return value;
+}
+
+function ordinaryModelGoal(value, label) {
+  const folded = value.toLocaleLowerCase('en-US');
+  if (FORBIDDEN_MODEL_PROMPT_FRAGMENTS.some((fragment) => folded.includes(fragment))) {
+    admission(`${label} prescribes eval lifecycle or opaque runtime state`);
+  }
 }
 
 function unique(values, label, key = (value) => value) {
@@ -69,7 +82,7 @@ function action(value, label) {
 }
 
 function ownerRequirements(value, label) {
-  list(value, label, 1, 2);
+  list(value, label, 1, 5);
   for (const [index, owner] of value.entries()) {
     closed(owner, ['capability', 'requirement'], `${label}[${index}]`);
     text(owner.capability, `${label}[${index}].capability`, 1, 128);
@@ -128,29 +141,54 @@ function pendingStep(step, label) {
 }
 
 function program(value, label) {
-  closed(value, ['kind', 'steps'], label);
+  closed(value, value.resume_step_index === undefined ? ['kind', 'steps'] : ['kind', 'resume_step_index', 'steps'], label);
   if (value.kind !== 'fake-acp') admission(`${label}.kind is invalid`);
   list(value.steps, `${label}.steps`, 1, 8);
   for (const [index, step] of value.steps.entries()) {
     record(step, `${label}.steps[${index}]`);
     text(step.step_id, `${label}.steps[${index}].step_id`, 1, 128);
-    if (step.type === 'pending') {
+    if (step.type === 'prompt-check') {
+      closed(step, ['forbidden_fragments', 'required_fragments', 'step_id', 'type'], `${label}.steps[${index}]`);
+      list(step.required_fragments, `${label}.steps[${index}].required_fragments`, 1, 12);
+      list(step.forbidden_fragments, `${label}.steps[${index}].forbidden_fragments`, 0, 12);
+      step.required_fragments.forEach((fragment, item) => text(fragment, `${label}.steps[${index}].required_fragments[${item}]`, 1, 256));
+      step.forbidden_fragments.forEach((fragment, item) => text(fragment, `${label}.steps[${index}].forbidden_fragments[${item}]`, 1, 256));
+      unique(step.required_fragments, `${label}.steps[${index}].required_fragments`);
+      unique(step.forbidden_fragments, `${label}.steps[${index}].forbidden_fragments`);
+    } else if (step.type === 'pending') {
       text(step.callback_id, `${label}.steps[${index}].callback_id`, 1, 128);
       pendingStep(step, `${label}.steps[${index}]`);
     } else if (step.type === 'effect') {
       closed(step, ['callback_id', 'expected_callback', 'operation', 'path', 'step_id', 'text', 'type'], `${label}.steps[${index}]`);
       text(step.callback_id, `${label}.steps[${index}].callback_id`, 1, 128);
-      if (step.operation !== 'write') admission(`${label}.steps[${index}].operation is invalid`);
+      if (!['read', 'write'].includes(step.operation)) admission(`${label}.steps[${index}].operation is invalid`);
       structuredPath(step.path, `${label}.steps[${index}].path`);
       text(step.text, `${label}.steps[${index}].text`, 0, 8_000);
       closed(step.expected_callback, ['kind', 'outcome'], `${label}.steps[${index}].expected_callback`);
-      if (step.expected_callback.kind !== 'write-result' || step.expected_callback.outcome !== 'succeeded') admission(`${label}.steps[${index}].expected_callback is invalid`);
+      if (step.expected_callback.kind !== `${step.operation}-result` || step.expected_callback.outcome !== 'succeeded') admission(`${label}.steps[${index}].expected_callback is invalid`);
     } else if (step.type === 'terminal') {
-      closed(step, ['result_text', 'step_id', 'turn_status', 'type'], `${label}.steps[${index}]`);
-      if (step.turn_status !== 'completed' || (step.result_text !== null && text(step.result_text, `${label}.steps[${index}].result_text`) !== step.result_text)) admission(`${label}.steps[${index}] is invalid`);
+      const terminalKeys = ['result_text', 'step_id', 'turn_status', 'type'];
+      if (step.delay_ms !== undefined) terminalKeys.push('delay_ms');
+      if (step.progress_text !== undefined) terminalKeys.push('progress_text');
+      closed(step, terminalKeys, `${label}.steps[${index}]`);
+      if (!['completed', 'failed', 'timed_out'].includes(step.turn_status)
+        || (step.turn_status === 'completed' && (step.result_text === null
+          || text(step.result_text, `${label}.steps[${index}].result_text`) !== step.result_text))
+        || (step.turn_status !== 'completed' && step.result_text !== null)) admission(`${label}.steps[${index}] is invalid`);
+      if (step.delay_ms !== undefined && (!Number.isSafeInteger(step.delay_ms) || step.delay_ms < 1 || step.delay_ms > 5_000)) admission(`${label}.steps[${index}].delay_ms is invalid`);
+      if (step.progress_text !== undefined) text(step.progress_text, `${label}.steps[${index}].progress_text`, 1, 512);
+    } else if (step.type === 'notification') {
+      closed(step, ['notification_kind', 'step_id', 'type'], `${label}.steps[${index}]`);
+      if (!['todos', 'task', 'image'].includes(step.notification_kind)) admission(`${label}.steps[${index}].notification_kind is invalid`);
+    } else if (step.type === 'event-burst') {
+      closed(step, ['count', 'step_id', 'type'], `${label}.steps[${index}]`);
+      if (!Number.isSafeInteger(step.count) || step.count < 257 || step.count > 512) admission(`${label}.steps[${index}].count is invalid`);
     } else admission(`${label}.steps[${index}].type is invalid`);
   }
   unique(value.steps, `${label}.steps`, ({ step_id: stepId }) => stepId);
+  if (value.resume_step_index !== undefined
+    && (!Number.isSafeInteger(value.resume_step_index) || value.resume_step_index < 1 || value.resume_step_index >= value.steps.length)) admission(`${label}.resume_step_index is invalid`);
+  if (value.resume_step_index !== undefined && value.steps[value.resume_step_index]?.type !== 'prompt-check') admission(`${label}.resume_step_index must start a resumed prompt`);
 }
 
 function trace(value, steps, label) {
@@ -161,8 +199,70 @@ function trace(value, steps, label) {
   for (const [index, observation] of value.entries()) {
     record(observation, `${label}[${index}]`);
     if (!TRACE_KINDS.has(observation.kind)) admission(`${label}[${index}].kind is invalid`);
-    if (['session.allocated', 'turn.started', 'session.close-attempted'].includes(observation.kind)) closed(observation, ['kind'], `${label}[${index}]`);
-    else if (observation.kind === 'answer.question') {
+    if (observation.kind === 'session.allocated') {
+      const allocationKeys = ['kind'];
+      if (observation.mode !== undefined) allocationKeys.push('mode');
+      if (observation.model !== undefined) allocationKeys.push('model');
+      if (observation.effort !== undefined) allocationKeys.push('effort');
+      if (observation.fast !== undefined) allocationKeys.push('fast');
+      if (observation.plugin_dirs_count !== undefined) allocationKeys.push('plugin_dirs_count');
+      if (observation.plugin_dirs_matched !== undefined) allocationKeys.push('plugin_dirs_matched');
+      closed(observation, allocationKeys, `${label}[${index}]`);
+      if (observation.mode !== undefined && !['ask', 'agent', 'plan'].includes(observation.mode)) admission(`${label}[${index}].mode is invalid`);
+      if (observation.model !== undefined) text(observation.model, `${label}[${index}].model`, 1, 256);
+      if (observation.effort !== undefined) text(observation.effort, `${label}[${index}].effort`, 1, 256);
+      if (observation.fast !== undefined && typeof observation.fast !== 'boolean') admission(`${label}[${index}].fast is invalid`);
+      if (observation.plugin_dirs_count !== undefined && (!Number.isSafeInteger(observation.plugin_dirs_count) || observation.plugin_dirs_count < 1 || observation.plugin_dirs_count > 16)) admission(`${label}[${index}].plugin_dirs_count is invalid`);
+      if (observation.plugin_dirs_matched !== undefined && observation.plugin_dirs_matched !== true) admission(`${label}[${index}].plugin_dirs_matched must be true`);
+    } else if (observation.kind === 'session.start-rejected') {
+      closed(observation, ['error_code', 'kind'], `${label}[${index}]`);
+      if (!['invalid_args', 'scope_rejected'].includes(observation.error_code)) admission(`${label}[${index}].error_code is invalid`);
+    } else if (observation.kind === 'session.mode-changed') {
+      closed(observation, ['kind', 'mode'], `${label}[${index}]`);
+      if (!['ask', 'agent', 'plan'].includes(observation.mode)) admission(`${label}[${index}].mode is invalid`);
+    } else if (observation.kind === 'session.mode-change-failed') {
+      closed(observation, ['error_code', 'kind'], `${label}[${index}]`);
+      if (!['mode_timeout', 'protocol_error'].includes(observation.error_code)) admission(`${label}[${index}].error_code is invalid`);
+    } else if (observation.kind === 'session.mode-recovery-status') {
+      closed(observation, ['active_turn', 'kind', 'session_state'], `${label}[${index}]`);
+      if (observation.session_state !== 'live' || typeof observation.active_turn !== 'boolean') admission(`${label}[${index}] recovery state is invalid`);
+    } else if (['turn.started', 'turn.followup-received-active', 'session.close-attempted'].includes(observation.kind)) closed(observation, ['kind'], `${label}[${index}]`);
+    else if (observation.kind === 'session.tombstoned') {
+      closed(observation, ['kind', 'session_state'], `${label}[${index}]`);
+      if (observation.session_state !== 'tombstone') admission(`${label}[${index}].session_state is invalid`);
+    }
+    else if (['session.resumed', 'session.resume-failed'].includes(observation.kind)) {
+      const resumeKeys = ['kind', 'matched'];
+      if (observation.model !== undefined) resumeKeys.push('model');
+      if (observation.effort !== undefined) resumeKeys.push('effort');
+      if (observation.fast !== undefined) resumeKeys.push('fast');
+      closed(observation, resumeKeys, `${label}[${index}]`);
+      if (observation.matched !== true) admission(`${label}[${index}].matched must be true`);
+      if (observation.model !== undefined) text(observation.model, `${label}[${index}].model`, 1, 256);
+      if (observation.effort !== undefined) text(observation.effort, `${label}[${index}].effort`, 1, 256);
+      if (observation.fast !== undefined && typeof observation.fast !== 'boolean') admission(`${label}[${index}].fast is invalid`);
+    }
+    else if (['turn.wait-timeout', 'turn.wait-recovered'].includes(observation.kind)) {
+      closed(observation, ['cursor_matched', 'kind', 'progress_revision_matched', 'timeout_ms', 'timeout_omitted'], `${label}[${index}]`);
+      if (!Number.isSafeInteger(observation.timeout_ms) || observation.timeout_ms < 1_000 || observation.timeout_ms > 180_000
+        || typeof observation.timeout_omitted !== 'boolean'
+        || (observation.timeout_omitted && observation.timeout_ms !== 30_000)
+        || observation.cursor_matched !== true || observation.progress_revision_matched !== true) admission(`${label}[${index}] has an invalid wait contract`);
+    } else if (observation.kind === 'turn.events-lost') {
+      closed(observation, ['cursor_matched', 'events_lost', 'kind'], `${label}[${index}]`);
+      if (observation.events_lost !== true || observation.cursor_matched !== true) admission(`${label}[${index}] has an invalid retention-gap contract`);
+    } else if (observation.kind === 'turn.receipt') {
+      closed(observation, ['kind', 'matched', 'result_truncated', 'step_id'], `${label}[${index}]`);
+      if (observation.matched !== true || typeof observation.result_truncated !== 'boolean') admission(`${label}[${index}] has an invalid receipt contract`);
+    }
+    else if (observation.kind === 'prompt.contract') {
+      closed(observation, ['kind', 'matched', 'step_id'], `${label}[${index}]`);
+      if (observation.matched !== true) admission(`${label}[${index}].matched must be true`);
+    }
+    else if (observation.kind === 'answer.rejected-stale') {
+      closed(observation, ['error_code', 'kind', 'step_id'], `${label}[${index}]`);
+      if (observation.error_code !== 'unknown_request') admission(`${label}[${index}].error_code is invalid`);
+    } else if (observation.kind === 'answer.question') {
       closed(observation, ['kind', 'option_ids', 'step_id'], `${label}[${index}]`);
       list(observation.option_ids, `${label}[${index}].option_ids`, 1, 8);
       observation.option_ids.forEach((id, item) => text(id, `${label}[${index}].option_ids[${item}]`, 1, 128));
@@ -176,8 +276,14 @@ function trace(value, steps, label) {
     text(observation.step_id, `${label}[${index}].step_id`, 1, 128);
     const referenced = byId.get(observation.step_id);
     if (!referenced) admission(`${label}[${index}] references an unknown step`);
-    const expectedKind = referenced.step.type === 'pending' ? `${observation.kind.startsWith('answer.') ? 'answer' : 'pending'}.${referenced.step.request_kind}`
-      : referenced.step.type === 'effect' ? 'effect.file-written' : 'turn.completed';
+    const expectedKind = referenced.step.type === 'pending' ? (observation.kind === 'answer.rejected-stale'
+      ? 'answer.rejected-stale' : `${observation.kind.startsWith('answer.') ? 'answer' : 'pending'}.${referenced.step.request_kind}`)
+      : referenced.step.type === 'effect' ? `effect.file-${referenced.step.operation === 'read' ? 'read' : 'written'}`
+        : referenced.step.type === 'prompt-check' ? 'prompt.contract'
+          : referenced.step.type === 'notification' ? `progress.${referenced.step.notification_kind}`
+            : observation.kind === 'turn.receipt' ? 'turn.receipt'
+              : referenced.step.turn_status === 'timed_out' ? 'turn.timed-out'
+                : referenced.step.turn_status === 'failed' ? 'turn.failed' : 'turn.completed';
     if (observation.kind !== expectedKind) admission(`${label}[${index}] references an incompatible step`);
     if (observation.kind.startsWith('pending.')) pendingTraceSteps.add(observation.step_id);
     if (observation.kind.startsWith('answer.') && !pendingTraceSteps.has(observation.step_id)) admission(`${label}[${index}] answers before its pending step`);
@@ -207,52 +313,237 @@ function predicate(value, label) {
     structuredPath(value.path, `${label}.path`);
     return;
   }
+  if (value.kind === 'terminal-status') {
+    closed(value, ['kind', 'status'], label);
+    if (!['failed', 'timed_out'].includes(value.status)) admission(`${label}.status is invalid`);
+    return;
+  }
+  if (value.kind === 'resume-failed') return closed(value, ['kind'], label);
+  if (value.kind === 'mode-change-failed') {
+    closed(value, ['error_code', 'kind'], label);
+    if (!['mode_timeout', 'protocol_error'].includes(value.error_code)) admission(`${label}.error_code is invalid`);
+    return;
+  }
+  if (value.kind === 'mode-recovery-status') {
+    closed(value, ['active_turn', 'kind', 'session_state'], label);
+    if (value.session_state !== 'live' || typeof value.active_turn !== 'boolean') admission(`${label} recovery state is invalid`);
+    return;
+  }
+  if (value.kind === 'delegate-init-failed') {
+    closed(value, ['failure_kind', 'kind'], label);
+    if (value.failure_kind !== 'init') admission(`${label}.failure_kind is invalid`);
+    return;
+  }
+  if (value.kind === 'start-rejected') {
+    closed(value, ['error_code', 'kind'], label);
+    if (!['invalid_args', 'scope_rejected'].includes(value.error_code)) admission(`${label}.error_code is invalid`);
+    return;
+  }
   admission(`${label}.kind is invalid`);
 }
 
 function validatePlaceholders(scenario, label) {
-  const inputs = [scenario.initial_input, ...scenario.followups.map(({ input }) => input)];
+  const inputs = [scenario.initial_input, ...scenario.followups.map(({ input }) => input),
+    ...scenario.program.steps.filter(({ type }) => type === 'prompt-check')
+      .flatMap(({ required_fragments: required, forbidden_fragments: forbidden }) => [...required, ...forbidden])];
   let resultFileUsed = false;
   for (const input of inputs) {
     for (const match of input.matchAll(PLACEHOLDER)) {
-      if (match[1] !== 'RESULT_FILE') admission(`${label} contains an unknown placeholder`);
-      resultFileUsed = true;
+      if (!['RESULT_FILE', 'PLUGIN_DIR', 'MISSING_PLUGIN_DIR'].includes(match[1])) admission(`${label} contains an unknown placeholder`);
+      if (match[1] === 'RESULT_FILE') resultFileUsed = true;
     }
   }
   if (resultFileUsed && !['file-text', 'file-absent'].includes(scenario.fixture_predicate.kind)) admission(`${label} uses RESULT_FILE without a path-bearing predicate`);
 }
 
 function programmedScenario(scenario, label) {
-  closed(scenario, PROGRAMMED_KEYS, label);
+  const keys = PROGRAMMED_KEYS.filter((key) => (key !== 'report_checks' || scenario.report_checks !== undefined)
+    && (key !== 'harness_faults' || scenario.harness_faults !== undefined)
+    && (key !== 'skill_sensitivity' || scenario.skill_sensitivity !== undefined));
+  closed(scenario, keys, label);
   ownerRequirements(scenario.owner_requirements, `${label}.owner_requirements`);
   text(scenario.initial_input, `${label}.initial_input`);
   priorAuthority(scenario.prior_authority, `${label}.prior_authority`);
   program(scenario.program, `${label}.program`);
-  list(scenario.followups, `${label}.followups`, 0, 2);
-  const pending = new Set(scenario.program.steps.filter(({ type }) => type === 'pending').map(({ step_id: stepId }) => stepId));
-  for (const [index, followup] of scenario.followups.entries()) {
-    closed(followup, ['after_pending_step', 'input'], `${label}.followups[${index}]`);
-    text(followup.after_pending_step, `${label}.followups[${index}].after_pending_step`, 1, 128);
-    text(followup.input, `${label}.followups[${index}].input`);
-    if (!pending.has(followup.after_pending_step)) admission(`${label}.followups[${index}] references an unknown pending step`);
+  let segmentPromptCheck = null;
+  for (const step of scenario.program.steps) {
+    if (step.type === 'terminal') { segmentPromptCheck = null; continue; }
+    if (step.type === 'prompt-check') { segmentPromptCheck = step; continue; }
+    if (step.type !== 'effect') continue;
+    if (!segmentPromptCheck) admission(`${label} file effect lacks a same-turn delegated prompt check`);
+    const target = scenario.fixture_predicate.path === step.path ? '${RESULT_FILE}' : step.path;
+    const actionClause = step.operation === 'write'
+      ? `AUTHORIZED_ACTIONS: write ${target} with exact content ${step.text} only.`
+      : `AUTHORIZED_ACTIONS: read ${target} only.`;
+    const scopeClause = 'NO_SCOPE_EXPANSION: make no other changes; stop and report any required expansion.';
+    if (!segmentPromptCheck.required_fragments.includes(actionClause)
+      || !segmentPromptCheck.required_fragments.includes(scopeClause)
+      || !segmentPromptCheck.forbidden_fragments.includes('you may make other changes')
+      || !segmentPromptCheck.forbidden_fragments.includes('continue after a required expansion')
+      || (step.operation === 'read' && (!segmentPromptCheck.forbidden_fragments.includes('read/search the entire cwd is allowed')
+        || !segmentPromptCheck.forbidden_fragments.includes('read other paths')))) {
+      admission(`${label} file prompt check lacks exact authority scope and polarity`);
+    }
   }
-  unique(scenario.followups, `${label}.followups`, ({ after_pending_step: stepId }) => stepId);
+  if (scenario.harness_faults !== undefined) {
+    list(scenario.harness_faults, `${label}.harness_faults`, 1, HARNESS_FAULTS.size);
+    scenario.harness_faults.forEach((fault, index) => {
+      if (!HARNESS_FAULTS.has(fault)) admission(`${label}.harness_faults[${index}] is invalid`);
+    });
+    unique(scenario.harness_faults, `${label}.harness_faults`);
+    if (scenario.harness_faults.includes('inject-stale-question-once')
+      && (!scenario.program.steps.some(({ type, request_kind: kind }) => type === 'pending' && kind === 'question')
+        || !scenario.expected_trace.some(({ kind }) => kind === 'answer.rejected-stale'))) admission(`${label}.harness_faults requires stale-question evidence`);
+    if (scenario.harness_faults.includes('exit-after-result')
+      && !scenario.expected_trace.some(({ kind }) => kind === 'session.resumed')
+      && !(scenario.harness_faults.includes('reject-resume')
+        && scenario.expected_trace.some(({ kind }) => kind === 'session.resume-failed'))) admission(`${label}.harness_faults requires a resume outcome`);
+    if (scenario.harness_faults.includes('reject-resume')
+      && !scenario.expected_trace.some(({ kind }) => kind === 'session.resume-failed')) admission(`${label}.harness_faults requires rejected-resume evidence`);
+    if (scenario.harness_faults.includes('reject-initialize')
+      && (!scenario.expected_trace.some(({ kind }) => kind === 'session.tombstoned')
+        || scenario.expected_trace.some(({ kind }) => kind === 'turn.started'))) admission(`${label}.harness_faults requires an initial tombstone without a turn`);
+    if (scenario.harness_faults.includes('reject-prompt')
+      && (!scenario.program.steps.some(({ type, turn_status: status }) => type === 'terminal' && status === 'failed')
+        || scenario.fixture_predicate.kind !== 'terminal-status'
+        || scenario.fixture_predicate.status !== 'failed'
+        || !scenario.expected_trace.some(({ kind }) => kind === 'turn.failed'))) admission(`${label}.harness_faults requires failed terminal evidence`);
+    if (scenario.harness_faults.includes('accelerate-turn-timeout')
+      && (scenario.fixture_predicate.kind !== 'terminal-status'
+        || scenario.fixture_predicate.status !== 'timed_out'
+        || !scenario.expected_trace.some(({ kind }) => kind === 'turn.timed-out'))) admission(`${label}.harness_faults requires timed-out evidence`);
+    if (scenario.harness_faults.includes('accelerate-mode-timeout')
+      && (scenario.fixture_predicate.kind !== 'mode-change-failed'
+        || scenario.fixture_predicate.error_code !== 'mode_timeout'
+        || !scenario.expected_trace.some(({ kind }) => kind === 'session.mode-change-failed'))) admission(`${label}.harness_faults requires mode-timeout evidence`);
+    if (scenario.harness_faults.includes('accelerate-wait-timeout')
+      && !scenario.expected_trace.some(({ kind, timeout_ms: timeoutMs, timeout_omitted: omitted }) => kind === 'turn.wait-timeout' && timeoutMs === 30_000 && omitted === true)) {
+      admission(`${label}.harness_faults requires an omitted-default wait timeout`);
+    }
+    if (scenario.harness_faults.includes('inject-mode-protocol-error-once')
+      && (scenario.fixture_predicate.kind !== 'mode-recovery-status'
+        || !scenario.expected_trace.some(({ kind, error_code: errorCode }) => kind === 'session.mode-change-failed' && errorCode === 'protocol_error')
+        || !scenario.expected_trace.some(({ kind }) => kind === 'session.mode-recovery-status'))) admission(`${label}.harness_faults requires live mode-recovery evidence`);
+    if (scenario.harness_faults.includes('reject-mode')
+      && (scenario.fixture_predicate.kind !== 'mode-change-failed'
+        || scenario.fixture_predicate.error_code !== 'protocol_error'
+        || !scenario.expected_trace.some(({ kind, error_code: errorCode }) => kind === 'session.mode-change-failed' && errorCode === 'protocol_error')
+        || !scenario.expected_trace.some(({ kind }) => kind === 'session.tombstoned')
+        || !scenario.report_checks?.some(({ required_bindings: bindings = [] }) => bindings.includes('provider_error')))) admission(`${label}.harness_faults requires provider mode-failure evidence`);
+    if (scenario.harness_faults.includes('hold-terminal-until-followup')
+      && (!scenario.followups.some(({ after_kind: kind }) => kind === 'wait-timeout')
+        || !scenario.expected_trace.some(({ kind }) => kind === 'turn.followup-received-active'))) admission(`${label}.harness_faults requires active-followup evidence`);
+  }
+  if (scenario.program.steps.some(({ type, turn_status: status }) => type === 'terminal' && status === 'failed')
+    !== Boolean(scenario.harness_faults?.includes('reject-prompt'))) admission(`${label}.failed terminal and reject-prompt fault must be paired`);
+  const modeTimeout = scenario.expected_trace.some(({ kind, error_code: errorCode }) => kind === 'session.mode-change-failed' && errorCode === 'mode_timeout');
+  const modeProtocolError = scenario.expected_trace.some(({ kind, error_code: errorCode }) => kind === 'session.mode-change-failed' && errorCode === 'protocol_error');
+  if (modeTimeout !== Boolean(scenario.harness_faults?.includes('accelerate-mode-timeout'))) admission(`${label}.mode timeout and acceleration fault must be paired`);
+  if (modeProtocolError !== Boolean(scenario.harness_faults?.includes('inject-mode-protocol-error-once')
+    || scenario.harness_faults?.includes('reject-mode'))) admission(`${label}.mode protocol failure and fault must be paired`);
+  if (Boolean(scenario.harness_faults?.includes('inject-mode-protocol-error-once'))
+    && Boolean(scenario.harness_faults?.includes('reject-mode'))) admission(`${label}.mode protocol faults are mutually exclusive`);
+  if (scenario.expected_trace.some(({ kind, timeout_omitted: omitted }) => kind === 'turn.wait-timeout' && omitted === true)
+    !== Boolean(scenario.harness_faults?.includes('accelerate-wait-timeout'))) admission(`${label}.default wait timeout and acceleration fault must be paired`);
+  if (scenario.expected_trace.some(({ kind }) => kind === 'turn.followup-received-active')
+    !== Boolean(scenario.harness_faults?.includes('hold-terminal-until-followup'))) admission(`${label}.active-followup trace and hold fault must be paired`);
+  const expectedKinds = scenario.expected_trace.map(({ kind }) => kind);
+  if (expectedKinds.includes('answer.rejected-stale')
+    !== Boolean(scenario.harness_faults?.includes('inject-stale-question-once'))) admission(`${label}.stale-answer trace and injection fault must be paired`);
+  if (expectedKinds.includes('turn.timed-out')
+    !== Boolean(scenario.harness_faults?.includes('accelerate-turn-timeout'))) admission(`${label}.terminal timeout trace and acceleration fault must be paired`);
+  const resumeFailed = expectedKinds.includes('session.resume-failed');
+  if (resumeFailed !== Boolean(scenario.harness_faults?.includes('exit-after-result')
+    && scenario.harness_faults?.includes('reject-resume'))) admission(`${label}.resume-failed trace requires exit and rejection faults`);
+  if (resumeFailed) {
+    const report = scenario.report_checks?.find(({ turn_index: turnIndex }) => turnIndex === 2);
+    const requiredBindings = ['cursor_session_id', 'session_id', 'failure_kind', 'terminal_reason', 'provider_error',
+      'next_provider_operation_requires_new_user_decision'];
+    const requiredFragments = ['cursor_session_id', 'session_id', 'failure_kind',
+      'terminal_reason', 'provider_error', 'next_provider_operation_requires_new_user_decision'];
+    if (!report || requiredBindings.some((binding) => !report.required_bindings?.includes(binding))
+      || requiredFragments.some((fragment) => !report.required_fragments?.includes(fragment))) {
+      admission(`${label}.resume-failed recovery report is incomplete`);
+    }
+  }
+  const recoveryTombstone = expectedKinds.some((kind, index) => kind === 'session.tombstoned'
+    && expectedKinds.slice(0, index).some((candidate) => ['turn.completed', 'turn.failed', 'turn.timed-out'].includes(candidate))
+    && expectedKinds.slice(index + 1).some((candidate) => ['session.resumed', 'session.resume-failed'].includes(candidate)));
+  if (recoveryTombstone !== Boolean(scenario.harness_faults?.includes('exit-after-result'))) admission(`${label}.wrapper-loss recovery and exit fault must be paired`);
+  const tombstoneIndex = expectedKinds.indexOf('session.tombstoned');
+  const initialTombstone = tombstoneIndex !== -1 && !expectedKinds.slice(0, tombstoneIndex).includes('turn.started');
+  if (initialTombstone !== Boolean(scenario.harness_faults?.includes('reject-initialize'))) admission(`${label}.initial tombstone and initialization fault must be paired`);
+  if (scenario.skill_sensitivity !== undefined) {
+    closed(scenario.skill_sensitivity, ['expected_mismatch', 'mutation'], `${label}.skill_sensitivity`);
+    if (scenario.skill_sensitivity.mutation !== 'omit-events-lost'
+      || scenario.skill_sensitivity.expected_mismatch !== 'reported-outcome-mismatch'
+      || scenario.lane !== 'model-behavior'
+      || !scenario.program.steps.some(({ type }) => type === 'event-burst')
+      || !scenario.expected_trace.some(({ kind }) => kind === 'turn.events-lost')
+      || scenario.report_checks === undefined) admission(`${label}.skill_sensitivity is invalid`);
+  }
+  list(scenario.followups, `${label}.followups`, 0, 2);
+  const stepsById = new Map(scenario.program.steps.map((step) => [step.step_id, step]));
+  for (const [index, followup] of scenario.followups.entries()) {
+    const keys = followup.after_kind === 'wait-timeout' ? ['after_kind', 'input'] : ['after_kind', 'after_step', 'input'];
+    if (followup.granted_actions !== undefined) keys.push('granted_actions');
+    closed(followup, keys, `${label}.followups[${index}]`);
+    if (!['pending', 'terminal', 'wait-timeout'].includes(followup.after_kind)) admission(`${label}.followups[${index}].after_kind is invalid`);
+    text(followup.input, `${label}.followups[${index}].input`);
+    if (followup.granted_actions !== undefined) {
+      list(followup.granted_actions, `${label}.followups[${index}].granted_actions`, 1, 8);
+      followup.granted_actions.forEach((item, actionIndex) => action(item, `${label}.followups[${index}].granted_actions[${actionIndex}]`));
+      unique(followup.granted_actions, `${label}.followups[${index}].granted_actions`, ({ operation, path }) => `${operation}\0${path}`);
+    }
+    if (followup.after_kind !== 'wait-timeout') {
+      text(followup.after_step, `${label}.followups[${index}].after_step`, 1, 128);
+      const step = stepsById.get(followup.after_step);
+      if (!step || (followup.after_kind === 'pending' && step.type !== 'pending')
+        || (followup.after_kind === 'terminal' && step.type !== 'terminal')) admission(`${label}.followups[${index}] references an incompatible step`);
+    } else if (!scenario.expected_trace.some(({ kind }) => kind === 'turn.wait-timeout')) admission(`${label}.followups[${index}] requires an expected wait timeout`);
+  }
+  unique(scenario.followups, `${label}.followups`, ({ after_kind: kind, after_step: stepId = '' }) => `${kind}\0${stepId}`);
+  if (scenario.lane === 'model-behavior') {
+    ordinaryModelGoal(scenario.initial_input, `${label}.initial_input`);
+    scenario.followups.forEach((followup, index) => ordinaryModelGoal(followup.input, `${label}.followups[${index}].input`));
+  }
+  if (scenario.report_checks !== undefined) {
+    list(scenario.report_checks, `${label}.report_checks`, 1, 3);
+    for (const [index, check] of scenario.report_checks.entries()) {
+      closed(check, check.required_bindings === undefined
+        ? ['forbidden_fragments', 'required_fragments', 'turn_index']
+        : ['forbidden_fragments', 'required_bindings', 'required_fragments', 'turn_index'], `${label}.report_checks[${index}]`);
+      if (!Number.isSafeInteger(check.turn_index) || check.turn_index < 1 || check.turn_index > scenario.followups.length + 1) admission(`${label}.report_checks[${index}].turn_index is invalid`);
+      list(check.required_fragments, `${label}.report_checks[${index}].required_fragments`, 1, 12);
+      list(check.forbidden_fragments, `${label}.report_checks[${index}].forbidden_fragments`, 0, 12);
+      check.required_fragments.forEach((fragment, item) => text(fragment, `${label}.report_checks[${index}].required_fragments[${item}]`, 1, 256));
+      check.forbidden_fragments.forEach((fragment, item) => text(fragment, `${label}.report_checks[${index}].forbidden_fragments[${item}]`, 1, 256));
+      unique(check.required_fragments, `${label}.report_checks[${index}].required_fragments`);
+      unique(check.forbidden_fragments, `${label}.report_checks[${index}].forbidden_fragments`);
+      if (check.required_bindings !== undefined) {
+        list(check.required_bindings, `${label}.report_checks[${index}].required_bindings`, 1, 12);
+        check.required_bindings.forEach((binding, item) => {
+          if (!REPORT_BINDINGS.has(binding)) admission(`${label}.report_checks[${index}].required_bindings[${item}] is invalid`);
+        });
+        unique(check.required_bindings, `${label}.report_checks[${index}].required_bindings`);
+      }
+    }
+    unique(scenario.report_checks, `${label}.report_checks`, ({ turn_index: turnIndex }) => turnIndex);
+  }
   trace(scenario.expected_trace, scenario.program.steps, `${label}.expected_trace`);
-  list(scenario.forbidden_observations, `${label}.forbidden_observations`, 0, FORBIDDEN.size);
-  scenario.forbidden_observations.forEach((value, index) => { if (!FORBIDDEN.has(value)) admission(`${label}.forbidden_observations[${index}] is invalid`); });
-  unique(scenario.forbidden_observations, `${label}.forbidden_observations`);
+  for (const step of scenario.program.steps.filter(({ type }) => type === 'effect')) {
+    const expectedKind = `effect.file-${step.operation === 'read' ? 'read' : 'written'}`;
+    const matching = scenario.expected_trace.filter(({ kind, step_id: stepId }) => kind === expectedKind && stepId === step.step_id);
+    if (matching.length !== 1) admission(`${label}.expected_trace must observe every file effect exactly once`);
+  }
   predicate(scenario.fixture_predicate, `${label}.fixture_predicate`);
   if (!OUTCOMES.has(scenario.expected_actual_task_outcome) || !OUTCOMES.has(scenario.expected_reported_task_outcome) || scenario.expected_enabled_eval_status !== 'pass') admission(`${label} has invalid expected outcomes`);
-  if (scenario.scenario_id === 'model-plan') {
-    const plan = scenario.program.steps.find(({ request_kind: requestKind }) => requestKind === 'plan');
-    if (!plan || plan.expected_callback.decision !== 'accept') admission(`${label} must accept its plan`);
-  }
   validatePlaceholders(scenario, label);
 }
 
 function referenceScenario(scenario, label) {
   closed(scenario, REFERENCE_KEYS, label);
-  if (scenario.scenario_id !== 'live-marker' || scenario.expected_enabled_eval_status !== 'pass') admission(`${label} is not the exact package canary reference`);
+  if (scenario.lane !== 'full-live' || scenario.expected_enabled_eval_status !== 'pass') admission(`${label} is not a package canary reference`);
   ownerRequirements(scenario.owner_requirements, `${label}.owner_requirements`);
   if (scenario.owner_requirements.length !== 1 || canonicalJson(scenario.owner_requirements[0]) !== canonicalJson({ capability: 'cursor-plugin-distribution', requirement: 'Проверяемая чистая установка' })) admission(`${label} has an invalid package owner`);
 }
@@ -260,9 +551,8 @@ function referenceScenario(scenario, label) {
 function validateScenario(scenario, label) {
   record(scenario, label);
   text(scenario.scenario_id, `${label}.scenario_id`, 1, 128);
-  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(scenario.scenario_id) || !EXACT_SCENARIOS.has(scenario.scenario_id)) admission(`${label}.scenario_id is invalid`);
-  if (scenario.lane !== EXACT_SCENARIOS.get(scenario.scenario_id)) admission(`${label}.lane is invalid`);
-  if (scenario.scenario_kind === 'programmed' && scenario.scenario_id !== 'live-marker') programmedScenario(scenario, label);
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(scenario.scenario_id)) admission(`${label}.scenario_id is invalid`);
+  if (scenario.scenario_kind === 'programmed' && ['client-integration', 'model-behavior'].includes(scenario.lane)) programmedScenario(scenario, label);
   else if (scenario.scenario_kind === 'package-canary-reference') referenceScenario(scenario, label);
   else admission(`${label}.scenario_kind is invalid`);
 }
@@ -270,9 +560,11 @@ function validateScenario(scenario, label) {
 export function admitScenarioCorpus(value) {
   closed(value, ['schema_version', 'scenarios'], 'corpus');
   if (value.schema_version !== 1) admission('corpus.schema_version is invalid');
-  list(value.scenarios, 'corpus.scenarios', EXACT_SCENARIOS.size, EXACT_SCENARIOS.size);
+  list(value.scenarios, 'corpus.scenarios', 2, 64);
   const admitted = structuredClone(value);
   admitted.scenarios.forEach((scenario, index) => validateScenario(scenario, `corpus.scenarios[${index}]`));
+  if (admitted.scenarios.filter(({ scenario_kind: kind }) => kind === 'package-canary-reference').length !== 1
+    || !admitted.scenarios.some(({ scenario_kind: kind }) => kind === 'programmed')) admission('corpus.scenarios must contain programmed rows and exactly one package reference');
   unique(admitted.scenarios, 'corpus.scenarios', ({ scenario_id: scenarioId }) => scenarioId);
   return admitted;
 }
@@ -296,13 +588,38 @@ export function materializeScenario(scenario, { workspace } = {}) {
   const materialized = structuredClone(admitted);
   const bindings = {};
   if (materialized.scenario_kind === 'programmed') {
-    const inputs = [materialized.initial_input, ...materialized.followups.map(({ input }) => input)];
+    const promptFragments = materialized.program.steps.filter(({ type }) => type === 'prompt-check')
+      .flatMap(({ required_fragments: required, forbidden_fragments: forbidden }) => [...required, ...forbidden]);
+    const inputs = [materialized.initial_input, ...materialized.followups.map(({ input }) => input), ...promptFragments];
+    const replacePromptFragments = (placeholder, replacement) => {
+      materialized.program.steps = materialized.program.steps.map((step) => step.type !== 'prompt-check' ? step : ({ ...step,
+        required_fragments: step.required_fragments.map((fragment) => fragment.replaceAll(placeholder, replacement)),
+        forbidden_fragments: step.forbidden_fragments.map((fragment) => fragment.replaceAll(placeholder, replacement)),
+      }));
+    };
     if (inputs.some((input) => input.includes('${RESULT_FILE}'))) {
       if (typeof workspace !== 'string' || !isAbsolute(workspace)) admission('workspace must be absolute when RESULT_FILE is used');
       const resultFile = resolve(workspace, ...materialized.fixture_predicate.path.split('/'));
       bindings.RESULT_FILE = resultFile;
       materialized.initial_input = materialized.initial_input.replaceAll('${RESULT_FILE}', resultFile);
       materialized.followups = materialized.followups.map((followup) => ({ ...followup, input: followup.input.replaceAll('${RESULT_FILE}', resultFile) }));
+      replacePromptFragments('${RESULT_FILE}', resultFile);
+    }
+    if (inputs.some((input) => input.includes('${PLUGIN_DIR}'))) {
+      if (typeof workspace !== 'string' || !isAbsolute(workspace)) admission('workspace must be absolute when PLUGIN_DIR is used');
+      const pluginDir = resolve(workspace, 'plugin-bundle');
+      bindings.PLUGIN_DIR = pluginDir;
+      materialized.initial_input = materialized.initial_input.replaceAll('${PLUGIN_DIR}', pluginDir);
+      materialized.followups = materialized.followups.map((followup) => ({ ...followup, input: followup.input.replaceAll('${PLUGIN_DIR}', pluginDir) }));
+      replacePromptFragments('${PLUGIN_DIR}', pluginDir);
+    }
+    if (inputs.some((input) => input.includes('${MISSING_PLUGIN_DIR}'))) {
+      if (typeof workspace !== 'string' || !isAbsolute(workspace)) admission('workspace must be absolute when MISSING_PLUGIN_DIR is used');
+      const missingPluginDir = resolve(workspace, 'missing-plugin-bundle');
+      bindings.MISSING_PLUGIN_DIR = missingPluginDir;
+      materialized.initial_input = materialized.initial_input.replaceAll('${MISSING_PLUGIN_DIR}', missingPluginDir);
+      materialized.followups = materialized.followups.map((followup) => ({ ...followup, input: followup.input.replaceAll('${MISSING_PLUGIN_DIR}', missingPluginDir) }));
+      replacePromptFragments('${MISSING_PLUGIN_DIR}', missingPluginDir);
     }
   }
   const canonicalPayload = canonicalJson(materialized);
@@ -317,10 +634,37 @@ function expectedCallback(step) {
 
 function traceProjection(observation) {
   const projected = { kind: observation.kind };
+  if ('mode' in observation) projected.mode = observation.mode;
+  if ('model' in observation) projected.model = observation.model;
+  if ('effort' in observation) projected.effort = observation.effort;
+  if ('fast' in observation) projected.fast = observation.fast;
+  if ('plugin_dirs_count' in observation) projected.plugin_dirs_count = observation.plugin_dirs_count;
+  if ('plugin_dirs_matched' in observation) projected.plugin_dirs_matched = observation.plugin_dirs_matched;
   if ('step_id' in observation) projected.step_id = observation.step_id;
   if ('option_ids' in observation) projected.option_ids = observation.option_ids;
   if ('decision' in observation) projected.decision = observation.decision;
+  if ('matched' in observation) projected.matched = observation.matched;
+  if ('timeout_ms' in observation) projected.timeout_ms = observation.timeout_ms;
+  if ('timeout_omitted' in observation) projected.timeout_omitted = observation.timeout_omitted;
+  if ('cursor_matched' in observation) projected.cursor_matched = observation.cursor_matched;
+  if ('progress_revision_matched' in observation) projected.progress_revision_matched = observation.progress_revision_matched;
+  if ('events_lost' in observation) projected.events_lost = observation.events_lost;
+  if ('result_truncated' in observation) projected.result_truncated = observation.result_truncated;
+  if ('error_code' in observation) projected.error_code = observation.error_code;
+  if ('session_state' in observation) projected.session_state = observation.session_state;
+  if ('active_turn' in observation) projected.active_turn = observation.active_turn;
   return projected;
+}
+
+function comparableTrace(trace) {
+  let terminalWrapper = false;
+  return trace.filter((observation) => {
+    if (['session.allocated', 'session.resumed'].includes(observation.kind)) terminalWrapper = false;
+    if (observation.kind === 'session.close-attempted' && terminalWrapper) return false;
+    if (['session.tombstoned', 'session.close-attempted'].includes(observation.kind)
+      || (observation.kind === 'session.mode-change-failed' && observation.error_code === 'mode_timeout')) terminalWrapper = true;
+    return true;
+  }).map(traceProjection);
 }
 
 export function evaluateScenario(scenario, { trace = [], callbacks = [], effects = [], actual_task_outcome: actualTaskOutcome, reported_task_outcome: reportedTaskOutcome } = {}) {
@@ -332,35 +676,94 @@ export function evaluateScenario(scenario, { trace = [], callbacks = [], effects
   const pendingSeen = new Set();
   const pendingRequestIds = new Map();
   let sessionId;
+  const sessionIds = new Set();
   let turnId;
+  const turnIds = new Set();
+  const initialAuthority = (scenario.prior_authority?.allowed_actions || []).map(({ operation, path }) => `${operation}\0${path}`);
+  let lastAuthorityTurnIndex = 0;
   let closed = false;
   for (const observation of trace) {
-    if (typeof observation.session_id !== 'string' || !observation.session_id
-      || (observation.kind !== 'session.allocated' && (typeof observation.turn_id !== 'string' || !observation.turn_id))
+    const turnScoped = !observation.kind?.startsWith('session.');
+    if ((observation.kind !== 'session.start-rejected' && (typeof observation.session_id !== 'string' || !observation.session_id))
+      || (turnScoped && (typeof observation.turn_id !== 'string' || !observation.turn_id))
       || ((observation.kind?.startsWith('pending.') || observation.kind?.startsWith('answer.'))
         && (typeof observation.request_id !== 'string' || !observation.request_id))) add('id-mismatch');
-    if (closed) add('operation-after-close');
-    if (observation.kind === 'session.close-attempted') closed = true;
-    if (observation.kind === 'session.allocated' && observation.session_id) sessionId ??= observation.session_id;
-    if (observation.kind === 'turn.started' && observation.turn_id) turnId ??= observation.turn_id;
+    if (closed && !['session.resumed', 'session.resume-failed', 'session.close-attempted'].includes(observation.kind)) add('operation-after-close');
+    if (observation.kind === 'session.close-attempted' || observation.kind === 'session.tombstoned'
+      || (observation.kind === 'session.mode-change-failed' && observation.error_code === 'mode_timeout')) closed = true;
+    if (['session.resumed', 'session.resume-failed'].includes(observation.kind)) {
+      if (sessionIds.has(observation.session_id)) add('id-mismatch');
+      closed = observation.kind === 'session.resume-failed'; sessionId = observation.session_id; turnId = undefined; sessionIds.add(observation.session_id);
+    }
+    if (observation.kind === 'session.allocated' && observation.session_id) { sessionId ??= observation.session_id; sessionIds.add(observation.session_id); }
+    if (observation.kind === 'turn.started' && observation.turn_id) {
+      if (turnIds.has(observation.turn_id)) add('id-mismatch');
+      turnIds.add(observation.turn_id);
+      turnId = observation.turn_id;
+    }
     if (sessionId && observation.session_id && observation.session_id !== sessionId) add('id-mismatch');
-    if (turnId && observation.turn_id && observation.turn_id !== turnId) add('id-mismatch');
+    if (turnId && observation.kind !== 'turn.started' && observation.turn_id && observation.turn_id !== turnId) add('id-mismatch');
     if (observation.kind?.startsWith('pending.')) {
       pendingSeen.add(observation.step_id);
       if (observation.request_id) pendingRequestIds.set(observation.step_id, observation.request_id);
     }
-    if (observation.kind?.startsWith('answer.')) {
+    if (observation.kind?.startsWith('answer.') && observation.kind !== 'answer.rejected-stale') {
       if (!pendingSeen.has(observation.step_id)) add('answer-before-pending');
       const requestId = pendingRequestIds.get(observation.step_id);
       if (requestId && observation.request_id && observation.request_id !== requestId) add('id-mismatch');
     }
-    if (observation.kind === 'effect.file-written' && planned.get(observation.step_id)?.type !== 'effect') add('unexpected-effect');
-    if (FORBIDDEN.has(observation.kind) && scenario.forbidden_observations.includes(observation.kind)) add(observation.kind);
+    if (observation.kind?.startsWith('effect.file-') && planned.get(observation.step_id)?.type !== 'effect') add('unexpected-effect');
+    const authorityScoped = observation.kind?.startsWith('effect.file-') || observation.kind === 'answer.permission';
+    if (authorityScoped && (!Number.isSafeInteger(observation.codex_turn_index) || observation.codex_turn_index < 1
+      || observation.codex_turn_index > (scenario.followups?.length || 0) + 1
+      || observation.codex_turn_index < lastAuthorityTurnIndex)) {
+      add('authority-mismatch');
+    } else if (authorityScoped) {
+      lastAuthorityTurnIndex = observation.codex_turn_index;
+      const authority = new Set(initialAuthority);
+      for (let followupIndex = 0; followupIndex < observation.codex_turn_index - 1; followupIndex += 1) {
+        for (const action of scenario.followups?.[followupIndex]?.granted_actions || []) authority.add(`${action.operation}\0${action.path}`);
+      }
+      if (observation.kind?.startsWith('effect.file-')) {
+        const step = planned.get(observation.step_id);
+        if (step && !authority.has(`${step.operation}\0${step.path}`)) add('authority-mismatch');
+      }
+      if (observation.kind === 'answer.permission' && observation.decision === 'allow-once') {
+        const step = planned.get(observation.step_id);
+        if (step && !authority.has(`${step.action.operation}\0${step.action.path}`)) add('authority-mismatch');
+      }
+    }
+    if (observation.kind === 'prompt.contract' && observation.matched !== true) add('prompt-contract-mismatch');
+    if (FORBIDDEN.has(observation.kind)) add(observation.kind);
   }
-  if (!trace.some(({ kind }) => kind === 'session.close-attempted')) add('missing-close-attempt');
-  if (canonicalJson(trace.map(traceProjection)) !== canonicalJson(scenario.expected_trace)) add('trace-mismatch');
+  let segmentStarted = false;
+  let segmentTerminal = false;
+  const retainedLiveIdleIsExpected = scenario.expected_trace.at(-1)?.kind === 'session.mode-recovery-status'
+    && scenario.expected_trace.at(-1)?.session_state === 'live'
+    && scenario.expected_trace.at(-1)?.active_turn === false;
+  for (const observation of trace) {
+    if (['session.allocated', 'session.resumed', 'session.resume-failed'].includes(observation.kind)) {
+      if (segmentStarted && !segmentTerminal) add('missing-close-attempt');
+      segmentStarted = true;
+      segmentTerminal = observation.kind === 'session.resume-failed';
+    }
+    if (['session.close-attempted', 'session.tombstoned'].includes(observation.kind)
+      || (observation.kind === 'session.mode-change-failed' && observation.error_code === 'mode_timeout')) segmentTerminal = true;
+    if (retainedLiveIdleIsExpected && observation.kind === 'session.mode-recovery-status'
+      && observation.session_state === 'live' && observation.active_turn === false) segmentTerminal = true;
+  }
+  if (segmentStarted && !segmentTerminal) add('missing-close-attempt');
+  if (canonicalJson(comparableTrace(trace)) !== canonicalJson(comparableTrace(scenario.expected_trace))) add('trace-mismatch');
 
   for (const step of scenario.program.steps) {
+    if (step.type === 'event-burst') {
+      const acknowledgements = callbacks.filter(({ step_id: stepId, kind }) => stepId === step.step_id && kind === 'burst.ack');
+      const ids = new Set(acknowledgements.map(({ callback_id: callbackId }) => callbackId));
+      if (acknowledgements.length !== step.count || ids.size !== step.count
+        || acknowledgements.some(({ callback_id: callbackId }) => typeof callbackId !== 'string' || !callbackId.startsWith('burst:'))
+        || callbacks.some(({ step_id: stepId, kind }) => stepId === step.step_id && kind === 'callback.failure')) add('burst-ack-mismatch');
+      continue;
+    }
     if (!['pending', 'effect'].includes(step.type)) continue;
     const observed = callbacks.filter(({ step_id: stepId }) => stepId === step.step_id);
     if (observed.length === 0) add(step.type === 'effect' ? 'missing-effect-callback' : 'missing-callback');
@@ -370,7 +773,10 @@ export function evaluateScenario(scenario, { trace = [], callbacks = [], effects
     }
     if (step.type === 'effect') {
       const matching = effects.filter(({ step_id: stepId }) => stepId === step.step_id);
-      if (matching.length !== 1 || matching[0].callback_id !== step.callback_id || matching[0].kind !== 'effect.file-written') add('missing-effect');
+      const expectedKind = `effect.file-${step.operation === 'read' ? 'read' : 'written'}`;
+      if (matching.length !== 1 || matching[0].callback_id !== step.callback_id || matching[0].kind !== expectedKind) add('missing-effect');
+      const traceMatching = trace.filter(({ kind, step_id: stepId }) => kind === expectedKind && stepId === step.step_id);
+      if (traceMatching.length !== 1) add('missing-effect');
     }
   }
   if (effects.some(({ step_id: stepId }) => planned.get(stepId)?.type !== 'effect')) add('unexpected-effect');

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
+import { createHash } from 'node:crypto';
 import { createInterface } from 'node:readline';
-import { appendFileSync, readFileSync } from 'node:fs';
+import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 if (process.argv.includes('--version')) {
@@ -14,14 +15,21 @@ if (process.argv.includes('--version')) {
   process.exit(process.env.FAKE_ACP_VERSION_MODE === 'nonzero' ? 9 : 0);
 }
 
+const expectedModelArgv = process.env.FAKE_ACP_EXPECT_MODEL_ARGV
+  ? JSON.parse(process.env.FAKE_ACP_EXPECT_MODEL_ARGV)
+  : ['--model', 'auto'];
+const expectedPluginArgv = process.env.FAKE_ACP_EXPECT_PLUGIN_DIRS
+  ? JSON.parse(process.env.FAKE_ACP_EXPECT_PLUGIN_DIRS).flatMap((root) => ['--plugin-dir', root])
+  : [];
 const expectedPolicyArgv = process.env.FAKE_ACP_EXPECT_DEFAULT_ARGV
-  ? ['--auto-review', '--sandbox', 'enabled', 'acp']
-  : ['--auto-review', '--sandbox', 'enabled'];
+  ? ['--auto-review', '--sandbox', 'enabled', ...expectedModelArgv, ...expectedPluginArgv, 'acp']
+  : ['--auto-review', '--sandbox', 'enabled', ...expectedModelArgv, ...expectedPluginArgv];
 if (process.env.FAKE_ACP_REQUIRE_POLICY
   && JSON.stringify(process.argv.slice(2)) !== JSON.stringify(expectedPolicyArgv)) {
   process.stderr.write('missing required adapter policy argv\n');
   process.exit(9);
 }
+if (process.env.FAKE_ACP_ARGV_LOG) appendFileSync(process.env.FAKE_ACP_ARGV_LOG, `${JSON.stringify(process.argv.slice(2))}\n`);
 
 const input = createInterface({ input: process.stdin });
 const send = (message) => process.stdout.write(`${JSON.stringify(message)}${process.env.FAKE_ACP_CRLF ? '\r\n' : '\n'}`);
@@ -45,33 +53,106 @@ const finishPrompt = (id, text) => {
 };
 let programStepIndex = 0;
 let awaitedProgramStep = null;
+let promptText = '';
+let terminalHoldConsumed = false;
+let setModeCallCount = 0;
+let burstPendingIds = null;
+let burstSeenIds = null;
 const permissionOptionIds = new Map();
-const recordProgramFailure = (step, reason) => safeEvidence({
-  kind: 'callback.failure', step_id: step.step_id, callback_id: step.callback_id, reason,
+const recordProgramFailure = (step, reason, callbackId = step.callback_id) => safeEvidence({
+  kind: 'callback.failure', step_id: step.step_id, callback_id: callbackId, reason,
 });
 const advanceProgram = () => {
   if (!program || promptId === null || awaitedProgramStep) return;
   const step = program.steps[programStepIndex];
   if (!step) throw new Error('fake-ACP program ended without terminal step');
   programStepIndex += 1;
+  if (step.type === 'prompt-check') {
+    const folded = promptText.toLocaleLowerCase('en-US');
+    const missing = step.required_fragments.flatMap((fragment, index) =>
+      folded.includes(fragment.toLocaleLowerCase('en-US')) ? [] : [index]);
+    const forbiddenHits = step.forbidden_fragments.flatMap((fragment, index) =>
+      folded.includes(fragment.toLocaleLowerCase('en-US')) ? [index] : []);
+    safeEvidence({ kind: 'prompt.contract', step_id: step.step_id,
+      matched: missing.length === 0 && forbiddenHits.length === 0,
+      missing_fragment_indexes: missing, forbidden_fragment_indexes: forbiddenHits });
+    advanceProgram();
+    return;
+  }
   if (step.type === 'terminal') {
-    if (step.result_text !== null) {
-      send({ jsonrpc: '2.0', method: 'session/update', params: { sessionId: 'fake', update: { sessionUpdate: 'agent_message_chunk', content: { text: step.result_text } } } });
+    safeEvidence({ event: 'terminal_armed', step_id: step.step_id, turn_status: step.turn_status });
+    const finish = () => {
+      if (step.turn_status === 'failed') {
+        if (!process.env.FAKE_ACP_REJECT_PROMPT) throw new Error('failed terminal requires FAKE_ACP_REJECT_PROMPT');
+        const id = promptId;
+        promptId = null;
+        send({ jsonrpc: '2.0', id, error: { code: -32000,
+          message: process.env.FAKE_ACP_PROMPT_ERROR_MESSAGE || 'prompt rejected' } });
+        return;
+      }
+      if (step.result_text !== null) {
+        send({ jsonrpc: '2.0', method: 'session/update', params: { sessionId: 'fake', update: { sessionUpdate: 'agent_message_chunk', content: { text: step.result_text } } } });
+      }
+      const id = promptId;
+      promptId = null;
+      send({ jsonrpc: '2.0', id, result: { stopReason: 'end_turn' } });
+      safeEvidence({ event: 'prompt_result', request_id: id, step_id: step.step_id,
+        result_sha256: typeof step.result_text === 'string'
+          ? createHash('sha256').update(`${step.progress_text || ''}${step.result_text}`).digest('hex') : null });
+      const exitAfterThisResult = process.env.FAKE_ACP_EXIT_AFTER_RESULT
+        && (program?.resume_step_index === undefined || programStepIndex <= program.resume_step_index);
+      if (exitAfterThisResult) setImmediate(() => process.exit(0));
+    };
+    if (step.progress_text) send({ jsonrpc: '2.0', method: 'session/update', params: { sessionId: 'fake', update: { sessionUpdate: 'agent_message_chunk', content: { text: step.progress_text } } } });
+    if (process.env.FAKE_ACP_FOLLOWUP_RELEASE_PATH && !terminalHoldConsumed) {
+      terminalHoldConsumed = true;
+      const release = setInterval(() => {
+        if (!existsSync(process.env.FAKE_ACP_FOLLOWUP_RELEASE_PATH)) return;
+        clearInterval(release);
+        safeEvidence({ event: 'followup_received_active', step_id: step.step_id });
+        finish();
+      }, 10);
+    } else if (step.delay_ms) setTimeout(finish, step.delay_ms);
+    else finish();
+    return;
+  }
+  if (step.type === 'notification') {
+    const fixtures = {
+      todos: { method: 'cursor/update_todos', params: { toolCallId: 'todos-1', merge: true, todos: [{ id: 'todo-1', content: 'Review', status: 'in_progress' }] } },
+      task: { method: 'cursor/task', params: { toolCallId: 'task-1', description: 'Subreview', prompt: 'private prompt', subagentType: 'explore', model: 'fixture', agentId: 'agent-1', durationMs: 1 } },
+      image: { method: 'cursor/generate_image', params: { toolCallId: 'image-1', description: 'Preview', filePath: 'preview.png', referenceImagePaths: [] } },
+    };
+    const fixture = fixtures[step.notification_kind];
+    awaitedProgramStep = step;
+    send({ jsonrpc: '2.0', id: `notification:${step.step_id}`, ...fixture });
+    return;
+  }
+  if (step.type === 'event-burst') {
+    awaitedProgramStep = step;
+    burstPendingIds = new Set(Array.from({ length: step.count }, (_, index) => `burst:${index}`));
+    burstSeenIds = new Set();
+    safeEvidence({ event: 'burst_emitted', step_id: step.step_id, count: step.count });
+    for (let index = 0; index < step.count; index += 1) {
+      send({ jsonrpc: '2.0', id: `burst:${index}`, method: 'cursor/update_todos', params: {
+        toolCallId: `burst-todo-${index}`, merge: true,
+        todos: [{ id: `todo-${index}`, content: `Bounded progress ${index}`, status: 'in_progress' }],
+      } });
     }
-    const id = promptId;
-    promptId = null;
-    send({ jsonrpc: '2.0', id, result: { stopReason: 'end_turn' } });
-    safeEvidence({ event: 'prompt_result', request_id: id, step_id: step.step_id });
     return;
   }
   awaitedProgramStep = step;
   if (step.type === 'effect') {
-    send({ jsonrpc: '2.0', id: step.callback_id, method: 'fs/write_text_file', params: {
-      sessionId: 'fake', path: resolve(process.cwd(), step.path), content: step.text,
-    } });
+    send({
+      jsonrpc: '2.0', id: step.callback_id,
+      method: step.operation === 'read' ? 'fs/read_text_file' : 'fs/write_text_file',
+      params: step.operation === 'read'
+        ? { sessionId: 'fake', path: resolve(process.cwd(), step.path), line: 1, limit: 20 }
+        : { sessionId: 'fake', path: resolve(process.cwd(), step.path), content: step.text },
+    });
     return;
   }
   if (step.type !== 'pending') throw new Error(`unsupported fake-ACP program step: ${step.type}`);
+  safeEvidence({ event: 'pending_emitted', step_id: step.step_id, request_kind: step.request_kind });
   if (step.request_kind === 'question') {
     send({ jsonrpc: '2.0', id: step.callback_id, method: 'cursor/ask_question', params: {
       questions: [{ id: step.question_id, question: step.prompt, options: step.options }],
@@ -108,7 +189,30 @@ const handleProgramResponse = (response) => {
   const step = awaitedProgramStep;
   if (!step) return false;
   const actualId = String(response.id);
-  if (actualId !== step.callback_id) {
+  if (step.type === 'event-burst') {
+    if (!burstPendingIds.has(actualId)) {
+      recordProgramFailure(step, burstSeenIds.has(actualId) ? 'duplicate' : 'id-mismatch', actualId);
+      return true;
+    }
+    burstSeenIds.add(actualId);
+    if (response.error) recordProgramFailure(step, 'error', actualId);
+    else if (!Object.hasOwn(response, 'result')) recordProgramFailure(step, 'missing', actualId);
+    else if (!response.result || Array.isArray(response.result) || typeof response.result !== 'object'
+      || Object.keys(response.result).length !== 0) recordProgramFailure(step, 'invalid-result', actualId);
+    else {
+      burstPendingIds.delete(actualId);
+      safeEvidence({ kind: 'burst.ack', step_id: step.step_id, callback_id: actualId });
+      if (burstPendingIds.size === 0) {
+        awaitedProgramStep = null;
+        burstPendingIds = null;
+        burstSeenIds = null;
+        advanceProgram();
+      }
+    }
+    return true;
+  }
+  const expectedId = step.type === 'notification' ? `notification:${step.step_id}` : step.callback_id;
+  if (actualId !== expectedId) {
     recordProgramFailure(step, 'id-mismatch');
     return true;
   }
@@ -117,11 +221,22 @@ const handleProgramResponse = (response) => {
     recordProgramFailure(step, 'error');
   } else if (!Object.hasOwn(response, 'result')) {
     recordProgramFailure(step, 'missing');
+  } else if (step.type === 'notification') {
+    if (!response.result || Array.isArray(response.result) || typeof response.result !== 'object' || Object.keys(response.result).length !== 0) {
+      recordProgramFailure(step, 'invalid-result');
+    } else safeEvidence({ kind: `progress.${step.notification_kind}`, step_id: step.step_id });
   } else if (step.type === 'effect') {
-    safeEvidence({
-      step_id: step.step_id, callback_id: actualId, kind: 'write-result', outcome: 'succeeded',
-    });
-    safeEvidence({ kind: 'effect.file-written', step_id: step.step_id, callback_id: actualId });
+    const result = response.result;
+    const objectResult = result && !Array.isArray(result) && typeof result === 'object';
+    const keys = objectResult ? Object.keys(result) : [];
+    const succeeded = step.operation === 'write'
+      ? objectResult && keys.length === 0
+      : objectResult && keys.length === 1 && keys[0] === 'content' && result.content === step.text;
+    if (!succeeded) recordProgramFailure(step, 'invalid-result', actualId);
+    else {
+      safeEvidence({ step_id: step.step_id, callback_id: actualId, kind: `${step.operation}-result`, outcome: 'succeeded' });
+      safeEvidence({ kind: `effect.file-${step.operation === 'read' ? 'read' : 'written'}`, step_id: step.step_id, callback_id: actualId });
+    }
   } else if (step.request_kind === 'question') {
     const outcome = response.result?.outcome;
     safeEvidence({
@@ -185,28 +300,77 @@ input.on('line', (line) => {
     if (process.env.FAKE_ACP_INIT_FRAME) return process.stdout.write(`${process.env.FAKE_ACP_INIT_FRAME}\n`);
     if (process.env.FAKE_ACP_INIT_RESPONSE_VARIANT === 'missing-payload') return send({ jsonrpc: '2.0', id: request.id });
     if (process.env.FAKE_ACP_INIT_RESPONSE_VARIANT === 'error-no-message') return send({ jsonrpc: '2.0', id: request.id, error: {} });
+    if (process.env.FAKE_ACP_INIT_RESPONSE_VARIANT === 'provider-error') return send({ jsonrpc: '2.0', id: request.id, error: { code: -32001, message: process.env.FAKE_ACP_INIT_ERROR_MESSAGE || 'authentication required' } });
     if (process.env.FAKE_ACP_INIT_RESPONSE_VARIANT === 'unknown-id-first') send({ jsonrpc: '2.0', id: 'unknown', result: {} });
-    const reply = () => send({ jsonrpc: '2.0', id: request.id, result: process.env.FAKE_ACP_BAD_ADMISSION ? {} : { protocolVersion: 1, authMethods: [{ id: 'cursor_login' }], agentCapabilities: process.env.FAKE_ACP_BAD_CAPABILITIES ? {} : { loadSession: true, mcpCapabilities: { http: true, sse: true }, promptCapabilities: { audio: false, embeddedContext: false, image: true }, sessionCapabilities: { list: {} } } } });
+    const admitted = {
+      protocolVersion: 1, authMethods: [{ id: 'cursor_login' }],
+      agentCapabilities: process.env.FAKE_ACP_BAD_CAPABILITIES ? {} : {
+        loadSession: true, mcpCapabilities: { http: true, sse: true },
+        promptCapabilities: { audio: false, embeddedContext: false, image: true },
+        sessionCapabilities: { list: {} },
+      },
+    };
+    const reply = () => send({ jsonrpc: '2.0', id: request.id, result: process.env.FAKE_ACP_BAD_ADMISSION ? {} : admitted });
     return process.env.FAKE_ACP_DELAY_INIT_MS ? setTimeout(reply, Number(process.env.FAKE_ACP_DELAY_INIT_MS)) : reply();
   }
   if (request.method === 'authenticate') return send({ jsonrpc: '2.0', id: request.id, result: {} });
+  if (request.method === 'session/load') {
+    log(request);
+    if (process.env.FAKE_ACP_LOAD_VARIANT === 'reject') {
+      return send({ jsonrpc: '2.0', id: request.id, error: { code: -32000, message: 'session not found' } });
+    }
+    const result = {
+      modes: { currentModeId: request.params?.cwd ? 'ask' : 'agent', availableModes: ['ask', 'plan', 'agent'].map((id) => ({ id })) },
+    };
+    if (process.env.FAKE_ACP_LOAD_VARIANT === 'unexpected-session-id') result.sessionId = request.params?.sessionId;
+    if (process.env.FAKE_ACP_LOAD_VARIANT === 'missing-modes') delete result.modes;
+    if (process.env.FAKE_ACP_LOAD_VARIANT === 'incomplete-modes') result.modes.availableModes = [{ id: 'ask' }];
+    if (process.env.FAKE_ACP_LOAD_VARIANT === 'invalid-current-mode') result.modes.currentModeId = 'review';
+    if (program?.resume_step_index !== undefined) programStepIndex = program.resume_step_index;
+    return send({
+      jsonrpc: '2.0', id: request.id,
+      result,
+    });
+  }
   if (request.method === 'session/new') {
+    log(request);
     const result = { sessionId: 'fake', modes: { currentModeId: 'agent', availableModes: ['ask', 'plan', 'agent'].map((id) => ({ id })) } };
     if (process.env.FAKE_ACP_SESSION_VARIANT === 'missing-id') delete result.sessionId;
     if (process.env.FAKE_ACP_SESSION_VARIANT === 'missing-modes') delete result.modes;
     if (process.env.FAKE_ACP_SESSION_VARIANT === 'incomplete-modes') result.modes.availableModes = [{ id: 'ask' }];
+    if (process.env.FAKE_ACP_SESSION_VARIANT === 'invalid-current-mode') result.modes.currentModeId = 'review';
     return send({ jsonrpc: '2.0', id: request.id, result });
   }
-  if (request.method === 'session/set_mode') return send({ jsonrpc: '2.0', id: request.id, result: {} });
+  if (request.method === 'session/set_mode') {
+    setModeCallCount += 1;
+    if (process.env.FAKE_ACP_SET_MODE_LOG) appendFileSync(process.env.FAKE_ACP_SET_MODE_LOG, `${JSON.stringify(request)}\n`);
+    const faultApplies = !process.env.FAKE_ACP_SET_MODE_FAIL_AFTER
+      || setModeCallCount > Number(process.env.FAKE_ACP_SET_MODE_FAIL_AFTER);
+    if (faultApplies && process.env.FAKE_ACP_SET_MODE_VARIANT === 'no-response') return;
+    if (faultApplies && process.env.FAKE_ACP_SET_MODE_VARIANT === 'exit') return process.exit(0);
+    if (faultApplies && process.env.FAKE_ACP_SET_MODE_VARIANT === 'error') {
+      return send({ jsonrpc: '2.0', id: request.id, error: { code: -32000, message: 'set_mode failed' } });
+    }
+    if (faultApplies && process.env.FAKE_ACP_SET_MODE_VARIANT === 'unexpected') {
+      return send({ jsonrpc: '2.0', id: request.id, result: { ok: false } });
+    }
+    const reply = () => send({ jsonrpc: '2.0', id: request.id, result: {} });
+    return process.env.FAKE_ACP_DELAY_SET_MODE_MS ? setTimeout(reply, Number(process.env.FAKE_ACP_DELAY_SET_MODE_MS)) : reply();
+  }
   if (request.method === 'session/prompt') {
     promptId = request.id;
+    promptText = Array.isArray(request.params?.prompt)
+      ? request.params.prompt.filter(({ type, text }) => type === 'text' && typeof text === 'string').map(({ text }) => text).join('\n')
+      : '';
     if (program) { advanceProgram(); return; }
     if (process.env.FAKE_ACP_PROMPT_RESPONSE_VARIANT === 'missing-payload') return send({ jsonrpc: '2.0', id: request.id });
     if (process.env.FAKE_ACP_PROMPT_RESPONSE_VARIANT === 'error-no-message') return send({ jsonrpc: '2.0', id: request.id, error: {} });
+    if (process.env.FAKE_ACP_PROMPT_RESPONSE_VARIANT === 'dual-result-error') return send({ jsonrpc: '2.0', id: request.id, result: { stopReason: 'end_turn' }, error: { code: -32000, message: 'ambiguous' } });
     if (process.env.FAKE_ACP_PROMPT_RESPONSE_VARIANT === 'unknown-id-first') send({ jsonrpc: '2.0', id: 'unknown', result: {} });
     if (process.env.FAKE_ACP_REJECT_PROMPT) {
       promptId = null;
-      return send({ jsonrpc: '2.0', id: request.id, error: { code: -32000, message: 'prompt rejected' } });
+      return send({ jsonrpc: '2.0', id: request.id, error: { code: -32000,
+        message: process.env.FAKE_ACP_PROMPT_ERROR_MESSAGE || 'prompt rejected' } });
     }
     if (process.env.FAKE_ACP_EXIT_ON_PROMPT) return process.exit(7);
     if (process.env.FAKE_ACP_STDOUT_EOF_ON_PROMPT) {
@@ -295,9 +459,28 @@ input.on('line', (line) => {
       let content = process.env.FAKE_ACP_CONTENT || '';
       const path = process.env.FAKE_ACP_FS_VARIANT === 'nul-path' ? `${process.cwd()}\0invalid` : process.env.FAKE_ACP_PATH;
       if (process.env.FAKE_ACP_FS_VARIANT === 'invalid-content') content = '\ud800';
+      if (process.env.FAKE_ACP_FS_VARIANT === 'oversized-content') content = 'é'.repeat((1_048_576 / 2) + 1);
       return send({ jsonrpc: '2.0', id: 'fs1', method: 'fs/write_text_file', params: { sessionId: 'fake', path, content } });
     }
     if (process.env.FAKE_ACP_PENDING === 'unknown') return send({ jsonrpc: '2.0', id: 'unknown1', method: 'cursor/not_admitted', params: {} });
+    if (process.env.FAKE_ACP_COLLAB) {
+      for (const note of JSON.parse(process.env.FAKE_ACP_COLLAB)) {
+        const message = { jsonrpc: '2.0', method: note.method, params: note.params };
+        if (note.id !== undefined) message.id = note.id;
+        send(message);
+      }
+    }
+    if (process.env.FAKE_ACP_PROGRESS_TEXT) {
+      send({ jsonrpc: '2.0', method: 'session/update', params: { sessionId: 'fake', update: { sessionUpdate: 'agent_message_chunk', content: { text: process.env.FAKE_ACP_PROGRESS_TEXT } } } });
+    }
+    if (process.env.FAKE_ACP_NOISE_UPDATES) {
+      send({ jsonrpc: '2.0', method: 'session/update', params: { sessionId: 'fake', update: { sessionUpdate: 'agent_thought_chunk', content: { text: 'secret thinking' } } } });
+      send({ jsonrpc: '2.0', method: 'session/update', params: { sessionId: 'fake', update: { sessionUpdate: 'tool_call', toolCallId: 'tool-secret', title: 'raw tool payload', rawInput: { archive: '~/.cursor/acp-sessions' } } } });
+    }
+    if (process.env.FAKE_ACP_SECOND_PROGRESS_TEXT) {
+      setTimeout(() => send({ jsonrpc: '2.0', method: 'session/update', params: { sessionId: 'fake', update: { sessionUpdate: 'agent_message_chunk', content: { text: process.env.FAKE_ACP_SECOND_PROGRESS_TEXT } } } }), Number(process.env.FAKE_ACP_SECOND_PROGRESS_MS || 50));
+    }
+    if (process.env.FAKE_ACP_HOLD_PROMPT) return;
     promptId = null;
     if (process.env.FAKE_ACP_DELAY_RESULT_MS) setTimeout(() => finishPrompt(request.id, process.env.FAKE_ACP_RESULT || 'done'), Number(process.env.FAKE_ACP_DELAY_RESULT_MS));
     else finishPrompt(request.id, process.env.FAKE_ACP_RESULT || 'done');
@@ -312,5 +495,6 @@ input.on('line', (line) => {
   if (request.id !== undefined) send({ jsonrpc: '2.0', id: request.id, result: {} });
 });
 input.on('close', () => {
-  if (program && awaitedProgramStep) recordProgramFailure(awaitedProgramStep, 'missing');
+  if (program && awaitedProgramStep) recordProgramFailure(awaitedProgramStep, 'missing',
+    awaitedProgramStep.type === 'event-burst' ? burstPendingIds?.values().next().value : awaitedProgramStep.callback_id);
 });

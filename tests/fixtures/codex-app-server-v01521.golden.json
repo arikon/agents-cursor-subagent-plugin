@@ -10,7 +10,7 @@
     "model_visible_tool": {"type": "namespace"},
     "loaded_call": {"type": "function_call", "fields": ["namespace", "name", "arguments", "call_id"], "namespace_source": "declared_namespace"},
     "confirmed_sequence": ["cursor_delegate", "cursor_wait", "cursor_close_session"],
-    "reported_outcome_evidence": {"turn_status": "completed", "turn_identity": "exact turn/start id", "agent_messages": ["CURSOR_EVAL_OK"]},
+    "reported_outcome_evidence": {"turn_status": "completed", "turn_identity": "exact turn/start id", "agent_message_phase": ["commentary", "final_answer", null], "selection": "last final_answer; otherwise last phase-null message in the exact terminal turn", "terminal_text": "CURSOR_EVAL_OK"},
     "unrelated_features": ["tool_search", "tool_suggest", "deferred_executor", "deferred_tool_world_state"],
     "unsupported_config_keys": ["tools.deferred_namespaces"]
   },

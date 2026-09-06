@@ -161,7 +161,8 @@ const server = createServer(async (request, response) => {
   state.declared_tool_types = Array.isArray(body?.tools) ? body.tools.map(({ type }) => type) : [];
   const warmup = process.env.CURSOR_EVAL_WARMUP === '1';
   if (warmup && state.requests === 1) {
-    state.skill_context_seen = Boolean(process.env.CURSOR_EVAL_SKILL_SENTINEL && serialized.includes(process.env.CURSOR_EVAL_SKILL_SENTINEL));
+    state.skill_context_seen = body.tools?.some(({ type }) => type === 'tool_search')
+      || state.declared_tool_names.some((name) => name.includes('cursor'));
     state.tool_sequence.push('warmup');
     await publishSafeState();
     response.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' });
@@ -170,10 +171,8 @@ const server = createServer(async (request, response) => {
   }
   const protocolStep = state.requests - (warmup ? 1 : 0);
   const deferred = process.env.CURSOR_EVAL_DEFERRED_TOOL_SEARCH === '1';
-  // The warmup turn is the only request guaranteed to include the explicit
-  // skill text on app-server 0.152. Preserve that observed proof for the
-  // following model turn instead of treating its compacted context as absent.
-  if (protocolStep === 1) state.skill_context_seen ||= Boolean(process.env.CURSOR_EVAL_SKILL_SENTINEL && serialized.includes(process.env.CURSOR_EVAL_SKILL_SENTINEL));
+  if (protocolStep === 1) state.skill_context_seen ||= body.tools?.some(({ type }) => type === 'tool_search')
+    || state.declared_tool_names.some((name) => name.includes('cursor'));
   if (protocolStep === (deferred ? 5 : 3)) state.terminal_result_matched = serialized.includes('CURSOR_EVAL_OK');
   const ids = findOpaqueIds(body) || findOpaqueIdsInText(body);
   const delegate = findExposedToolName(body, 'cursor_delegate');

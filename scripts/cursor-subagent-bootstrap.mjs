@@ -21,11 +21,19 @@ class BootstrapError extends Error {
 }
 
 const bounded = (value) => {
-  const source = String(value ?? '');
+  const source = Buffer.from(String(value ?? ''), 'utf8').toString('utf8');
   if (Buffer.byteLength(source) <= PACKAGE_LIMITS.messageBytes) return source;
-  let end = source.length;
-  while (end && Buffer.byteLength(source.slice(0, end)) > PACKAGE_LIMITS.messageBytes - 3) end -= 1;
-  return `${source.slice(0, end)}...`;
+  const suffix = '...';
+  const contentLimit = PACKAGE_LIMITS.messageBytes - Buffer.byteLength(suffix);
+  let text = '';
+  let textBytes = 0;
+  for (const character of source) {
+    const characterBytes = Buffer.byteLength(character);
+    if (textBytes + characterBytes > contentLimit) break;
+    text += character;
+    textBytes += characterBytes;
+  }
+  return `${text}${suffix}`;
 };
 const fail = (code, message, exitCode = 1) => { throw new BootstrapError(code, bounded(message), exitCode); };
 const invalid = (message) => fail('invalid_invocation', message, 2);
