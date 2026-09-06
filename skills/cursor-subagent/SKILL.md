@@ -8,6 +8,40 @@ description: "Delegate a task to Cursor Agent through an interactive ACP session
 Use this skill when the user explicitly asks to delegate part of the work to
 Cursor.
 
+## Mandatory control points
+
+Treat the following as blocking checkpoints, not advice to apply later:
+
+- Before a write-capable `cursor_delegate`, put the exact authorized-write and
+  no-scope-expansion clauses required by step 1 into its `prompt`; do not make
+  the tool call first and add those clauses later.
+- Omit `plugin_dirs` unless the user explicitly supplied an absolute local
+  Agent Plugin root for this delegation. The installed Cursor skill, workspace,
+  or an inferred plugin location is not such a root and never supplies a
+  default `plugin_dirs` value.
+- When the caller limits an active turn to one ordinary wait interval, a
+  `wait_timeout:true` ends the current Codex turn with the step-2
+  work-in-progress report. Do not issue an extra wait; process the later
+  follow-up as the next Codex turn.
+- After every terminal `cursor_wait`, make the step-5 evidence report from that
+  returned terminal result and its `terminal_receipt` before closing the
+  session. If `events_lost:true`, include the step-2 observation-gap fields in
+  the same report. Treat `terminal_receipt` and its digest as opaque returned
+  values: copy them unchanged, never reconstruct, abbreviate, or manually
+  retype them. If exact copying is unavailable, report the result as
+  unverifiable. A prose-only completion claim is insufficient.
+- If that terminal turn is the last declared provider stage and its returned
+  session is still live, retain its receipt, call `cursor_close_session` before
+  the caller-visible completion report, and do not finish the Codex turn from
+  `cursor_wait` alone. If the next declared stage changes `model`, `effort`,
+  `fast`, or `plugin_dirs`, retain the provider ID and resume with the exact
+  requested launch settings: close only a live idle wrapper; a terminal wait
+  that already returned a tombstone resumes directly, without a redundant
+  close.
+- For a live terminal session with no declared next provider operation, the
+  next MCP call is therefore `cursor_close_session({session_id})`; the report
+  does not substitute for that call.
+
 1. Start with `cursor_delegate({prompt,cwd,mode,model?,effort?,fast?,
    plugin_dirs?})`. Modes are exactly
    `ask|plan|agent`: choose `ask` for every read-only task, including research,

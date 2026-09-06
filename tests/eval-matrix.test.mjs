@@ -33,6 +33,9 @@ test('eval matrix emits per-scenario progress and writes atomic aggregate statis
   assert.equal(summary.pass_rate, 1);
   assert.equal(summary.concurrency, 8);
   assert.equal(summary.digest_stable, true);
+  assert.equal(summary.results[0].process.artifact_root, `${output}.artifacts/model-question-attempt-1`);
+  await readFile(join(summary.results[0].process.artifact_root, 'driver-stdout.txt'), 'utf8');
+  await readFile(join(summary.results[0].process.artifact_root, 'driver-stderr.txt'), 'utf8');
   assert.equal(events.filter(({ event }) => event === 'scenario_started').length, 24);
   assert.equal(events.filter(({ event }) => event === 'scenario_completed').length, 24);
   assert.ok(events.filter(({ event }) => event === 'scenario_progress').length >= 24);
@@ -42,6 +45,30 @@ test('eval matrix emits per-scenario progress and writes atomic aggregate statis
   assert.equal(events.slice(0, firstCompletion).filter(({ event }) => event === 'scenario_started').length, 8);
   assert.deepEqual(events.filter(({ event }) => event === 'scenario_started').map(({ index }) => index).sort((a, b) => a - b),
     Array.from({ length: 24 }, (_, index) => index + 1));
+});
+
+test('interrupted eval matrix terminates active children without publishing a partial summary', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'cursor-eval-matrix-interrupt-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const output = join(root, 'summary.json');
+  const child = spawn(process.execPath, [matrix, 'gpt-5.6-terra', 'high', output], {
+    cwd: repository,
+    env: { ...process.env, CURSOR_EVAL_MATRIX_RUNNER: fakeChild, FAKE_EVAL_MATRIX_DELAY_MS: '10000' },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  const stdout = [];
+  let markStarted;
+  const started = new Promise((resolveStarted) => { markStarted = resolveStarted; });
+  child.stdout.on('data', (chunk) => {
+    stdout.push(chunk);
+    if (Buffer.concat(stdout).toString('utf8').includes('matrix_started')) markStarted();
+  });
+  await started;
+  child.kill('SIGTERM');
+  const [code, signal] = await once(child, 'close');
+  assert.equal(signal, null);
+  assert.equal(code, 130);
+  await assert.rejects(readFile(output, 'utf8'));
 });
 
 test('eval suite runs saved model rows with default parallelism and preserves every row result', async (t) => {

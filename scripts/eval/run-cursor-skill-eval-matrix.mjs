@@ -3,7 +3,7 @@
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { once } from 'node:events';
-import { readFile, rename, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -14,6 +14,7 @@ if (!/^[A-Za-z0-9._-]+$/.test(model || '') || !/^(low|medium|high)$/.test(effort
 }
 
 const output = resolve(outputArg);
+const artifactRoot = `${output}.artifacts`;
 const evalRunner = process.env.CURSOR_EVAL_MATRIX_RUNNER
   ? resolve(process.env.CURSOR_EVAL_MATRIX_RUNNER)
   : resolve(repository, 'scripts/run-cursor-skill-eval.mjs');
@@ -40,20 +41,29 @@ const scenarioIds = corpus.scenarios.filter(({ lane }) => lane === 'model-behavi
 
 const runOne = async (scenarioId, index, attempt) => {
   const started = Date.now();
+  const attemptArtifactRoot = resolve(artifactRoot, `${scenarioId.replace(/[^A-Za-z0-9._-]/g, '_')}-attempt-${attempt}`);
+  await mkdir(attemptArtifactRoot, { recursive: true });
+  if (interrupted) return null;
   emit({ event: 'scenario_started', scenario_id: scenarioId, index, total: scenarioIds.length, attempt });
   const child = spawn(process.execPath, [evalRunner, scenarioId], {
     cwd: repository,
     env: { ...process.env, CURSOR_EVAL_HOSTED_CODEX: '1', CURSOR_EVAL_HOSTED_MODEL: model,
-      CURSOR_EVAL_HOSTED_REASONING_EFFORT: effort },
+      CURSOR_EVAL_HOSTED_REASONING_EFFORT: effort, NODE_TEST_ARTIFACT_ROOT: attemptArtifactRoot },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
+  activeChildren.add(child);
   const progress = setInterval(() => emit({ event: 'scenario_progress', scenario_id: scenarioId,
     index, total: scenarioIds.length, attempt, elapsed_ms: Date.now() - started }), progressMs);
   const stdout = []; const stderr = [];
   child.stdout.on('data', (chunk) => stdout.push(chunk));
   child.stderr.on('data', (chunk) => stderr.push(chunk));
   const [code, signal] = await once(child, 'close');
+  activeChildren.delete(child);
   clearInterval(progress);
+  await Promise.all([
+    writeFile(resolve(attemptArtifactRoot, 'driver-stdout.txt'), Buffer.concat(stdout), { flag: 'wx' }),
+    writeFile(resolve(attemptArtifactRoot, 'driver-stderr.txt'), Buffer.concat(stderr), { flag: 'wx' }),
+  ]);
   const text = Buffer.concat(stdout).toString('utf8').trim();
   let result;
   try { result = JSON.parse(text.split('\n').at(-1)); }
@@ -64,7 +74,7 @@ const runOne = async (scenarioId, index, attempt) => {
       fixture_assertion_outcome: 'not_observed', evidence_publication_status: 'not_attempted',
       cleanup_status: 'not_required', failure_stage: 'runner' };
   }
-  const completed = { ...result, process: { code, signal, duration_ms: Date.now() - started } };
+  const completed = { ...result, process: { code, signal, duration_ms: Date.now() - started, artifact_root: attemptArtifactRoot } };
   emit({ event: 'scenario_completed', scenario_id: scenarioId, index, total: scenarioIds.length, attempt,
     eval_status: completed.eval_status, error_code: completed.error_code, duration_ms: completed.process.duration_ms });
   return completed;
@@ -74,24 +84,43 @@ const startedAt = new Date().toISOString();
 const startedMs = Date.now();
 const results = Array(scenarioIds.length);
 let nextOffset = 0;
+let interrupted = false;
+const activeChildren = new Set();
+const interrupt = (signal) => {
+  if (interrupted) return;
+  interrupted = true;
+  for (const child of activeChildren) child.kill(signal);
+};
+const onInterrupt = () => interrupt('SIGTERM');
+process.once('SIGINT', onInterrupt);
+process.once('SIGTERM', onInterrupt);
 emit({ event: 'matrix_started', total: scenarioIds.length, output, concurrency });
 const worker = async () => {
-  while (nextOffset < scenarioIds.length) {
+  while (!interrupted && nextOffset < scenarioIds.length) {
     const offset = nextOffset++;
     const scenarioId = scenarioIds[offset];
     const index = offset + 1;
     const attempts = [];
     let result = await runOne(scenarioId, index, 1);
+    if (result === null) break;
     attempts.push(result);
-    if (result.eval_status === 'integration_failure') {
+    if (!interrupted && result.eval_status === 'integration_failure') {
       emit({ event: 'scenario_retrying', scenario_id: scenarioId, index, total: scenarioIds.length, next_attempt: 2 });
       result = await runOne(scenarioId, index, 2);
+      if (result === null) break;
       attempts.push(result);
     }
+    if (result === null) break;
     results[offset] = { ...result, attempts: attempts.map(({ eval_status, error_code, process }) => ({ eval_status, error_code, process })) };
   }
 };
 await Promise.all(Array.from({ length: Math.min(concurrency, scenarioIds.length) }, () => worker()));
+process.removeListener('SIGINT', onInterrupt);
+process.removeListener('SIGTERM', onInterrupt);
+if (interrupted) {
+  process.exitCode = 130;
+}
+if (!interrupted) {
 const final = { corpus: await digest(corpusPath), skill: await digest(skillPath) };
 const counts = Object.fromEntries(['pass', 'agent_behavior_mismatch', 'integration_failure', 'skipped']
   .map((status) => [status, results.filter(({ eval_status }) => eval_status === status).length]));
@@ -106,3 +135,4 @@ await rename(`${output}.tmp`, output);
 emit({ event: 'matrix_completed', output, counts: summary.counts, pass_rate: summary.pass_rate,
   duration_ms: summary.duration_ms, digest_stable: summary.digest_stable });
 process.exitCode = counts.pass === results.length && summary.digest_stable ? 0 : 1;
+}

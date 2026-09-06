@@ -366,10 +366,19 @@ export function observationsFromEvidence(scenario, transcriptEvidence, safeEvide
           : { decision: call.request?.decision }) });
     } else if (call.tool === 'cursor_close_session') {
       const closeTurnId = call.request?.turn_id || call.response?.turn_id || call.response?.terminal_receipt?.turn_id;
-      trace.push({ kind: 'session.close-attempted',
-        session_id: call.request?.session_id || call.response?.session_id,
-        ...(closeTurnId === undefined || closeTurnId === null ? {} : { turn_id: closeTurnId }),
-        call_outcome: callOutcome });
+      const closedSessionId = call.request?.session_id || call.response?.session_id;
+      // Wrapper-loss scenarios require the observed tombstone, rather than only
+      // the caller's close attempt, before an explicit resume is admissible.
+      if (call.response?.session_state === 'tombstone'
+        && scenario.expected_trace.some(({ kind }) => kind === 'session.tombstoned')
+        && calls.slice(callIndex + 1).some(({ tool }) => tool === 'cursor_resume_session')) {
+        trace.push({ kind: 'session.tombstoned', session_state: 'tombstone',
+          session_id: closedSessionId, call_outcome: callOutcome });
+      } else {
+        trace.push({ kind: 'session.close-attempted', session_id: closedSessionId,
+          ...(closeTurnId === undefined || closeTurnId === null ? {} : { turn_id: closeTurnId }),
+          call_outcome: callOutcome });
+      }
     } else {
       trace.push({ kind: 'unexpected-operation', ...ids, call_outcome: callOutcome });
     }
@@ -550,6 +559,16 @@ test('runtime recovery trace proves the old wrapper tombstone without duplicatin
   assert.deepEqual(directTombstone.trace.slice(firstTerminal, firstTerminal + 3).map(({ kind }) => kind),
     ['turn.completed', 'turn.receipt', 'session.tombstoned']);
   assert.equal(evaluateScenario(scenario, directTombstone).eval_status, 'pass');
+  const closeTombstoneCalls = structuredClone(calls);
+  closeTombstoneCalls[2] = {
+    tool: 'cursor_close_session', request: { session_id: 'session-1' },
+    response: { ok: true, session_id: 'session-1', session_state: 'tombstone' },
+  };
+  const closeTombstone = observationsFromEvidence(scenario, { calls: closeTombstoneCalls, dropped_calls: 0 }, safe,
+    { actual_task_outcome: 'succeeded', reported_task_outcome: 'succeeded' });
+  assert.deepEqual(closeTombstone.trace.slice(firstTerminal, firstTerminal + 3).map(({ kind }) => kind),
+    ['turn.completed', 'turn.receipt', 'session.tombstoned']);
+  assert.equal(evaluateScenario(scenario, closeTombstone).eval_status, 'pass');
 });
 
 test('scripted providers use distinct OS-assigned endpoints in parallel', async (t) => {
@@ -1579,6 +1598,8 @@ test('credential-free Codex client observes only the package-bootstrap-installed
 });
 
 test('hosted Codex actually calls the installed Cursor MCP tools', { skip: process.env.CURSOR_EVAL_HOSTED_CODEX === '1' ? false : 'requires explicit hosted-auth eval lane' }, async (t) => {
+  const phase = (name) => process.stderr.write(`[hosted-eval] ${name}\n`);
+  phase('scenario-loaded');
   const outer = await readOuterScenario();
   const fixture = await layout(outer.workspace);
   t.after(() => rm(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }));
@@ -1590,6 +1611,7 @@ test('hosted Codex actually calls the installed Cursor MCP tools', { skip: proce
   const followupReleasePath = join(fixture.root, 'followup-release');
   await prepareScenarioWorkspace(outer.workspace, outer.scenario);
   const authFile = await resolveHostedAuthFile();
+  phase('auth-resolved');
   const node = await realpath(process.execPath);
   await cp(authFile, join(fixture.home, 'auth.json'));
   const env = { ...process.env, CODEX_HOME: fixture.home, CODEX_SQLITE_HOME: fixture.home,
@@ -1626,6 +1648,7 @@ test('hosted Codex actually calls the installed Cursor MCP tools', { skip: proce
     '--allowed-workspace-root', fixture.allowedWorkspace], { env,
     runCommand: (command, args, options) => runPackageCommand(command, args, { ...options, timeoutMs: 70_000 }) });
   assert.equal(installed.exitCode, 0, JSON.stringify(installed.envelope));
+  phase('package-installed');
   await rename(fixture.source, fixture.hidden);
   const hostedConfig = hostedAppServerConfig(env);
   const runner = new CodexAppServerClient(codex, hostedConfig.args, env, {
@@ -1637,14 +1660,19 @@ test('hosted Codex actually calls the installed Cursor MCP tools', { skip: proce
   let childResult = null;
   let failure = null;
   try {
+    phase('app-server-initialize');
     await runner.initialize();
+    phase('app-server-initialized');
     const skillEvidence = await runner.skillLoadEvidence(fixture.workspace, skill);
     assert.equal(typeof skillEvidence.plugin_id, 'string');
     assert.equal(skillEvidence.content_sha256, fixture.skillSha256);
     assert.equal(skillEvidence.content_bytes, fixture.skillBytes);
+    phase('skill-loaded');
     const proof = await packageProof(fixture, node, env, skillEvidence);
     const thread = await runner.startThread({ cwd: fixture.workspace });
+    phase('thread-started');
     hostedThreadId = thread.thread.id;
+    phase('turn-started');
     let evaluatedTurn = await runner.startTurn({ threadId: thread.thread.id,
       text: outer.scenario.initial_input,
       skill: { name: skill, path: skillEvidence.path }, pluginName: skillEvidence.plugin_id });
@@ -1689,6 +1717,7 @@ test('hosted Codex actually calls the installed Cursor MCP tools', { skip: proce
     assert.equal(typeof evaluatedTurn.turn?.id, 'string');
     const terminalTurn = await waitForExactTurnTerminal(runner, thread.thread.id, evaluatedTurn.turn.id, HOSTED_OBSERVATION_TIMEOUT_MS);
     assert.equal(terminalTurn.status, 'completed', JSON.stringify(terminalTurn));
+    phase('terminal-observed');
     reportedTexts.push(await reportedTextForTurn(runner, thread.thread.id, evaluatedTurn.turn.id));
     const finalTranscriptEnd = await stableMcpTranscriptLength(join(evidenceRoot, 'mcp.json'));
     mcp = await waitForMcpEvidence(join(evidenceRoot, 'mcp.json'), finalTranscriptEnd, 5_000);
@@ -1716,6 +1745,7 @@ test('hosted Codex actually calls the installed Cursor MCP tools', { skip: proce
         prompt_contracts: safeEvidence.filter(({ kind }) => kind === 'prompt.contract'),
         tool_sequence: mcp.transcript.map(({ tool }) => tool), request_trace: mcp.transcript.map(({ tool, call_id: callId }, index) => ({ step: index + 1, tool, call_id: callId })) },
     };
+    phase('child-result-built');
     if (skillSensitivity === 'omit-events-lost') assert.deepEqual(oracle.mismatches, ['reported-outcome-mismatch'], JSON.stringify(oracle));
     else {
       const mismatchDiagnostics = { oracle, trace: observations.trace, reportChecks };
@@ -1726,6 +1756,7 @@ test('hosted Codex actually calls the installed Cursor MCP tools', { skip: proce
     const diagnostics = await hostedFailureDiagnostics(runner, hostedThreadId, hostedTurnId);
     failure = new Error(`${String(error?.message || error).slice(0, 8_000)}; hosted_diagnostics=${JSON.stringify(diagnostics)}`, { cause: error });
   } finally {
+    phase('cleanup-started');
     const cleanup = await cleanupHostedRunner(runner, hostedThreadId, failure);
     failure = cleanup.failure;
     await finalizeChildResult(fixture, childResult, failure, cleanup.cleanupFailed);

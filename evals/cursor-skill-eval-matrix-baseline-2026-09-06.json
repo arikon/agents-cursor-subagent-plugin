@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "kind": "cursor-skill-eval-baseline",
-  "captured_at": "2026-09-06T13:41:21.395Z",
-  "note": "Descriptive snapshot of the frozen 24-scenario corpus. Luna/medium integration failures occurred during intermittent network connectivity.",
+  "captured_at": "2026-09-06T15:52:29.441Z",
+  "note": "Descriptive snapshot of the frozen 24-scenario corpus. The gpt-5.6-terra/high row was refreshed after the cursor-subagent evidence-control repair with hosted concurrency 12; the corpus and oracle digests are unchanged.",
   "plan": "evals/cursor-skill-eval-matrix.plan.v1.json",
   "row_concurrency": 8,
   "rows": [
@@ -90,17 +90,18 @@
     {
       "model": "gpt-5.6-terra",
       "effort": "high",
-      "started_at": "2026-09-06T13:13:56.048Z",
-      "finished_at": "2026-09-06T13:18:45.428Z",
-      "duration_ms": 289379,
+      "concurrency": 12,
+      "started_at": "2026-09-06T15:49:21.667Z",
+      "finished_at": "2026-09-06T15:52:29.441Z",
+      "duration_ms": 187773,
       "counts": {
         "total": 24,
-        "pass": 21,
-        "agent_behavior_mismatch": 3,
+        "pass": 24,
+        "agent_behavior_mismatch": 0,
         "integration_failure": 0,
         "skipped": 0
       },
-      "pass_rate": 0.875,
+      "pass_rate": 1,
       "attempted_runs": 25,
       "digest_stable": true,
       "input": {
@@ -109,8 +110,8 @@
           "bytes": 69496
         },
         "skill": {
-          "sha256": "7757b187feb4b24d94c3f57b0743633163bb31b93a2afa7972e4c2c8f914b092",
-          "bytes": 18679
+          "sha256": "b0d3f5916df255330e46f37d3a0db4dd6d0db8adddc62769917aa486d626f580",
+          "bytes": 20754
         }
       }
     },
