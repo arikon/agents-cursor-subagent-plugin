@@ -1,18 +1,17 @@
 import { createHash } from 'node:crypto';
 import { isAbsolute, resolve } from 'node:path';
 
-const PROGRAMMED_KEYS = ['expected_actual_task_outcome', 'expected_enabled_eval_status', 'expected_reported_task_outcome', 'expected_trace', 'fixture_predicate', 'followups', 'harness_faults', 'initial_input', 'lane', 'owner_requirements', 'prior_authority', 'program', 'report_checks', 'scenario_id', 'scenario_kind', 'skill_sensitivity'];
+const PROGRAMMED_KEYS = ['expected_actual_task_outcome', 'expected_enabled_eval_status', 'expected_trace', 'fixture_predicate', 'followups', 'harness_faults', 'initial_input', 'lane', 'owner_requirements', 'prior_authority', 'program', 'report_checks', 'scenario_id', 'scenario_kind'];
 const REFERENCE_KEYS = ['expected_enabled_eval_status', 'lane', 'owner_requirements', 'scenario_id', 'scenario_kind'];
-const FORBIDDEN = new Set(['answer-before-pending', 'id-mismatch', 'operation-after-close', 'unexpected-effect']);
-const HARNESS_FAULTS = new Set(['accelerate-mode-timeout', 'accelerate-turn-timeout', 'accelerate-wait-timeout', 'exit-after-result', 'hold-terminal-until-followup', 'inject-mode-protocol-error-once', 'inject-stale-question-once', 'reject-initialize', 'reject-mode', 'reject-prompt', 'reject-resume']);
+const HARNESS_FAULTS = new Set(['mode-timeout', 'accelerate-turn-timeout', 'accelerate-wait-timeout', 'exit-after-result', 'hold-terminal-until-followup', 'inject-mode-protocol-error-once', 'inject-stale-question-once', 'reject-initialize', 'reject-mode', 'reject-prompt', 'reject-resume', 'result-overflow']);
 const OUTCOMES = new Set(['succeeded', 'failed']);
-const REPORT_BINDINGS = new Set(['cursor_session_id', 'effort', 'error_code', 'evidence_scope', 'failure_kind', 'fast', 'history_reconstructed', 'model', 'next_provider_operation_requires_new_user_decision', 'observation_gap', 'pending_request_id', 'plugin_dir', 'provider_error', 'resume_after_event_id', 'session_id', 'terminal_reason', 'terminal_receipt', 'terminal_result_sha256', 'turn_id', 'work_in_progress']);
-const TRACE_KINDS = new Set(['session.allocated', 'session.start-rejected', 'session.resumed', 'session.resume-failed', 'session.tombstoned', 'session.mode-changed', 'session.mode-change-failed', 'session.mode-recovery-status', 'turn.started', 'turn.wait-timeout', 'turn.wait-recovered', 'turn.events-lost', 'turn.followup-received-active', 'turn.receipt', 'session.close-attempted', 'prompt.contract', 'pending.question', 'pending.plan', 'pending.permission', 'effect.file-read', 'effect.file-written', 'progress.todos', 'progress.task', 'progress.image', 'turn.completed', 'turn.failed', 'turn.timed-out', 'answer.question', 'answer.plan', 'answer.permission', 'answer.rejected-stale']);
+const REPORT_CATEGORIES = new Set(['interaction']);
+const TRACE_KINDS = new Set(['session.allocated', 'session.start-rejected', 'session.resumed', 'session.resume-failed', 'session.tombstoned', 'session.mode-changed', 'session.mode-change-failed', 'session.mode-recovery-status', 'turn.started', 'turn.wait-timeout', 'turn.wait-recovered', 'turn.events-lost', 'turn.followup-received-active', 'turn.receipt', 'turn.result-read', 'session.close-attempted', 'prompt.contract', 'pending.question', 'pending.plan', 'pending.permission', 'effect.file-read', 'effect.file-written', 'progress.todos', 'progress.task', 'progress.image', 'turn.completed', 'turn.failed', 'turn.timed-out', 'answer.question', 'answer.plan', 'answer.permission', 'answer.rejected-stale']);
 const PLACEHOLDER = /\$\{([^}]+)\}/g;
 const PUBLIC_MCP_TOOL_NAMES = Object.freeze([
   'cursor_delegate', 'cursor_start_session', 'cursor_resume_session', 'cursor_send_prompt',
   'cursor_set_mode', 'cursor_session_status', 'cursor_wait', 'cursor_answer_question',
-  'cursor_answer_plan', 'cursor_answer_permission', 'cursor_cancel', 'cursor_close_session',
+  'cursor_answer_plan', 'cursor_answer_permission', 'cursor_cancel', 'cursor_close_session', 'cursor_read_result',
 ]);
 const FORBIDDEN_MODEL_PROMPT_FRAGMENTS = Object.freeze([
   ...PUBLIC_MCP_TOOL_NAMES, 'after_event_id', 'after_progress_revision', 'resume_after_event_id',
@@ -243,17 +242,20 @@ function trace(value, steps, label) {
       if (observation.fast !== undefined && typeof observation.fast !== 'boolean') admission(`${label}[${index}].fast is invalid`);
     }
     else if (['turn.wait-timeout', 'turn.wait-recovered'].includes(observation.kind)) {
-      closed(observation, ['cursor_matched', 'kind', 'progress_revision_matched', 'timeout_ms', 'timeout_omitted'], `${label}[${index}]`);
+      closed(observation, ['kind', 'progress_revision_matched', 'timeout_ms', 'timeout_omitted'], `${label}[${index}]`);
       if (!Number.isSafeInteger(observation.timeout_ms) || observation.timeout_ms < 1_000 || observation.timeout_ms > 180_000
         || typeof observation.timeout_omitted !== 'boolean'
         || (observation.timeout_omitted && observation.timeout_ms !== 30_000)
-        || observation.cursor_matched !== true || observation.progress_revision_matched !== true) admission(`${label}[${index}] has an invalid wait contract`);
+        || observation.progress_revision_matched !== true) admission(`${label}[${index}] has an invalid wait contract`);
     } else if (observation.kind === 'turn.events-lost') {
-      closed(observation, ['cursor_matched', 'events_lost', 'kind'], `${label}[${index}]`);
-      if (observation.events_lost !== true || observation.cursor_matched !== true) admission(`${label}[${index}] has an invalid retention-gap contract`);
+      closed(observation, ['events_lost', 'kind'], `${label}[${index}]`);
+      if (observation.events_lost !== true) admission(`${label}[${index}] has an invalid retention-gap contract`);
     } else if (observation.kind === 'turn.receipt') {
       closed(observation, ['kind', 'matched', 'result_truncated', 'step_id'], `${label}[${index}]`);
       if (observation.matched !== true || typeof observation.result_truncated !== 'boolean') admission(`${label}[${index}] has an invalid receipt contract`);
+    } else if (observation.kind === 'turn.result-read') {
+      closed(observation, ['complete', 'kind', 'step_id'], `${label}[${index}]`);
+      if (observation.complete !== true) admission(`${label}[${index}] has an invalid result-read contract`);
     }
     else if (observation.kind === 'prompt.contract') {
       closed(observation, ['kind', 'matched', 'step_id'], `${label}[${index}]`);
@@ -282,6 +284,7 @@ function trace(value, steps, label) {
         : referenced.step.type === 'prompt-check' ? 'prompt.contract'
           : referenced.step.type === 'notification' ? `progress.${referenced.step.notification_kind}`
             : observation.kind === 'turn.receipt' ? 'turn.receipt'
+              : observation.kind === 'turn.result-read' ? 'turn.result-read'
               : referenced.step.turn_status === 'timed_out' ? 'turn.timed-out'
                 : referenced.step.turn_status === 'failed' ? 'turn.failed' : 'turn.completed';
     if (observation.kind !== expectedKind) admission(`${label}[${index}] references an incompatible step`);
@@ -357,9 +360,7 @@ function validatePlaceholders(scenario, label) {
 }
 
 function programmedScenario(scenario, label) {
-  const keys = PROGRAMMED_KEYS.filter((key) => (key !== 'report_checks' || scenario.report_checks !== undefined)
-    && (key !== 'harness_faults' || scenario.harness_faults !== undefined)
-    && (key !== 'skill_sensitivity' || scenario.skill_sensitivity !== undefined));
+  const keys = PROGRAMMED_KEYS.filter((key) => key !== 'harness_faults' || scenario.harness_faults !== undefined);
   closed(scenario, keys, label);
   ownerRequirements(scenario.owner_requirements, `${label}.owner_requirements`);
   text(scenario.initial_input, `${label}.initial_input`);
@@ -412,7 +413,7 @@ function programmedScenario(scenario, label) {
       && (scenario.fixture_predicate.kind !== 'terminal-status'
         || scenario.fixture_predicate.status !== 'timed_out'
         || !scenario.expected_trace.some(({ kind }) => kind === 'turn.timed-out'))) admission(`${label}.harness_faults requires timed-out evidence`);
-    if (scenario.harness_faults.includes('accelerate-mode-timeout')
+    if (scenario.harness_faults.includes('mode-timeout')
       && (scenario.fixture_predicate.kind !== 'mode-change-failed'
         || scenario.fixture_predicate.error_code !== 'mode_timeout'
         || !scenario.expected_trace.some(({ kind }) => kind === 'session.mode-change-failed'))) admission(`${label}.harness_faults requires mode-timeout evidence`);
@@ -428,17 +429,22 @@ function programmedScenario(scenario, label) {
       && (scenario.fixture_predicate.kind !== 'mode-change-failed'
         || scenario.fixture_predicate.error_code !== 'protocol_error'
         || !scenario.expected_trace.some(({ kind, error_code: errorCode }) => kind === 'session.mode-change-failed' && errorCode === 'protocol_error')
-        || !scenario.expected_trace.some(({ kind }) => kind === 'session.tombstoned')
-        || !scenario.report_checks?.some(({ required_bindings: bindings = [] }) => bindings.includes('provider_error')))) admission(`${label}.harness_faults requires provider mode-failure evidence`);
+        || !scenario.expected_trace.some(({ kind }) => kind === 'session.tombstoned'))) admission(`${label}.harness_faults requires provider mode-failure evidence`);
     if (scenario.harness_faults.includes('hold-terminal-until-followup')
       && (!scenario.followups.some(({ after_kind: kind }) => kind === 'wait-timeout')
         || !scenario.expected_trace.some(({ kind }) => kind === 'turn.followup-received-active'))) admission(`${label}.harness_faults requires active-followup evidence`);
+    if (scenario.harness_faults.includes('result-overflow')
+      && (!scenario.program.steps.some(({ type, turn_status: status }) => type === 'terminal' && status === 'failed')
+        || scenario.fixture_predicate.kind !== 'terminal-status'
+        || scenario.fixture_predicate.status !== 'failed'
+        || !scenario.expected_trace.some(({ kind }) => kind === 'turn.failed')
+        || scenario.expected_trace.some(({ kind }) => kind === 'turn.result-read'))) admission(`${label}.harness_faults requires overflow failure without a successful result read`);
   }
   if (scenario.program.steps.some(({ type, turn_status: status }) => type === 'terminal' && status === 'failed')
-    !== Boolean(scenario.harness_faults?.includes('reject-prompt'))) admission(`${label}.failed terminal and reject-prompt fault must be paired`);
+    !== Boolean(scenario.harness_faults?.some((fault) => ['reject-prompt', 'result-overflow'].includes(fault)))) admission(`${label}.failed terminal and failure fault must be paired`);
   const modeTimeout = scenario.expected_trace.some(({ kind, error_code: errorCode }) => kind === 'session.mode-change-failed' && errorCode === 'mode_timeout');
   const modeProtocolError = scenario.expected_trace.some(({ kind, error_code: errorCode }) => kind === 'session.mode-change-failed' && errorCode === 'protocol_error');
-  if (modeTimeout !== Boolean(scenario.harness_faults?.includes('accelerate-mode-timeout'))) admission(`${label}.mode timeout and acceleration fault must be paired`);
+  if (modeTimeout !== Boolean(scenario.harness_faults?.includes('mode-timeout'))) admission(`${label}.mode timeout and fault must be paired`);
   if (modeProtocolError !== Boolean(scenario.harness_faults?.includes('inject-mode-protocol-error-once')
     || scenario.harness_faults?.includes('reject-mode'))) admission(`${label}.mode protocol failure and fault must be paired`);
   if (Boolean(scenario.harness_faults?.includes('inject-mode-protocol-error-once'))
@@ -455,17 +461,6 @@ function programmedScenario(scenario, label) {
   const resumeFailed = expectedKinds.includes('session.resume-failed');
   if (resumeFailed !== Boolean(scenario.harness_faults?.includes('exit-after-result')
     && scenario.harness_faults?.includes('reject-resume'))) admission(`${label}.resume-failed trace requires exit and rejection faults`);
-  if (resumeFailed) {
-    const report = scenario.report_checks?.find(({ turn_index: turnIndex }) => turnIndex === 2);
-    const requiredBindings = ['cursor_session_id', 'session_id', 'failure_kind', 'terminal_reason', 'provider_error',
-      'next_provider_operation_requires_new_user_decision'];
-    const requiredFragments = ['cursor_session_id', 'session_id', 'failure_kind',
-      'terminal_reason', 'provider_error', 'next_provider_operation_requires_new_user_decision'];
-    if (!report || requiredBindings.some((binding) => !report.required_bindings?.includes(binding))
-      || requiredFragments.some((fragment) => !report.required_fragments?.includes(fragment))) {
-      admission(`${label}.resume-failed recovery report is incomplete`);
-    }
-  }
   const recoveryTombstone = expectedKinds.some((kind, index) => kind === 'session.tombstoned'
     && expectedKinds.slice(0, index).some((candidate) => ['turn.completed', 'turn.failed', 'turn.timed-out'].includes(candidate))
     && expectedKinds.slice(index + 1).some((candidate) => ['session.resumed', 'session.resume-failed'].includes(candidate)));
@@ -473,15 +468,6 @@ function programmedScenario(scenario, label) {
   const tombstoneIndex = expectedKinds.indexOf('session.tombstoned');
   const initialTombstone = tombstoneIndex !== -1 && !expectedKinds.slice(0, tombstoneIndex).includes('turn.started');
   if (initialTombstone !== Boolean(scenario.harness_faults?.includes('reject-initialize'))) admission(`${label}.initial tombstone and initialization fault must be paired`);
-  if (scenario.skill_sensitivity !== undefined) {
-    closed(scenario.skill_sensitivity, ['expected_mismatch', 'mutation'], `${label}.skill_sensitivity`);
-    if (scenario.skill_sensitivity.mutation !== 'omit-events-lost'
-      || scenario.skill_sensitivity.expected_mismatch !== 'reported-outcome-mismatch'
-      || scenario.lane !== 'model-behavior'
-      || !scenario.program.steps.some(({ type }) => type === 'event-burst')
-      || !scenario.expected_trace.some(({ kind }) => kind === 'turn.events-lost')
-      || scenario.report_checks === undefined) admission(`${label}.skill_sensitivity is invalid`);
-  }
   list(scenario.followups, `${label}.followups`, 0, 2);
   const stepsById = new Map(scenario.program.steps.map((step) => [step.step_id, step]));
   for (const [index, followup] of scenario.followups.entries()) {
@@ -508,27 +494,19 @@ function programmedScenario(scenario, label) {
     scenario.followups.forEach((followup, index) => ordinaryModelGoal(followup.input, `${label}.followups[${index}].input`));
   }
   if (scenario.report_checks !== undefined) {
-    list(scenario.report_checks, `${label}.report_checks`, 1, 3);
+    list(scenario.report_checks, `${label}.report_checks`, 0, 9);
     for (const [index, check] of scenario.report_checks.entries()) {
-      closed(check, check.required_bindings === undefined
-        ? ['forbidden_fragments', 'required_fragments', 'turn_index']
-        : ['forbidden_fragments', 'required_bindings', 'required_fragments', 'turn_index'], `${label}.report_checks[${index}]`);
+      closed(check, ['category', 'forbidden_fragments', 'required_fragments', 'turn_index'], `${label}.report_checks[${index}]`);
       if (!Number.isSafeInteger(check.turn_index) || check.turn_index < 1 || check.turn_index > scenario.followups.length + 1) admission(`${label}.report_checks[${index}].turn_index is invalid`);
+      if (!REPORT_CATEGORIES.has(check.category)) admission(`${label}.report_checks[${index}].category is invalid`);
       list(check.required_fragments, `${label}.report_checks[${index}].required_fragments`, 1, 12);
       list(check.forbidden_fragments, `${label}.report_checks[${index}].forbidden_fragments`, 0, 12);
       check.required_fragments.forEach((fragment, item) => text(fragment, `${label}.report_checks[${index}].required_fragments[${item}]`, 1, 256));
       check.forbidden_fragments.forEach((fragment, item) => text(fragment, `${label}.report_checks[${index}].forbidden_fragments[${item}]`, 1, 256));
       unique(check.required_fragments, `${label}.report_checks[${index}].required_fragments`);
       unique(check.forbidden_fragments, `${label}.report_checks[${index}].forbidden_fragments`);
-      if (check.required_bindings !== undefined) {
-        list(check.required_bindings, `${label}.report_checks[${index}].required_bindings`, 1, 12);
-        check.required_bindings.forEach((binding, item) => {
-          if (!REPORT_BINDINGS.has(binding)) admission(`${label}.report_checks[${index}].required_bindings[${item}] is invalid`);
-        });
-        unique(check.required_bindings, `${label}.report_checks[${index}].required_bindings`);
-      }
     }
-    unique(scenario.report_checks, `${label}.report_checks`, ({ turn_index: turnIndex }) => turnIndex);
+    unique(scenario.report_checks, `${label}.report_checks`, ({ turn_index: turnIndex, category }) => `${turnIndex}\0${category}`);
   }
   trace(scenario.expected_trace, scenario.program.steps, `${label}.expected_trace`);
   for (const step of scenario.program.steps.filter(({ type }) => type === 'effect')) {
@@ -537,7 +515,7 @@ function programmedScenario(scenario, label) {
     if (matching.length !== 1) admission(`${label}.expected_trace must observe every file effect exactly once`);
   }
   predicate(scenario.fixture_predicate, `${label}.fixture_predicate`);
-  if (!OUTCOMES.has(scenario.expected_actual_task_outcome) || !OUTCOMES.has(scenario.expected_reported_task_outcome) || scenario.expected_enabled_eval_status !== 'pass') admission(`${label} has invalid expected outcomes`);
+  if (!OUTCOMES.has(scenario.expected_actual_task_outcome) || scenario.expected_enabled_eval_status !== 'pass') admission(`${label} has invalid expected outcomes`);
   validatePlaceholders(scenario, label);
 }
 
@@ -646,32 +624,221 @@ function traceProjection(observation) {
   if ('matched' in observation) projected.matched = observation.matched;
   if ('timeout_ms' in observation) projected.timeout_ms = observation.timeout_ms;
   if ('timeout_omitted' in observation) projected.timeout_omitted = observation.timeout_omitted;
-  if ('cursor_matched' in observation) projected.cursor_matched = observation.cursor_matched;
   if ('progress_revision_matched' in observation) projected.progress_revision_matched = observation.progress_revision_matched;
   if ('events_lost' in observation) projected.events_lost = observation.events_lost;
   if ('result_truncated' in observation) projected.result_truncated = observation.result_truncated;
+  if ('complete' in observation) projected.complete = observation.complete;
   if ('error_code' in observation) projected.error_code = observation.error_code;
   if ('session_state' in observation) projected.session_state = observation.session_state;
   if ('active_turn' in observation) projected.active_turn = observation.active_turn;
   return projected;
 }
 
-function comparableTrace(trace) {
+function comparableTrace(trace, expectedTrace = null) {
   let terminalWrapper = false;
-  return trace.filter((observation) => {
+  const filtered = trace.filter((observation) => {
     if (['session.allocated', 'session.resumed'].includes(observation.kind)) terminalWrapper = false;
     if (observation.kind === 'session.close-attempted' && terminalWrapper) return false;
     if (['session.tombstoned', 'session.close-attempted'].includes(observation.kind)
       || (observation.kind === 'session.mode-change-failed' && observation.error_code === 'mode_timeout')) terminalWrapper = true;
     return true;
-  }).map(traceProjection);
+  });
+  const expected = expectedTrace === null ? null : comparableTrace(expectedTrace);
+  return filtered.map((observation, index) => {
+    const projected = traceProjection(observation);
+    if (['session.allocated', 'session.resumed'].includes(observation.kind)
+      && expected?.[index]?.kind === observation.kind) {
+      if (!('effort' in expected[index])) delete projected.effort;
+      if (!('fast' in expected[index])) delete projected.fast;
+    }
+    return projected;
+  });
 }
 
-export function evaluateScenario(scenario, { trace = [], callbacks = [], effects = [], actual_task_outcome: actualTaskOutcome, reported_task_outcome: reportedTaskOutcome } = {}) {
+function reportChecksFor(scenario) {
+  return scenario.report_checks;
+}
+
+function reportEvaluation(scenario, capturedFinals) {
+  if (!Array.isArray(capturedFinals)) return { invalid: true, diagnostics: [], reportedTaskOutcome: 'not_checked' };
+  const finals = new Map();
+  let bytes = 0;
+  for (const final of capturedFinals) {
+    if (!final || typeof final !== 'object' || Array.isArray(final)
+      || !Number.isSafeInteger(final.turn_index) || final.turn_index < 1 || final.turn_index > scenario.followups.length + 1
+      || finals.has(final.turn_index)) return { invalid: true, diagnostics: [], reportedTaskOutcome: 'not_checked' };
+    if (final.completeness === 'complete') {
+      if (typeof final.text !== 'string' || (final.text.isWellFormed && !final.text.isWellFormed())) return { invalid: true, diagnostics: [], reportedTaskOutcome: 'not_checked' };
+      bytes += Buffer.byteLength(final.text, 'utf8');
+    } else if (final.completeness === 'confirmed_missing') {
+      if (final.text !== null) return { invalid: true, diagnostics: [], reportedTaskOutcome: 'not_checked' };
+    } else return { invalid: true, diagnostics: [], reportedTaskOutcome: 'not_checked' };
+    finals.set(final.turn_index, final);
+  }
+  if (finals.size !== scenario.followups.length + 1) return { invalid: true, diagnostics: [], reportedTaskOutcome: 'not_checked' };
+  if (bytes > 1_048_576) return { invalid: true, diagnostics: [], reportedTaskOutcome: 'not_checked' };
+  const checks = reportChecksFor(scenario);
+  const deliveryMissing = [...finals.values()].some((final) => final.completeness === 'confirmed_missing'
+    || final.text.trim().length === 0);
+  const diagnostics = checks.map((check) => {
+    const final = finals.get(check.turn_index);
+    const textValue = final?.completeness === 'complete' ? final.text : null;
+    const required_assertions = check.required_fragments.map((fragment) => ({
+      fragment, matched: textValue !== null && textValue.includes(fragment),
+    }));
+    const forbidden_matches = textValue === null ? [] : check.forbidden_fragments.filter((fragment) => textValue.includes(fragment));
+    return {
+      turn_index: check.turn_index,
+      category: check.category,
+      matched: required_assertions.every(({ matched }) => matched) && forbidden_matches.length === 0,
+      missing_final: textValue === null,
+      required_assertions,
+      forbidden_matches,
+    };
+  });
+  return { invalid: false, diagnostics, reportedTaskOutcome: 'not_checked', deliveryMissing };
+}
+
+export function validRecoveryContext(transcript, expectedTurns) {
+  if (!Array.isArray(transcript?.calls) || !Array.isArray(transcript.turn_call_ranges)
+    || transcript.turn_call_ranges.length !== expectedTurns
+    || !Number.isSafeInteger(transcript.unexpected_input_requests) || transcript.unexpected_input_requests < 0) return false;
+  let end = 0;
+  for (const range of transcript.turn_call_ranges) {
+    if (!range || Object.keys(range).sort().join(',') !== 'end,start'
+      || range.start !== end || !Number.isSafeInteger(range.end)
+      || range.end < end || range.end > transcript.calls.length) return false;
+    end = range.end;
+  }
+  return end === transcript.calls.length;
+}
+
+// Runtime owns rejection boundaries. These existing-session address lookups,
+// wait validation and local mode validation precede tool-specific effects.
+// Launch, provider transitions and answer-content repairs have other proof needs.
+const SESSION_LOOKUP_TOOLS = new Set(['cursor_wait', 'cursor_session_status', 'cursor_read_result',
+  'cursor_set_mode', 'cursor_cancel', 'cursor_close_session', 'cursor_send_prompt',
+  'cursor_answer_question', 'cursor_answer_plan', 'cursor_answer_permission']);
+const TURN_LOOKUP_TOOLS = new Set(['cursor_wait', 'cursor_read_result', 'cursor_cancel',
+  'cursor_answer_question', 'cursor_answer_plan', 'cursor_answer_permission']);
+const LOCAL_RECOVERY_ERRORS = new Set(['unknown_session', 'unknown_turn', 'invalid_args', 'invalid_text_encoding']);
+const capturedRecoveryId = (value) => typeof value === 'string' && value.length > 0 && Buffer.byteLength(value) <= 256;
+const argumentTag = (request) => typeof request?.arguments_without_session_turn_sha256 === 'string'
+  && /^[a-f0-9]{64}$/.test(request.arguments_without_session_turn_sha256)
+  ? request.arguments_without_session_turn_sha256 : null;
+function exactArgumentProjection(request, fields) {
+  const projection = Object.fromEntries(fields.filter((field) => Object.hasOwn(request || {}, field))
+    .map((field) => [field, request[field]]));
+  return argumentTag(request) === createHash('sha256').update(canonicalJson(projection)).digest('hex');
+}
+
+export function findRecoveredCalls(transcript, expectedTurns) {
+  if (!validRecoveryContext(transcript, expectedTurns) || transcript.dropped_calls !== 0
+    || transcript.unexpected_input_requests !== 0) return [];
+  const recovered = [];
+  let sessionId; let turnId; let eventId; let progressRevision;
+  for (let index = 0; index < transcript.calls.length; index += 1) {
+    const call = transcript.calls[index];
+    if (call?.response?.ok === true) {
+      if (['cursor_delegate', 'cursor_start_session', 'cursor_resume_session'].includes(call.tool)) {
+        sessionId = call.response.session_id; turnId = call.response.turn_id;
+        eventId = undefined; progressRevision = undefined;
+      } else if (call.tool === 'cursor_send_prompt' && call.request?.session_id === sessionId) {
+        turnId = call.response.turn_id;
+        progressRevision = undefined;
+      }
+      if (call.response.session_id === sessionId) {
+        if (Number.isSafeInteger(call.response.last_event_id)) eventId = call.response.last_event_id;
+        if (call.response.turn_id === turnId && Number.isSafeInteger(call.response.progress_revision)) {
+          progressRevision = call.response.progress_revision;
+        }
+      }
+      continue;
+    }
+    if (!LOCAL_RECOVERY_ERRORS.has(call?.response?.error_code) || !SESSION_LOOKUP_TOOLS.has(call.tool)
+      || call.response.ok !== false || call.response.provider_error
+      || (call.response.error_code === 'unknown_turn' && !TURN_LOOKUP_TOOLS.has(call.tool))) continue;
+    const rangeIndex = transcript.turn_call_ranges.findIndex(({ start, end }) => start <= index && index < end);
+    if (rangeIndex < 0) continue;
+    let successIndex = index + 1;
+    let repairEventId = eventId;
+    // Read-only diagnostics do not change the operation being repaired. Their
+    // successful current-session responses must remain in the original evidence.
+    while (successIndex < transcript.turn_call_ranges[rangeIndex].end) {
+      const diagnostic = transcript.calls[successIndex];
+      if (diagnostic?.tool !== 'cursor_session_status' || diagnostic.tool === call.tool
+        || diagnostic.response?.ok !== true || diagnostic.response.error_code || diagnostic.response.provider_error
+        || diagnostic.request?.session_id !== sessionId || diagnostic.response.session_id !== sessionId
+        || diagnostic.request.turn_id !== undefined
+        || !exactArgumentProjection(diagnostic.request, [])) break;
+      if (Number.isSafeInteger(diagnostic.response.last_event_id)) repairEventId = diagnostic.response.last_event_id;
+      successIndex += 1;
+    }
+    const next = transcript.calls[successIndex];
+    if (successIndex >= transcript.turn_call_ranges[rangeIndex].end || next?.tool !== call.tool
+      || next.response?.ok !== true || next.response.error_code || next.response.provider_error) continue;
+    const before = call.request; const after = next.request;
+    if (!capturedRecoveryId(sessionId) || after?.session_id !== sessionId
+      || (TURN_LOOKUP_TOOLS.has(call.tool)
+        ? !capturedRecoveryId(turnId) || after.turn_id !== turnId : after.turn_id !== undefined)) continue;
+    const changed = ['session_id', 'turn_id'].filter((field) => before?.[field] !== after[field]);
+    let recoveryClass;
+    if (changed.length && argumentTag(before) && argumentTag(before) === argumentTag(after)) {
+      recoveryClass = 'address';
+    } else if (call.tool === 'cursor_wait'
+      && exactArgumentProjection(before, ['after_event_id', 'after_progress_revision', 'timeout_ms'])
+      && exactArgumentProjection(after, ['after_event_id', 'after_progress_revision', 'timeout_ms'])
+      && before.timeout_ms === after.timeout_ms) {
+      const cursors = [['after_event_id', repairEventId], ['after_progress_revision', progressRevision]];
+      const changedCursors = cursors.filter(([field]) => before[field] !== after[field]);
+      if (changedCursors.length && changedCursors.every(([field, observed]) => Number.isSafeInteger(observed)
+        && observed >= 0 && after[field] === observed)) {
+        recoveryClass = 'wait_state';
+      }
+    } else if (call.tool === 'cursor_set_mode' && call.response.error_code === 'invalid_args'
+      && !['ask', 'plan', 'agent'].includes(before?.mode) && ['ask', 'plan', 'agent'].includes(after.mode)
+      && exactArgumentProjection(before, ['mode']) && exactArgumentProjection(after, ['mode'])) {
+      // The successful transition still has to match the scenario-owned exact
+      // expected trace; this mechanical repair does not authorize a new mode.
+      recoveryClass = 'set_mode';
+    }
+    if (!recoveryClass) continue;
+    recovered.push({ failed_call_index: index + 1, successful_call_index: successIndex + 1,
+      codex_turn_index: rangeIndex + 1, tool: call.tool, error_code: call.response.error_code,
+      correction_kind: recoveryClass });
+  }
+  return recovered;
+}
+
+export function evaluateScenario(scenario, { trace = [], callbacks = [], effects = [], captured_finals: capturedFinals, actual_task_outcome: actualTaskOutcome, transcript } = {}) {
   if (scenario?.scenario_kind !== 'programmed') throw new TypeError('pure oracle accepts only programmed scenarios');
   const mismatches = [];
   const add = (code) => { if (!mismatches.includes(code)) mismatches.push(code); };
   if (!Array.isArray(trace) || !Array.isArray(callbacks) || !Array.isArray(effects)) throw new TypeError('oracle observations must be arrays');
+  const reports = reportEvaluation(scenario, capturedFinals);
+  const recoveredCalls = findRecoveredCalls(transcript, scenario.followups.length + 1);
+  const recoveredIndices = new Set(recoveredCalls.map(({ failed_call_index: index }) => index));
+  if (transcript?.calls?.some((call, index) => call?.response?.ok === false
+    && (['unknown_session', 'unknown_turn'].includes(call.response.error_code)
+      || (SESSION_LOOKUP_TOOLS.has(call.tool) && LOCAL_RECOVERY_ERRORS.has(call.response.error_code)))
+    && !recoveredIndices.has(index + 1))) add('unrecovered-call');
+  if (reports.invalid) {
+    return {
+      assertion_outcome: 'not_observed',
+      actual_task_outcome: actualTaskOutcome ?? 'not_observed',
+      reported_task_outcome: 'not_checked',
+      eval_status: 'integration_failure',
+      failure_stage: 'inspection',
+      error_code: 'capture_invalid',
+      mismatches: ['invalid-report-evidence'],
+      recovered_calls: recoveredCalls,
+      components: {
+        evidence_admission: 'fail', execution_trace: 'not_applicable', continuation_handoff: 'not_applicable',
+        outcome_report: 'not_checked', interaction_report: 'not_applicable', safety_disclosure: 'not_checked',
+      },
+      report_checks: reports.diagnostics,
+    };
+  }
   const planned = new Map(scenario.program.steps.map((step) => [step.step_id, step]));
   const pendingSeen = new Set();
   const pendingRequestIds = new Map();
@@ -734,7 +901,6 @@ export function evaluateScenario(scenario, { trace = [], callbacks = [], effects
       }
     }
     if (observation.kind === 'prompt.contract' && observation.matched !== true) add('prompt-contract-mismatch');
-    if (FORBIDDEN.has(observation.kind)) add(observation.kind);
   }
   let segmentStarted = false;
   let segmentTerminal = false;
@@ -753,7 +919,7 @@ export function evaluateScenario(scenario, { trace = [], callbacks = [], effects
       && observation.session_state === 'live' && observation.active_turn === false) segmentTerminal = true;
   }
   if (segmentStarted && !segmentTerminal) add('missing-close-attempt');
-  if (canonicalJson(comparableTrace(trace)) !== canonicalJson(comparableTrace(scenario.expected_trace))) add('trace-mismatch');
+  if (canonicalJson(comparableTrace(trace, scenario.expected_trace)) !== canonicalJson(comparableTrace(scenario.expected_trace))) add('trace-mismatch');
 
   for (const step of scenario.program.steps) {
     if (step.type === 'event-burst') {
@@ -781,12 +947,29 @@ export function evaluateScenario(scenario, { trace = [], callbacks = [], effects
   }
   if (effects.some(({ step_id: stepId }) => planned.get(stepId)?.type !== 'effect')) add('unexpected-effect');
   if (actualTaskOutcome !== scenario.expected_actual_task_outcome) add('actual-outcome-mismatch');
-  if (reportedTaskOutcome !== scenario.expected_reported_task_outcome) add('reported-outcome-mismatch');
+  const interactionFailed = reports.deliveryMissing
+    || reports.diagnostics.some(({ category, matched }) => category === 'interaction' && !matched);
+  if (interactionFailed) add('interaction-report-mismatch');
+  const continuationCodes = new Set(['answer-before-pending', 'authority-mismatch', 'callback-mismatch', 'effect-callback-error', 'effect-callback-id-mismatch', 'id-mismatch', 'missing-callback', 'missing-effect-callback']);
+  const continuationApplicable = scenario.followups.length > 0 || scenario.program.steps.some(({ type }) => type === 'pending');
+  const nonReportMismatches = mismatches.filter((code) => code !== 'interaction-report-mismatch');
   return {
     assertion_outcome: mismatches.length === 0 ? 'pass' : 'fail',
+    recovered_calls: recoveredCalls,
     actual_task_outcome: actualTaskOutcome ?? 'not_observed',
-    reported_task_outcome: reportedTaskOutcome ?? 'not_reported',
+    reported_task_outcome: reports.reportedTaskOutcome,
     eval_status: mismatches.length === 0 ? scenario.expected_enabled_eval_status : 'agent_behavior_mismatch',
     mismatches,
+    components: {
+      evidence_admission: 'pass',
+      execution_trace: nonReportMismatches.length === 0 ? 'pass' : 'fail',
+      continuation_handoff: continuationApplicable
+        ? mismatches.some((code) => continuationCodes.has(code)) ? 'fail' : 'pass'
+        : 'not_applicable',
+      outcome_report: 'not_checked',
+      interaction_report: interactionFailed ? 'fail' : 'pass',
+      safety_disclosure: 'not_checked',
+    },
+    report_checks: reports.diagnostics,
   };
 }

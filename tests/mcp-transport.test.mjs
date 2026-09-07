@@ -78,6 +78,7 @@ test('MCP tools/list publishes the stable tool names and answer schemas', async 
     'cursor_send_prompt',
     'cursor_set_mode',
     'cursor_session_status',
+    'cursor_read_result',
     'cursor_wait',
     'cursor_answer_question',
     'cursor_answer_plan',
@@ -89,6 +90,8 @@ test('MCP tools/list publishes the stable tool names and answer schemas', async 
   assert.deepEqual(byName.cursor_wait.required, ['session_id', 'turn_id']);
   assert.deepEqual(byName.cursor_wait.properties.timeout_ms, { type: 'integer', minimum: 1_000, maximum: 180_000 });
   assert.deepEqual(byName.cursor_wait.properties.after_progress_revision, { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER });
+  assert.deepEqual(byName.cursor_read_result.required, ['session_id', 'turn_id']);
+  assert.deepEqual(byName.cursor_read_result.properties.offset, { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER });
   for (const name of ['cursor_delegate', 'cursor_start_session', 'cursor_resume_session']) {
     assert.equal(byName[name].additionalProperties, false);
     assert.equal(byName[name].properties.model.pattern, '^[^\\[\\]]+$');
@@ -131,7 +134,7 @@ test('MCP maps requests and notifications to standard JSON-RPC outcomes', async 
 
   client.sendRaw(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }));
   client.sendRaw(JSON.stringify({ jsonrpc: '1.0', method: 'tools/list' }));
-  assert.equal((await client.request('tools/list')).result.tools.length, 12);
+  assert.equal((await client.request('tools/list')).result.tools.length, 13);
   assert.deepEqual(client.messages, []);
 });
 
@@ -142,7 +145,7 @@ test('MCP keeps notifications silent and bounds untrusted tool errors', async (t
   client.sendRaw(JSON.stringify({ jsonrpc: '2.0', method: 'not/admitted' }));
   client.sendRaw(JSON.stringify({ jsonrpc: '1.0', method: 'tools/list' }));
   client.sendRaw(JSON.stringify({ jsonrpc: '2.0', method: '\ud800' }));
-  assert.equal((await client.request('tools/list')).result.tools.length, 12);
+  assert.equal((await client.request('tools/list')).result.tools.length, 13);
   assert.deepEqual(client.messages, []);
 
   const response = await client.request('tools/call', {
@@ -154,6 +157,22 @@ test('MCP keeps notifications silent and bounds untrusted tool errors', async (t
   assert.equal(failure.error_code, 'invalid_args');
   assert.ok(Buffer.byteLength(failure.message, 'utf8') <= 8_000);
   assert.match(failure.message, /…$/);
+});
+
+test('MCP wires cursor_read_result through the public tool boundary', async (t) => {
+  const client = await transport(t, { FAKE_ACP_RESULT: 'wire-result' });
+  await client.request('initialize');
+  const session = await client.tool('cursor_start_session', { cwd: process.cwd(), mode: 'ask' });
+  const turn = await client.tool('cursor_send_prompt', { session_id: session.session_id, prompt: 'Complete.' });
+  await client.tool('cursor_wait', {
+    session_id: session.session_id, turn_id: turn.turn_id,
+    after_event_id: turn.last_event_id, timeout_ms: 1_000,
+  });
+  const page = await client.tool('cursor_read_result', {
+    session_id: session.session_id, turn_id: turn.turn_id,
+  });
+  assert.equal(page.text, 'wire-result');
+  await client.tool('cursor_close_session', { session_id: session.session_id });
 });
 
 test('MCP tools/call wires interactive answers, status and cancellation', async (t) => {
@@ -241,12 +260,12 @@ test('MCP framing rejects malformed and oversized input, then resumes at frame b
 
   client.child.stdin.write(Buffer.from(`${'x'.repeat(1_048_577)}\n${JSON.stringify({ jsonrpc: '2.0', id: 'after-complete-limit', method: 'tools/list' })}\n`));
   assert.equal((await client.waitFor((message) => message.id === null)).error.code, -32700);
-  assert.equal((await client.waitFor((message) => message.id === 'after-complete-limit')).result.tools.length, 12);
+  assert.equal((await client.waitFor((message) => message.id === 'after-complete-limit')).result.tools.length, 13);
 
   client.child.stdin.write(Buffer.alloc(1_048_577, 0x61));
   assert.equal((await client.waitFor((message) => message.id === null)).error.code, -32700);
   client.child.stdin.write(Buffer.from(`discarded remainder\n${JSON.stringify({ jsonrpc: '2.0', id: 'after-limit', method: 'tools/list' })}\r\n`));
-  assert.equal((await client.waitFor((message) => message.id === 'after-limit')).result.tools.length, 12);
+  assert.equal((await client.waitFor((message) => message.id === 'after-limit')).result.tools.length, 13);
 });
 
 test('MCP server fails closed when its packaged manifest version is corrupted', async (t) => {

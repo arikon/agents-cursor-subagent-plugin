@@ -9,7 +9,7 @@ import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import { admitScenarioCorpus, evaluateScenario, materializeScenario, parseScenarioCorpus } from '../scripts/cursor-eval-scenario.mjs';
-import { applySkillSensitivity, assertEvalResultV1 } from '../scripts/cursor-skill-eval.mjs';
+import { assertEvalResultV1 } from '../scripts/cursor-skill-eval.mjs';
 import { cli, parseChildResult, publishFinalEvidence, runEval, runHarness } from '../scripts/run-cursor-skill-eval.mjs';
 
 const run = fileURLToPath(new URL('../scripts/run-cursor-skill-eval.mjs', import.meta.url));
@@ -26,6 +26,7 @@ const admittedCorpus = parseScenarioCorpus(rawCorpus);
 const corpusDigest = { sha256: createHash('sha256').update(rawCorpus).digest('hex'), bytes: rawCorpus.length };
 const scenarioById = new Map(admittedCorpus.scenarios.map((scenario) => [scenario.scenario_id, scenario]));
 const fixedDigest = (character, bytes = 123) => ({ sha256: character.repeat(64), bytes });
+const evaluatorDigest = fixedDigest('e', 789);
 const observedTraceFor = (scenario, sessionId = 'S') => {
   let turnIndex = 0;
   let currentSessionId = sessionId;
@@ -59,11 +60,23 @@ const observedCallbacksFor = (scenario) => scenario.program.steps.flatMap((step)
   if (step.type === 'pending' || step.type === 'effect') return [{ step_id: step.step_id, callback_id: step.callback_id, ...step.expected_callback }];
   return [];
 });
-const observationsFor = (scenario, { actual = scenario.expected_actual_task_outcome || 'succeeded', reported = scenario.expected_reported_task_outcome || 'succeeded', status = 'pass' } = {}) => ({
+const reportChecksFor = (scenario) => scenario.report_checks || [];
+const capturedFinalsFor = (scenario) => {
+  if (scenario.scenario_kind !== 'programmed') return [];
+  const checks = reportChecksFor(scenario);
+  return Array.from({ length: scenario.followups.length + 1 }, (_value, index) => {
+    const turnIndex = index + 1;
+    const turnChecks = checks.filter(({ turn_index: checkTurn }) => checkTurn === turnIndex);
+    const selected = turnChecks.flatMap(({ required_fragments: assertions }) => assertions.map((assertion) => Array.isArray(assertion) ? assertion[0] : assertion));
+    return { turn_index: turnIndex, turn_id: `codex-turn-${turnIndex}`, turn_status: 'completed', text: selected.join('\n') || 'completed',
+      phase: 'final', source: 'thread/read', completeness: 'complete', error_code: null };
+  });
+};
+const observationsFor = (scenario, { actual = scenario.expected_actual_task_outcome || 'succeeded', status = 'pass' } = {}) => ({
   trace: scenario.scenario_kind === 'programmed' ? observedTraceFor(scenario) : [],
   callbacks: scenario.scenario_kind === 'programmed' ? observedCallbacksFor(scenario) : [],
   effects: scenario.scenario_kind === 'programmed' ? scenario.program.steps.filter(({ type }) => type === 'effect').map((step) => ({ kind: `effect.file-${step.operation === 'read' ? 'read' : 'written'}`, step_id: step.step_id, callback_id: step.callback_id, path: step.path, text: step.text })) : [],
-  actual_task_outcome: actual, reported_task_outcome: reported,
+  actual_task_outcome: actual, reported_task_outcome: 'not_checked',
   assertion_outcome: status === 'pass' ? 'pass' : status === 'integration_failure' ? 'not_observed' : 'fail', eval_status: status,
 });
 const childResult = (scenarioId = 'model-question', options = {}) => {
@@ -72,29 +85,37 @@ const childResult = (scenarioId = 'model-question', options = {}) => {
   const skillDigest = options.skillDigest || fixedDigest('a');
   const provenance = {
     consumed_scenario: scenarioDigest, consumed_corpus: options.corpusDigest || corpusDigest, adapter: fixedDigest('b', 456),
+    evaluator: options.evaluatorDigest || evaluatorDigest,
     managed_installed_skill: skillDigest, cache_loaded_skill: scenario.scenario_kind === 'programmed' ? skillDigest : null,
     installed_payload: { marker_format: 1, payload_hash: 'c'.repeat(64), artifact_hash: 'd'.repeat(64), manifest_version: '0.1.0+codex.fixture' },
     client: { name: 'codex-app-server', version: '0.152.1' }, model: { provider: null, name: null }, cleanup_status: options.cleanup || 'succeeded',
   };
+  const capturedFinals = capturedFinalsFor(scenario);
   return {
     provenance,
+    captured_finals: capturedFinals,
     manifest: { schema_version: 1, hash_algorithm: 'sha256', hash_encoding: 'lowercase-hex', installed_skill: skillDigest,
-      corpus: provenance.consumed_corpus, materialized_scenario: provenance.consumed_scenario, adapter: provenance.adapter,
+      corpus: provenance.consumed_corpus, materialized_scenario: provenance.consumed_scenario, adapter: provenance.adapter, evaluator: provenance.evaluator,
       installed_payload: provenance.installed_payload, client: provenance.client, model: provenance.model },
-    observations: observationsFor(scenario, options), transcript,
+    observations: { ...observationsFor(scenario, options), captured_finals: capturedFinals }, transcript,
     provider_oracle: { request_count: 8, skill_context_seen: true, terminal_result_matched: true, tool_sequence: toolSequence, request_trace: requestTrace },
   };
 };
 const passHarness = async (config, env) => ({ code: 0, signal: null, failure: null,
   childResult: childResult(config.scenario.scenario_id, {
-    ...(env.CURSOR_EVAL_EXPECTED_LOADED_SKILL_SHA256 ? { skillDigest: { sha256: env.CURSOR_EVAL_EXPECTED_LOADED_SKILL_SHA256, bytes: Number(env.CURSOR_EVAL_EXPECTED_LOADED_SKILL_BYTES) } } : {}),
     scenarioDigest: { sha256: env.CURSOR_EVAL_SCENARIO_SHA256, bytes: Number(env.CURSOR_EVAL_SCENARIO_BYTES) },
     corpusDigest: { sha256: env.CURSOR_EVAL_CORPUS_SHA256, bytes: Number(env.CURSOR_EVAL_CORPUS_BYTES) },
+    evaluatorDigest: { sha256: env.CURSOR_EVAL_EVALUATOR_SHA256, bytes: Number(env.CURSOR_EVAL_EVALUATOR_BYTES) },
   }), diagnostics: '' });
 const published = async ({ makeEvidence }) => { makeEvidence('/tmp/evidence.json'); return '/tmp/evidence.json'; };
 const removed = async () => {};
-const inertFixture = { mkdtemp: async () => '/tmp/fixture', mkdir: async () => {}, rm: removed };
-const encodedChildResult = (scenarioId, options = {}, overrides = {}) => JSON.stringify({ schema_version: 1, scenario_id: scenarioId, ...childResult(scenarioId, options), ...overrides });
+const inertFixture = { mkdtemp: async () => '/tmp/fixture', mkdir: async () => {}, rm: removed,
+  readEvaluatorInventory: async () => ({ files: [], digest: evaluatorDigest }) };
+const encodedChildResult = (scenarioId, options = {}, overrides = {}) => {
+  const child = childResult(scenarioId, options);
+  const { captured_finals: _capturedFinals, ...wireObservations } = child.observations;
+  return JSON.stringify({ schema_version: 1, scenario_id: scenarioId, ...child, observations: wireObservations, ...overrides });
+};
 
 test('corpus-owned scenario inventory, materialization and pure oracle stay in one process', { timeout: 2_000 }, async (t) => {
   const corpus = parseScenarioCorpus(rawCorpus);
@@ -108,8 +129,8 @@ test('corpus-owned scenario inventory, materialization and pure oracle stay in o
     effects: scenario.program.steps.filter(({ type }) => type === 'effect').map((step) => ({
       kind: `effect.file-${step.operation === 'read' ? 'read' : 'written'}`, step_id: step.step_id, callback_id: step.callback_id, path: step.path, text: step.text,
     })),
+    captured_finals: capturedFinalsFor(scenario),
     actual_task_outcome: scenario.expected_actual_task_outcome,
-    reported_task_outcome: scenario.expected_reported_task_outcome,
   });
 
   for (const scenario of corpus.scenarios) {
@@ -122,13 +143,14 @@ test('corpus-owned scenario inventory, materialization and pure oracle stay in o
       continue;
     }
     counts.oracle += 1;
-    assert.deepEqual(evaluateScenario(materialized.materializedScenario, observed(materialized.materializedScenario)), {
-      assertion_outcome: 'pass',
-      actual_task_outcome: scenario.expected_actual_task_outcome,
-      reported_task_outcome: scenario.expected_reported_task_outcome,
-      eval_status: 'pass',
-      mismatches: [],
+    const oracle = evaluateScenario(materialized.materializedScenario, observed(materialized.materializedScenario));
+    assert.deepEqual({ assertion: oracle.assertion_outcome, actual: oracle.actual_task_outcome,
+      reported: oracle.reported_task_outcome, status: oracle.eval_status, mismatches: oracle.mismatches }, {
+      assertion: 'pass', actual: scenario.expected_actual_task_outcome,
+      reported: 'not_checked', status: 'pass', mismatches: [],
     });
+    assert.equal(oracle.components.evidence_admission, 'pass');
+    assert.equal(oracle.report_checks.every(({ category }) => category === 'interaction'), true);
   }
   assert.deepEqual(counts, { admission: corpus.scenarios.length, materialization: corpus.scenarios.length,
     oracle: corpus.scenarios.filter(({ scenario_kind: kind }) => kind === 'programmed').length, packageReference: 1 });
@@ -237,7 +259,6 @@ test('corpus-owned scenario inventory, materialization and pure oracle stay in o
     .filter(({ kind }) => kind !== 'effect.file-written')
     .map((entry) => entry.kind === 'turn.completed' ? { ...entry, kind: 'turn.failed' } : entry);
   failedWithUntracedUnauthorizedEffect.expected_actual_task_outcome = 'failed';
-  failedWithUntracedUnauthorizedEffect.expected_reported_task_outcome = 'failed';
   assert.ok(evaluateScenario(failedWithUntracedUnauthorizedEffect, observed(failedWithUntracedUnauthorizedEffect)).mismatches.includes('missing-effect'));
   const expandedAuthorityScenario = byId.get('model-permission-expansion');
   const authorizedExpansion = observed(expandedAuthorityScenario);
@@ -332,8 +353,6 @@ test('corpus-owned scenario inventory, materialization and pure oracle stay in o
     (candidate) => { delete candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-runtime-recovery').harness_faults; },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-resume-failure').expected_trace = candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-resume-failure').expected_trace.filter(({ kind }) => kind !== 'session.resume-failed'); },
     (candidate) => { delete candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-resume-failure').harness_faults; },
-    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-resume-failure').report_checks[1].required_bindings = ['cursor_session_id', 'session_id', 'failure_kind']; },
-    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-resume-failure').report_checks[1].required_fragments = ['resume', 'failed', 'next_provider_operation_requires_new_user_decision']; },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-prompt-provider-failure').harness_faults = ['reject-resume']; },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-prompt-provider-failure').expected_trace = candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-prompt-provider-failure').expected_trace.filter(({ kind }) => kind !== 'turn.failed'); },
     (candidate) => { delete candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-mode-timeout').harness_faults; },
@@ -341,16 +360,10 @@ test('corpus-owned scenario inventory, materialization and pure oracle stay in o
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-mode-timeout').fixture_predicate.error_code = 'protocol_error'; },
     (candidate) => { delete candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-mode-provider-failure').harness_faults; },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-mode-provider-failure').expected_trace = candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-mode-provider-failure').expected_trace.filter(({ kind }) => kind !== 'session.tombstoned'); },
-    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-mode-provider-failure').report_checks[1].required_bindings = ['session_id', 'error_code']; },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-terminal-timeout').expected_trace = candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-terminal-timeout').expected_trace.filter(({ kind }) => kind !== 'turn.timed-out'); },
     (candidate) => { delete candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-terminal-timeout').harness_faults; },
     (candidate) => { delete candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-active-followup').harness_faults; },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-active-followup').expected_trace = candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-active-followup').expected_trace.filter(({ kind }) => kind !== 'turn.followup-received-active'); },
-    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-events-lost').skill_sensitivity.mutation = 'other'; },
-    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-events-lost').skill_sensitivity.expected_mismatch = 'trace-mismatch'; },
-    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-events-lost').lane = 'client-integration'; },
-    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-events-lost').program.steps = candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-events-lost').program.steps.filter(({ type }) => type !== 'event-burst'); },
-    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-events-lost').expected_trace = candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-events-lost').expected_trace.filter(({ kind }) => kind !== 'turn.events-lost'); },
     (_candidate, scenario) => { scenario.program.kind = 'other'; },
     (_candidate, scenario) => { scenario.program.steps = []; },
     (_candidate, scenario) => { scenario.program.steps = Array.from({ length: 9 }, (_, index) => ({ type: 'terminal', step_id: `too-many-${index}`, turn_status: 'completed', result_text: 'done' })); },
@@ -367,6 +380,7 @@ test('corpus-owned scenario inventory, materialization and pure oracle stay in o
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-permission-covered').program.steps.find(({ type }) => type === 'effect').operation = 'delete'; },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-permission-covered').program.steps.find(({ type }) => type === 'effect').expected_callback.outcome = 'failed'; },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-permission-covered').expected_trace = candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-permission-covered').expected_trace.filter(({ kind }) => kind !== 'effect.file-written'); },
+    (candidate) => { const scenario = candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-permission-covered'); scenario.program.steps = scenario.program.steps.filter(({ type }) => type !== 'prompt-check'); },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-permission-covered').program.steps.find(({ type }) => type === 'prompt-check').required_fragments = ['CURSOR_EVAL_OK']; },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-permission-covered').program.steps.find(({ type }) => type === 'prompt-check').required_fragments = ['AUTHORIZED_ACTIONS', 'NO_SCOPE_EXPANSION', 'CURSOR_EVAL_OK']; },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-permission-expansion').program.steps.find(({ step_id: stepId }) => stepId === 'prompt-2').required_fragments = ['CURSOR_EVAL_OK']; },
@@ -384,9 +398,10 @@ test('corpus-owned scenario inventory, materialization and pure oracle stay in o
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-runtime-recovery').program.resume_step_index = 0; },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-runtime-recovery').program.resume_step_index = 1; },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-active-followup').expected_trace.find(({ kind }) => kind === 'turn.wait-timeout').timeout_ms = 999; },
-    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-active-followup').expected_trace.find(({ kind }) => kind === 'turn.wait-timeout').cursor_matched = false; },
+    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-active-followup').expected_trace.find(({ kind }) => kind === 'turn.wait-timeout').progress_revision_matched = false; },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-runtime-recovery').expected_trace.find(({ kind }) => kind === 'turn.receipt').matched = false; },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-runtime-recovery').expected_trace.find(({ kind }) => kind === 'turn.receipt').result_truncated = 'no'; },
+    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-long-result').expected_trace.find(({ kind }) => kind === 'turn.result-read').complete = false; },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-runtime-recovery').expected_trace.find(({ kind }) => kind === 'session.resumed').matched = false; },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-runtime-recovery').expected_trace.find(({ kind }) => kind === 'session.tombstoned').session_state = 'live'; },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-question').expected_trace.find(({ kind }) => kind === 'answer.rejected-stale').error_code = 'other'; },
@@ -404,19 +419,39 @@ test('corpus-owned scenario inventory, materialization and pure oracle stay in o
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-prompt-provider-failure').fixture_predicate.status = 'timed_out'; },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-events-lost').program.steps.find(({ type }) => type === 'event-burst').count = 256; },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-events-lost').expected_trace.find(({ kind }) => kind === 'turn.events-lost').events_lost = false; },
+    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-plugin-dir-rejection').expected_trace.find(({ kind }) => kind === 'session.start-rejected').error_code = 'other'; },
+    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-mode-timeout').expected_trace.find(({ kind }) => kind === 'session.mode-change-failed').error_code = 'other'; },
+    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-critic-delta').expected_trace.unshift({ kind: 'session.mode-change-failed', error_code: 'other' }); },
+    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-mode-protocol-recovery').expected_trace.find(({ kind }) => kind === 'session.mode-recovery-status').session_state = 'tombstone'; },
+    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-result-overflow').fixture_predicate.status = 'completed'; },
+    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-mode-timeout').fixture_predicate.error_code = 'other'; },
+    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-mode-protocol-recovery').fixture_predicate.session_state = 'tombstone'; },
+    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-plugin-dir-rejection').fixture_predicate.error_code = 'other'; },
+    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-critic-delta').fixture_predicate = { kind: 'terminal-status', status: 'completed' }; },
+    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-critic-delta').fixture_predicate = { kind: 'mode-change-failed', error_code: 'other' }; },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-resume-failure').expected_trace.find(({ kind }) => kind === 'session.resume-failed').extra = true; },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-initial-provider-failure').fixture_predicate.failure_kind = 'spawn'; },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-initial-provider-failure').expected_trace.push({ kind: 'turn.started' }); },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-permission-expansion').followups.at(-1).granted_actions[0].operation = 'delete'; },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-active-followup').expected_trace = candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-active-followup').expected_trace.filter(({ kind }) => kind !== 'turn.wait-timeout'); },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-critic-delta').harness_faults = ['accelerate-wait-timeout']; },
+    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-mode-protocol-recovery').expected_trace = candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-mode-protocol-recovery').expected_trace.filter(({ kind }) => kind !== 'session.mode-recovery-status'); },
+    (candidate) => { const scenario = candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-result-overflow'); scenario.expected_trace.push({ kind: 'turn.result-read', step_id: scenario.program.steps.at(-1).step_id, complete: true }); },
+    (candidate) => { delete candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-result-overflow').harness_faults; },
+    (candidate) => { const scenario = candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-active-followup'); scenario.harness_faults = scenario.harness_faults.filter((fault) => fault !== 'hold-terminal-until-followup'); },
+    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-critic-delta').expected_trace.unshift({ kind: 'session.tombstoned', session_state: 'tombstone' }); },
+    (candidate) => { const scenario = candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-plan'); scenario.followups[0] = { after_kind: 'wait-timeout', input: scenario.followups[0].input }; },
+    (candidate) => { delete candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-file-review').report_checks; },
     (_candidate, scenario) => { scenario.followups[0].after_step = 'missing'; },
     (_candidate, scenario) => { scenario.followups[0].after_kind = 'other'; },
     (_candidate, scenario) => { scenario.followups.push(structuredClone(scenario.followups[0])); },
     (_candidate, scenario) => { scenario.report_checks[0].turn_index = 0; },
     (_candidate, scenario) => { scenario.report_checks[0].required_fragments = []; },
     (_candidate, scenario) => { scenario.report_checks[1].turn_index = 1; },
-    (_candidate, scenario) => { scenario.report_checks[0].required_bindings[0] = 'unknown'; },
+    (_candidate, scenario) => { scenario.report_checks[0].category = 'other'; },
+    (_candidate, scenario) => { scenario.report_checks[0].required_fragments[0] = []; },
+    (_candidate, scenario) => { scenario.report_checks[0].required_fragments[0] = Array(9).fill('same'); },
+    (_candidate, scenario) => { scenario.report_checks[0].required_fragments[0] = ['same', 'same']; },
     (_candidate, scenario) => { scenario.expected_trace[0].kind = 'other'; },
     (_candidate, scenario) => { scenario.expected_trace[2].step_id = 'missing'; },
     (_candidate, scenario) => { scenario.expected_trace[2].kind = 'turn.completed'; },
@@ -435,8 +470,12 @@ test('corpus-owned scenario inventory, materialization and pure oracle stay in o
   }
 
   const variantCorpus = structuredClone(corpus);
-  variantCorpus.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'client-happy').fixture_predicate = { kind: 'none' };
-  variantCorpus.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-semantic-failure').fixture_predicate = { kind: 'file-absent', path: 'result.txt' };
+  const clientVariant = variantCorpus.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'client-happy');
+  clientVariant.report_checks = structuredClone(reportChecksFor(clientVariant));
+  clientVariant.fixture_predicate = { kind: 'none' };
+  const semanticVariant = variantCorpus.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-semantic-failure');
+  semanticVariant.report_checks = structuredClone(reportChecksFor(semanticVariant));
+  semanticVariant.fixture_predicate = { kind: 'file-absent', path: 'result.txt' };
   admitScenarioCorpus(variantCorpus);
   assert.throws(() => parseScenarioCorpus('{'), (error) => error.evalCode === 'adapter_admission');
   assert.throws(() => materializeScenario(byId.get('model-semantic-failure'), { workspace: 'relative' }), (error) => error.evalCode === 'adapter_admission');
@@ -502,31 +541,130 @@ test('corpus-owned scenario inventory, materialization and pure oracle stay in o
   assert.ok(evaluateScenario(question, wrongPendingCallbackId).mismatches.includes('id-mismatch'));
   const omittedOutcomes = structuredClone(questionObserved);
   delete omittedOutcomes.actual_task_outcome;
-  delete omittedOutcomes.reported_task_outcome;
-  assert.deepEqual(
-    evaluateScenario(question, omittedOutcomes),
-    {
-      assertion_outcome: 'fail',
-      actual_task_outcome: 'not_observed',
-      reported_task_outcome: 'not_reported',
-      eval_status: 'agent_behavior_mismatch',
-      mismatches: ['actual-outcome-mismatch', 'reported-outcome-mismatch'],
-    },
-  );
+  const omittedOracle = evaluateScenario(question, omittedOutcomes);
+  assert.deepEqual({ actual: omittedOracle.actual_task_outcome, reported: omittedOracle.reported_task_outcome,
+    status: omittedOracle.eval_status, mismatches: omittedOracle.mismatches }, {
+    actual: 'not_observed', reported: 'not_checked', status: 'agent_behavior_mismatch', mismatches: ['actual-outcome-mismatch'],
+  });
   const wrongOutcomes = structuredClone(questionObserved);
   wrongOutcomes.actual_task_outcome = 'failed';
-  wrongOutcomes.reported_task_outcome = 'failed';
-  assert.deepEqual(evaluateScenario(question, wrongOutcomes).mismatches.slice(-2), ['actual-outcome-mismatch', 'reported-outcome-mismatch']);
+  assert.deepEqual(evaluateScenario(question, wrongOutcomes).mismatches, ['actual-outcome-mismatch']);
   t.diagnostic(`scenario counts ${JSON.stringify(counts)}`);
 });
 
-test('canonical-checkout behavior scenario does not seed its expected worktree guidance', () => {
-  const scenario = scenarioById.get('model-permission-covered');
-  const guidance = ['isolated worktree', 'coordination risk', 'does not verify'];
-  for (const fragment of guidance) {
-    assert.equal(scenario.initial_input.includes(fragment), false);
-    assert.equal(scenario.report_checks[0].required_fragments.includes(fragment), true);
+test('materialization preserves literal non-fixture authority targets and rejects an oversized admitted payload', () => {
+  const literalCorpus = structuredClone(admittedCorpus);
+  const literal = literalCorpus.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-permission-covered');
+  const effect = literal.program.steps.find(({ type }) => type === 'effect');
+  const prompt = literal.program.steps.find(({ type }) => type === 'prompt-check');
+  effect.path = 'other.txt';
+  literal.prior_authority.allowed_actions[0].path = 'other.txt';
+  prompt.required_fragments = prompt.required_fragments.map((fragment) => fragment.replace('${RESULT_FILE}', 'other.txt'));
+  const admittedLiteral = admitScenarioCorpus(literalCorpus).scenarios.find(({ scenario_id: scenarioId }) => scenarioId === literal.scenario_id);
+  const materializedLiteral = materializeScenario(admittedLiteral, { workspace: '/tmp/cursor-eval-workspace' });
+  assert.equal(materializedLiteral.materializedScenario.program.steps.find(({ type }) => type === 'prompt-check')
+    .required_fragments.some((fragment) => fragment.includes('write other.txt with exact content')), true);
+
+  const oversizedCorpus = structuredClone(admittedCorpus);
+  const oversized = oversizedCorpus.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-question');
+  const question = oversized.program.steps.find(({ request_kind: kind }) => kind === 'question');
+  question.prompt = 'p'.repeat(8_000);
+  question.options = [question.options[0], ...Array.from({ length: 7 }, (_value, index) => ({ id: `extra-${index}`, label: String(index).repeat(8_000) }))];
+  const admittedOversized = admitScenarioCorpus(oversizedCorpus).scenarios.find(({ scenario_id: scenarioId }) => scenarioId === oversized.scenario_id);
+  assert.throws(() => materializeScenario(admittedOversized, { workspace: '/tmp/cursor-eval-workspace' }),
+    (error) => error.evalCode === 'adapter_admission' && /byte bound/.test(error.message));
+});
+
+test('capture admission remains exact while report semantics stay unchecked', () => {
+  const scenario = scenarioById.get('model-file-review');
+  const evaluateText = (text) => evaluateScenario(scenario, {
+    ...observationsFor(scenario),
+    captured_finals: [{ ...capturedFinalsFor(scenario)[0], text }],
+  });
+  const complete = evaluateText(capturedFinalsFor(scenario)[0].text);
+  assert.deepEqual({ reported: complete.reported_task_outcome, outcome: complete.components.outcome_report,
+    safety: complete.components.safety_disclosure, status: complete.eval_status },
+  { reported: 'not_checked', outcome: 'not_checked', safety: 'not_checked', status: 'pass' });
+
+  const confirmedMissing = evaluateScenario(scenario, { ...observationsFor(scenario), captured_finals: [{
+    ...capturedFinalsFor(scenario)[0], text: null, completeness: 'confirmed_missing',
+  }] });
+  assert.deepEqual({ status: confirmedMissing.eval_status, reported: confirmedMissing.reported_task_outcome },
+    { status: 'agent_behavior_mismatch', reported: 'not_checked' });
+  for (const captured_finals of [
+    undefined,
+    [],
+    [{ ...capturedFinalsFor(scenario)[0], completeness: 'incomplete' }],
+    [capturedFinalsFor(scenario)[0], { ...capturedFinalsFor(scenario)[0] }],
+    [{ ...capturedFinalsFor(scenario)[0], turn_index: 2 }],
+    [{ ...capturedFinalsFor(scenario)[0], completeness: 'complete', text: null }],
+    [{ ...capturedFinalsFor(scenario)[0], completeness: 'complete', text: '\ud800' }],
+    [{ ...capturedFinalsFor(scenario)[0], completeness: 'confirmed_missing', text: 'unexpected' }],
+    [{ ...capturedFinalsFor(scenario)[0], text: 'x'.repeat(1_048_577) }],
+  ]) {
+    const invalid = evaluateScenario(scenario, { ...observationsFor(scenario), captured_finals });
+    assert.deepEqual({ status: invalid.eval_status, stage: invalid.failure_stage, code: invalid.error_code,
+      assertion: invalid.assertion_outcome, mismatch: invalid.mismatches[0] },
+    { status: 'integration_failure', stage: 'inspection', code: 'capture_invalid',
+      assertion: 'not_observed', mismatch: 'invalid-report-evidence' });
   }
+
+  const multiTurn = scenarioById.get('model-question');
+  const missingEarlierTurn = evaluateScenario(multiTurn, {
+    ...observationsFor(multiTurn),
+    captured_finals: capturedFinalsFor(multiTurn).slice(1),
+  });
+  assert.deepEqual({ status: missingEarlierTurn.eval_status, stage: missingEarlierTurn.failure_stage, code: missingEarlierTurn.error_code },
+    { status: 'integration_failure', stage: 'inspection', code: 'capture_invalid' });
+
+  const observedFailure = evaluateScenario(scenario, {
+    ...observationsFor(scenario), actual_task_outcome: 'failed', captured_finals: [],
+  });
+  assert.equal(observedFailure.actual_task_outcome, 'failed');
+  assert.equal(evaluateScenario(scenario, { captured_finals: [] }).actual_task_outcome, 'not_observed');
+});
+
+test('event-burst callback failure remains an execution mismatch with complete capture evidence', () => {
+  const scenario = scenarioById.get('model-events-lost');
+  const observations = observationsFor(scenario);
+  observations.callbacks.push({ step_id: scenario.program.steps.find(({ type }) => type === 'event-burst').step_id,
+    callback_id: 'burst:failure', kind: 'callback.failure' });
+  const result = evaluateScenario(scenario, { ...observations, captured_finals: capturedFinalsFor(scenario) });
+  assert.equal(result.eval_status, 'agent_behavior_mismatch');
+  assert.equal(result.components.execution_trace, 'fail');
+  assert.equal(result.components.outcome_report, 'not_checked');
+  assert.equal(result.mismatches.includes('burst-ack-mismatch'), true);
+});
+
+test('interaction and continuation components remain mechanical while prose semantics stay unchecked', () => {
+  const question = scenarioById.get('model-question');
+  const questionCaptures = capturedFinalsFor(question);
+  questionCaptures[0].text = 'A pending choice exists';
+  const earlierFailure = evaluateScenario(question, { ...observationsFor(question), captured_finals: questionCaptures });
+  assert.deepEqual({ reported: earlierFailure.reported_task_outcome, interaction: earlierFailure.components.interaction_report,
+    outcome: earlierFailure.components.outcome_report, safety: earlierFailure.components.safety_disclosure, status: earlierFailure.eval_status },
+    { reported: 'not_checked', interaction: 'fail', outcome: 'not_checked', safety: 'not_checked', status: 'agent_behavior_mismatch' });
+
+  const wrongContinuation = { ...observationsFor(question), captured_finals: capturedFinalsFor(question) };
+  wrongContinuation.trace.find(({ kind }) => kind === 'answer.question').request_id = 'wrong-request';
+  const continuationResult = evaluateScenario(question, wrongContinuation);
+  assert.deepEqual({ reported: continuationResult.reported_task_outcome, continuation: continuationResult.components.continuation_handoff },
+    { reported: 'not_checked', continuation: 'fail' });
+  assert.equal(questionCaptures[1].text.includes('session_id'), false, 'valid continuation does not require IDs in final prose');
+});
+
+test('long-result corpus rows keep the exact preview boundary and overflow recovery contract', () => {
+  const long = scenarioById.get('model-long-result');
+  const terminal = long.program.steps.find(({ type }) => type === 'terminal');
+  assert.equal(Buffer.byteLength(terminal.progress_text, 'utf8'), 512);
+  assert.equal(Buffer.byteLength(terminal.result_text, 'utf8'), 8_000);
+  assert.equal(terminal.result_text.endsWith('LONG_REVIEW_OK'), true);
+  assert.equal(long.expected_trace.some(({ kind, complete }) => kind === 'turn.result-read' && complete === true), true);
+
+  const overflow = scenarioById.get('model-result-overflow');
+  assert.deepEqual(overflow.harness_faults, ['result-overflow']);
+  assert.equal(overflow.expected_trace.some(({ kind }) => kind === 'turn.result-read'), false);
+  assert.equal(overflow.program.steps.at(-1).result_text, null);
 });
 
 const supervisorResult = ({ verdict = 'passed', terminal_cause = 'close_0', code = 0, signal = null, failureDetails = [] } = {}) => ({
@@ -578,6 +716,9 @@ test('runner selects each lane and propagates the scenario environment expected 
   const cases = [
     ['client-happy', { CURSOR_EVAL_REAL_CODEX: '1' }, 'client-integration', 'credential-free client integration', { CURSOR_EVAL_REAL_CODEX: '1' }],
     ['model-question', { CURSOR_EVAL_HOSTED_CODEX: '1' }, 'model-behavior', 'hosted Codex', { CURSOR_EVAL_HOSTED_CODEX: '1', CURSOR_EVAL_INJECT_STALE_QUESTION_ONCE: '1' }],
+    ['model-mode-protocol-recovery', { CURSOR_EVAL_HOSTED_CODEX: '1' }, 'model-behavior', 'hosted Codex', { CURSOR_EVAL_INJECT_MODE_PROTOCOL_ERROR_ONCE: '1' }],
+    ['model-active-followup', { CURSOR_EVAL_HOSTED_CODEX: '1' }, 'model-behavior', 'hosted Codex', { FAKE_ACP_ACCELERATE_WAIT_TIMEOUT: '1' }],
+    ['model-launch-progress', { CURSOR_EVAL_HOSTED_CODEX: '1' }, 'model-behavior', 'hosted Codex', {}],
     ['model-permission-covered', { CURSOR_EVAL_HOSTED_CODEX: '1' }, 'model-behavior', 'hosted Codex', { CURSOR_EVAL_HOSTED_CODEX: '1' }],
     ['live-marker', { CURSOR_SUBAGENT_LIVE_E2E: '1' }, 'full-live', 'live release canary', { CURSOR_SUBAGENT_LIVE_E2E: '1' }],
   ];
@@ -585,7 +726,7 @@ test('runner selects each lane and propagates the scenario environment expected 
     let observed;
     const result = await runEval({ scenarioId, env }, { ...inertFixture, publishEvidence: published,
       runHarness: async (config, harnessEnv) => { observed = { pattern: config.pattern, env: harnessEnv }; return passHarness(config, harnessEnv); } });
-    assert.equal(assertEvalResultV1(result).eval_status, 'pass'); assert.equal(result.lane, lane); assert.equal(observed.pattern, pattern);
+    assert.equal(assertEvalResultV1(result).eval_status, 'pass', JSON.stringify(result)); assert.equal(result.lane, lane); assert.equal(observed.pattern, pattern);
     for (const [name, value] of Object.entries(expectedEnv)) assert.equal(observed.env[name], value);
     assert.equal(observed.env.CURSOR_EVAL_WORKSPACE, '/tmp/fixture/workspace');
     assert.deepEqual(JSON.parse(observed.env.CURSOR_EVAL_SCENARIO_PAYLOAD).scenario_id, scenarioId);
@@ -593,20 +734,50 @@ test('runner selects each lane and propagates the scenario environment expected 
     assert.equal(Number.isSafeInteger(Number(observed.env.CURSOR_EVAL_SCENARIO_BYTES)), true);
     assert.equal(observed.env.CURSOR_EVAL_CORPUS_SHA256, corpusDigest.sha256);
     assert.equal(Number(observed.env.CURSOR_EVAL_CORPUS_BYTES), corpusDigest.bytes);
+    if (scenarioId === 'model-launch-progress') {
+      assert.equal(observed.env.CURSOR_EVAL_EXPECTED_PLUGIN_DIRS_SHA256,
+        createHash('sha256').update(JSON.stringify(['/tmp/fixture/workspace/plugin-bundle'])).digest('hex'));
+    }
   }
+});
+
+test('runner reports evaluator inventory failures and frozen digest drift before starting a harness', async () => {
+  const cases = [
+    { env: {}, readEvaluatorInventory: async () => { throw new Error('inventory unavailable'); } },
+    { env: { CURSOR_EVAL_EVALUATOR_SHA256: 'f'.repeat(64), CURSOR_EVAL_EVALUATOR_BYTES: '789' }, readEvaluatorInventory: inertFixture.readEvaluatorInventory },
+    { env: { CURSOR_EVAL_EVALUATOR_SHA256: 'invalid', CURSOR_EVAL_EVALUATOR_BYTES: '789' }, readEvaluatorInventory: inertFixture.readEvaluatorInventory },
+  ];
+  for (const { env, readEvaluatorInventory } of cases) {
+    let harnessStarted = false;
+    const result = await runEval({ scenarioId: 'model-question', env: { CURSOR_EVAL_HOSTED_CODEX: '1', ...env } }, {
+      ...inertFixture, readEvaluatorInventory,
+      runHarness: async () => { harnessStarted = true; throw new Error('must not start'); },
+    });
+    assert.equal(harnessStarted, false);
+    assert.deepEqual({ status: result.eval_status, stage: result.failure_stage, code: result.error_code },
+      { status: 'integration_failure', stage: 'inspection', code: 'evaluator_drift' });
+  }
+});
+
+test('runner has a bounded default failure when an admitted corpus has no client scenario', async () => {
+  const noClient = structuredClone(admittedCorpus);
+  noClient.scenarios = noClient.scenarios.filter(({ lane }) => lane !== 'client-integration');
+  const result = await runEval({ env: {} }, { readFile: async () => Buffer.from(JSON.stringify(noClient)) });
+  assert.deepEqual({ scenario: result.scenario_id, status: result.eval_status, stage: result.failure_stage, code: result.error_code },
+    { scenario: 'corpus-default', status: 'integration_failure', stage: 'runner', code: 'unknown_scenario' });
 });
 
 test('cleanup failure overrides a behavior mismatch after evidence publication', async () => {
   const result = await runEval({ scenarioId: 'model-question', env: { CURSOR_EVAL_HOSTED_CODEX: '1' } }, {
     ...inertFixture, publishEvidence: published,
     runHarness: async (config, harnessEnv) => ({ code: 1, signal: null, failure: 'scenario_contract_mismatch',
-      childResult: childResult(config.scenario.scenario_id, { actual: 'succeeded', reported: 'failed', status: 'agent_behavior_mismatch',
+      childResult: childResult(config.scenario.scenario_id, { actual: 'succeeded', status: 'agent_behavior_mismatch',
         scenarioDigest: { sha256: harnessEnv.CURSOR_EVAL_SCENARIO_SHA256, bytes: Number(harnessEnv.CURSOR_EVAL_SCENARIO_BYTES) }, corpusDigest }), diagnostics: '' }),
     rm: async () => { throw new Error('fixture remains'); },
   });
   assert.deepEqual(assertEvalResultV1(result), {
     schema_version: 1, scenario_id: 'model-question', lane: 'model-behavior', eval_status: 'integration_failure',
-    actual_task_outcome: 'succeeded', reported_task_outcome: 'failed', fixture_assertion_outcome: 'fail',
+    actual_task_outcome: 'succeeded', reported_task_outcome: 'not_checked', fixture_assertion_outcome: 'pass',
     evidence_publication_status: 'published', evidence_ref: '/tmp/evidence.json', cleanup_status: 'failed', failure_stage: 'cleanup',
     error_code: 'cleanup_failed', message: 'fixture remains',
   });
@@ -725,7 +896,7 @@ test('runner normalizes a harness infrastructure failure without child evidence'
     {
       status: 'integration_failure',
       actual: 'not_observed',
-      reported: 'not_reported',
+      reported: 'not_checked',
       assertion: 'not_observed',
       stage: 'runner',
       code: 'harness_failure',
@@ -757,6 +928,19 @@ test('runner does not publish durable evidence before complete programmed or pac
   }
 });
 
+test('runner distinguishes malformed proof inspection from missing runner evidence', async () => {
+  for (const [failure, stage] of [['child_result_invalid', 'inspection'], ['child_result_missing', 'runner']]) {
+    const result = await runEval({ scenarioId: 'model-question', env: { CURSOR_EVAL_HOSTED_CODEX: '1' } }, {
+      ...inertFixture,
+      runHarness: async () => ({ code: 1, signal: null, failure, childResult: null, diagnostics: '' }),
+    });
+    assert.equal(result.eval_status, 'integration_failure');
+    assert.equal(result.failure_stage, stage);
+    assert.equal(result.error_code, failure);
+    assert.equal(result.evidence_ref, null);
+  }
+});
+
 test('runner treats missing child evidence as an integration failure before behavior classification', async () => {
   const result = await runEval({ scenarioId: 'model-semantic-failure', env: { CURSOR_EVAL_HOSTED_CODEX: '1' } }, {
     ...inertFixture,
@@ -780,7 +964,7 @@ test('runner treats missing child evidence as an integration failure before beha
     {
       status: 'integration_failure',
       actual: 'not_observed',
-      reported: 'not_reported',
+      reported: 'not_checked',
       assertion: 'not_observed',
       stage: 'runner',
     },
@@ -798,269 +982,47 @@ test('published evidence is emitted after cleanup with exact child provenance an
   assert.deepEqual(order, ['cleanup', 'publication']); assert.equal(result.eval_status, 'pass');
   assert.deepEqual(evidence.skill, { sha256: 'a'.repeat(64), bytes: 123 });
   assert.deepEqual(evidence.transcript, transcript); assert.deepEqual(evidence.provider_oracle, childResult('client-happy').provider_oracle);
-  assert.equal(evidence.fixture_oracle.eval_status, 'pass'); assert.deepEqual(evidence.final_result, result);
-  assert.deepEqual(Object.keys(evidence.manifest).sort(), ['adapter', 'client', 'corpus', 'hash_algorithm', 'hash_encoding', 'installed_payload', 'installed_skill', 'materialized_scenario', 'model', 'schema_version']);
+  assert.equal(evidence.fixture_oracle.eval_status, 'pass');
+  assert.deepEqual(evidence.final_result, { ...result, evidence_ref: 'final-evidence.json' });
+  assert.deepEqual(Object.keys(evidence.manifest).sort(), ['adapter', 'client', 'corpus', 'evaluator', 'hash_algorithm', 'hash_encoding', 'installed_payload', 'installed_skill', 'materialized_scenario', 'model', 'schema_version']);
   assert.deepEqual(evidence.manifest.installed_skill, { sha256: 'a'.repeat(64), bytes: 123 });
   assert.equal(Buffer.byteLength(JSON.stringify(evidence), 'utf8') < 1_048_576, true);
 });
 
-test('semantic failure outcomes are classified independently of successful TAP exit', async () => {
+test('actual failure outcomes are classified without grading reported prose', async () => {
   const result = await runEval({ scenarioId: 'model-semantic-failure', env: { CURSOR_EVAL_HOSTED_CODEX: '1' } }, {
     ...inertFixture, publishEvidence: published,
     runHarness: async (config, harnessEnv) => ({ code: 0, signal: null, failure: null,
-      childResult: childResult(config.scenario.scenario_id, { actual: 'failed', reported: 'failed',
+      childResult: childResult(config.scenario.scenario_id, { actual: 'failed',
         scenarioDigest: { sha256: harnessEnv.CURSOR_EVAL_SCENARIO_SHA256, bytes: Number(harnessEnv.CURSOR_EVAL_SCENARIO_BYTES) }, corpusDigest }), diagnostics: '' }),
   });
   assert.deepEqual({ status: result.eval_status, actual: result.actual_task_outcome, reported: result.reported_task_outcome, assertion: result.fixture_assertion_outcome },
-    { status: 'pass', actual: 'failed', reported: 'failed', assertion: 'pass' });
+    { status: 'pass', actual: 'failed', reported: 'not_checked', assertion: 'pass' });
 
-  const dishonest = await runEval({ scenarioId: 'model-semantic-failure', env: { CURSOR_EVAL_HOSTED_CODEX: '1' } }, {
+  const wrongActual = await runEval({ scenarioId: 'model-semantic-failure', env: { CURSOR_EVAL_HOSTED_CODEX: '1' } }, {
     ...inertFixture, publishEvidence: published,
     runHarness: async (config, harnessEnv) => ({ code: 0, signal: null, failure: null,
-      childResult: childResult(config.scenario.scenario_id, { actual: 'failed', reported: 'succeeded', status: 'agent_behavior_mismatch',
+      childResult: childResult(config.scenario.scenario_id, { actual: 'succeeded', status: 'agent_behavior_mismatch',
         scenarioDigest: { sha256: harnessEnv.CURSOR_EVAL_SCENARIO_SHA256, bytes: Number(harnessEnv.CURSOR_EVAL_SCENARIO_BYTES) }, corpusDigest }), diagnostics: '' }),
   });
-  assert.deepEqual({ status: dishonest.eval_status, actual: dishonest.actual_task_outcome, reported: dishonest.reported_task_outcome },
-    { status: 'agent_behavior_mismatch', actual: 'failed', reported: 'succeeded' });
+  assert.deepEqual({ status: wrongActual.eval_status, actual: wrongActual.actual_task_outcome, reported: wrongActual.reported_task_outcome },
+    { status: 'agent_behavior_mismatch', actual: 'succeeded', reported: 'not_checked' });
 });
 
-test('skill sensitivity passes only when removing events-lost guidance causes a behavior mismatch', async () => {
-  let evidence; let publicationCount = 0;
+test('runner rejects the removed skill sensitivity probe instead of silently passing it', async () => {
+  let harnessStarted = false;
   const result = await runEval({
     scenarioId: 'model-events-lost',
     env: { CURSOR_EVAL_HOSTED_CODEX: '1', CURSOR_EVAL_SKILL_SENSITIVITY: 'omit-events-lost' },
   }, {
-    ...inertFixture,
-    runHarness: async (config, harnessEnv) => {
-      const mutated = harnessEnv.CURSOR_EVAL_SKILL_SENSITIVITY === 'omit-events-lost';
-      return {
-        code: mutated ? 1 : 0,
-        signal: null,
-        failure: mutated ? 'scenario_contract_mismatch' : null,
-        childResult: childResult(config.scenario.scenario_id, {
-          ...(mutated ? { reported: 'not_reported', status: 'agent_behavior_mismatch' } : {}),
-          skillDigest: { sha256: harnessEnv.CURSOR_EVAL_EXPECTED_LOADED_SKILL_SHA256, bytes: Number(harnessEnv.CURSOR_EVAL_EXPECTED_LOADED_SKILL_BYTES) },
-          scenarioDigest: { sha256: harnessEnv.CURSOR_EVAL_SCENARIO_SHA256, bytes: Number(harnessEnv.CURSOR_EVAL_SCENARIO_BYTES) },
-          corpusDigest,
-        }),
-        diagnostics: '',
-      };
-    },
-    publishEvidence: async ({ makeEvidence }) => {
-      publicationCount += 1;
-      const ref = publicationCount === 1 ? '/tmp/baseline-evidence.json' : '/tmp/sensitivity-evidence.json';
-      const publishedEvidence = makeEvidence(ref);
-      if (publicationCount === 2) evidence = publishedEvidence;
-      return ref;
-    },
+    runHarness: async () => { harnessStarted = true; throw new Error('must not start'); },
   });
-
+  assert.equal(harnessStarted, false);
   assert.deepEqual(
-    { status: result.eval_status, assertion: result.fixture_assertion_outcome, stage: result.failure_stage, code: result.error_code },
-    { status: 'pass', assertion: 'pass', stage: null, code: null },
-  );
-  assert.equal(evidence.harness.skill_sensitivity, 'omit-events-lost');
-  assert.deepEqual(evidence.harness.sensitivity_baseline, {
-    scenario_id: 'model-events-lost', eval_status: 'pass', evidence_ref: '/tmp/baseline-evidence.json',
-  });
-  assert.deepEqual(evidence.harness.sensitivity_pair.source_skill, evidence.harness.sensitivity_pair.baseline_loaded_skill);
-  assert.notDeepEqual(evidence.harness.sensitivity_pair.source_skill, evidence.harness.sensitivity_pair.mutated_loaded_skill);
-  assert.equal(evidence.fixture_oracle.eval_status, 'agent_behavior_mismatch');
-  assert.deepEqual(evidence.fixture_oracle.mismatches, ['reported-outcome-mismatch']);
-  assertEvalResultV1(result);
-});
-
-test('skill sensitivity snapshots one admitted corpus for baseline and mutation', async () => {
-  let corpusReads = 0;
-  const result = await runEval({
-    scenarioId: 'model-events-lost',
-    env: { CURSOR_EVAL_HOSTED_CODEX: '1', CURSOR_EVAL_SKILL_SENSITIVITY: 'omit-events-lost' },
-  }, {
-    ...inertFixture,
-    readFile: async () => {
-      corpusReads += 1;
-      if (corpusReads > 1) throw new Error('sensitivity reread mutable corpus');
-      return rawCorpus;
-    },
-    runHarness: async (config, harnessEnv) => ({
-      code: harnessEnv.CURSOR_EVAL_SKILL_SENSITIVITY ? 1 : 0,
-      signal: null,
-      failure: harnessEnv.CURSOR_EVAL_SKILL_SENSITIVITY ? 'scenario_contract_mismatch' : null,
-      childResult: childResult(config.scenario.scenario_id, {
-        ...(harnessEnv.CURSOR_EVAL_SKILL_SENSITIVITY ? { reported: 'not_reported', status: 'agent_behavior_mismatch' } : {}),
-        skillDigest: { sha256: harnessEnv.CURSOR_EVAL_EXPECTED_LOADED_SKILL_SHA256, bytes: Number(harnessEnv.CURSOR_EVAL_EXPECTED_LOADED_SKILL_BYTES) },
-        scenarioDigest: { sha256: harnessEnv.CURSOR_EVAL_SCENARIO_SHA256, bytes: Number(harnessEnv.CURSOR_EVAL_SCENARIO_BYTES) },
-        corpusDigest: { sha256: harnessEnv.CURSOR_EVAL_CORPUS_SHA256, bytes: Number(harnessEnv.CURSOR_EVAL_CORPUS_BYTES) },
-      }),
-      diagnostics: '',
-    }),
-    publishEvidence: published,
-  });
-  assert.equal(result.eval_status, 'pass');
-  assert.equal(corpusReads, 1);
-});
-
-test('skill sensitivity mutation has one exact instruction target', async () => {
-  const original = await readFile(fileURLToPath(new URL('../skills/cursor-subagent/SKILL.md', import.meta.url)), 'utf8');
-  const mutated = applySkillSensitivity(original, 'omit-events-lost');
-  assert.notEqual(mutated, original);
-  assert.match(mutated, /continue from the currently returned normalized state/);
-  assert.throws(() => applySkillSensitivity(mutated, 'omit-events-lost'), /mutation target drifted/);
-  assert.throws(() => applySkillSensitivity(original, 'unknown'), /mutation target drifted/);
-});
-
-test('paired skill sensitivity requires a fresh passing baseline', async () => {
-  let harnessRuns = 0;
-  const result = await runEval({
-    scenarioId: 'model-events-lost',
-    env: { CURSOR_EVAL_HOSTED_CODEX: '1', CURSOR_EVAL_SKILL_SENSITIVITY: 'omit-events-lost' },
-  }, {
-    ...inertFixture,
-    publishEvidence: published,
-    runHarness: async (config, harnessEnv) => {
-      harnessRuns += 1;
-      return {
-        code: 1,
-        signal: null,
-        failure: 'scenario_contract_mismatch',
-        childResult: childResult(config.scenario.scenario_id, {
-          reported: 'not_reported',
-          status: 'agent_behavior_mismatch',
-          skillDigest: { sha256: harnessEnv.CURSOR_EVAL_EXPECTED_LOADED_SKILL_SHA256, bytes: Number(harnessEnv.CURSOR_EVAL_EXPECTED_LOADED_SKILL_BYTES) },
-          scenarioDigest: { sha256: harnessEnv.CURSOR_EVAL_SCENARIO_SHA256, bytes: Number(harnessEnv.CURSOR_EVAL_SCENARIO_BYTES) },
-          corpusDigest,
-        }),
-        diagnostics: '',
-      };
-    },
-  });
-
-  assert.equal(harnessRuns, 1);
-  assert.deepEqual(
-    { status: result.eval_status, stage: result.failure_stage, code: result.error_code, publication: result.evidence_publication_status, ref: result.evidence_ref },
-    { status: 'integration_failure', stage: 'scenario', code: 'sensitivity_baseline_failed', publication: 'published', ref: '/tmp/evidence.json' },
+    { status: result.eval_status, stage: result.failure_stage, code: result.error_code, reported: result.reported_task_outcome },
+    { status: 'integration_failure', stage: 'adapter_admission', code: 'unsupported_skill_sensitivity', reported: 'not_checked' },
   );
   assertEvalResultV1(result);
-});
-
-test('skill sensitivity preserves an integration-failed baseline root cause and evidence', async () => {
-  for (const scenario of [
-    { name: 'cleanup', cleanup: 'failed', publish: published,
-      expected: { stage: 'cleanup', code: 'cleanup_failed', publication: 'published', cleanup: 'failed', ref: '/tmp/evidence.json' } },
-    { name: 'publication', cleanup: 'succeeded', publish: async () => { throw new Error('publication unavailable'); },
-      expected: { stage: 'publication', code: 'evidence_publication_failed', publication: 'failed', cleanup: 'succeeded', ref: null } },
-  ]) {
-    let harnessRuns = 0;
-    const result = await runEval({
-      scenarioId: 'model-events-lost',
-      env: { CURSOR_EVAL_HOSTED_CODEX: '1', CURSOR_EVAL_SKILL_SENSITIVITY: 'omit-events-lost' },
-    }, {
-      ...inertFixture,
-      publishEvidence: scenario.publish,
-      runHarness: async (config, harnessEnv) => {
-        harnessRuns += 1;
-        return { code: 0, signal: null, failure: null, diagnostics: '', childResult: childResult(config.scenario.scenario_id, {
-          cleanup: scenario.cleanup,
-          skillDigest: { sha256: harnessEnv.CURSOR_EVAL_EXPECTED_LOADED_SKILL_SHA256, bytes: Number(harnessEnv.CURSOR_EVAL_EXPECTED_LOADED_SKILL_BYTES) },
-          scenarioDigest: { sha256: harnessEnv.CURSOR_EVAL_SCENARIO_SHA256, bytes: Number(harnessEnv.CURSOR_EVAL_SCENARIO_BYTES) },
-          corpusDigest,
-        }) };
-      },
-    });
-    assert.equal(harnessRuns, 1, scenario.name);
-    assert.deepEqual({ stage: result.failure_stage, code: result.error_code, publication: result.evidence_publication_status,
-      cleanup: result.cleanup_status, ref: result.evidence_ref }, scenario.expected, scenario.name);
-    assert.equal(result.eval_status, 'integration_failure', scenario.name);
-    assertEvalResultV1(result);
-  }
-});
-
-test('skill sensitivity refuses source drift after its linked baseline', async () => {
-  let reads = 0;
-  const original = await readFile(fileURLToPath(new URL('../skills/cursor-subagent/SKILL.md', import.meta.url)));
-  const result = await runEval({
-    scenarioId: 'model-events-lost',
-    env: { CURSOR_EVAL_HOSTED_CODEX: '1', CURSOR_EVAL_SKILL_SENSITIVITY: 'omit-events-lost' },
-  }, {
-    ...inertFixture,
-    readSkillFile: async () => (++reads === 1 ? original : Buffer.concat([original, Buffer.from('\nsource drift')])),
-    runHarness: passHarness,
-    publishEvidence: published,
-  });
-  assert.deepEqual(
-    { status: result.eval_status, stage: result.failure_stage, code: result.error_code, publication: result.evidence_publication_status, ref: result.evidence_ref },
-    { status: 'integration_failure', stage: 'inspection', code: 'sensitivity_source_drift', publication: 'published', ref: '/tmp/evidence.json' },
-  );
-});
-
-test('skill sensitivity reports source loss after its linked baseline without running mutation', async () => {
-  let reads = 0; let harnessRuns = 0;
-  const original = await readFile(fileURLToPath(new URL('../skills/cursor-subagent/SKILL.md', import.meta.url)));
-  const result = await runEval({
-    scenarioId: 'model-events-lost',
-    env: { CURSOR_EVAL_HOSTED_CODEX: '1', CURSOR_EVAL_SKILL_SENSITIVITY: 'omit-events-lost' },
-  }, {
-    ...inertFixture,
-    readSkillFile: async () => {
-      reads += 1;
-      if (reads === 1) return original;
-      throw new Error('skill source disappeared');
-    },
-    runHarness: async (...args) => { harnessRuns += 1; return passHarness(...args); },
-    publishEvidence: published,
-  });
-  assert.equal(harnessRuns, 1);
-  assert.deepEqual(
-    { status: result.eval_status, stage: result.failure_stage, code: result.error_code, publication: result.evidence_publication_status, ref: result.evidence_ref },
-    { status: 'integration_failure', stage: 'inspection', code: 'sensitivity_source_unavailable', publication: 'published', ref: '/tmp/evidence.json' },
-  );
-});
-
-test('skill sensitivity rejects a loaded payload that differs from the paired digest', async () => {
-  const result = await runEval({
-    scenarioId: 'model-events-lost',
-    env: { CURSOR_EVAL_HOSTED_CODEX: '1', CURSOR_EVAL_SKILL_SENSITIVITY: 'omit-events-lost' },
-  }, {
-    ...inertFixture,
-    publishEvidence: published,
-    runHarness: async (config, harnessEnv) => ({
-      code: 0, signal: null, failure: null, diagnostics: '',
-      childResult: childResult(config.scenario.scenario_id, {
-        ...(harnessEnv.CURSOR_EVAL_SKILL_SENSITIVITY ? { reported: 'not_reported', status: 'agent_behavior_mismatch' } : {}),
-        skillDigest: harnessEnv.CURSOR_EVAL_SKILL_SENSITIVITY
-          ? fixedDigest('f')
-          : { sha256: harnessEnv.CURSOR_EVAL_EXPECTED_LOADED_SKILL_SHA256, bytes: Number(harnessEnv.CURSOR_EVAL_EXPECTED_LOADED_SKILL_BYTES) },
-        scenarioDigest: { sha256: harnessEnv.CURSOR_EVAL_SCENARIO_SHA256, bytes: Number(harnessEnv.CURSOR_EVAL_SCENARIO_BYTES) },
-        corpusDigest,
-      }),
-    }),
-  });
-  assert.deepEqual(
-    { status: result.eval_status, stage: result.failure_stage, code: result.error_code },
-    { status: 'integration_failure', stage: 'skill_load', code: 'sensitivity_payload_mismatch' },
-  );
-});
-
-test('skill sensitivity rejects unsupported mutations and scenarios before starting a harness', async () => {
-  for (const [scenarioId, sensitivity] of [
-    ['model-events-lost', 'unknown-mutation'],
-    ['model-question', 'omit-events-lost'],
-  ]) {
-    let harnessStarted = false;
-    const result = await runEval({
-      scenarioId,
-      env: { CURSOR_EVAL_HOSTED_CODEX: '1', CURSOR_EVAL_SKILL_SENSITIVITY: sensitivity },
-    }, {
-      runHarness: async () => { harnessStarted = true; throw new Error('must not start'); },
-    });
-
-    assert.equal(harnessStarted, false);
-    assert.deepEqual(
-      { status: result.eval_status, stage: result.failure_stage, code: result.error_code, cleanup: result.cleanup_status },
-      { status: 'integration_failure', stage: 'adapter_admission', code: 'adapter_admission', cleanup: 'not_required' },
-    );
-    assertEvalResultV1(result);
-  }
 });
 
 test('cleanup failure remains the primary stage when failure-artifact publication also fails', async () => {
@@ -1119,7 +1081,7 @@ test('package integration failure without a harness code uses the stable child f
   assertEvalResultV1(result);
 });
 
-test('published evidence safely normalizes optional child sections from a partial harness result', async () => {
+test('published evidence classifies a partial child proof as integration failure and normalizes optional sections', async () => {
   let evidence;
   const partialChild = { manifest: { schema_version: 1 }, provenance: { cleanup_status: 'succeeded' } };
   const result = await runEval({ scenarioId: 'live-marker', env: { CURSOR_SUBAGENT_LIVE_E2E: '1' } }, {
@@ -1130,7 +1092,7 @@ test('published evidence safely normalizes optional child sections from a partia
       return '/tmp/partial-evidence.json';
     },
   });
-  assert.equal(result.eval_status, 'agent_behavior_mismatch');
+  assert.equal(result.eval_status, 'integration_failure');
   assert.deepEqual(
     {
       skill: evidence.skill,
@@ -1157,9 +1119,33 @@ test('child-result parser normalizes exact provenance and builds the closed priv
     installed_skill: fixedDigest('a'), corpus: corpusDigest,
     materialized_scenario: materializeScenario(scenarioById.get('model-question'), { workspace: '/tmp/fixture/workspace' }).digest,
     adapter: fixedDigest('b', 456),
+    evaluator: evaluatorDigest,
     installed_payload: { marker_format: 1, payload_hash: 'c'.repeat(64), artifact_hash: 'd'.repeat(64), manifest_version: '0.1.0+codex.fixture' },
     client: { name: 'codex-app-server', version: '0.152.1' }, model: { provider: null, name: null },
   });
+});
+
+test('child-result parser admits only complete recovery context while preserving legacy transcripts', () => {
+  const scenario = scenarioById.get('model-question');
+  const full = JSON.parse(encodedChildResult('model-question'));
+  full.transcript = { ...full.transcript,
+    turn_call_ranges: [{ start: 0, end: 2 }, { start: 2, end: full.transcript.calls.length }],
+    unexpected_input_requests: 0 };
+  assert.deepEqual(parseChildResult(JSON.stringify(full), 'model-question', { scenario }).transcript, full.transcript);
+  assert.deepEqual(parseChildResult(encodedChildResult('model-question'), 'model-question', { scenario }).transcript, transcript);
+
+  for (const malformed of [
+    { ...full.transcript, unexpected_input_requests: undefined },
+    { ...full.transcript, turn_call_ranges: undefined },
+    { ...full.transcript, turn_call_ranges: [{ start: 0, end: full.transcript.calls.length }] },
+    { ...full.transcript, turn_call_ranges: [{ start: 0, end: 2 }, { start: 1, end: full.transcript.calls.length }] },
+    { ...full.transcript, unexpected_input_requests: -1 },
+  ]) {
+    const child = structuredClone(full);
+    child.transcript = malformed;
+    assert.throws(() => parseChildResult(JSON.stringify(child), 'model-question', { scenario }),
+      (error) => error.evalCode === 'child_result_invalid');
+  }
 });
 
 test('child-result parser preserves the explicit compatibility defaults for partial observations and package references', () => {
@@ -1243,11 +1229,27 @@ test('child-result parser rejects every required evidence-contract violation', (
 test('child-result parser rejects corpus and materialized payload digest mismatches before behavior verdict', () => {
   const scenario = scenarioById.get('client-happy');
   const expectedScenario = materializeScenario(scenario, { workspace: '/tmp/fixture/workspace' }).digest;
-  for (const expected of [{ scenarioDigest: fixedDigest('f') }, { corpusDigest: fixedDigest('f') }]) {
+  for (const expected of [{ scenarioDigest: fixedDigest('f') }, { corpusDigest: fixedDigest('f') }, { evaluatorDigest: fixedDigest('f') }]) {
     assert.throws(() => parseChildResult(encodedChildResult('client-happy'), 'client-happy', {
       scenario, scenarioDigest: expected.scenarioDigest || expectedScenario, corpusDigest: expected.corpusDigest || corpusDigest,
+      evaluatorDigest: expected.evaluatorDigest || evaluatorDigest,
     }), (error) => error.evalCode === 'child_result_invalid');
   }
+});
+
+test('child-result parser separates malformed final capture from a generic child contract failure', () => {
+  for (const mutate of [
+    (child) => { child.captured_finals[0].completeness = 'confirmed_missing'; child.captured_finals[0].text = 'present'; },
+    (child) => { child.captured_finals.pop(); },
+    (child) => { child.captured_finals[1].turn_index = 1; },
+  ]) {
+    const child = JSON.parse(encodedChildResult('model-question'));
+    mutate(child);
+    assert.throws(() => parseChildResult(JSON.stringify(child), 'model-question', { scenario: scenarioById.get('model-question') }),
+      (error) => error.evalCode === 'capture_invalid');
+  }
+  assert.throws(() => parseChildResult('{}', 'model-question', { scenario: scenarioById.get('model-question') }),
+    (error) => error.evalCode === 'child_result_invalid');
 });
 
 test('published evidence retains the normalized bounded provider route trace', async () => {
@@ -1284,6 +1286,8 @@ test('harness validates configured scenario and corpus digests at the process bo
       CURSOR_EVAL_SCENARIO_BYTES: String(scenarioDigest.bytes),
       CURSOR_EVAL_CORPUS_SHA256: corpusDigest.sha256,
       CURSOR_EVAL_CORPUS_BYTES: String(corpusDigest.bytes),
+      CURSOR_EVAL_EVALUATOR_SHA256: evaluatorDigest.sha256,
+      CURSOR_EVAL_EVALUATOR_BYTES: String(evaluatorDigest.bytes),
     },
     {
       runSupervisor: async () => supervisorResult(),
@@ -1293,6 +1297,7 @@ test('harness validates configured scenario and corpus digests at the process bo
   assert.equal(result.failure, null);
   assert.deepEqual(result.childResult.manifest.materialized_scenario, scenarioDigest);
   assert.deepEqual(result.childResult.manifest.corpus, corpusDigest);
+  assert.deepEqual(result.childResult.manifest.evaluator, evaluatorDigest);
 });
 
 test('harness routes its configured test through the canonical Node supervisor', async () => {
@@ -1300,22 +1305,54 @@ test('harness routes its configured test through the canonical Node supervisor',
   const result = await runHarness(
     { pattern: 'hosted Codex', test: fileURLToPath(new URL('./codex-client-integration.test.mjs', import.meta.url)) },
     { CURSOR_EVAL_CHILD_RESULT: '/tmp/result.json', CURSOR_EVAL_SCENARIO_ID: 'client-happy' },
-    { runSupervisor: async (value) => { invocation = value; return supervisorResult(); }, readFile: async () => encodedChildResult('client-happy') },
+    { artifactRoot: '/tmp/eval-artifacts', runSupervisor: async (value) => { invocation = value; return supervisorResult(); }, readFile: async () => encodedChildResult('client-happy') },
   );
   assert.equal(result.failure, null);
   assert.deepEqual(result.childResult, childResult('client-happy'));
-  assert.deepEqual({ laneName: invocation.laneName, tests: invocation.tests, testNamePattern: invocation.testNamePattern }, {
-    laneName: 'eval', tests: ['tests/codex-client-integration.test.mjs'], testNamePattern: 'hosted Codex',
+  assert.deepEqual({ laneName: invocation.laneName, tests: invocation.tests, testNamePattern: invocation.testNamePattern, artifactRoot: invocation.artifactRoot }, {
+    laneName: 'eval', tests: ['tests/codex-client-integration.test.mjs'], testNamePattern: 'hosted Codex', artifactRoot: '/tmp/eval-artifacts',
   });
+});
+
+test('harness tolerates a canonical supervisor result without optional failure details', async () => {
+  const result = await runHarness({ pattern: 'scenario', test: '/tmp/test.mjs' }, {
+    CURSOR_EVAL_CHILD_RESULT: '/tmp/result.json', CURSOR_EVAL_SCENARIO_ID: 'client-happy',
+  }, {
+    runSupervisor: async () => ({ verdict: 'passed', terminal_cause: 'close_0', child: { code: 0, signal: null } }),
+    readFile: async () => encodedChildResult('client-happy'),
+  });
+  assert.deepEqual({ failure: result.failure, diagnostics: result.diagnostics }, { failure: null, diagnostics: '' });
+});
+
+test('harness reads child evidence through its production filesystem adapter', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'cursor-eval-child-result-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const childResultPath = join(root, 'child-result.json');
+  await writeFile(childResultPath, encodedChildResult('client-happy'));
+  const result = await runHarness({ pattern: 'scenario', test: '/tmp/test.mjs' }, {
+    CURSOR_EVAL_CHILD_RESULT: childResultPath, CURSOR_EVAL_SCENARIO_ID: 'client-happy',
+  }, { runSupervisor: async () => supervisorResult() });
+  assert.equal(result.failure, null);
+  assert.equal(result.childResult.observations.eval_status, 'pass');
+});
+
+test('harness executes its canonical supervisor adapter for an admitted eval test', async () => {
+  const result = await runHarness({
+    pattern: 'observed MCP transcript drives oracle order',
+    test: fileURLToPath(new URL('./codex-client-integration.test.mjs', import.meta.url)),
+  }, {
+    CURSOR_EVAL_CHILD_RESULT: '/tmp/result.json', CURSOR_EVAL_SCENARIO_ID: 'client-happy',
+  }, { readFile: async () => encodedChildResult('client-happy') });
+  assert.deepEqual({ failure: result.failure, status: result.childResult?.observations.eval_status }, { failure: null, status: 'pass' });
 });
 
 test('harness maps child scenario evidence to a scenario-contract mismatch', async () => {
   const result = await runHarness({ pattern: 'scenario', test: '/tmp/test.mjs' }, { CURSOR_EVAL_CHILD_RESULT: '/tmp/result.json', CURSOR_EVAL_SCENARIO_ID: 'model-semantic-failure' }, {
     runSupervisor: async () => supervisorResult({ verdict: 'failed', terminal_cause: 'exit_nonzero', code: 1 }),
-    readFile: async () => encodedChildResult('model-semantic-failure', { actual: 'failed', reported: 'succeeded', status: 'agent_behavior_mismatch' }),
+    readFile: async () => encodedChildResult('model-semantic-failure', { actual: 'succeeded', status: 'agent_behavior_mismatch' }),
   });
   assert.equal(result.failure, 'scenario_contract_mismatch');
-  assert.deepEqual({ actual: result.childResult.observations.actual_task_outcome, reported: result.childResult.observations.reported_task_outcome }, { actual: 'failed', reported: 'succeeded' });
+  assert.deepEqual({ actual: result.childResult.observations.actual_task_outcome, reported: result.childResult.observations.reported_task_outcome }, { actual: 'succeeded', reported: 'not_checked' });
 });
 
 test('canonical supervisor infrastructure failure dominates recorded behavior mismatch', async () => {
@@ -1323,7 +1360,7 @@ test('canonical supervisor infrastructure failure dominates recorded behavior mi
     CURSOR_EVAL_CHILD_RESULT: '/tmp/result.json', CURSOR_EVAL_SCENARIO_ID: 'model-semantic-failure',
   }, {
     runSupervisor: async () => supervisorResult({ verdict: 'runner_error', terminal_cause: 'reporter_error', code: 1 }),
-    readFile: async () => encodedChildResult('model-semantic-failure', { actual: 'failed', reported: 'succeeded', status: 'agent_behavior_mismatch' }),
+    readFile: async () => encodedChildResult('model-semantic-failure', { actual: 'succeeded', status: 'agent_behavior_mismatch' }),
   });
   assert.equal(result.failure, 'harness_infrastructure_failure');
 });
@@ -1336,6 +1373,22 @@ test('harness distinguishes generic child failure from a scenario-contract misma
     runSupervisor: async () => supervisorResult({ verdict: 'failed', terminal_cause: 'exit_nonzero', code: 1 }), readFile: async () => encodedChildResult('client-happy', { actual: 'failed', status: 'agent_behavior_mismatch' }),
   });
   assert.deepEqual([generic.failure, mismatch.failure], ['harness_failure', 'scenario_contract_mismatch']);
+});
+
+test('harness preserves a hosted turn interruption instead of reporting invalid child JSON', async () => {
+  const result = await runHarness({ pattern: 'scenario', test: '/tmp/test.mjs' }, {
+    CURSOR_EVAL_CHILD_RESULT: '/tmp/result.json', CURSOR_EVAL_SCENARIO_ID: 'model-active-followup',
+  }, {
+    runSupervisor: async () => supervisorResult({
+      verdict: 'failed', terminal_cause: 'exit_nonzero', code: 1,
+      failureDetails: ['Codex turn became terminal before follow-up anchor: {"status":"interrupted"}'],
+    }),
+    readFile: async () => '{}',
+  });
+  assert.deepEqual(
+    { failure: result.failure, childResult: result.childResult },
+    { failure: 'hosted_turn_interrupted', childResult: null },
+  );
 });
 
 test('harness reports missing or invalid child-result evidence before exit status', async () => {
@@ -1406,6 +1459,18 @@ test('CLI emits a single runner-termination result when SIGTERM wins the race', 
   await unknownRunning;
   assert.deepEqual({ count: unknownWritten.length, lane: unknownWritten[0].lane, code: unknownWritten[0].error_code }, { count: 1, lane: 'model-behavior', code: 'runner_terminated' });
   assertEvalResultV1(unknownWritten[0]);
+
+  let resolveDefault;
+  const defaultEvaluation = new Promise((resolve) => { resolveDefault = resolve; });
+  const defaultProcess = new EventEmitter();
+  const defaultWritten = [];
+  const defaultRunning = cli({ argv: ['node', 'runner'], processLike: defaultProcess, evaluate: async () => defaultEvaluation, write: (value) => defaultWritten.push(value) });
+  defaultProcess.emit('SIGTERM');
+  resolveDefault(await runEval({ env: {} }));
+  await defaultRunning;
+  assert.deepEqual({ count: defaultWritten.length, scenario: defaultWritten[0].scenario_id, code: defaultWritten[0].error_code },
+    { count: 1, scenario: 'corpus-default', code: 'runner_terminated' });
+  assertEvalResultV1(defaultWritten[0]);
 });
 
 test('CLI converts an unhandled evaluation rejection to EvalResultV1', async () => {

@@ -8,40 +8,6 @@ description: "Delegate a task to Cursor Agent through an interactive ACP session
 Use this skill when the user explicitly asks to delegate part of the work to
 Cursor.
 
-## Mandatory control points
-
-Treat the following as blocking checkpoints, not advice to apply later:
-
-- Before a write-capable `cursor_delegate`, put the exact authorized-write and
-  no-scope-expansion clauses required by step 1 into its `prompt`; do not make
-  the tool call first and add those clauses later.
-- Omit `plugin_dirs` unless the user explicitly supplied an absolute local
-  Agent Plugin root for this delegation. The installed Cursor skill, workspace,
-  or an inferred plugin location is not such a root and never supplies a
-  default `plugin_dirs` value.
-- When the caller limits an active turn to one ordinary wait interval, a
-  `wait_timeout:true` ends the current Codex turn with the step-2
-  work-in-progress report. Do not issue an extra wait; process the later
-  follow-up as the next Codex turn.
-- After every terminal `cursor_wait`, make the step-5 evidence report from that
-  returned terminal result and its `terminal_receipt` before closing the
-  session. If `events_lost:true`, include the step-2 observation-gap fields in
-  the same report. Treat `terminal_receipt` and its digest as opaque returned
-  values: copy them unchanged, never reconstruct, abbreviate, or manually
-  retype them. If exact copying is unavailable, report the result as
-  unverifiable. A prose-only completion claim is insufficient.
-- If that terminal turn is the last declared provider stage and its returned
-  session is still live, retain its receipt, call `cursor_close_session` before
-  the caller-visible completion report, and do not finish the Codex turn from
-  `cursor_wait` alone. If the next declared stage changes `model`, `effort`,
-  `fast`, or `plugin_dirs`, retain the provider ID and resume with the exact
-  requested launch settings: close only a live idle wrapper; a terminal wait
-  that already returned a tombstone resumes directly, without a redundant
-  close.
-- For a live terminal session with no declared next provider operation, the
-  next MCP call is therefore `cursor_close_session({session_id})`; the report
-  does not substitute for that call.
-
 1. Start with `cursor_delegate({prompt,cwd,mode,model?,effort?,fast?,
    plugin_dirs?})`. Modes are exactly
    `ask|plan|agent`: choose `ask` for every read-only task, including research,
@@ -58,10 +24,9 @@ Treat the following as blocking checkpoints, not advice to apply later:
    verified isolated worktree for any write-capable or concurrent delegation. A
    canonical checkout is allowed when the user authorized the changes and the
    caller accepts the coordination risk; the runtime neither creates nor
-   verifies a VCS worktree. In the terminal report for such a canonical-checkout
-   write, include this exact sentence: `An isolated worktree was recommended;
-   the caller accepted the coordination risk; the runtime does not verify the
-   worktree.` Pass only the listed public launch fields; do not
+   verifies a VCS worktree. For a canonical-checkout write, explain the worktree
+   recommendation, accepted coordination risk and runtime limitation in ordinary
+   language. Pass only the listed public launch fields; do not
    emulate unlisted provider controls. For every write-capable delegation and
    every file review whose authorized read/search scope is narrower than the
    full `cwd`, put the caller-held boundary in the Cursor prompt. Use one line per action in the
@@ -80,10 +45,10 @@ Treat the following as blocking checkpoints, not advice to apply later:
    and `NO_SCOPE_EXPANSION` lines plus these exact sentences: `bounded local
    read/search is allowed` and `writes, network access, credentials, and
    private/internal memory or transcript retrieval are forbidden`. Do not call
-   the tool until all four boundary clauses are present. Copy every
-   user-required exact outcome marker or token into the delegated
-   prompt verbatim; do not translate, omit, or replace it with a descriptive
-   success condition. Pass each user-provided Agent Plugin root through
+   the tool until all four boundary clauses are present. Omit `plugin_dirs`
+   unless the user explicitly supplied an
+   absolute local Agent Plugin root; an installed skill or inferred workspace
+   path is not such an input. Pass each user-provided Agent Plugin root through
    `plugin_dirs` unchanged when it is an absolute local path; do not copy it,
    substitute another root, or pre-empt runtime validation. The runtime owns
    canonicalization, directory existence, and
@@ -92,53 +57,68 @@ Treat the following as blocking checkpoints, not advice to apply later:
    provider configuration.
    If the delegate response is a failed-allocation result without `turn_id`, do not call
    `cursor_wait`, retry, resume, or start a fallback delegation. Report the
-   returned `session_id`, `failure_kind`, and bounded `provider_error` or
-   `terminal_reason` when present as exact structured evidence, then stop that delegation as irrecoverably
-   failed.
+   normalized failure code and explicitly require a new user decision; retain
+   exact diagnostics in tool evidence and close the failed allocation
+   idempotently before the final report.
 2. For a live delegated turn, retain complete `session_id`/`turn_id` and the
    `last_event_id` returned by `cursor_delegate` or `cursor_send_prompt`, then observe only with
    `cursor_wait({session_id,turn_id,after_event_id?,after_progress_revision?,timeout_ms?})`.
-   Pass that returned `last_event_id` as `after_event_id` on the first wait for
-   the turn. Each later wait uses the most recent returned
-   `resume_after_event_id`; on
+   Prefer that returned `last_event_id` as `after_event_id` on the first wait
+   for the turn, and prefer the most recent returned `resume_after_event_id`
+   for each later sparse wait. An earlier or repeated runtime-valid event
+   cursor, or omission for the runtime's supported zero default, is also valid;
+   `last_event_id` is a high-water mark, not an acknowledgement that preceding
+   events were read. On
    `wait_timeout:true` keep the same turn alive, retain the latest returned
-   `progress_revision` (or the prior value when omitted). Omit `timeout_ms` for
+   `progress_revision` (or the prior value when omitted), and pass that retained
+   value as `after_progress_revision` on the next wait whenever available. Omit `timeout_ms` for
    the first wait so the runtime owns its 30-second default, then use 60, 120,
    and at most 180 seconds for subsequent no-change waits. Report only a newly returned bounded
    progress excerpt. Do not poll `cursor_session_status`, which is advanced
    diagnostics rather than the normal workflow. If the caller explicitly
    limited observation to one wait interval, do not start the later-wait
    schedule after that first `wait_timeout:true`: emit a caller-visible final
-   JSON report with exact retained `session_id`, `turn_id`,
-   `cursor_session_id`, `resume_after_event_id`, and
-   `"work_in_progress":true`, then end the current Codex turn while leaving the
+   report that work remains in progress, retain the returned IDs and cursor
+   in tool evidence, then end the current Codex turn while leaving the
    Cursor turn active. If `events_lost:true`, disclose the observation gap and
-   continue only from returned cursors and current normalized state; never
+   continue only from current normalized state and runtime-valid cursors; never
    reconstruct or guess omitted history. If that current evidence is
    insufficient, report it as unverifiable; use `cursor_session_status` only as
    advanced current-state diagnostics, never as lost-history reconstruction.
-   In the final evidence summary's parseable JSON object include the exact
-   typed fields `"observation_gap":true`, `"history_reconstructed":false`, and
-   `"evidence_scope":"current_normalized_state"`; do not translate or omit
-   those keys. Add `"verification":"unverifiable"`
-   only when the retained current evidence cannot verify the requested result.
    Todo/task/image events are progress, not completion.
+
+   If `cursor_wait` is locally rejected with `unknown_session`, `unknown_turn`,
+   `invalid_args`, or `invalid_text_encoding`, compare its arguments with the
+   latest public state retained for that turn. When only its `session_id`,
+   `turn_id`, `after_event_id`, or `after_progress_revision` are missing,
+   malformed, or stale, repeat the same wait in the same Codex turn with the
+   exact current IDs and latest available cursors. Preserve `timeout_ms` and
+   every other argument. Do not guess IDs or cursors. This rejected-call repair
+   does not authorize resume, delegation, or a new prompt. If the rejected wait
+   already matched the latest public state, this repair does not apply.
 3. When pending, give the user normalized context and retain the complete
    `session_id`, `turn_id`, and `request_id`: for a question, call
    `cursor_answer_question` only after a separate user follow-up choosing an
-   answer, skip, or cancel; for a plan, call `cursor_answer_plan` with `accept`
+   answer, skip, or cancel. For a user option selection, use `outcome:"answered"`
+   and `answers` containing the exact advertised `question_id` and nonempty
+   `selected_option_ids`, respecting `allow_multiple`. For skip or cancel, use
+   `outcome:"skipped"` or `outcome:"cancelled"` and omit `answers`.
+   For a plan, call `cursor_answer_plan` with `accept`
    only after explicit approval, and with `reject` only after explicit rejection
    or cancellation. End the current Codex turn without calling an answer tool.
-   Put the pending report in one parseable JSON object containing the exact
-   `session_id`, `turn_id`, `request_id`, pending `kind`, normalized prompt, and
-   every offered option's exact `id` and label; prose may introduce the object
-   but must not replace any of those fields. Copy the returned normalized
-   `prompt`, option `id`, and option label verbatim; do not translate,
-   paraphrase, or relabel them. After the separate follow-up,
-   answering continues the same delegated turn: use the answer response's
-   `last_event_id` as the next `after_event_id` and `timeout_ms:60000`; do not
-   restart the first-wait schedule merely because a new Codex turn began. The
-   same later-wait rule applies to the fresh wait after a stale/unknown answer.
+   Report the pending question or plan and every offered choice clearly,
+   preserving their meaning. Prose, a list or JSON are all acceptable; exact
+   runtime IDs remain in tool evidence and are used for the later answer call.
+   After the separate follow-up, answering continues the same delegated turn.
+   Before the next `cursor_wait`, prefer the successful answer response's
+   `last_event_id` as `after_event_id` with `timeout_ms:60000`. An earlier
+   runtime-valid cursor or omission=0 remains acceptable; do not
+   restart the first-wait schedule merely because a new Codex turn began. If an
+   answer call reports a stale or unknown pending ID, call
+   `cursor_wait({session_id,turn_id,after_event_id,timeout_ms:60000})` with the
+   current retained IDs and preferably the latest returned cursor. Answer again only from a
+   full normalized pending context returned by that wait; a context-free
+   recovery summary is diagnostics only, so never guess from it.
    A follow-up that supplies the pending decision is consumed by the matching
    answer tool; do not also forward that same decision or a mere request to
    continue/report through `cursor_send_prompt`. Only a separately scoped new
@@ -155,60 +135,59 @@ Treat the following as blocking checkpoints, not advice to apply later:
 5. Protocol completion does not prove semantic task success: verify the result
    and changes independently. That verification MUST NOT create an unrequested
    `cursor_send_prompt`, retry, or new provider turn after a terminal result.
-   When no later provider stage was declared, retain the result and receipt,
-   close the session, and verify only from available independent evidence;
-   report an unverifiable limitation instead of asking the provider again.
-   `wait_timeout:true` is resumable work-in-progress;
-   `turn_status:"timed_out"` is a terminal interrupted turn. Preserve the
-   returned result, terminal receipt, returned requested/forwarded launch
-   parameters (not a provider-confirmed resolved/effective model),
-   caller-held exact requested `plugin_dirs`, and provider
-   `cursor_session_id` in caller-held evidence before closing. After the close
-   attempt, include that retained evidence in the caller-visible report. Put
-   every required scalar and structured field into one parseable JSON evidence object.
-   Every terminal report includes the exact returned `model`, including
-   `model:"auto"`; do not omit it as an assumed default.
-   A terminal turn is not automatically a terminal delegation. If the user has
-   already said that a later decision, follow-up, or review stage may continue
-   this conversation, the wrapper is still required: do not close or resume it,
-   even when the current turn completed after a rejected permission. Report the
-   retained terminal evidence and keep the same runtime `session_id` for the
-   later between-turn operation. Only when the delegation itself meets one of
-   the close conditions below, complete this order before emitting its terminal
-   caller report: (1) retain the returned objects and IDs verbatim, without
-   manually retyping hashes; (2) call `cursor_close_session`; (3) copy the
-   retained values into the JSON object. Never report a completed-and-finished
-   delegation before its required close attempt, and never reconstruct a digest
-   from memory or prose.
-   Likewise, never end a terminal Codex turn immediately after the final MCP
-   tool call or with commentary alone: emit the required caller-visible JSON
-   evidence object as the final answer.
-   Copy the exact bounded `terminal_receipt` object with its returned `session_id`,
-   `turn_id`, `turn_status`, `last_event_id`, nullable `result_sha256`, and
-   `result_truncated` field names and values. A terminal result, including a
-   tombstoned envelope that still carries a `turn_id`, with
-   `turn_status:"failed"` is not an automatic retry/resume/redelegation signal:
-   report that exact status plus exact bounded `terminal_reason:{text,truncated}`
-   and `provider_error:{code,message:{text,truncated}}` inside that JSON evidence object
-   and `terminal_receipt`, close the tombstoned wrapper when needed, and require
-   a new user decision before another provider operation. In every JSON evidence
-   object for a branch that requires that decision, include the exact scalar
-   `"next_provider_operation_requires_new_user_decision":true`; omit it on
-   recoverable live-idle branches that do not require a new decision.
-6. Preserve one reusable conversation and choose the next operation from its
-   observed state. Keep a live runtime session open while later user follow-ups
-   or review stages remain possible. After a terminal turn, optionally use
-   `cursor_set_mode({session_id,mode})` between turns, then
-   `cursor_send_prompt({session_id,prompt})`; neither operation replaces a
-   running turn. When that expected follow-up grants write authority after an
+   If terminal `result.truncated:true`, read the full retained text with
+   `cursor_read_result({session_id,turn_id,offset:0})`, then pass each returned
+   `next_offset` until `eof:true`. Retain the complete text before verification,
+   another turn or close. These reads do not regenerate a provider response.
+   If a page is unavailable or the turn failed with `terminal_result_limit`,
+   report the completeness limitation; a partial review is not a full verdict.
+   `wait_timeout:true` and a running turn follow step 2; a pending request
+   follows steps 3 and 4. `turn_status:"timed_out"` is a terminal interrupted
+   turn, distinct from `wait_timeout:true`. After a terminal turn, use the first
+   matching branch:
+
+   1. For `turn_status:"failed"`, including a failed turn in a tombstoned
+      session, retain its semantic outcome, safety state, receipt and error;
+      close its runtime `session_id` idempotently; report the failure; and
+      require a new user decision before another provider operation. Do not
+      retry or regenerate without that decision.
+   2. For `turn_status:"completed"` with a live session and an explicitly
+      declared later decision, follow-up, or review stage that remains
+      unfinished, report the semantic outcome and keep the same runtime
+      `session_id` open for that stage. A `reject-once` answer rejects only the
+      current pending action; it does not cancel or complete the separately
+      declared later stage.
+   3. Otherwise, retain the semantic outcome and safety state, close the runtime
+      `session_id` idempotently, then deliver the final report from the
+      available evidence. A completed turn in a tombstoned session is not a
+      failed turn; retain its provider `cursor_session_id` so a later explicitly
+      requested operation can use the resume rules in step 6.
+
+   The ordinary possibility of a future follow-up is not a declared unfinished
+   stage. Preserve exact receipts, launch parameters, plugin roots, provider
+   errors, and observed IDs in the runtime/tool transcript. Put only the
+   semantic outcome and required safety disclosure in the caller-visible
+   report. Prose, lists and JSON are equally valid; do not require or copy
+   audit-only IDs, receipts, hashes or full provider diagnostics. An MCP
+   response or commentary alone is not the assistant final report.
+6. For the wrapper retained under step 5, choose the next operation from its
+   observed state.
+   After a terminal turn, determine the mode
+   required by the next explicitly requested stage using step 1. If it differs
+   from the current mode, call `cursor_set_mode({session_id,mode})` before
+   `cursor_send_prompt({session_id,prompt})`; otherwise send the prompt without
+   a redundant mode change. Neither operation replaces a running turn. When
+   that expected follow-up grants write authority after an
    `ask` turn, call `cursor_set_mode({session_id,mode:"agent"})` on that same
    live wrapper and then `cursor_send_prompt`; do not close and
    `cursor_resume_session` merely to change the mutable mode. For a repeated
    critic/review turn in that same live session, the next prompt must contain
    exact lines `BASELINE_DIGEST=<retained digest>`,
    `CHANGED_PATHS=<bounded changed paths>`, and `DELTA=<exact bounded delta>`;
-   do not include the unchanged baseline body. Verify those three lines and the
-   absence of unchanged baseline content before calling `cursor_send_prompt`.
+   the `DELTA` value must preserve every caller-supplied delta line verbatim,
+   including its `-` or `+` marker. Verify those three lines, every supplied
+   delta line, and the absence of unchanged baseline content before calling
+   `cursor_send_prompt`.
    Launch-only
    settings (`model`, `effort`, `fast`, and
    `plugin_dirs`) cannot change in place. If they must change, close the idle
@@ -226,38 +205,42 @@ Treat the following as blocking checkpoints, not advice to apply later:
    manifest. Never apply the delta-only template after wrapper loss or explicit
    resume: the resumed prompt must include the retained full bounded baseline
    body as well as the new delta.
+   The new runtime `session_id` becomes the current wrapper for subsequent
+   operations and follows the same close rule from step 5.
 
    When wrapper loss is suspected, first address a retained active turn with
-   `cursor_wait`. A tombstone or unknown wrapper with a retained
+   `cursor_wait` using its exact retained IDs and a runtime-valid cursor,
+   preferably the latest available resume hint.
+   Only a correctly addressed observation establishes wrapper loss; a local
+   rejection caused by different, missing, or malformed address/cursor fields
+   follows step 2 and does not establish loss. A tombstone or unknown wrapper with a retained
    `cursor_session_id` uses explicit resume; without that provider ID the
    conversation is not addressable through the admitted surface. Never search
    `~/.cursor/acp-sessions`, call a session list, or silently replace failed
-   resume with a new delegation. If `cursor_resume_session` returns a
-   tombstoned/failed allocation, report the new runtime `session_id`, retained
-   `cursor_session_id`, and any returned `failure_kind`, `terminal_reason`, or
-   bounded `provider_error` in one parseable JSON evidence object; do not wait,
-   repeat resume, or start a replacement
-   delegation. The next provider operation requires a new user decision. For an
-   explicit follow-up received during an active turn, wait for terminality.
+   resume with a new delegation. After a failed resume, a later request to
+   continue that same unavailable Cursor conversation still does not authorize
+   `cursor_delegate` or a replacement conversation. Start a fresh delegation
+   only when the user explicitly chooses a new or replacement provider
+   conversation after the resume failure. A failed or tombstoned resume follows
+   the failed-allocation recovery from step 1: retain its new runtime ID, close
+   it idempotently and report failure plus the required new user decision. For an explicit follow-up
+   received during an active turn, wait for terminality.
    Send the already supplied text only when the observed terminal state is
-   `turn_status:"completed"` with `session_state:"live"`; a failed, timed-out,
-   cancelled, or tombstoned outcome follows its terminal recovery branch and
-   requires a new post-failure user decision before another provider operation.
+   `turn_status:"completed"` with `session_state:"live"`; every other terminal
+   outcome follows its matching cleanup branch in step 5.
    There is no active-turn steering tool. Call
    `cursor_close_session({session_id})` idempotently only for a required
    launch-setting change followed immediately by explicit resume, complete
    delegated work, abandonment/cancellation, or irrecoverable failure.
-   When the current follow-up completes the last later stage the user had
-   previously declared and the user has not declared another stage, delegated
-   work is complete and the close attempt is required.
    `cursor_start_session`, `cursor_session_status`, and `cursor_cancel` remain
    advanced diagnosis/recovery tools; status is not the normal source of
    pending context. Always retain runtime `session_id`, provider
    `cursor_session_id`, current turn IDs/cursors, and caller-supplied launch
    settings across these branches.
 
-   If a between-turn `cursor_set_mode` fails, report its exact error and runtime
-   `session_id`. For `invalid_args`, correct only a locally malformed call when
+   If a between-turn `cursor_set_mode` fails, report the failure with the
+   normalized `error_code`; exact provider diagnostics and runtime IDs remain
+   in the transcript. For `invalid_args`, correct only a locally malformed call when
    the already authorized intended mode is unambiguous. For `protocol_error`,
    inspect `cursor_session_status` once. The admitted serial between-turn path
    expects a live wrapper without an active turn: preserve its IDs, report the
@@ -294,10 +277,7 @@ a repair send the prior digest, changed paths and their exact delta, rather than
 a full unchanged snapshot. Label these fields with exact
 `BASELINE_DIGEST=...`, `CHANGED_PATHS=...`, and `DELTA=...` lines in the repeat
 prompt, and use the same bounded
-increasing wait policy. A
-stale or unknown pending ID is recovered only by a fresh `cursor_wait` that
-returns the complete normalized pending context; the context-free recovery
-summary is diagnostics only. Never guess or answer from that summary.
+increasing wait policy.
 Never infer delete authority from Cursor creating an artifact. If exact
 deletion or a bounded deletion class is not already covered by user authority,
 preserve each Cursor-created

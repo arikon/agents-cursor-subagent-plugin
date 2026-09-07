@@ -37,7 +37,7 @@ Package references are «Внешний контракт bootstrap» and «Пр�
 input, prior authority, fake-ACP program, follow-ups, ссылку на применимый
 facade owner requirement and any additional runtime/package owner boundary whose
 semantics the row specifically asserts, expected trace, expected actual task outcome,
-expected Codex-reported outcome, expected `eval_status` и evidence predicate.
+expected `eval_status` и evidence predicate.
 Harness MUST оценивать transcript по expected trace и единым oracle invariants
 только на соответствие указанным owner requirements, не переопределяя их
 semantics.
@@ -55,10 +55,12 @@ eval harness владеет только selection, `EvalResultV1` mapping и ev
 Authority-aware question, plan и permission semantics принадлежат modified
 facade requirement «Skill workflow делегирования». Harness only observes their
 scenario-specific trace. Для каждой allocated session harness MUST проверить
-close attempt согласно runtime requirement «Ограниченный жизненный цикл
+close attempt единого owner согласно runtime requirement «Ограниченный жизненный цикл
 ACP-процесса», кроме fixture-доказанного natural child exit после terminal
-result, уже tombstoned wrapper и последующего explicit resume. Идемпотентность
-close остаётся runtime-owned. Сценарии writing
+result или уже tombstoned wrapper. Explicit resume не отменяет cleanup: старый
+live wrapper закрывается до resume, а resumed wrapper проверяется по новому
+current runtime `session_id` тем же single close owner. Идемпотентность close
+остаётся runtime-owned. Сценарии writing
 `agent` ссылаются на facade requirement «Workspace discipline делегирования» и
 не добавляют собственную worktree policy.
 
@@ -73,15 +75,16 @@ Client/model rows MUST иметь `scenario_kind: "programmed"` и baseline keys
 `scenario_id`, `lane`, `owner_requirements`, `initial_input`, `prior_authority`,
 `program`, `followups`, `expected_trace`,
 `fixture_predicate`, `expected_actual_task_outcome`,
-`expected_reported_task_outcome`, `expected_enabled_eval_status`, а также MAY
-иметь `report_checks`, `harness_faults` и `skill_sensitivity`.
+`expected_enabled_eval_status`, `report_checks`, а также MAY иметь
+`harness_faults`.
 Ровно один row MUST быть reference-only object с ровно
 `scenario_kind: "package-canary-reference"`, уникальным kebab-case `scenario_id`,
 `lane: "full-live"`, одним `owner_requirements` element
 `{ "capability":"cursor-plugin-distribution",
 "requirement":"Проверяемая чистая установка" }` и
 `expected_enabled_eval_status: "pass"`. Programmed fields input, authority,
-program, followups, trace, observations, predicate и task outcomes в нём MUST
+program, followups, trace, observations, predicate, task outcome и programmed
+report fields в нём MUST
 быть запрещены: их единственным владельцем остаётся package canary.
 
 Для каждого row `scenario_id` MUST быть уникальным kebab-case значением длиной 1–128 UTF-8
@@ -110,11 +113,11 @@ attributable to the selected installed skill rather than an algorithm copied
 from the user prompt.
 
 Optional `harness_faults` MUST быть непустым unique array, содержащим только
-`accelerate-mode-timeout`, `accelerate-turn-timeout`,
+`mode-timeout`, `accelerate-turn-timeout`,
 `accelerate-wait-timeout`, `exit-after-result`,
 `hold-terminal-until-followup`, `inject-mode-protocol-error-once`,
 `inject-stale-question-once`,
-`reject-initialize`, `reject-mode`, `reject-prompt` и `reject-resume`. Это единственный scenario-level
+`reject-initialize`, `reject-mode`, `reject-prompt`, `result-overflow` и `reject-resume`. Это единственный scenario-level
 selector для programmed fault injection: runner, proxy и provider fixture MUST
 NOT выбирать fault по `scenario_id`. Proxy MUST activate a selected fault only
 when its installed process receives the complete eval handshake: an absolute
@@ -127,7 +130,11 @@ expected `session.resumed`, либо `session.resume-failed` только при
 `reject-initialize` требует initial `session.tombstoned` без `turn.started`;
 `reject-prompt` требует paired terminal step `failed + null`, predicate
 `terminal-status:failed` и expected `turn.failed`;
-`accelerate-mode-timeout` требует predicate `mode-change-failed:mode_timeout`
+`result-overflow` requires the same failed-terminal/predicate/trace pairing,
+is mutually exclusive with `reject-prompt`, and makes the provider fixture
+emit a finite agent-text stream that crosses the runtime IUX-20 retention cap.
+Exact stream construction belongs to the fixture, not a second runtime limit;
+`mode-timeout` требует predicate `mode-change-failed:mode_timeout`
 и expected `session.mode-change-failed`;
 `inject-mode-protocol-error-once` требует predicate
 `mode-recovery-status:live:false`, expected
@@ -136,14 +143,14 @@ expected `session.resumed`, либо `session.resume-failed` только при
 `session.close-attempted` because the wrapper remains live;
 `reject-mode` требует predicate `mode-change-failed:protocol_error`, expected
 `session.mode-change-failed:protocol_error`, следующий `session.tombstoned` и
-report binding `provider_error`; injected и provider-originated mode faults
+transcript/evidence comparison `provider_error`; injected и provider-originated mode faults
 взаимоисключающи;
 `accelerate-turn-timeout` требует predicate
 `terminal-status:timed_out` и expected `turn.timed-out`;
-`accelerate-mode-timeout` сокращает только runtime-owned 15-second mode-control
-deadline; `accelerate-turn-timeout` сокращает только runtime-owned one-hour turn
-deadline; каждый accelerator действует лишь при своём exact fault flag и MUST
-NOT менять два других timer classes;
+`mode-timeout` проверяет runtime-owned fixed 15-second mode-control deadline без
+preload acceleration; `accelerate-turn-timeout` сокращает только runtime-owned
+one-hour turn deadline; каждый accelerator действует лишь при своём exact fault
+flag и MUST NOT менять другие timer classes;
 `accelerate-wait-timeout` требует первый expected `turn.wait-timeout` с
 effective `timeout_ms:30000` и `timeout_omitted:true`; fixture сокращает только
 wall-clock ожидание этого default request и MUST NOT менять наблюдаемый request
@@ -168,14 +175,6 @@ decision. Expected default `turn.wait-timeout` with `timeout_omitted:true` —
 ровно с `accelerate-wait-timeout`.
 Intentional launch-setting resume после explicit close остаётся normal workflow
 и не требует provider-exit fault.
-
-Optional `skill_sensitivity` MUST иметь ровно
-`{ "mutation":"omit-events-lost",
-"expected_mismatch":"reported-outcome-mismatch" }`, допускаться только для
-lane `model-behavior`, требовать `event-burst` step, expected trace
-`turn.events-lost` и `report_checks` и быть единственным owner выбора этой
-mutation и её expected oracle mismatch. Runner MUST NOT выбирать sensitivity
-по `scenario_id`.
 
 `program` MUST быть закрытым `{ "kind": "fake-acp", "steps": [...] }` с 1–8 ordered closed steps и
 уникальными `step_id` длиной 1–128 UTF-8 bytes. Допустимы только следующие
@@ -213,7 +212,8 @@ mutation и её expected oracle mismatch. Runner MUST NOT выбирать sens
   "result_text":null }` or
   `{ "type":"terminal", "step_id":string, "turn_status":"timed_out",
   "result_text":null }`; a completed `result_text` occupies 1–8000 bytes.
-  A failed terminal MUST be paired exactly with the `reject-prompt` harness
+  A failed terminal MUST be paired with exactly one of `reject-prompt` or
+  `result-overflow` harness
   fault; protocol `completed` MUST NOT само по себе означать semantic task
   success.
 
@@ -236,16 +236,95 @@ IDs, что expected callback; `answer.plan` и `answer.permission` ссылаю
 соответствующий pending kind и совпадают с expected callback. Trace order MUST
 быть совместим с ordered program; `effect.file-written` требует matching
 successful effect callback. Oracle глобально и без per-row policy отклоняет
-`answer-before-pending`, `id-mismatch`, `operation-after-close` и
-`unexpected-effect`. Конфиденциальность raw provider payload принадлежит
+`answer-before-pending`, `operation-after-close` и `unexpected-effect`.
+Конфиденциальность raw provider payload принадлежит
 recording-proxy behavioral test, а не искусственному corpus observation.
 Session-level observations require only the `session_id` actually present in
 their MCP request/response; an optional `turn_id` is admissible only when that
 same operation exposes it. They MUST NOT inherit a previous mutable turn ID.
 Turn-level observations require both IDs from their actual call or bounded
 result.
+
+ID provenance имеет здесь одного normative eval owner. Transcript proof MUST
+быть одним из двух closed shapes: legacy
+`{calls,dropped_calls}` либо recovery-capable
+`{calls,dropped_calls,turn_call_ranges,unexpected_input_requests}`. Legacy proof
+остаётся допустимым для обычной проверки, но не может доказать recovered call.
+В full proof `turn_call_ranges` MUST содержать ровно `followups.length + 1`
+closed `{start,end}` safe-integer ranges, которые без gaps или overlap образуют
+полную последовательную partition `[0,calls.length)`; persisted
+`unexpected_input_requests` MUST быть nonnegative safe integer. Любая другая
+shape или неполная partition MUST быть отклонена как malformed transcript proof,
+а не ослаблять ID oracle.
+
+Recovery-capable proof MUST сохранять ordered raw record каждого MCP call и его
+фактический normalized success/error result. Capture каждого plain-object
+request MUST также сохранить lower-hex SHA-256
+`arguments_without_session_turn_sha256`, вычисленный над canonical raw
+arguments после удаления только `session_id` и `turn_id`; `request_id` и все
+остальные properties остаются в digest domain. Этот digest служит только
+детерминированной проверке equality и не является privacy или integrity
+гарантией.
+
+Oracle MAY признать recovery только по full proof с `dropped_calls:0` и
+`unexpected_input_requests:0`. В одном complete `turn_call_ranges` segment MAY
+быть ноль или больше непересекающихся recovery spans. Каждый span содержит
+ровно один rejected call и один corrected successful call того же tool; между
+ними MAY находиться ноль или больше contiguous successful
+`cursor_session_status` с exact pure request `{session_id:current}` без других
+arguments в пределах bounded transcript. Иной interleaving внутри span и
+overlap запрещены; второй rejection до corrected success оставляет первый call
+unrecovered. Дополнительных user inputs быть не может. Raw calls и
+normalized error сохраняются; corrected success всё равно MUST пройти обычные
+trace, ordering, authority, callback, effect и exact-delivery checks.
+
+Finite recovery taxonomy допускает ровно три класса:
+
+- `address`: у existing-session tool изменяется непустое подмножество только
+  `session_id`/`turn_id`, включая missing, malformed или несколько неверных IDs;
+  success использует current causal public IDs, non-address arguments digests
+  exact equal, а rejected error равен применимому
+  `invalid_args | invalid_text_encoding | unknown_session | unknown_turn`;
+- `wait_state`: у `cursor_wait` изменяется непустое подмножество
+  `session_id`, `turn_id`, `after_event_id`, `after_progress_revision`; success
+  использует current IDs и exact latest public event/progress cursors, timeout
+  остаётся identical. Digest каждого call MUST совпасть с canonical
+  reconstruction его captured wait non-ID arguments; hidden/invalid extras
+  запрещены. Rejected error равен применимому
+  `invalid_args | invalid_text_encoding | unknown_session | unknown_turn`.
+  Переход от captured `{}` к current IDs плюс latest `after_event_id` является
+  допустимым вариантом;
+- `set_mode`: rejected `cursor_set_mode` имеет `invalid_args`, success использует
+  current session ID, а отсутствующий/non-enum mode исправлен на admitted enum;
+  address MAY быть исправлен одновременно. Обычный expected trace MUST доказать
+  exact authorized mode transition.
+
+Launch/delegate/start/resume, result-read offset и local answer-shape repair,
+direct `request_id` correction, historical/ungrounded IDs,
+`resource_limit | scope_rejected | protocol_error | mode_timeout` или provider
+errors, prompt mutation, other tool/turn и любая delta вне соответствующего
+typed класса MUST оставаться mismatch. Без full four-key proof recovery нет.
+
+Oracle MUST recompute `recovered_calls` как массив closed records
+`{failed_call_index,successful_call_index,codex_turn_index,tool,error_code,correction_kind}`
+с one-based indexes и `correction_kind` exactly
+`address | wait_state | set_mode`; отдельный count или corrected-fields list не
+хранится, authoritative delta выводится из indexed raw calls. Observer MAY
+пропустить semantic trace projection failed call только для verified pair;
+каждый иной raw lookup/validation failure остаётся mismatch, даже если
+normalized trace его не спроецировал. Это recovery evidence, а не доказательство
+истинности свободного prose, которое остаётся `not_checked`.
+
+`unknown_request` не входит в эту adjacent-pair exception: existing
+`answer.rejected-stale` contract сохраняет distinct fresh wait, repeated pending
+и единственный admitted answer с returned current `request_id`.
 Отсутствие close не является observation: oracle отдельно применяет
 close-or-proven-natural-tombstone rule, определённый выше.
+Exact complete full-result reread с теми же session/turn IDs, page chain, total
+и digest MAY быть схлопнут как idempotent trace variation даже после close, пока
+result retained. Invalid/partial reread и первый complete read только после
+close MUST оставаться mismatch. После natural tombstone сохраняется один
+required idempotent close observation; repeated closes являются mismatch.
 
 `fixture_predicate` MUST быть одним closed variant:
 `{ "kind":"none" }`, `{ "kind":"terminal-token", "token":string }`,
@@ -308,84 +387,93 @@ admission, MUST давать `integration_failure/runner/unknown_scenario`.
 - **THEN** admission завершается `integration_failure/adapter_admission` до
   запуска Codex или Cursor
 
-#### Scenario: Paired mutation sensitivity records an associated behavior difference
-- **WHEN** a hosted sensitivity invocation first executes a fresh unchanged
-  baseline, then installs the same payload with only the `events_lost` safety
-  instruction removed and executes the same ordinary-goal retention-gap
-  scenario
-- **THEN** sensitivity passes only when the fresh baseline passes and the
-  mutated run becomes `agent_behavior_mismatch` with exactly the corpus-owned
-  `reported-outcome-mismatch`; final evidence links the baseline evidence and
-  records one snapshotted corpus/scenario digest pair, the mutation name, the
-  common pre-mutation skill digest and exact digests of both actually loaded
-  baseline/mutated skills; source, corpus, scenario or loaded-payload drift is
-  an `integration_failure`, never a valid paired result; the public sensitivity
-  `EvalResultV1` maps this expected single
-  underlying oracle failure to meta-assertion
-  `fixture_assertion_outcome:"pass"` and `eval_status:"pass"`, while preserving
-  the underlying `agent_behavior_mismatch`, failed assertion and exact mismatch
-  in published evidence. If the fresh baseline fails, the outer failure MUST
-  retain its already published baseline `evidence_ref` rather than orphan it.
-  Because the hosted model run has no fixed seed or deterministic replay, this
-  single baseline/mutation pair records a mutation-associated behavioral
-  difference only; it MUST NOT be reported as proof that the removed
-  instruction caused that difference. Replicated/control causal estimation is
-  outside v1 scope.
-
-
 The programmed rows MUST remain owned by the existing facade/runtime
 requirements and MUST be evaluated from actual Codex MCP calls and safe fixture
 effects, never from substring or regular-expression inspection of `SKILL.md`.
-Each programmed row has the baseline exact keys plus optional `report_checks`,
-`harness_faults` and `skill_sensitivity` under the closed grammars above.
-When present, `report_checks` contains 1–3 unique closed objects with
-`turn_index` in 1..`followups.length + 1`, 1–12 unique bounded
-`required_fragments`, 0–12 unique bounded `forbidden_fragments`, and optional
-1–12 unique `required_bindings` from `session_id`, `turn_id`,
-`pending_request_id`, `cursor_session_id`, `resume_after_event_id`, `model`,
-`effort`, `error_code`, `failure_kind`, `fast`, `plugin_dir`, `provider_error`,
-`next_provider_operation_requires_new_user_decision`, `observation_gap`,
-`history_reconstructed`, `evidence_scope`, `work_in_progress` and
-`terminal_reason`, `terminal_receipt`, `terminal_result_sha256`. `plugin_dir` is the exact materialized canonical
-fixture root and is admitted only when the same request has digest-matched
-`plugin_dirs`; `provider_error` is the recording proxy's bounded public
-`{code,message:{text,truncated}}` projection and never includes provider
-`error.data`. All required bindings for one report check MUST occur inside one
-parseable JSON evidence object. Scalar bindings use their exact field names,
-except `pending_request_id` maps to `request_id`, `terminal_result_sha256` maps
-to `terminal_receipt.result_sha256`, and `plugin_dir` maps to membership in
-`plugin_dirs`; `next_provider_operation_requires_new_user_decision`,
-`work_in_progress`, and `observation_gap` bind only to exact boolean `true`;
-`history_reconstructed` binds only to exact boolean `false`, and
-`evidence_scope` binds only to exact string `current_normalized_state`.
-Structured `provider_error` binding requires exact full-object
-equality with one observed error, with no missing, extra or cross-object fields.
-`terminal_receipt` is likewise atomic over one observed bounded receipt and
-requires exact full-object equality for its `session_id`, `turn_id`,
-`turn_status`, `last_event_id`, nullable `result_sha256` and
-`result_truncated`; a word such as
-`terminal_receipt` or an unassociated digest is insufficient.
-`terminal_reason` requires exact full-object equality for `text` and
-`truncated`. Values found only in unrelated objects or prose are never
-candidates. A report check matches only the terminal
-`final_answer` (or legacy null-phase final) of that exact Codex turn; every
-fragment and every turn-scoped value selected from the bounded MCP call range
-of that exact Codex turn MUST occur, and every forbidden fragment MUST be
-absent. Within that exact range, `session_id` and `turn_id` resolve from the
-latest call carrying the respective value, so a close/resume sequence cannot
-bind the abandoned wrapper while a newer wrapper is the reported outcome.
-Session-scoped retained bindings `cursor_session_id`, `model`, `effort`,
-`fast` and `plugin_dir` instead MUST resolve only from the latest
-observed successful allocate/resume call before the report boundary: this is
-the current runtime-session segment provenance, not arbitrary prior report
-text. A newer allocate/resume supersedes the closed/tombstoned segment, so its
-IDs or launch values are not candidates. Values from a later Codex turn are
-never candidates; `terminal_receipt`, `terminal_reason` and `provider_error`
-remain exact current-turn atomic bindings. Thus caller-held state continuity is
-provable without accepting fixture prose or stale values. Without `report_checks`,
-reported outcome keeps the last-terminal safe-token rule; the semantic-failure
-token is exactly `CURSOR_EVAL_FAILED`. A missing or mismatched report contract
-gives `not_reported` even when MCP trace and fixture effect are correct.
+Each programmed row has the baseline exact keys including `report_checks`, plus
+optional `harness_faults` under the closed grammars above. `report_checks` проверяет
+только exact user-visible delivery, явно заданную corpus/program/fixture.
+
+`report_checks` contains 0–9 closed objects with exact keys
+`turn_index`, `category`, `required_fragments`, `forbidden_fragments`.
+`turn_index` is in 1..`followups.length + 1`; `category` is exactly
+`interaction`; the pair is unique within a scenario. `required_fragments`
+contains 1–12 unique nonempty 1–256-byte literal strings;
+`forbidden_fragments` contains 0–12 unique nonempty 1–256-byte literal strings.
+Matching is case-sensitive literal containment over the captured text. Every
+fragment MUST be exact requested/user-visible data supplied by the corpus,
+program or fixture: marker/result token, pending question, visible option label
+or plan content. Alternative arrays, author-created paraphrases, language or
+template conditions, safety/outcome phrases, negation semantics, regex, fuzzy
+matching, translation, model judging and JSON parsing are not admitted. An
+empty array selects only the generic mandatory nonempty-final delivery check;
+omitting `report_checks` is an admission failure.
+
+`required_bindings` is no longer admitted in a report check. Existing corpus
+rows MUST migrate explicitly: final-copy ID/receipt/launch checks move to their
+existing transcript/evidence owner. The loader MUST reject unmigrated bindings.
+Full JSON, prose and list answers remain acceptable when their text contains the
+same exact requested data. No derived fallback outcome exists. `FILE_REVIEW_OK`
+is an exact interaction-delivery marker and never evidence of reported outcome.
+
+Захват final и completeness proof определены в «Eval transcript plumbing и
+process verdict»; report assertions используют только этот admitted capture.
+Каждый model-behavior final MUST существовать и быть непустым даже при пустом
+`report_checks`: `confirmed_missing` и complete empty
+final являются `agent_behavior_mismatch` компонента interaction delivery, а
+incomplete capture является `integration_failure`.
+
+Continuation within the same Codex task MUST be checked from actual MCP
+dataflow under the existing trace/ID invariants: next calls consume the
+previously returned active IDs and pending request in their causal order.
+Successful waits MAY omit `after_event_id` or use any earlier/repeated
+runtime-valid value; latest `resume_after_event_id` is a recommended sparse
+default, not read acknowledgement evidence. A new wrapper supersedes the old
+segment; future or invalid values are
+not valid candidates. Missing IDs in final prose alone are not a failure.
+No final-only external consumer or new handoff protocol is admitted here.
+
+Evidence integrity reuses existing runtime/provider observations, including
+the receipt-to-result comparison, rather than a second shape-only algorithm.
+Missing or corrupt required evidence, dropped calls and unconfirmed extraction
+are inspection failures. A correctly observed runtime operation violating its
+contract remains an execution failure; it MUST NOT be hidden as an
+infrastructure error. Exact receipt, reason and provider-error values remain
+atomic and turn-scoped in evidence; hashes are compared with independently
+observed bounded provider results where the scenario requires that comparison.
+An absent receipt is valid only for a branch whose runtime contract does not
+return one. Provider `error.data` stays excluded.
+
+Компоненты и итоговая классификация определены в «Outcome model и
+диагностические доказательства»; corpus задаёт ожидания, а не второй classifier.
+
+#### Scenario: Exact token не зависит от оформления report
+- **WHEN** complete final содержит exact запрошенный token
+- **THEN** interaction delivery проходит независимо от prose/list/JSON
+  оформления; continuation и receipt проверяются только evidence checks
+
+#### Scenario: File review сообщает user marker без provider sentence
+- **WHEN** complete final содержит `FILE_REVIEW_OK` в корректном prose, но не
+  повторяет полное предложение provider result
+- **THEN** exact interaction check проходит, а reported outcome остаётся
+  `not_checked`
+
+#### Scenario: Длинный review дочитывается до отчёта
+- **WHEN** обычная review-задача возвращает truncated preview с user-required
+  marker только в хвосте полного runtime result
+- **THEN** Codex использует runtime IUX-20 read path до final report/close,
+  сообщает marker из прочитанного хвоста и не запускает provider regeneration;
+  eval проверяет composition, не дублирует paging/лимиты runtime
+
+#### Scenario: Overflow результата не выдаётся за полное review
+- **WHEN** runtime завершает review через IUX-20 overflow failure
+- **THEN** eval проверяет failed terminal, отсутствие regeneration и required
+  close/recovery mechanics по trace; свободный prose о полноте не оценивается
+
+#### Scenario: Неполное извлечение не обвиняет модель
+- **WHEN** final находится за первой страницей или capture не завершён
+- **THEN** adapter читает оставшиеся items либо сохраняет inspection failure;
+  только подтверждённое отсутствие final классифицируется как report omission
 
 The `followups` array contains 0–2 unique closed objects. A follow-up MAY carry
 1–8 unique closed `granted_actions` with the same action grammar as
@@ -460,6 +548,10 @@ The closed trace grammar admits:
   retained path;
 - `session.resumed` with exact `matched:true`, optional exact `model:string`,
   `effort:string` and `fast:boolean`, and a new runtime session ID;
+- for `session.allocated | session.resumed`, omitted expected `effort` or `fast`
+  leaves that observed field unconstrained; when declared it MUST match exactly.
+  This exception does not relax kind/order, exact `mode`/`model` presence and
+  value, required `matched`, runtime-session identity or plugin-root proof;
 - `session.resume-failed` with exact `matched:true`, a new terminal runtime
   session ID and no replacement delegation;
 - `session.mode-change-failed` with exact `error_code:"mode_timeout"` or
@@ -471,21 +563,27 @@ The closed trace grammar admits:
 - `session.tombstoned` after an observed old-wrapper response with exact
   `session_state:"tombstone"`;
 - `turn.wait-timeout` and `turn.wait-recovered` with exact `timeout_ms` in
-  1000–180000, boolean `timeout_omitted`, `cursor_matched:true` and
+  1000–180000, boolean `timeout_omitted` and
   `progress_revision_matched:true`; `timeout_omitted:true` is valid only with
   effective `timeout_ms:30000`, while explicit retries use `false`;
-- `turn.events-lost` with `events_lost:true` and `cursor_matched:true`, derived
+- `turn.events-lost` with `events_lost:true`, derived
   from the actual sparse wait response rather than expected scenario prose;
 - `turn.receipt` with a terminal `step_id`, `matched:true` and boolean
   `result_truncated`;
+- `turn.result-read` with `complete:true`, emitted only after actual
+  `cursor_read_result` calls reach EOF from offset zero using returned
+  continuation values for that turn; it proves workflow composition and does
+  not define a second paging/hash/retention algorithm;
 - `prompt.contract` with a prompt-check `step_id` and `matched:true`;
 - `progress.todos`, `progress.task` and `progress.image` with the matching
   notification `step_id`;
 - `effect.file-read` for the admitted read effect.
 - `turn.timed-out` for an observed terminal runtime status correlated with a
   fixture-armed terminal step, never reconstructed from `expected_trace`;
-- `turn.failed` for an observed provider-rejected terminal runtime status
-  correlated with its fixture-armed failed terminal step;
+- `turn.failed` for an observed failed terminal runtime status correlated with
+  its fixture-armed failed terminal step and selected fault; overflow evidence
+  uses the IUX-20 reason, not a fabricated provider error, and MUST NOT include
+  a successful `turn.result-read`;
 - `answer.rejected-stale` with a pending step and exact
   `error_code:"unknown_request"`; a later repeated pending observation plus the
   admitted answer proves that Codex performed a fresh wait before retrying.
@@ -536,8 +634,9 @@ old-wrapper call, so an explicit resume can follow directly.
 #### Scenario: Wait, receipt и resume проверяются одной recovery цепочкой
 - **WHEN** первый wait возвращает resumable timeout с progress revision, затем
   turn завершается и ACP child независимо исчезает, tombstoning the wrapper
-- **THEN** следующий wait использует returned event cursor и progress revision
-  с увеличенным timeout, evidence проверяет immutable terminal receipt и
+- **THEN** следующий wait использует те же runtime IDs, returned progress
+  revision и увеличенный timeout; event cursor может быть latest, earlier
+  runtime-valid или omitted=0. Evidence проверяет immutable terminal receipt и
   observable old-wrapper tombstone, а
   `cursor_resume_session` attempts the retained provider ID in a new runtime
   session без fallback delegation; successful load itself is not semantic
@@ -556,6 +655,26 @@ old-wrapper call, so an explicit resume can follow directly.
 - **THEN** trace содержит `answer.rejected-stale`, затем повторный pending из
   fresh `cursor_wait` и ровно один admitted answer с актуальным ID
 
+#### Scenario: Typed pre-effect correction проверяется прозрачно
+- **WHEN** full raw transcript содержит один или несколько disjoint spans класса
+  `address | wait_state | set_mode` и только contiguous successful pure
+  current-session status reads внутри каждого span complete range того же turn
+- **THEN** oracle сохраняет rejected calls, recomputes один typed
+  `recovered_calls` record на span и проверяет каждый successful call по обычным trace,
+  authority, effect и delivery invariants
+
+#### Scenario: Safe rejection без достаточного grounding остаётся mismatch
+- **WHEN** transcript содержит result-read offset или answer-shape correction,
+  overlapping/unfinished span, repeated rejection до success,
+  non-pure/noncontiguous status либо неполный proof
+- **THEN** oracle сохраняет raw evidence и возвращает mismatch без recovery
+
+#### Scenario: Полный retained result reread схлопывается идемпотентно
+- **WHEN** trace повторяет exact complete page chain с теми же IDs, total и
+  digest, включая retained reread после close
+- **THEN** oracle схлопывает повтор; partial/invalid либо первый post-close read
+  и repeated close остаются mismatch
+
 #### Scenario: Launch options и collaboration progress наблюдаемы
 - **WHEN** user явно выбирает agent model settings, локальный `plugin_dirs` bundle
   и одну покрытую запись
@@ -565,60 +684,61 @@ old-wrapper call, so an explicit resume can follow directly.
 
 #### Scenario: Invalid plugin directory не вызывает fallback
 - **WHEN** ordinary user goal выбирает отсутствующий Agent Plugin directory
-- **THEN** Codex сообщает exact `scope_rejected`, не копирует skill, не расширяет
-  allowed roots, не инжектит raw provider configuration и не запускает provider
+- **THEN** exact delegate/start evidence содержит normalized `error_code`
+  `scope_rejected`, а trace не копирует skill, не расширяет allowed roots, не
+  инжектит raw provider configuration и не запускает provider; captured final
+  проверяется только как generic nonempty delivery, свободный prose не оценивается
 
 #### Scenario: Initial provider failure не вызывает wait или fallback
 - **WHEN** an ordinary delegation receives an allocated init tombstone without
   `turn_id`
-- **THEN** Codex reports exact `session_id`, `failure_kind` and bounded
-  `provider_error`, while evidence contains no wait, retry, resume or replacement
-  delegation
+- **THEN** actual failure, exact IDs и provider diagnostics остаются в evidence,
+  которое не содержит wait, retry, resume или replacement delegation;
+  свободное объяснение и reported outcome не оцениваются
 
 #### Scenario: Prompt provider failure не вызывает automatic recovery
 - **WHEN** a live allocated turn is rejected by the provider
 - **THEN** exact MCP evidence yields `turn.failed` and a null-result terminal
-  receipt, actual and reported outcomes are failed, the report binds the exact
-  bounded `provider_error`, and evidence contains no retry, resume or
+  receipt, actual outcome is failed, reported outcome is `not_checked`, and
+  evidence contains no retry, resume or
   replacement delegation
 
 #### Scenario: Mode timeout не запускает prompt или automatic recovery
 - **WHEN** the provider does not answer an idle between-turn mode transition
 - **THEN** exact MCP evidence yields `session.mode-change-failed` with
-  `mode_timeout`, actual and reported outcomes are failed, and no prompt,
+  `mode_timeout`, actual outcome is failed, reported outcome is `not_checked`, and no prompt,
   repeated transition, resume or replacement delegation occurs before a new
   user decision
 
 #### Scenario: Pre-provider mode rejection preserves a live wrapper
 - **WHEN** a between-turn mode call receives `protocol_error` while the wrapper
   remains live and idle
-- **THEN** the skill performs one diagnostic status read, reports the exact
-  live/no-active-turn state, sends no prompt, and does not claim wrapper loss or
-  require a new user decision; after the evaluation stage is complete it closes
-  that still-live runtime session
+- **THEN** exact trace/status evidence contains one diagnostic status read with
+  the live/no-active-turn state, no prompt, no replacement or resume, and a final
+  close of that still-live runtime session; free prose is not scored
 
 #### Scenario: Active follow-up не переживает failed terminal автоматически
 - **WHEN** a user follow-up arrives after a wait timeout but the addressed
   active turn then terminalizes as failed
 - **THEN** evidence contains no second `turn.started` or prompt contract, the
-  report preserves exact failure evidence, fake ACP releases that failure only
+  tool transcript preserves exact failure evidence; fake ACP releases that failure only
   after observable start of the separate Codex follow-up turn, and another
   provider operation requires a new post-failure user decision
 
 #### Scenario: Terminal timeout не маскируется wait timeout
 - **WHEN** runtime terminalizes an active turn as `timed_out`
 - **THEN** exact MCP evidence yields `turn.timed-out`, actual task outcome is
-  failed, and the Codex report calls the outcome interrupted rather than success
+  failed, while reported outcome remains `not_checked`
 
 #### Scenario: Failed resume не создаёт replacement delegation
 - **WHEN** a dead wrapper is followed by a provider load rejection
-- **THEN** evidence contains an exact-ID `session.resume-failed`, actual and
-  reported workflow outcomes are failed, and no replacement delegation occurs
+- **THEN** evidence contains an exact-ID `session.resume-failed`, actual outcome
+  is failed, reported outcome is `not_checked`, and no replacement delegation occurs
 
 #### Scenario: Cursor artifact остаётся для user decision
 - **WHEN** authorized agent work creates a temporary file without delete authority
 - **THEN** the workspace predicate proves the file still exists after close and
-  the Codex report names it as preserved
+  the report names it only when the exact path token is explicitly requested
 
 #### Scenario: Launch-only settings change through explicit resume
 - **WHEN** a later user turn requests different model settings for the retained
@@ -628,8 +748,321 @@ old-wrapper call, so an explicit resume can follow directly.
 
 #### Scenario: Retention gap не реконструируется
 - **WHEN** a real wait reports `events_lost:true` after bounded-log eviction
-- **THEN** Codex reports the gap, uses only current normalized state and terminal
-  evidence, and does not claim reconstructed intermediate history
+- **THEN** trace confirms the retention gap and subsequent operations consume
+  only current normalized state and terminal evidence; free prose is not scored
+
+### Requirement: Eval transcript plumbing и process verdict
+Eval harness MUST передавать pure scenario oracle фактическую bounded
+упорядоченную MCP trace. Trace MUST сохранять порядок вызовов, opaque IDs,
+успех/ошибку каждого вызова и факт отброшенных bound-ом вызовов. Harness MUST
+NOT реконструировать ожидаемые observations из scenario program.
+
+Включённый eval с `integration_failure` или `agent_behavior_mismatch` MUST
+напечатать один валидный `EvalResultV1` в stdout и завершиться ненулевым exit
+code. Только `pass` и явно выключенный `skipped` MUST завершаться с exit code
+`0`.
+
+
+Each report check MUST use only the final message of its exact Codex turn;
+commentary, tool output and later-turn messages are not substitutes. The
+version-specific Codex adapter owns exact item/phase/schema interpretation.
+The harness MUST capture the complete final before follow-up or cleanup and
+publish the evaluated text, Codex turn identity, observed phase, extraction
+source and completeness status in local evidence. Every required page/item
+MUST be read within bounded capture limits. A confirmed complete turn with no
+final is a report failure; failed/incomplete extraction, unsupported adapter
+shape or capture-limit overflow is `integration_failure`, not model omission.
+Truncated text MUST NOT be scored as a complete report. Golden fixtures MUST
+cover final extraction, including late/paginated items and a truly absent final.
+Only the isolated eval report is retained; credentials, request parameters,
+private history and raw provider prompts MUST NOT be added to diagnostics.
+
+#### Scenario: Transcript передаётся без реконструкции
+- **WHEN** harness передаёт trace в pure oracle
+- **THEN** trace сохраняет фактически observed порядок, IDs, outcomes и
+dropped-call evidence без program-driven additions
+
+#### Scenario: Включённый eval завершается ошибкой
+- **WHEN** включённый eval классифицирован как `integration_failure` или
+`agent_behavior_mismatch`
+- **THEN** stdout содержит один `EvalResultV1`, а процесс завершается nonzero
+
+### Requirement: Outcome model и диагностические доказательства
+Каждый eval run MUST написать в stdout ровно один `EvalResultV1` JSON object;
+diagnostics MUST идти только в stderr. `EvalResultV1` имеет schema version 1,
+запрещает additional properties и содержит:
+
+```json
+{
+  "schema_version": 1,
+  "scenario_id": "string",
+  "lane": "client-integration | model-behavior | full-live",
+  "eval_status": "pass | skipped | integration_failure | agent_behavior_mismatch",
+  "actual_task_outcome": "succeeded | failed | not_observed",
+  "reported_task_outcome": "not_checked",
+  "fixture_assertion_outcome": "pass | fail | not_observed",
+  "evidence_publication_status": "published | failed | not_attempted",
+  "evidence_ref": "string | null",
+  "cleanup_status": "succeeded | failed | not_required",
+  "failure_stage": "null | runner | adapter_admission | discovery | skill_load | transport | scenario | inspection | publication | cleanup",
+  "error_code": "string | null",
+  "message": "string | null"
+}
+```
+
+`scenario_id` and `error_code` are at most 128 UTF-8 bytes, `evidence_ref` at
+most 4,096 bytes, `message` at most 8,000 bytes, stdout JSON at most 16,384
+bytes and a published evidence artifact at most 1,048,576 UTF-8 bytes.
+`evidence_ref` is non-null if and only if publication status is `published`;
+the transcript exists only inside published evidence. `skipped` and pre-spawn
+failures use `not_observed` and `not_checked`; publication failure still emits
+the complete `EvalResultV1` to stdout with a null `evidence_ref`.
+
+Classifier MUST apply precedence: explicitly disabled optional lane —
+`skipped`; runner, adapter admission, discovery, skill load, transport,
+inspection, publication or cleanup failure — `integration_failure`; after
+complete evidence and successful cleanup a scenario-contract violation —
+`agent_behavior_mismatch`; expected scenario behavior — `pass`.
+
+
+The classifier MUST expose evidence admission, execution (including actual
+continuation), interaction delivery, outcome report and safety disclosure from
+one evaluation result. `actual_task_outcome` is independently observed from
+fixture/runtime evidence. `reported_task_outcome` MUST always be `not_checked`;
+expected metadata, actual outcome, marker presence and free prose MUST NOT
+populate it. Components `outcome_report` and `safety_disclosure` MUST always be
+`not_checked`. Interaction delivery is `pass | fail | not_applicable` and checks
+only exact admitted report fragments plus the mandatory nonempty model final.
+No new `EvalResultV1` status is introduced. Evidence failure maps to
+`integration_failure` with the existing inspection stage; admitted evidence
+with a mechanics or exact-delivery violation maps to
+`agent_behavior_mismatch`; only all applicable checks passing maps to `pass`.
+Confirmed missing or complete empty model final is an interaction-delivery
+mismatch when `report_checks` is empty; incomplete capture is an
+inspection `integration_failure`. `terminal_result_matched` MUST describe only
+the result/receipt comparison. Diagnostics MUST distinguish capture/evidence,
+mechanics/continuation and exact-delivery failures without inferring prose
+semantics.
+
+#### Scenario: Ожидаемый semantic failure честно сообщён
+- **WHEN** fixture assertion независимо фиксирует expected failed task outcome
+- **THEN** harness может вернуть `pass` при зелёных mechanics/evidence/exact
+  delivery, а `reported_task_outcome` остаётся `not_checked`
+
+#### Scenario: Evidence cleanup конфликтует с behavior mismatch
+- **WHEN** harness одновременно наблюдает workflow mismatch и не может
+  опубликовать evidence либо завершить cleanup
+- **THEN** harness возвращает `integration_failure` по precedence classifier
+
+#### Scenario: Реальный live lane выключен
+- **WHEN** live integration lane не включён явной конфигурацией
+- **THEN** этот lane возвращает `skipped`, не меняя итог локального
+  детерминированного behavior-eval
+
+### Requirement: Scenario program driver и pure scenario oracle
+Fake-ACP program driver MUST только выдавать materialized pending/effect/
+terminal stimuli и записывать bounded normalized callback/effect observations.
+Driver MUST NOT валидировать public MCP IDs, порядок вызовов, authority policy
+или runtime lifecycle. Pure scenario oracle MUST вызываться для всех admitted
+`programmed` rows и принимать materialized scenario, recorded normalized MCP
+trace, callback/effect observations и exact interaction checks и MUST возвращать
+детерминированное сравнение без child process, сети или изменения внешнего
+состояния.
+
+Oracle MUST обнаруживать answer до pending, operation after close, unexpected
+effect и отсутствие обязательной close attempt как scenario mismatch. Для
+public session/turn/request IDs oracle MUST применить только recovery-aware
+provenance rule и `recovered_calls` schema из owner «Сценарный контракт
+поведения и authority-aware interaction»; любой mismatch вне доказанной pair
+остаётся scenario mismatch. Runtime остаётся единственным владельцем
+немедленного отклонения invalid public IDs/order; отсутствие close observation
+для oracle является отсутствующим наблюдением. Mismatch после полного evidence
+и успешного cleanup MUST классифицироваться как `agent_behavior_mismatch` на
+стадии `scenario`.
+
+
+Итоговая классификация и постоянный `not_checked` reported outcome определены owner
+«Outcome model и диагностические доказательства»; driver не вычисляет второй
+verdict и не подставляет expected outcome вместо наблюдения.
+
+#### Scenario: Pending request получает коррелированный ответ
+- **WHEN** driver публикует pending stimulus, а recorded MCP trace содержит
+  answer с соответствующими opaque IDs и expected callback payload
+- **THEN** pure oracle принимает observation и продолжает проверку до terminal
+  outcome и close attempt
+
+#### Scenario: Ответ записан прежде pending
+- **WHEN** normalized trace содержит answer до соответствующего pending
+- **THEN** pure oracle возвращает scenario mismatch, не исправляя trace и не
+  присваивая driver роль runtime validator
+
+### Requirement: Immutable evidence manifest
+Существующий private published evidence object каждого scenario с полным
+validated proof MUST сохранить transcript/oracle/result fields и report capture
+из «Eval transcript plumbing и process verdict». Поле `manifest` MUST быть закрытым
+`EvidenceManifestV1` с `schema_version: 1`, `hash_algorithm: "sha256"`,
+`hash_encoding: "lowercase-hex"`, digest objects `installed_skill`, `corpus`,
+`materialized_scenario`, `adapter`, `evaluator`, closed `installed_payload`, `client` и
+`model`, без additional properties. Closure относится только к manifest
+subobject и MUST NOT переопределять существующий evidence envelope. При
+pre-proof failure durable evidence MUST NOT публиковаться: используется
+существующий `EvalResultV1` с `evidence_publication_status:"not_attempted"` и
+`evidence_ref:null`, без nullable variant manifest.
+
+Digest object MUST иметь ровно `{ "sha256": string, "bytes": integer }`;
+digest — 64 lowercase hexadecimal characters, `bytes` — positive safe integer
+не больше 1,048,576. `installed_payload` MUST иметь ровно
+`{ "marker_format":1, "payload_hash":string, "artifact_hash":string,
+"manifest_version":string }`; оба hashes имеют digest format, а version
+занимает 1–256 UTF-8 bytes. `client` MUST иметь ровно bounded nonempty
+`name/version`; `model` — ровно bounded `provider/name`, каждое string 1–256
+bytes либо null.
+
+Raw installed `SKILL.md`, corpus и выбранный adapter implementation MUST
+хешироваться как фактически прочитанные bytes без newline normalization.
+Materialized scenario MUST хешироваться как UTF-8 canonical JSON: object keys
+рекурсивно сортируются по ASCII, array order сохраняется, serialization
+использует `JSON.stringify` без whitespace; canonical scenario не больше 65,536
+bytes. Raw provider/model payload MUST не сохраняться, кроме exact isolated final,
+который является report capture по его owner requirement. Version-specific golden
+остаётся отдельным adapter contract-test evidence и MUST NOT входить в per-run
+manifest. Admitted version-specific adapter fixture MUST вернуть normalized
+`implementation_sha256`/`implementation_bytes` своих raw implementation bytes;
+golden contract-test MUST независимо сверить их с fixture и Codex version.
+Generic runner MUST NOT выводить digest source эвристикой из argv/path.
+
+Outer runner MUST до spawn прочитать/admit corpus, выбрать ID, materialize
+scenario, вычислить canonical payload/digest и передать child именно этот
+bounded payload с ожидаемым digest. Child MUST проверить digest до исполнения,
+через package-owned validation захватить marker projection, exact managed skill
+digest и programmed-only cache-loaded skill evidence до разрушения layout,
+выполнить собственный transport/package cleanup и на управляемых
+client/model/package terminal branches через finalizer записать bounded
+child-result в outer-owned path, включая cleanup status. Abrupt process loss
+остаётся pre-proof missing-result integration failure. Outer MUST сверить exact
+scenario и raw corpus digests и MUST проверить closed shape/bounds adapter и
+aggregate package projection. Adapter fixture/golden владеет фактической
+сверкой adapter bytes/version, package preflight — фактической сверкой package
+proof; outer MUST NOT повторять admission, выводить adapter source из argv/path
+или обходить package tree. Outer MUST попытаться удалить собственный fixture,
+затем сформировать окончательный `EvalResultV1` и только после обеих cleanup
+attempts опубликовать immutable evidence с final result только при полном
+validated proof. Cleanup failure MUST быть отражён в published failure evidence
+по существующему classifier precedence; pre-proof failure не публикует durable
+evidence. Publication failure после cleanup сохраняет существующую
+classification. Public bootstrap envelope MUST не изменяться. Missing или
+mismatched owned digest либо malformed proof MUST давать `integration_failure`
+до behavior verdict. Per-scenario manifest MUST NOT содержать run ordinal или temp roots.
+`evaluator` is the digest object of canonical candidate module inventory:
+repository-relative paths and raw-byte digests of the actually loaded
+oracle/harness/runtime/package/adapter/golden inputs, in deterministic path
+order. The inventory is retained once in the candidate bundle; each child
+proves its consumed inventory digest. It contains no credentials, environment
+dump or absolute host paths. Existing package proof owns installed payload
+validation; this digest does not create a second package scanner.
+
+
+До hosted acceptance MUST быть зафиксирован один candidate manifest для
+skill, corpus, исполняемого oracle/harness, runtime/package payload и
+version-specific adapter/golden и версии Codex client. Candidate identity
+включает только эти неизменные payload inputs. Отдельный run record ссылается
+на candidate digest и сохраняет model, effort, serial, фактическую concurrency
+и attempts; high и medium отличаются run settings, не candidate identity.
+Manifest MUST описывать реально использованные
+байты каждого child, а не только digest исходников до/после matrix. Drift любого
+входа делает acceptance непригодной. Число repeats и условие reproducibly green
+имеют единственного owner в `AGENTS.md`; counts выводятся из admitted corpus.
+Results разных runs MUST NOT собираться в одну зелёную серию. Исторические
+retry-containing artifacts сохраняют все attempts, но не принимаются как
+доказательство нового acceptance policy.
+
+Принятый baseline MUST иметь self-contained durable evidence bundle вне
+автоматически очищаемых temp-каталогов: aggregate, per-run/per-attempt artifacts,
+проверенные final reports и manifest. References внутри bundle относительные,
+целостность проверяется digest; индекс baseline указывает этот bundle.
+Markdown summary и JSON index MUST отражать один и тот же принятый candidate;
+старые descriptive snapshots не подменяются новым acceptance verdict и не
+выдаются за current evidence. Bundle не требует нового runtime registry или
+external storage service. Supervisor остаётся owner process/cleanup mechanics.
+
+Новый frozen input manifest MUST связать owner proof без второй source schema:
+`coverage_sources_digest` exact равен `coverage.sources.digest`, а mandatory
+`verification.coverage_audit` является root-relative path к exact
+`zero-counter-audit.json`, опубликованному owner CLI. Пересечение
+coverage-source paths и evaluator inventory MUST быть непустым; для каждого
+общего path `bytes` и `sha256` exact совпадают. До записи нового freeze creator
+MUST перечитать и сверить current bytes/hash всех entries coverage manifest
+(16 для этого candidate). Исторические freeze files остаются immutable; эти
+bindings не вводят all-lane source snapshot или registry.
+
+`scripts/eval/finalize-cursor-skill-eval.mjs --freeze <frozen-inputs.json>
+--diagnostic <highserial1.json> --high <highserial3.json> --medium
+<mediumserial3.json> --coverage-audit <zero-counter-audit.json> --baseline
+<existingbaseline.json> --report <existingMarkdown.md> --tasks <tasks.md>
+--output <acceptance-bundle-root/closeout-proof.json>` MUST быть единственным deterministic closeout
+consumer. Он принимает один frozen input manifest, ровно один successful high
+diagnostic run, одну high series из трёх serial runs, одну medium series из трёх
+serial runs и один current successful coverage audit. До любой target mutation
+он MUST проверить один candidate во всех eval inputs; exact corpus-owned
+scenario-ID set без duplicates или omissions и admitted-corpus counts в каждом
+run; process code `0`, null signal, `eval_status:pass`, одну retained attempt,
+published evidence, successful cleanup и complete nonempty final capture
+каждого scenario. Каждая artifact reference обязана быть относительной,
+оставаться внутри своего bundle, указывать на regular file и иметь совпадающий
+indexed hash. Coverage audit проверяется как отдельный local proof; его
+reference/hash не доказывает source binding hosted candidate и не разрешает
+автоматически завершать pre-freeze tasks 5.7/5.7a–5.7f.
+Finalizer MUST собрать переносимый acceptance bundle в общем root каталоге
+output proof file:
+authoritative evidence references в closeout proof относительны, содержатся
+внутри этого bundle и не зависят от исходных абсолютных CLI paths. Seed
+baseline/report/tasks и их опубликованные версии сохраняются рядом как
+проверяемые snapshots без превращения копий в отдельный source of truth.
+Новый freeze использует только references от этого общего bundle root;
+предыдущие freeze artifacts остаются immutable historical evidence.
+
+При полном proof finalizer MUST сначала вычислить и подготовить все outputs,
+затем детерминированно записать один closeout proof, additive JSON baseline и
+Markdown summary с сохранением всей истории, а также изменить только task
+checkboxes 5.8–5.11. Каждая target file заменяется атомарно, повтор с теми же
+inputs идемпотентен, tasks записываются последними. Любая validation failure до
+начала публикации MUST оставить proof, baseline, Markdown report и tasks без изменений.
+Межфайловая транзакция не обещается: interruption во время публикации может
+оставить корректный prefix, который идемпотентный повтор восстанавливает до
+полного набора. Finalizer не архивирует OpenSpec change, не создаёт generic
+workflow engine/registry и не выдаёт critic или architect approval.
+
+#### Scenario: Evidence связано с точным payload
+- **WHEN** outer запускает выбранный scenario и получает child-result
+- **THEN** scenario/raw-corpus digests совпадают, adapter/package proof
+  корректной closed формы захвачен до cleanup, а outer публикует один вложенный
+  manifest только при полном proof
+
+#### Scenario: Новый freeze связан с coverage owner proof
+- **WHEN** freeze creator принимает current coverage result/audit и evaluator
+  inventory для нового candidate
+- **THEN** он до записи сверяет все 16 coverage source files, exact digest,
+  непустое path overlap с identical bytes/hashes и root-relative exact audit
+  reference, не изменяя historical freezes
+
+#### Scenario: Closeout публикуется только после полного proof
+- **WHEN** finalizer получает frozen input manifest, high diagnostic,
+  high/medium three-run series и current coverage audit одного candidate
+- **THEN** он сначала проверяет exact scenario sets, process verdicts,
+  hashes/counts/attempts/captures/publication/cleanup и containment regular
+  artifact files, затем атомарно по одному файлу и идемпотентно пишет proof,
+  additive baseline, summary и последними только task checkboxes 5.8–5.11
+
+#### Scenario: Неуспешная validation не меняет acceptance records
+- **WHEN** любой required input, hash, count, capture, publication или cleanup
+  не проходит проверку до начала output publication
+- **THEN** finalizer не изменяет baseline, Markdown report или tasks и не
+  архивирует change
+
+#### Scenario: Прерванная публикация восстанавливается повтором
+- **WHEN** публикация прерывается после атомарной замены части target files
+- **THEN** уже записанные файлы остаются валидным prefix, tasks не опережают
+  остальные outputs, а повтор с теми же inputs идемпотентно завершает closeout
 
 ### Requirement: Cost-aware execution policy
 Corpus admission, canonical materialization, pure-oracle evaluation всех
@@ -657,6 +1090,44 @@ acceptance; duration и scenario count MAY быть только TAP diagnostics
 использовать per-test `mkdtemp` и не разделять mutable state между files;
 no-I/O contract tests MAY использовать inert injected path strings. Такие
 eval/driver tests MUST NOT изменять shared `process.env`.
+
+До candidate freeze MUST пройти детерминированная проверка изменённого oracle на
+admitted corpus и сохранённых report examples вместе с targeted focused
+reproductions. После freeze hosted диагностика MUST предшествовать новому
+acceptance baseline и состоять из одного полного diagnostic run выбранной
+конфигурации. Diagnostic pass не заменяет baseline по `AGENTS.md`.
+После baseline failure следующий запуск MUST иметь конкретную проверяемую
+гипотезу и соответствующее изменение либо подтверждённое восстановление
+инфраструктуры; повторять behavior trials только ради удачного pass запрещено.
+Если новый дефект не локализован, публикуется непринятый результат с evidence,
+а не очередное обещание «финального» прогона. Уже начатый baseline сохраняет
+полное распределение согласно `AGENTS.md`.
+
+Matrix MUST NOT автоматически повторять scenario после failure любого класса.
+Каждый запланированный scenario в serial run имеет одну попытку; любой non-pass
+делает этот run непринятым. После подтверждённого восстановления инфраструктуры
+или repair допускается новый отдельно идентифицированный запуск через
+diagnostic gate; предыдущий failed run остаётся историческим evidence.
+Повторная оценка сохранённого trace допускается только как diagnostic analysis
+и MUST NOT изменять его исходный verdict или выдавать его за новый run. Новый
+baseline требует свежих high и medium three-run series frozen candidate.
+
+Candidate provenance и долговечное хранение определены в «Immutable evidence
+manifest»; этот execution policy использует тот же manifest без второй схемы.
+После diagnostic pass выполняются ровно high three-run series и затем medium
+three-run series одного candidate. Только после них deterministic finalizer из
+того же owner requirement может выполнить closeout; он не повторяет runs и не
+создаёт отдельный approval gate.
+
+#### Scenario: Изменение oracle обесценивает прежний acceptance
+- **WHEN** skill и corpus неизменны, но oracle или adapter отличаются от candidate
+- **THEN** прежние counts остаются историческим evidence; новый candidate
+  проходит diagnostic и отдельный acceptance, без переноса зелёных runs
+
+#### Scenario: Неудачная диагностика не запускает цикл baseline
+- **WHEN** полный diagnostic run содержит mismatch
+- **THEN** причина и проверенный report сохраняются для targeted repair;
+  baseline не начинается до устранения диагностированного нарушения
 
 #### Scenario: Corpus проверяется дешёвым динамическим слоем
 - **WHEN** выполняется unit contract test

@@ -388,9 +388,11 @@ test('semantic gate rejects composite launch progress without every exercised ow
   assertRejected(checkOpenSpecSemantics(root, corpusRegistry), 'lacks Role-neutral mode and collaboration surface owner');
 });
 
-for (const { name, trace, requirement } of [
+for (const { name, trace, harnessFaults, requirement } of [
   { name: 'resume trace', trace: [{ kind: 'session.resumed' }], requirement: 'Продолжение Cursor-сессии' },
   { name: 'addressed wait trace', trace: [{ kind: 'turn.wait-timeout' }], requirement: 'Адресуемое ожидание состояния сессии' },
+  { name: 'full result read', trace: [{ kind: 'turn.result-read', complete: true }], requirement: 'Полное чтение terminal result' },
+  { name: 'result overflow', trace: [], harnessFaults: ['result-overflow'], requirement: 'Полное чтение terminal result' },
 ]) test(`semantic gate rejects ${name} without its runtime owner`, async (t) => {
   const root = await fixture(t);
   const corpusRegistry = await withCorpusOwnerRequirements(root, [{
@@ -399,7 +401,8 @@ for (const { name, trace, requirement } of [
   }]);
   const corpusPath = join(root, 'evals/cursor-subagent-scenarios.v1.json');
   const corpus = JSON.parse(await readFile(corpusPath, 'utf8'));
-  Object.assign(corpus.scenarios[0], { scenario_kind: 'programmed', expected_trace: trace });
+  Object.assign(corpus.scenarios[0], { scenario_kind: 'programmed', expected_trace: trace,
+    ...(harnessFaults ? { harness_faults: harnessFaults } : {}) });
   await writeFile(corpusPath, JSON.stringify(corpus));
   assertRejected(checkOpenSpecSemantics(root, corpusRegistry), `lacks ${requirement} owner`);
 });
@@ -500,6 +503,7 @@ for (const { name, content, expected } of [
   { name: 'malformed corpus owner document', content: '{', expected: 'cannot read corpus owner requirements' },
   { name: 'corpus without scenarios', content: JSON.stringify({ schema_version: 1 }), expected: 'cannot inspect corpus owner requirements' },
   { name: 'corpus row without owner requirements', content: JSON.stringify({ schema_version: 1, scenarios: [{}] }), expected: 'lacks owner_requirements' },
+  { name: 'null corpus row', content: JSON.stringify({ schema_version: 1, scenarios: [null] }), expected: 'scenario row 0 lacks owner_requirements' },
 ]) {
   test(`semantic gate rejects ${name}`, async (t) => {
     const root = await fixture(t);
@@ -796,6 +800,114 @@ test('semantic gate admits an archived replacement only after its exact delta is
   assertRejected(checkOpenSpecSemantics(root, replacementRegistry), 'invalid modified capability');
 });
 
+async function stackedFixture(t, sourceChange = evalChange) {
+  const root = await fixture(t);
+  const capability = contracts[facadeChange].capability;
+  const requirement = 'Skill workflow делегирования';
+  const sourcePath = `openspec/changes/${sourceChange}/specs/${capability}/spec.md`;
+  const sourceBlock = requirementBlock(await readFile(join(root, sourcePath), 'utf8'), requirement);
+  const deltaPath = `openspec/changes/${supervisorChange}/specs/${capability}/spec.md`;
+  const replacementBlock = `### Requirement: ${requirement}\nSuccessor contract.`;
+  await write(root, deltaPath, `## MODIFIED Requirements\n${replacementBlock}\n`);
+  await append(root, `openspec/changes/${supervisorChange}/proposal.md`, `- \`${capability}\`\n`);
+  await replace(root, `openspec/changes/${supervisorChange}/design.md`,
+    '«Supervisor fixture requirement»', `«Supervisor fixture requirement», «${requirement}»`);
+  await append(root, `openspec/changes/${supervisorChange}/tasks.md`, `\n- [ ] Verify «${requirement}»`);
+  const modification = {
+    capability, requirement, sourceChange,
+    replacementReason: 'Replace the exact registered predecessor contract.',
+    sourceDigest: createHash('sha256').update(sourceBlock).digest('hex'),
+    replacementDigest: createHash('sha256').update(replacementBlock).digest('hex'),
+  };
+  const stackedRegistry = structuredClone(registry);
+  stackedRegistry.changes.find(({ id }) => id === supervisorChange).modified.push(modification);
+  return { root, stackedRegistry, modification, sourcePath, sourceBlock, deltaPath, replacementBlock,
+    mainPath: `openspec/specs/${capability}/spec.md` };
+}
+
+async function archiveFixtureChange(root, change) {
+  const destination = `openspec/changes/archive/2026-09-07-${change}`;
+  await mkdir(dirname(join(root, destination)), { recursive: true });
+  await rename(join(root, `openspec/changes/${change}`), join(root, destination));
+  return destination;
+}
+
+test('stacked replacement admits registered modified and owned ADDED sources before main sync', async (t) => {
+  for (const source of [evalChange, facadeChange]) {
+    const f = await stackedFixture(t, source);
+    if (source === facadeChange) {
+      // The existing eval consumer still needs its unrelated main-source contract.
+      f.stackedRegistry.changes.find(({ id }) => id === evalChange).modified[0] = {
+        ...f.modification, replacementDigest: createHash('sha256').update(requirementBlock(
+          await readFile(join(f.root, `openspec/changes/${evalChange}/specs/${f.modification.capability}/spec.md`), 'utf8'),
+          f.modification.requirement)).digest('hex'),
+      };
+      await write(f.root, f.sourcePath, `## ADDED Requirements\n${await readFile(join(f.root, f.sourcePath), 'utf8')}`);
+      await rm(join(f.root, f.mainPath));
+    }
+    assert.deepEqual(checkOpenSpecSemantics(f.root, f.stackedRegistry).errors, []);
+  }
+});
+
+for (const fault of ['unknown', 'self', 'later', 'unowned', 'missing file', 'missing block', 'source drift', 'replacement drift', 'missing reason', 'invalid source digest', 'missing replacement digest', 'undefined source']) {
+  test(`stacked replacement rejects ${fault}`, async (t) => {
+    const f = await stackedFixture(t);
+    if (fault === 'unknown') f.modification.sourceChange = 'unknown';
+    if (fault === 'self') f.modification.sourceChange = supervisorChange;
+    if (fault === 'later') {
+      const consumer = f.stackedRegistry.changes.pop();
+      f.stackedRegistry.changes.unshift(consumer);
+    }
+    if (fault === 'unowned') {
+      f.modification.sourceChange = packageChange;
+      await write(f.root, `openspec/changes/${packageChange}/specs/${f.modification.capability}/spec.md`, f.sourceBlock);
+    }
+    if (fault === 'missing file') await rm(join(f.root, f.sourcePath));
+    if (fault === 'missing block') await replace(f.root, f.sourcePath,
+      `### Requirement: ${f.modification.requirement}`, `### Requirement: ${f.modification.requirement} suffix`);
+    if (fault === 'source drift') await append(f.root, f.sourcePath, '\nSource drift.');
+    if (fault === 'replacement drift') await append(f.root, f.deltaPath, '\nSuccessor drift.');
+    if (fault === 'missing reason') delete f.modification.replacementReason;
+    if (fault === 'invalid source digest') f.modification.sourceDigest = 'invalid';
+    if (fault === 'missing replacement digest') delete f.modification.replacementDigest;
+    if (fault === 'undefined source') f.modification.sourceChange = undefined;
+    if (fault === 'missing file') {
+      assert.throws(() => checkOpenSpecSemantics(f.root, f.stackedRegistry), { code: 'ENOENT' });
+      return;
+    }
+    assertRejected(checkOpenSpecSemantics(f.root, f.stackedRegistry), 'invalid modified capability');
+  });
+}
+
+test('stacked archive requires ordered lifecycle and exact predecessor main sync', async (t) => {
+  const f = await stackedFixture(t);
+  const sourceArchive = await archiveFixtureChange(f.root, evalChange);
+  assertRejected(checkOpenSpecSemantics(f.root, f.stackedRegistry), 'invalid modified capability');
+  await write(f.root, f.mainPath, f.sourceBlock);
+  assert.deepEqual(checkOpenSpecSemantics(f.root, f.stackedRegistry).errors, []);
+  await write(f.root, f.mainPath, f.replacementBlock);
+  assertRejected(checkOpenSpecSemantics(f.root, f.stackedRegistry), 'invalid modified capability');
+  await archiveFixtureChange(f.root, supervisorChange);
+  // The predecessor's legacy additive delta requires its original lines in main.
+  f.stackedRegistry.changes.find(({ id }) => id === evalChange).modified[0] = {
+    ...f.modification, sourceChange: facadeChange,
+    sourceDigest: createHash('sha256').update(requirementBlock(await readFile(join(f.root,
+      `openspec/changes/${facadeChange}/specs/${f.modification.capability}/spec.md`), 'utf8'),
+    f.modification.requirement)).digest('hex'), replacementDigest: f.modification.sourceDigest,
+  };
+  await archiveFixtureChange(f.root, facadeChange);
+  assert.deepEqual(checkOpenSpecSemantics(f.root, f.stackedRegistry).errors, []);
+  await append(f.root, `${sourceArchive}/specs/${f.modification.capability}/spec.md`, '\nArchived source drift.');
+  assertRejected(checkOpenSpecSemantics(f.root, f.stackedRegistry), 'invalid modified capability');
+});
+
+test('stacked consumer cannot archive while its source remains active', async (t) => {
+  const f = await stackedFixture(t);
+  await archiveFixtureChange(f.root, supervisorChange);
+  await write(f.root, f.mainPath, f.replacementBlock);
+  assertRejected(checkOpenSpecSemantics(f.root, f.stackedRegistry), 'invalid modified capability');
+});
+
 test('replacement lineage admits a registered future supersession without trusting mutable current text', () => {
   const first = '1'.repeat(64); const second = '2'.repeat(64); const third = '3'.repeat(64);
   const lineageRegistry = { changes: [
@@ -807,11 +919,43 @@ test('replacement lineage admits a registered future supersession without trusti
   assert.equal(replacementLineageReaches(lineageRegistry, 'fixture', 'Requirement', first, '4'.repeat(64)), false);
 });
 
+test('replacement lineage terminates when registered replacements contain a cycle', () => {
+  const first = '1'.repeat(64); const second = '2'.repeat(64);
+  const lineageRegistry = { changes: [
+    { modified: [{ capability: 'fixture', requirement: 'Requirement', sourceDigest: first, replacementDigest: second }] },
+    { modified: [{ capability: 'fixture', requirement: 'Requirement', sourceDigest: second, replacementDigest: first }] },
+  ] };
+  assert.equal(replacementLineageReaches(lineageRegistry, 'fixture', 'Requirement', first, '3'.repeat(64)), false);
+});
+
 test('eval replacement rejects stale hardcoded corpus counts outside the corpus', () => {
   assert.equal(hasFixedEvalCorpusCount('Cost-aware execution policy', 'evaluate 19 programmed rows'), true);
   assert.equal(hasFixedEvalCorpusCount('Разделённые eval lanes и evidence загрузки skill', 'each of six programmed runs'), true);
   assert.equal(hasFixedEvalCorpusCount('Cost-aware execution policy', 'семи rows'), true);
   assert.equal(hasFixedEvalCorpusCount('Cost-aware execution policy', 'evaluate every admitted programmed row'), false);
+  assert.equal(hasFixedEvalCorpusCount('Unrelated requirement', 'evaluate 26 programmed rows'), false);
+});
+
+test('semantic gate applies the fixed corpus-count rule to the interactive eval modification', async (t) => {
+  const root = await fixture(t);
+  const capability = 'cursor-subagent-skill-evals';
+  const requirement = 'Cost-aware execution policy';
+  await write(root, `openspec/specs/${capability}/spec.md`,
+    `### Requirement: ${requirement}\nEvaluate every admitted programmed row.\n`);
+  await write(root, `openspec/changes/${evalChange}/specs/${capability}/spec.md`,
+    `## MODIFIED Requirements\n### Requirement: ${requirement}\nEvaluate every admitted programmed row.\nEvaluate 26 programmed rows.\n`);
+  await append(root, `openspec/changes/${evalChange}/proposal.md`, `- \`${capability}\`\n`);
+  await append(root, `openspec/changes/${evalChange}/design.md`, `\n«${requirement}»\n`);
+  await append(root, `openspec/changes/${evalChange}/tasks.md`, `\n- [ ] Verify «${requirement}»\n`);
+  const interactiveRegistry = {
+    ...registry,
+    roles: { ...registry.roles, interactiveAcpUx: evalChange },
+    changes: registry.changes.map((contract) => contract.id === evalChange
+      ? { ...contract, modified: [...contract.modified, { capability, requirement }] }
+      : contract),
+  };
+  assertRejected(checkOpenSpecSemantics(root, interactiveRegistry),
+    `invalid modified capability ${capability}/${requirement}`);
 });
 
 test('semantic gate rejects an unreasoned replacement bypass', async (t) => {

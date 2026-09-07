@@ -24,7 +24,7 @@ if (!Number.isSafeInteger(concurrency) || concurrency < 1 || concurrency > 3) {
 }
 
 const plan = JSON.parse(await readFile(planPath, 'utf8'));
-if (plan?.schema_version !== 1 || typeof plan.name !== 'string' || !Array.isArray(plan.rows) || plan.rows.length === 0) {
+if (plan?.schema_version !== 1 || typeof plan.name !== 'string' || plan.name.length === 0 || !Array.isArray(plan.rows) || plan.rows.length === 0) {
   throw new Error('plan must be a v1 object with nonempty name and rows');
 }
 const seen = new Set();
@@ -43,6 +43,8 @@ const emit = (event) => process.stdout.write(`${JSON.stringify({ timestamp: new 
 const startedAt = new Date().toISOString();
 const startedMs = Date.now();
 const results = Array(plan.rows.length);
+const rowPassed = ({ process: child, summary }) => child.code === 0 && child.signal === null
+  && summary?.counts?.total > 0 && summary.counts.pass === summary.counts.total && summary.digest_stable === true;
 
 const runRow = async (row, index) => {
   const rowOutput = resolve(rowDirectory, `${row.model}-${row.effort}.json`);
@@ -68,7 +70,7 @@ const runRow = async (row, index) => {
   catch { error = Buffer.concat(stderr).toString('utf8').slice(-4_000) || 'matrix summary was not published'; }
   const result = { ...row, output: rowOutput, process: { code, signal, duration_ms: Date.now() - started }, summary, error };
   emit({ event: 'row_completed', index, total: plan.rows.length, model: row.model, effort: row.effort,
-    eval_status: summary?.counts?.pass === summary?.counts?.total && summary?.digest_stable ? 'pass' : 'failed',
+    eval_status: rowPassed(result) ? 'pass' : 'failed',
     duration_ms: result.process.duration_ms });
   return result;
 };
@@ -85,7 +87,7 @@ const worker = async () => {
 await Promise.all(Array.from({ length: Math.min(concurrency, plan.rows.length) }, () => worker()));
 const counts = { total: results.length, passed: 0, failed: 0 };
 for (const result of results) {
-  if (result.summary?.counts?.pass === result.summary?.counts?.total && result.summary?.digest_stable) counts.passed += 1;
+  if (rowPassed(result)) counts.passed += 1;
   else counts.failed += 1;
 }
 const summary = { schema_version: 1, plan: { name: plan.name, rows: plan.rows }, concurrency,

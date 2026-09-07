@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdir, rename, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute } from 'node:path';
+import { canonicalJson } from './cursor-subagent-bootstrap.mjs';
 
 const MAX_CALLS = 128;
 const MAX_ID_BYTES = 256;
@@ -14,6 +15,7 @@ const [target, ...args] = process.argv.slice(2);
 if (!target) throw new Error('MCP proxy target is required');
 const transcript = [];
 const pendingCalls = new Map();
+const resultReads = new Map();
 let droppedCalls = 0;
 const child = spawn(process.execPath, [target, ...args], { stdio: ['pipe', 'pipe', 'pipe'], env: process.env });
 const ownerPid = process.ppid;
@@ -34,6 +36,11 @@ function boundedId(value) {
   return value;
 }
 function callKey(value) { return `${typeof value}:${String(value)}`; }
+function isPlainObject(value) {
+  if (!value || Array.isArray(value) || typeof value !== 'object') return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
 function compactIds(value) {
   if (!value || Array.isArray(value) || typeof value !== 'object') return {};
   return Object.fromEntries(['session_id', 'turn_id', 'request_id'].flatMap((key) => {
@@ -59,7 +66,14 @@ function compactBoundedText(value) {
   return { text: value.text, truncated: value.truncated };
 }
 function compactRequest(tool, args) {
+  let argumentsDigest = null;
+  if (isPlainObject(args)) {
+    const nonIdArguments = Object.fromEntries(Object.entries(args)
+      .filter(([key]) => key !== 'session_id' && key !== 'turn_id'));
+    argumentsDigest = createHash('sha256').update(canonicalJson(nonIdArguments)).digest('hex');
+  }
   const request = compactIds(args);
+  if (argumentsDigest !== null) request.arguments_without_session_turn_sha256 = argumentsDigest;
   if ((tool === 'cursor_delegate' || tool === 'cursor_set_mode') && boundedId(args?.mode) !== null) request.mode = args.mode;
   if (tool === 'cursor_delegate' || tool === 'cursor_resume_session') {
     if (boundedId(args?.model) !== null) request.model = args.model;
@@ -79,6 +93,7 @@ function compactRequest(tool, args) {
     if (Number.isSafeInteger(args?.after_progress_revision)) request.after_progress_revision = args.after_progress_revision;
     if (Number.isSafeInteger(args?.timeout_ms)) request.timeout_ms = args.timeout_ms;
   }
+  if (tool === 'cursor_read_result' && Number.isSafeInteger(args?.offset)) request.offset = args.offset;
   if (tool === 'cursor_answer_question') {
     if (boundedId(args?.outcome) !== null) request.outcome = args.outcome;
     if (Array.isArray(args?.answers)) request.answers = args.answers.slice(0, MAX_LIST_ITEMS).map((answer) => ({
@@ -93,7 +108,31 @@ function toolPayload(message) {
   if (typeof text !== 'string') return null;
   try { const value = JSON.parse(text); return value && !Array.isArray(value) && typeof value === 'object' ? value : null; } catch { return null; }
 }
-function compactResponse(message) {
+function compactResultRead(payload, entry) {
+  if (entry?.tool !== 'cursor_read_result' || typeof payload?.text !== 'string') return null;
+  const { session_id: sessionId, turn_id: turnId } = entry.request;
+  const requestedOffset = entry.request.offset ?? 0;
+  const textBytes = Buffer.from(payload.text, 'utf8');
+  const key = `${sessionId}\0${turnId}`;
+  let state = resultReads.get(key);
+  if (requestedOffset === 0) {
+    state = { nextOffset: 0, hash: createHash('sha256'), bytes: 0 };
+    resultReads.set(key, state);
+  }
+  const shapeMatched = state && requestedOffset === state.nextOffset && payload.offset === requestedOffset
+    && Number.isSafeInteger(payload.total_bytes) && payload.total_bytes >= 0
+    && typeof payload.sha256 === 'string' && /^[a-f0-9]{64}$/.test(payload.sha256)
+    && typeof payload.eof === 'boolean'
+    && (payload.eof ? payload.next_offset === null : payload.next_offset === requestedOffset + textBytes.length);
+  if (!shapeMatched) return { complete: false, eof: payload.eof === true };
+  state.hash.update(textBytes); state.bytes += textBytes.length; state.nextOffset = requestedOffset + textBytes.length;
+  if (!payload.eof) return { complete: false, eof: false };
+  const digest = state.hash.digest('hex');
+  const complete = state.bytes === payload.total_bytes && state.nextOffset === payload.total_bytes && digest === payload.sha256;
+  resultReads.delete(key);
+  return { complete, eof: true, total_bytes: payload.total_bytes, sha256: payload.sha256 };
+}
+function compactResponse(message, entry) {
   const payload = toolPayload(message);
   const response = { ok: message?.result?.isError === false && payload !== null };
   if (payload) {
@@ -121,6 +160,8 @@ function compactResponse(message) {
     });
     if (Array.isArray(payload.pending)) response.pending = compactPending(payload.pending);
     if (typeof payload.result?.text === 'string') response.result = compactResult(payload.result);
+    const resultRead = compactResultRead(payload, entry);
+    if (resultRead) response.result_read = resultRead;
     if (payload.terminal_receipt && !Array.isArray(payload.terminal_receipt) && typeof payload.terminal_receipt === 'object') {
       const receipt = payload.terminal_receipt;
       response.terminal_receipt = {
@@ -147,7 +188,7 @@ function observeResponse(message) {
   if (!message || !Object.hasOwn(message, 'id')) return;
   const key = callKey(message.id); const entry = pendingCalls.get(key);
   if (!entry) return;
-  pendingCalls.delete(key); entry.response = compactResponse(message);
+  pendingCalls.delete(key); entry.response = compactResponse(message, entry);
   publication = publication.then(publish).catch((error) => {
     publicationFailure ??= error;
     failProxy(error.message);

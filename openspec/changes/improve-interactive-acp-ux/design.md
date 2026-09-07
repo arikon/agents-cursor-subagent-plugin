@@ -9,26 +9,39 @@ caller при переносе cursor и IDs между interactive calls. Пр�
 ## v1 Contract Baseline
 
 **Goal.** Сделать продолжение wait и ранее созданной Cursor-сессии, recovery
-stale pending request, проверку terminal completion, экономную доставку terminal
+stale pending request и конечного набора полностью аудируемых pre-effect
+corrections existing-session calls, проверку terminal completion, экономную доставку terminal
 result, явный выбор модели и recovery follow-up после active turn понятными для caller,
 сохраняя coarse user-bounded delegation и current-mode write-capability gate; устранить преждевременный `timed_out` для
 длительной авторизованной реализации, а также применить тот же
 прямолинейный lifecycle к research/Q&A, planning, debugging и coordinator
 сценариям, а не только review/implementation.
+Текущее уточнение IUX-3/IUX-19 завершает проверяемую приёмку skill для
+terra/high и terra/medium, устраняя смешение пользовательского отчёта и evidence.
+Одобренный пользователем IUX-20 устраняет потерю хвоста длинного review: preview
+остаётся bounded, весь принятый result доступен через адресуемое чтение.
+Одобренная после terra/high diagnostic автоматизация связывает coverage с
+проверенными product sources и делает acceptance closeout воспроизводимым через
+существующих owners IUX-18/IUX-19.
 
 **Non-goals.** Не вводить persistent registry,
 Cursor archive reader, auto-approval, auto-retry/restart, prompt policy engine,
 model registry, global Cursor-config writes, session listing или новые external
 dependencies.
+Final-only external handoff, новый versioned final-answer protocol и
+универсальный natural-language judge также вне scope.
 
-**Public-invariant index.** `IUX-1` → «Публичный MCP tool contract»; `IUX-2` → «Адресуемое ожидание состояния сессии», «Нормативные limits runtime»; `IUX-3` → «Skill workflow делегирования», «Workspace discipline делегирования»; `IUX-4` → «Явный выбор модели запуска»; `IUX-5` → «Продолжение Cursor-сессии»; `IUX-6` → «Высокоуровневое создание делегирования»; `IUX-7` → «Per-session параметры модели»; `IUX-8` → excluded as `external_adapter_drift`: installed Cursor не подтверждает отдельный public `auto_optimize_for`; `IUX-9` → «Skill workflow делегирования»; `IUX-10` → retired as overengineering: no automatic artifact cleanup; `IUX-11` → «Нормативные limits runtime», «Seamless per-session launch»; `IUX-12` → «Sparse wait and bounded progress»; `IUX-13` → «Sparse wait and bounded progress»; `IUX-14` → «Provider errors are bounded and classified»; `IUX-15` → «Seamless per-session launch»; `IUX-16` → «Режимы Cursor и ACP callbacks», «Role-neutral mode and collaboration surface»; `IUX-17` → «Role-neutral mode and collaboration surface»; `IUX-18` → `node-test-supervision` «Lane selection и coverage scope» и `cursor-plugin-distribution` «Проверяемая чистая установка», «Managed marketplace lifecycle»; `IUX-19` → `cursor-subagent-skill-evals` «Разделённые eval lanes и evidence загрузки skill», «Сценарный контракт поведения и authority-aware interaction», «Cost-aware execution policy» с project-wide policy из `AGENTS.md`.
+**Public-invariant index.** `IUX-1` → «Публичный MCP tool contract»; `IUX-2` → «Адресуемое ожидание состояния сессии», «Нормативные limits runtime»; `IUX-3` → «Skill workflow делегирования», «Workspace discipline делегирования»; `IUX-4` → «Явный выбор модели запуска»; `IUX-5` → «Продолжение Cursor-сессии»; `IUX-6` → «Высокоуровневое создание делегирования»; `IUX-7` → «Per-session параметры модели»; `IUX-8` → excluded as `external_adapter_drift`: installed Cursor не подтверждает отдельный public `auto_optimize_for`; `IUX-9` → «Skill workflow делегирования»; `IUX-10` → retired as overengineering: no automatic artifact cleanup; `IUX-11` → «Нормативные limits runtime», «Seamless per-session launch»; `IUX-12` → «Sparse wait and bounded progress»; `IUX-13` → «Sparse wait and bounded progress»; `IUX-14` → «Provider errors are bounded and classified»; `IUX-15` → «Seamless per-session launch»; `IUX-16` → «Режимы Cursor и ACP callbacks», «Role-neutral mode and collaboration surface»; `IUX-17` → «Role-neutral mode and collaboration surface»; `IUX-18` → `node-test-supervision` «Lane selection и coverage scope» и `cursor-plugin-distribution` «Проверяемая чистая установка», «Managed marketplace lifecycle»; `IUX-19` → `cursor-subagent-skill-evals` «Разделённые eval lanes и evidence загрузки skill», «Сценарный контракт поведения и authority-aware interaction», «Eval transcript plumbing и process verdict», «Outcome model и диагностические доказательства», «Scenario program driver и pure scenario oracle», «Immutable evidence manifest», «Cost-aware execution policy» с project-wide policy из `AGENTS.md`; `IUX-20` → runtime «Публичный MCP tool contract», «Нормативные limits runtime», «Полное чтение terminal result», facade «Skill workflow делегирования», eval «Сценарный контракт поведения и authority-aware interaction», package «Проверяемая чистая установка».
 
-**Owner map.** `cursor-acp-session-runtime` owns additive interactive diagnostics; `cursor-task-delegation` owns caller workflow composition; `node-test-supervision` owns test process lifecycle; `cursor-subagent-skill-evals` owns behavior proof; `cursor-plugin-distribution` owns installation/discovery and the release canary semantics. Concretely, `node-test-supervision` owns every Node test process lifecycle and the dedicated eval lane, while `cursor-subagent-skill-evals` owns corpus admission, behavior oracle and evidence schema. `cursor-acp-session-runtime` владеет envelope, cursor,
-recoverable error, terminal receipt, model/resume schema и adapter;
-`cursor-task-delegation` владеет caller-facing evidence-mode, state handoff и
+**Owner map.** `cursor-acp-session-runtime` owns additive interactive diagnostics; `cursor-task-delegation` owns caller workflow composition; `node-test-supervision` owns test process lifecycle; `cursor-subagent-skill-evals` owns behavior proof; `cursor-plugin-distribution` owns installation/discovery and the release canary semantics. Concretely, `node-test-supervision` owns every Node test process lifecycle, dedicated eval lane, coverage source binding и zero-counter audit, while `cursor-subagent-skill-evals` owns corpus admission, behavior oracle, evidence schema и acceptance closeout. `cursor-acp-session-runtime` владеет envelope, cursor,
+recoverable error, terminal receipt, model/resume schema, retained full result
+и его paging, а также adapter;
+`cursor-task-delegation` владеет caller-facing evidence-mode, пользовательским
+report guidance и использованием tool-held state для continuation, а также
 единственным facade forwarding optional launch fields; `cursor-subagent-skill-evals`
-добавляет только новые rows и минимальную trace grammar для их observable
-behavior, не дублируя skill workflow. Existing owner boundaries, public
+владеет corpus, exact-delivery assertions, capture proof, recovery-aware audit
+raw call pair и итоговым classifier
+для mechanics/evidence/observable delivery, не дублируя skill workflow. Existing owner boundaries, public
 session/turn state union и permission-decision policy не меняются. Runtime
 получает additive internal mode-transition guard, а package owner расширяет
 свой payload allowlist recording proxy; эти изменения остаются внутри
@@ -40,10 +53,16 @@ owner; strict и semantic gates проходят; runtime, facade и Codex behav
 Cursor-конфигурации, explicit resume только по previously returned opaque ID,
 180-second wait cap, hour-long turn cap, admitted mode/collaboration-extension
 adapter fixtures, однократную доставку
-terminal result, отсутствие automatic permission и сохранение idempotent close,
+terminal preview, полное чтение длинного результата до отчёта и явный overflow
+failure, отсутствие automatic permission и сохранение idempotent close,
 а также focused unit invocation через тот же process/artifact supervisor без
 ослабления полного coverage manifest. Keyword/substring assertions над текстом
 skill не считаются behavioral proof.
+Для текущего уточнения exit означает готовность документов к apply: owner
+specs согласованы с tasks раздела 5, независимый critic не находит
+`baseline_violation`, architect подтверждает классификации и минимальность.
+Успешная hosted-приёмка является выходом реализации по tasks 5.8–5.11, а не
+доказательством готовности planning artifacts.
 
 **Future-change candidates.** Durable cross-process audit export и интеграция
 с документированным Cursor session-storage API требуют отдельного change после
@@ -51,6 +70,31 @@ skill не считаются behavioral proof.
 
 **Review classification.** Замороженный baseline не расширяется находками;
 каждая из них имеет ровно одну классификацию и минимальный repair owner:
+
+Пользователь 2026-09-06 явно одобрил обновление текущего change по рекомендациям
+ремонта oracle/evidence. Это уточнение существующих IUX-3/IUX-19; новый invariant
+или protocol не создаётся. Ниже сохраняется история review, но старые
+реализационные формы report-binding заменены согласно этому решению.
+Позже пользователь явно одобрил `new_scope` IUX-20: устранение runtime truncation
+полного review. Его численные
+лимиты, схема и retention принадлежат runtime, skill только дочитывает результат.
+Пользователь 2026-09-07 также явно одобрил сокращение mandatory IUX-19
+acceptance: свободные outcome/safety semantics, язык, шаблон и фразы не являются
+gate; exact capture сохраняется, а semantic components записываются как
+`not_checked`. Это уточнение границы существующего eval owner, без нового
+runtime/facade protocol.
+Пользователь 2026-09-07 затем явно одобрил recovery-aware расширение IUX-19:
+eval может принять только полностью доказанный конечный класс pre-effect
+correction existing-session call, сохраняя видимую runtime error и raw call
+records. Это не меняет runtime API, facade authority или общий запрет loose
+matching.
+Пользователь 2026-09-07 также явно одобрил `new_scope`, удаляющий
+`cursor_matched` и обязательную equality с последним returned event cursor.
+`resume_after_event_id` остаётся рекомендуемой sparse-подсказкой;
+`last_event_id` является high-water mark, а не acknowledgement чтения
+предшествующих событий. Успешный wait допускает omitted=0, повторный или более ранний runtime-valid
+`after_event_id`. Failed-call recovery по-прежнему требует exact causal public
+state и не получает loose matching.
 
 | Finding | Classification | Current repair |
 | --- | --- | --- |
@@ -68,7 +112,7 @@ skill не считаются behavioral proof.
 | Hosted eval fallback подменяет observed skill behavior | `implementation_concern` | Diagnostic fallback removed; fail-closed hosted lane |
 | README смешивает portable runtime и pinned development Node | `implementation_concern` | Раздельные runtime/development requirements |
 | Sensitivity без fresh baseline и exact mismatch | `implementation_concern` | Linked baseline plus corpus-owned mismatch |
-| Fault injection выбирается hardcoded scenario IDs | `overengineering` | Corpus-owned `harness_faults`/`skill_sensitivity` metadata |
+| Fault injection выбирается hardcoded scenario IDs | `overengineering` | Corpus-owned `harness_faults` metadata |
 | Programmed scenario без facade owner | `baseline_violation` | Every programmed row references its facade workflow owner |
 | Archive replacement сравнивается с mutable current main | `overengineering` | Immutable source/replacement digests validate active and archived artifacts separately |
 | Sensitivity baseline и mutation читают разные source/corpus payloads | `implementation_concern` | Exact source, corpus, scenario and loaded-skill digest pairing with retained baseline evidence |
@@ -86,27 +130,27 @@ skill не считаются behavioral proof.
 | Artifact preservation row is self-fulfilled by an explicit no-delete prompt | `implementation_concern` | Ordinary create-only authority leaves cleanup uninstructed and observes preserved file/path |
 | Eval spec has conflicting placeholder/predicate allowlists after start-rejection addition | `baseline_violation` | One canonical grammar includes the missing-directory placeholder and predicate; unknown placeholders remain rejected |
 | Per-row `forbidden_observations` and synthetic raw-payload injection duplicate existing oracle owners | `overengineering` | Global oracle owns runtime-invariant mismatches; recording-proxy behavior test exclusively owns payload-confidentiality proof |
-| Delegate init tombstone shape, envelope prohibition, operator recovery, eval grammar and proxy evidence are inconsistent | `baseline_violation` | Admit unchanged failed-allocation `SessionEnvelope`; scope sparse-field prohibitions to live `ActionEnvelope`; report exact failure diagnostics without wait, retry, resume or fallback; synchronize grammar; retain only bounded public provider error without raw data; prove one hosted scenario |
+| Delegate init tombstone shape, envelope prohibition, operator recovery, eval grammar and proxy evidence are inconsistent | `baseline_violation` | Admit unchanged failed-allocation `SessionEnvelope`; scope sparse-field prohibitions to live `ActionEnvelope`; report normalized failed state and error code without wait, retry, resume or fallback; keep exact diagnostics in transcript evidence; synchronize grammar; retain only bounded public provider error without raw data; prove one hosted scenario |
 | Terminal eval grammar describes independent status/result unions that admission rejects | `baseline_violation` | Specify the intentional closed variants `completed + string`, `failed + null` and `timed_out + null` enforced by loader and behavioral corpus |
 | Eval observer fabricates prior `turn_id` on session-level mode/close operations | `implementation_concern` | Require actual call provenance: session-level observations use observed `session_id` and only an optional same-operation `turn_id`; turn-level observations still require both IDs |
 | Runtime-only model/effort grammar is absent from discoverable MCP contract | `baseline_violation` | Keep the admitted base-model and effort-token boundary, expose exact JSON Schema patterns, and document it in owner spec, skill and README |
-| `provider_error` report binding accepts only one field of a structured error | `implementation_concern` | Match exact code, message text and truncation flag atomically from one observed provider error; add incomplete-report negatives |
+| `provider_error` report binding accepts only one field of a structured error | `implementation_concern` | Atomic equality остаётся в transcript evidence; final-copy binding снят уточнением IUX-19 |
 | UTF-8 byte truncation can retain a lone surrogate at a multibyte boundary | `implementation_concern` | Normalize internal strings, truncate by Unicode code point, and regress exact boundary cases for terminal result, progress, provider error, eval result and bootstrap diagnostics |
 | Blanket artifact-preservation rule overrides already granted delete authority | `baseline_violation` | Treat artifact creation as no delete grant, but honor existing exact or bounded explicit deletion authority without redundant confirmation |
 | Returned launch echo is described as provider-confirmed effective model | `baseline_violation` | Report only requested/forwarded launch parameters; provider model resolution is outside the admitted surface |
-| Live-turn provider rejection has no operator recovery or hosted behavior row | `implementation_concern` | Report failed terminal evidence and receipt, require a new user decision, and prove no automatic retry/resume/redelegation |
+| Live-turn provider rejection has no operator recovery or hosted behavior row | `implementation_concern` | Report failure and required new decision; exact receipt stays in evidence, prove no automatic retry/resume/redelegation |
 | Artifact report promises discovery of every provider-internal path | `baseline_violation` | Preserve only Cursor-created temporary paths returned or observed through the bounded caller surface |
 | Artifact eval forbids truthful negative wording such as not deleted | `implementation_concern` | Let the file predicate prove preservation; avoid style-sensitive forbidden fragments |
 | Hosted cleanup resolves immediately after SIGKILL without observing child close | `implementation_concern` | Wait for the process close event under a separate final bound and fail cleanup provenance when closure is unconfirmed |
-| Terminal report checks accept an unassociated receipt word or digest | `implementation_concern` | Bind every field of one observed bounded terminal receipt atomically, including null-result failed and timed-out receipts |
-| Prompt-failure report can fabricate a terminal reason | `implementation_concern` | Recording proxy retains only bounded reason text/truncation and report oracle binds both atomically from one observed response |
-| Failed resume lacks an explicit operator terminal branch | `baseline_violation` | Report exact new/runtime and retained provider identities plus bounded failure diagnostics; no wait, repeated resume or replacement before a new user decision |
-| Mode-transition timeout has no operator recovery or hosted behavior row | `implementation_concern` | Report exact failure, allocate no prompt, and require a new user decision before any retry/resume/replacement |
+| Terminal report checks accept an unassociated receipt word or digest | `implementation_concern` | Exact receipt относится к evidence owner; пользовательский outcome проверяется отдельно по IUX-19 |
+| Prompt-failure report can fabricate a terminal reason | `implementation_concern` | Evidence сохраняет bounded reason; report не выдумывает причину и не копирует полный объект |
+| Failed resume lacks an explicit operator terminal branch | `baseline_violation` | Retain tool-held identities, report failure and required new decision; no wait, repeated resume or replacement |
+| Mode-transition timeout has no operator recovery or hosted behavior row | `implementation_concern` | Report normalized failure, allocate no prompt, and require a new user decision before any retry/resume/replacement |
 | File-review prompt omits the internal-memory half of its own boundary | `baseline_violation` | Use one exact read-only boundary phrase covering private/internal memory and transcript retrieval, with positive and opposite eval checks |
 | Active-turn follow-up is sent after any terminal status, including tombstone | `baseline_violation` | Send only after completed plus live; failed, timed-out, cancelled or tombstoned outcomes require a new post-failure user decision |
 | Active-follow-up eval relies on a wall-clock delay, so hosted model latency can erase the active-state precondition | `implementation_concern` | Hold the first fake-ACP terminal behind a harness gate and release it only after the separate Codex follow-up turn has observably started |
 | Cost-aware eval policy freezes exact test/module paths and a literal timeout without adding observable behavior | `overengineering` | Keep one table-driven pass, a finite runaway bound and a side-effect-free scenario-contract surface normative; retain current paths/value only as task-level implementation details |
-| Structured or scalar report fields can be assembled from unrelated prose or sibling objects | `implementation_concern` | Require every binding in one parseable JSON evidence object and full equality for nested receipt, reason and provider error |
+| Structured or scalar report fields can be assembled from unrelated prose or sibling objects | `implementation_concern` | Exact atomic bindings проверяются по transcript; обязательная JSON-форма final удалена уточнением IUX-3/IUX-19 |
 | Ambient stale-answer fault variable can mutate an ordinary installed MCP request | `implementation_concern` | Require the complete eval-only evidence, scenario and program-path handshake before proxy fault activation |
 | Credential-free runner/provider cleanup errors lose cleanup precedence or wait unbounded after SIGKILL | `implementation_concern` | Accumulate cleanup failure separately, publish failed cleanup provenance and bound final close confirmation |
 | File effects observed after a later terminal wait inherit that wait's later Codex turn authority | `implementation_concern` | Snapshot safe-evidence position before every follow-up turn and bind each effect to its causal Codex turn |
@@ -140,7 +184,7 @@ skill не считаются behavioral proof.
 | Corpus admission enforces same-turn authority prompt only for write effects | `implementation_concern` | Apply the prompt-scope/polarity guard to read effects and add negative mutations for missing read grant and opposite checkout-wide permission |
 | Report binding accepts stale prior-turn IDs and diagnostics from the same runtime segment | `implementation_concern` | Resolve only five retained launch bindings from the current segment; all turn IDs, cursors, pending and failure diagnostics come from the exact Codex-turn call range |
 | One-to-two owner-reference cap makes composite behavior rows misattribute asserted semantics | `baseline_violation` | Admit a closed bound of up to five row-specific owners, derive the exact owner set from effects/trace/fault semantics, and keep uniform cross-row ID/order/close invariants owned once by eval composition |
-| Shared timeout preload accelerates unrelated wait, mode and turn deadlines | `implementation_concern` | Gate each exact timer by its own fault flag, forward preload and flags only into the installed MCP runtime environment, and regress all three timer classes independently |
+| Shared timeout preload accelerates unrelated wait, mode and turn deadlines | `implementation_concern` | Gate preload independently for only the one-hour turn deadline and omitted 30-second wait; exercise mode timeout against the real fixed 15-second runtime deadline, forward admitted flags only into the installed MCP runtime environment, and regress all three timer classes independently |
 | Skill body требует explicit request, но metadata разрешает implicit invocation | `implementation_concern` | Set `allow_implicit_invocation:false` so discovery policy and operator contract agree |
 | Proposal promises collaboration acknowledgement delivery beyond the writable-transport contract | `baseline_violation` | Promise one synchronous empty-result response attempt while writable and state explicitly that delivery is not guaranteed |
 | Ordinary rows repeat the lifecycle owner despite uniform eval-owned close composition | `overengineering` | Remove row-level lifecycle refs and reject future copies in the semantic gate |
@@ -148,23 +192,55 @@ skill не считаются behavioral proof.
 | Exact-seven prose calls a preserved scenario title an identifier | `baseline_violation` | Keep the lineage title without inventing a corpus scenario ID |
 | README omits close-plus-resume for launch-only setting changes | `baseline_violation` | Distinguish in-place mode transition from launch-only close plus explicit resume |
 | Semantic gate rejects only known governed extras, not every non-derived valid owner | `implementation_concern` | For programmed rows reject every authoritative reference outside the exact derived owner set |
-| Operator contract requires a caller-visible final report before the close tool call | `baseline_violation` | Retain exact receipt evidence before close, perform close, then include retained evidence in the final caller-visible report |
+| Operator contract requires a caller-visible final report before the close tool call | `baseline_violation` | Retain semantic result, perform required close, then report result and limitations; exact receipt остаётся в tool evidence |
 | Authority oracle can consume future grants or decreasing turn provenance | `implementation_concern` | Rebuild authority per observation from immutable initial grants and reached follow-up turns; require bounded nondecreasing Codex-turn indexes |
 | Runtime requirement promises every ACP request is forwarded to the caller | `baseline_violation` | Expose only normalized pending and admitted collaboration evidence; execute filesystem callbacks behind runtime checks and reject/ignore unsupported or malformed requests without false permission observability |
 | Effect before a failed or timed-out terminal can bypass authority provenance | `implementation_concern` | Require exactly one authority-bearing trace observation for every programmed effect and project safe effects before every terminal status |
 | Late failed/timed-out wait races between `closing` and `tombstone` | `implementation_concern` | Normalize both wrapper states to the same ordered terminal plus receipt evidence and retain explicit close as the lifecycle observation |
-| Operator contract leaves first-wait cursor optional while behavior rows require an exact match | `baseline_violation` | Pass turn-start `last_event_id` as the first `after_event_id`; preserve runtime omission=0 only as a lower-level supported option |
+| Operator contract leaves first-wait cursor optional while behavior rows require an exact match | `baseline_violation` | Историческая форма superseded: user-approved cursor baseline ниже удаляет обязательную equality |
 | Model-goal admission omits answer/cancel tools and retention markers | `implementation_concern` | Keep one complete public-tool token set plus timeout/retention control markers and reject them in ordinary model inputs |
 | Narrow file-review effect omits its facade Workspace owner reference | `implementation_concern` | Reference Workspace discipline for every read/write effect row and enforce it generically in the semantic gate |
-| One stochastic baseline/mutation pair is described as causal proof | `baseline_violation` | Report paired mutation sensitivity and exact associated mismatch only; state that v1 does not establish causality without deterministic replay or replicated controls |
+| One stochastic baseline/mutation pair is described as causal proof | `baseline_violation` | Superseded 2026-09-07: prose-only sensitivity mutation удалена; causal claim и replacement fake green отсутствуют |
 | Best-effort acknowledgement wording treats asynchronous EPIPE as a harmless pre-write closure | `baseline_violation` | Abandon only a pre-write non-writable/synchronous rejection; preserve normal transport-failure terminalization for async EPIPE after write acceptance |
 | First completed terminal wait can carry wrapper-loss tombstone needed for direct resume | `implementation_concern` | Order completed terminal and receipt first, then preserve tombstone from either the same wait or a later old-wrapper observation; suppress only failed/timed-out shutdown-state races |
 | Long-lived specs duplicate an excluded vendor flag already owned by the adapter golden | `overengineering` | Keep closed-schema rejection generic and retain exact flag semantics only in current-version golden/design evidence |
+| Prose report разрешён одновременно с обязательной копией IDs/receipt/model/decision JSON | `baseline_violation` | IUX-3: один пользовательский report contract; task 5.2 |
+| Overall mismatch при зелёных применимых components | `baseline_violation` | IUX-19: единый classifier mechanics/evidence/exact delivery; task 5.4; прежний derived outcome superseded 2026-09-07 |
+| Удаление disclosure bindings пропускает голый success marker при events_lost | `baseline_violation` | Историческая форма superseded 2026-09-07: свободный disclosure не scored; trace остаётся mechanical evidence |
+| Проверяемый final удаляется, omission неотличим от extraction failure | `baseline_violation` | IUX-19: publish capture proof до cleanup; task 5.1 |
+| Точные Codex phase/items/pagination semantics не подтверждены | `external_adapter_drift` | Installed-interface review и version-specific golden; task 5.1 |
+| Mandatory final-only ID handoff без production consumer | `overengineering` | Continuation по existing MCP trace; отдельный protocol исключён |
+| Candidate fingerprint не включает oracle/adapter, baseline находится в temp | `baseline_violation` | IUX-19: manifest реально использованных inputs и durable bundle; task 5.6 |
+| Новый полный baseline после каждого targeted pass без диагностического gate | `baseline_violation` | IUX-19 Cost-aware policy; tasks 5.7–5.11 |
+| Candidate identity смешивает payload и разные high/medium run settings | `baseline_violation` | Immutable manifest отделяет candidate digest от run record; task 5.6 |
+| Automatic scenario retry скрывает первый non-pass при acceptance | `baseline_violation` | Одна попытка на scenario/run; повтор только новым run после diagnostic gate в owner Cost-aware execution policy; tasks 5.7/5.9 |
+| README сохраняет старые model gate и retry semantics | `implementation_concern` | Синхронизировать до candidate freeze; task 5.11 после hosted gates меняет только baseline/summary/bundles |
+| File-review fallback требует полное предложение provider вместо user marker | `baseline_violation` | `FILE_REVIEW_OK` остаётся exact interaction marker; outcome inference superseded 2026-09-07 |
+| Final outcome owner не определён для multi-turn и checks без outcome | `baseline_violation` | Superseded 2026-09-07: reported outcome всегда `not_checked`; exact checks только interaction |
+| Pure report scorer не получает captured finals по turn | `implementation_concern` | Captured finals сохранены; scorer проверяет только mandatory nonempty final и exact delivery |
+| Actual outcome или marker используется как reported outcome | `baseline_violation` | Никогда не фабриковать report evidence: `reported_task_outcome` всегда `not_checked` |
+| Language/template/phrase mining для свободного report | `overengineering` | Удалить из mandatory acceptance; exact requested tokens не являются language template |
+| Prose-only `events_lost` sensitivity mutation | `overengineering` | Удалить без replacement marker или fake green; mechanical trace scenario остаётся |
+| Mandatory free-prose scoring | `new_scope` | Одобренное 2026-09-07 сокращение baseline: проверять только mechanics/evidence/exact delivery и сохранять capture |
+| Unconditional mismatch oracle rejects a safely rejected and corrected existing-session call | `new_scope` | Одобренный пользователем recovery-aware baseline: finite typed address/wait-state/set-mode classes с нулём или более contiguous pure current-session status reads внутри каждого disjoint recovery span; raw error/calls сохраняются, остальные mismatches остаются failures |
+| Recovery-aware eval relies on an undeclared pre-action lookup guarantee | `baseline_violation` | Declare once in runtime owner «Публичный MCP tool contract» that existing-session `unknown_session | unknown_turn` lookup fails before tool-specific provider dispatch/state/effect; eval only references that owner and bounded tombstone eviction remains housekeeping |
+| Single-ID/strict-adjacency implementation excludes other user-approved proven pre-effect corrections | `baseline_violation` | Replace the narrow pair with one finite eval-owned taxonomy for address, wait state and set mode; keep ungrounded read/answer repairs as mismatch, fresh-wait unknown-request recovery distinct, and reopen task 5.7d |
+| Coverage result не связан с exact product sources, а zero-counter review переносится вручную | `new_scope` | Одобрено пользователем после terra/high diagnostic: IUX-18 owner добавляет coverage-only source proof и deterministic audit CLI; task 5.7e |
+| Ручной closeout может смешать candidates, потерять history или отметить tasks до проверки evidence | `new_scope` | Одобрено пользователем после terra/high diagnostic: IUX-19 owner добавляет один deterministic finalizer с atomic per-file publication и tasks-last; task 5.7f |
+| Event high-water ошибочно трактуется как read acknowledgement и требует latest event cursor equality | `new_scope` | Одобрено пользователем: удалить `cursor_matched` без replacement tracker; latest resume cursor остаётся рекомендацией, а runtime-valid earlier/repeated/omitted cursor не является mismatch; task 5.7g |
+
+| Runtime preview truncation необратимо теряет часть review | `new_scope` | Явно одобрено пользователем: IUX-20 retained full result и bounded read; tasks 5.0a/5.0b |
+| Legacy delivery/progress wording не различает preview и retained full result | `baseline_violation` | Согласовать owner references и краткое baseline описание с IUX-20 |
+| `turn.failed` исключает runtime overflow и предполагает provider rejection | `baseline_violation` | Observed failed terminal с соответствующим armed fault; без fabricated provider error |
+| Skill называет read path, но не public read tool | `baseline_violation` | Один operator-facing `cursor_read_result`, с runtime-owned schema |
+| Для long-result row предложен дополнительный padding hook | `overengineering` | Existing terminal `progress_text` + `result_text` уже пересекают preview bound; task 5.0b фиксирует fixture construction |
+| Preview receipt и full result digest можно смешать в evaluator | `implementation_concern` | Task 5.4 явно разделяет две разные области evidence comparison |
 
 ## Goals / Non-Goals
 
-**Goals:** исключить stale cursor и неподдерживаемый review mode в нормальном
-tool loop, сделать ошибочный pending ID восстанавливаемым, дать bounded evidence
+**Goals:** сохранять корректный session/turn address и рекомендовать sparse
+resume hint без read-ack semantics, исключить неподдерживаемый review mode в
+нормальном tool loop, сделать ошибочный pending ID восстанавливаемым, дать bounded evidence
 terminal result без raw provider payload, разрешить явный per-session model
 override без mutation глобальной конфигурации и продолжить уже созданную
 Cursor-сессию без скрытого поиска её архива.
@@ -179,6 +255,9 @@ Cursor-сессию без скрытого поиска её архива.
 `resume_after_event_id` дублирует value high-water mark намеренно как
 caller-facing next-step hint. Existing `after_event_id` semantics и event log
 остаются единственным runtime owner; новый field не хранит независимое state.
+Latest hint является рекомендуемым sparse default; high-water mark не является
+acknowledgement чтения предшествующих событий. Успешный wait принимает также omitted=0, повторный или более ранний
+runtime-valid `after_event_id`, и eval не выводит из него `cursor_matched`.
 Отдельный `cursor_resume` для wait отвергнут: он добавил бы API без новой
 наблюдаемой возможности. Это не относится к принятому
 `cursor_resume_session`, который пытается продолжить provider conversation
@@ -196,6 +275,21 @@ Unknown/stale answer возвращает only opaque request IDs/kinds и curre
 Это достаточно для исправления caller loop, но не раскрывает permission title,
 locations или raw ACP data через error path. Автоматическое повторение answer
 или `allow-once` отвергнуто как нарушение authority boundary.
+
+### Recovery-aware correction остаётся видимой и аудируемой
+
+Runtime requirement «Публичный MCP tool contract» остаётся владельцем
+pre-effect rejection, а facade «Skill workflow делегирования» использует current
+causal public IDs, cursors, pending context и mode из tool-held state.
+Единственная finite grammar и classifier proof допустимой correction pair
+принадлежат eval requirement «Сценарный контракт поведения и authority-aware
+interaction»; driver и верхние слои только ссылаются на него.
+
+Эта граница не скрывает MCP error и не разрешает loose matching. Evidence
+сохраняет raw rejected/corrected calls и normalized error; canonical digest
+служит только проверке разрешённой typed delta и не является privacy или
+integrity гарантией. Свободный prose остаётся `not_checked` и не доказывает
+recovery.
 
 ### Receipt формируется из public bounded result
 
@@ -262,13 +356,14 @@ envelope; caller сам решает создать новую сессию.
 ### Close не повторяет уже доставленный terminal result
 
 Первый `cursor_wait` для завершившегося target turn — единственный штатный
-delivery path полного bounded terminal result и его receipt; повторный wait для
+delivery path compact terminal preview и его receipt; повторный wait для
 того же turn не возвращает их снова. Последующие mutation acknowledgements
 могут вернуть только тот же compact immutable receipt, но не
 `last_terminal_turn`; обычные waits другого/active turn его не дублируют. Close
 redacts retained snapshot. Так progress и close сохраняют idempotence и
-diagnosability без повторного расхода context; полный retained snapshot остаётся
-доступен только по явному status запросу.
+diagnosability без повторного расхода context; diagnostic preview snapshot
+доступен по явному status, полный retained текст — только через
+`cursor_read_result`.
 
 ### Mutation acknowledgement не является диагностическим snapshot
 
@@ -340,24 +435,72 @@ lane canonical test-file selectors и один name pattern, но всё рав�
 и на экспортированный supervisor, поэтому library caller не может случайно
 создать частичный coverage result.
 
+Coverage source binding и zero-counter audit принадлежат тому же IUX-18 owner
+requirement «Lane selection и coverage scope». Eval closeout только принимает и
+хэширует готовый local audit proof; он не объявляет его доказательством hosted
+candidate source binding и не присваивает semantic classifications.
+
 ### Operator surface получает user-level доказательство
 
 Любое расширение публичных skill/MCP happy paths сопровождается scenario eval в
 реальном Codex agent context. Eval загружает установленный skill и проверяет
 observable tool/effect trace, IDs, pending handoff и close/continuation policy.
 Package E2E owns точные установленные байты, discovery и один минимальный facade
-canary; eval owns полный skill workflow и hosted instruction following. Substring
+canary; eval owns mandatory mechanics/evidence/exact delivery behavior proof. Substring
 или regex по `SKILL.md` отвергнуты: они доказывают наличие слов, а не поведение.
+
+### Mandatory acceptance проверяет mechanics и exact delivery
+
+IUX-19 использует существующие capture, transcript, pure oracle и
+`EvalResultV1`. Каждая programmed row задаёт `report_checks`; пустой массив
+выбирает generic nonempty-final delivery. Непустые checks имеют только category
+`interaction` и проверяет exact literal данные из corpus/program/fixture:
+marker/result token, вопрос, видимые option labels или plan content. Он не
+выводит outcome/safety semantics, не задаёт язык, шаблон или авторские фразы и
+не использует alternatives, fuzzy matching или LLM judge.
+
+Current same-task continuation проверяется фактическими calls; exact receipt,
+IDs, progress revision, authority/effects и IUX-20 read проверяются
+trace/evidence. Event high-water остаётся runtime state и рекомендуемой
+следующей sparse-позицией, но не read acknowledgement или обязательной
+continuation equality. Version-specific
+capture сохраняет exact final, turn, phase, source и completeness. Каждый model
+final обязан существовать и быть непустым: confirmed missing/complete empty —
+interaction mismatch, incomplete extraction — integration failure.
+`actual_task_outcome` наблюдается независимо. `reported_task_outcome` всегда
+`not_checked`; components `outcome_report` и `safety_disclosure` также всегда
+`not_checked`. Один aggregate verdict включает все применимые mechanics,
+evidence, capture и exact-delivery checks.
+
+100% pass означает functional acceptance mechanics, trace, IDs,
+authority/effects, capture, exact delivery и IUX-20. Он не сертифицирует
+корректность свободного prose, safety disclosure, язык, стиль или противоречия
+вне exact requested tokens; в частности, наличие и истинность свободного
+disclosure о неполноте остаются `not_checked`.
+
+Порядок завершения находится в tasks раздела 5: детерминированный repair,
+диагностика high, затем baseline high и medium на одном candidate. Финальные
+повторы наследуют project-wide `AGENTS.md`; неизвестный behavior mismatch
+останавливает переход к следующему gate и требует локализации. Новые результаты
+не сравниваются с историческими counts как с неизменной системой, а digest
+manifest и durable bundle связывают их с конкретным кандидатом.
+После pre-freeze проверок один IUX-19 finalizer проверяет diagnostic, high и
+medium series и immutable references, затем обновляет closeout proof, additive
+baseline, Markdown summary и последними tasks 5.8–5.11. Это узкий consumer
+существующих artifacts, без нового workflow engine, registry или approval.
 
 ### Live session живёт дольше одного turn
 
 Terminal turn завершает только адресуемый prompt, а не обязательно весь
-delegated workflow. Если ожидается пользовательский follow-up или следующий
-этап ревью с теми же launch options, skill сохраняет live runtime session и
+delegated workflow. Только если явно объявленный пользовательский follow-up или
+следующий этап ревью с теми же launch options остаётся незавершённым, skill сохраняет live runtime session и
 вызывает `cursor_send_prompt` после `completed + live`. `cursor_set_mode` допустим
 между turns и сохраняет provider conversation. Close выполняется только при
 workflow completion, abandonment/cancel или irrecoverable failure; смена
-launch-only options требует close и explicit resume по provider ID.
+launch-only options требует close и explicit resume по provider ID. Возможность
+будущего сообщения сама по себе не откладывает close. Один workflow step имеет
+одного close owner; после resume он закрывает resumed wrapper по новому current
+runtime `session_id`.
 
 ### Isolated worktree — operational recommendation
 
@@ -370,7 +513,37 @@ path и сообщает его пользователю для отдельно
 explicit authority не запрашивает повторное подтверждение. Это исключает destructive operator path,
 для которого в frozen v1 corpus нет самостоятельного behavior scenario.
 
+### Hosted prose не является mandatory gate
+
+Историческая focused verification показала false negatives из-за English
+assertions над Russian prose. Поэтому corpus и skill не навязывают язык,
+шаблон или тестовые фразы. Mandatory oracle проверяет только exact данные,
+которые пользователь или fixture действительно требует доставить.
+
+### Verification runtime, user-authorized 2026-09-07
+
+Успешный unit run занял 92,1 секунды: bootstrap file — 91,95 секунды,
+runtime file — 63,6 секунды, включая два реальных ожидания по 15 секунд.
+Пользователь поручил применить исследованный план ускорения до candidate freeze.
+Это implementation concern существующей verification, без нового публичного
+runtime invariant или изменения admission/acceptance corpus.
+
+Общий test-only fake-adapter core нужен, чтобы убрать сотни повторных Node
+startups из lifecycle tables через существующий `runCommand` seam. Он имеет
+одного владельца fake state/fault semantics; CLI wrapper использует тот же core
+и сохраняет process/wire boundary. Parity и отдельные real kill/timeout/overflow
+тесты проверяют, что смена test transport не скрыла поведение bootstrap.
+Управляемое время убирает реальные ожидания в deadline tests; production limits
+и transport deadlines сохраняются. Concurrency остаётся 2. Tasks 5.7a–5.7b
+владеют реализацией и проверкой ускорения; hosted attempt policy не меняется.
+
 ## Risks / Trade-offs
+
+Принятый риск: 100% mandatory acceptance может сосуществовать с вводящим в
+заблуждение свободным prose вне exact requested tokens. Сохранённый exact final
+делает такой текст доступным для inspection, но не превращает его в scored
+semantic proof. Универсальная semantic оценка потребовала бы отдельного
+подтверждённого judge contract и остаётся вне v1.
 
 - [Additive envelope fields не попадут в часть старых consumers] → fields
   additive; existing fields и schemas сохраняются, adapter/golden fixtures
@@ -380,8 +553,9 @@ explicit authority не запрашивает повторное подтвер
 - [Recovery summary раскроет context] → contract допускает только IDs/kinds,
   а tests покрывают отсутствие context/locations.
 - [Consumer ожидает terminal snapshot от close/progress] → единственный
-  delivery path — terminal wait; для явной диагностики сохранён
-  `cursor_session_status`, а regression tests фиксируют redaction.
+  automatic preview delivery path — terminal wait; для явной диагностики
+  сохранён preview `cursor_session_status`, для полного текста —
+  `cursor_read_result`, а regression tests фиксируют redaction.
 - [Cursor version не поддерживает steering extension] → extension исключён из
   v1; follow-up ждёт terminality и использует подтверждённый `session/prompt`
   только после `completed + live`, иначе требуется новое user decision.
@@ -393,3 +567,19 @@ resume hint сразу после установки; прежние callers м�
 `last_event_id`. Добавляется opt-in `cursor_resume_session`; wait cap становится
 180 секунд, persistent data не меняются.
 Rollback — откат change.
+
+
+### IUX-20: Полный результат при компактном preview
+Наблюдаемый дефект — Grok завершил review, но terminal preview потерял часть
+findings, и доступные wait/status не могли вернуть хвост. Простое увеличение
+preview расходует контекст и оставляет ту же потерю на новой границе. Один
+runtime-owned read tool поверх уже удерживаемого turn сохраняет compact wait
+и даёт caller полный результат без повторной генерации.
+
+Нормативные schema, paging, failure и retention находятся только в runtime
+owner requirements из индекса. Новый persistent artifact/registry не нужен.
+Runtime tests доказывают полноту и лимиты; один Codex behavior scenario доказывает
+только чтение хвоста перед report/close; отдельная recovery row проверяет failed
+terminal, отсутствие regeneration и close по trace, сохраняет capture, а свободный
+prose не оценивает. Package canary проверяет discovery дополнительного tool через
+существующий installation owner, не повторяя семантику paging.

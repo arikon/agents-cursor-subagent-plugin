@@ -4,6 +4,27 @@ import { readFile } from 'node:fs/promises';
 import { StringDecoder } from 'node:string_decoder';
 
 const OUTPUT_LIMIT = 1_048_576;
+const CAPTURE_PAGE_LIMIT = 100;
+const CAPTURE_PAGE_SIZE = 100;
+const CAPTURE_TEXT_LIMIT = 1_000_000;
+const TURN_STATUSES = new Set(['completed', 'failed', 'interrupted', 'inProgress']);
+const TERMINAL_TURN_STATUSES = new Set(['completed', 'failed', 'interrupted']);
+
+function finalCapture(turnId, turnStatus, text, phase, completeness, errorCode = null, source = 'thread/items/list') {
+  return {
+    text,
+    turn_id: turnId,
+    turn_status: turnStatus,
+    phase,
+    source,
+    completeness,
+    error_code: errorCode,
+  };
+}
+
+function captureFailure(turnId, turnStatus, errorCode, source = 'thread/turns/list') {
+  return finalCapture(turnId, turnStatus, null, null, 'incomplete', errorCode, source);
+}
 
 export class CodexAppServerClient {
   constructor(command, args = ['app-server', '--stdio'], env = process.env, options = {}) {
@@ -13,9 +34,12 @@ export class CodexAppServerClient {
     this.closeGraceMs = options.closeGraceMs ?? 1_000;
     this.killGraceMs = options.killGraceMs ?? 1_000;
     this.closeConfirmMs = options.closeConfirmMs ?? 1_000;
+    this.captureNow = options.now ?? Date.now;
+    this.captureSleep = options.sleep ?? ((delayMs) => new Promise((resolve) => setTimeout(resolve, delayMs)));
     this.nextId = 1;
     this.pending = new Map();
     this.notifications = [];
+    this.clientRequests = [];
     this.serverRequests = [];
     this.onServerRequest = options.onServerRequest ?? null;
     this.readSkillFile = options.readSkillFile ?? readFile;
@@ -46,7 +70,7 @@ export class CodexAppServerClient {
       let message; try { message = JSON.parse(line); } catch { return; }
       if (typeof message.method === 'string') {
         if (Object.hasOwn(message, 'id')) void respondToServerRequest(message);
-        else this.notifications.push({ method: message.method, params: message.params ?? null });
+        else this.notifications.push({ method: message.method, params: message.params ?? null, at_ms: Date.now() });
         return;
       }
       const waiter = this.pending.get(String(message.id));
@@ -66,6 +90,12 @@ export class CodexAppServerClient {
   request(method, params, timeoutMs = this.requestTimeoutMs) {
     if (this.closed) return Promise.reject(new Error('Codex app-server is closed'));
     const id = `client-${this.nextId++}`;
+    this.clientRequests.push({
+      id,
+      method,
+      thread_id: typeof params?.threadId === 'string' ? params.threadId : null,
+      at_ms: Date.now(),
+    });
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => { this.pending.delete(String(id)); reject(new Error(`Codex app-server ${method} timed out`)); }, timeoutMs);
       this.pending.set(String(id), { resolve, reject, timer });
@@ -82,6 +112,111 @@ export class CodexAppServerClient {
   }
 
   startThread(params = {}) { return this.request('thread/start', params); }
+
+  async captureTurnFinal(threadId, turnId, options = {}) {
+    if (typeof threadId !== 'string' || !threadId || typeof turnId !== 'string' || !turnId) throw new Error('invalid turn capture identity');
+    const timeoutMs = options.timeoutMs ?? 10_000;
+    const pollIntervalMs = options.pollIntervalMs ?? 250;
+    const pageLimit = options.pageLimit ?? CAPTURE_PAGE_LIMIT;
+    if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 0
+      || !Number.isSafeInteger(pollIntervalMs) || pollIntervalMs < 0
+      || !Number.isSafeInteger(pageLimit) || pageLimit < 1 || pageLimit > CAPTURE_PAGE_LIMIT) throw new Error('invalid turn capture limits');
+    const deadline = this.captureNow() + timeoutMs;
+    let latest = captureFailure(turnId, null, 'turn_not_found');
+    let attempted = false;
+    for (;;) {
+      if (attempted && this.captureNow() >= deadline) return latest;
+      attempted = true;
+      let turnPage;
+      try { turnPage = await this.#findTurn(threadId, turnId, pageLimit, deadline); }
+      catch (error) { return captureFailure(turnId, null, error?.message?.endsWith(' timed out') ? 'capture_timeout' : 'request_failed'); }
+      if (turnPage.error) return captureFailure(turnId, turnPage.status, turnPage.error);
+      const turn = turnPage.turn;
+      if (!turn) latest = captureFailure(turnId, null, 'turn_not_found');
+      else if (!TERMINAL_TURN_STATUSES.has(turn.status)) latest = captureFailure(turnId, turn.status, 'turn_not_terminal');
+      else {
+        let captured;
+        try { captured = await this.#readTurnFinal(threadId, turnId, pageLimit, deadline); }
+        catch (error) {
+          return captureFailure(turnId, turn.status, error?.message?.endsWith(' timed out') ? 'capture_timeout' : 'request_failed', 'thread/items/list');
+        }
+        if (captured.error) return captureFailure(turnId, turn.status, captured.error, 'thread/items/list');
+        if (captured.found) {
+          if (Buffer.byteLength(captured.text, 'utf8') > CAPTURE_TEXT_LIMIT) {
+            return captureFailure(turnId, turn.status, 'capture_text_limit', 'thread/items/list');
+          }
+          return finalCapture(turnId, turn.status, captured.text, captured.phase, 'complete');
+        }
+        latest = finalCapture(turnId, turn.status, null, null, 'confirmed_missing');
+      }
+      if (this.captureNow() >= deadline) return latest;
+      await this.captureSleep(Math.min(pollIntervalMs, Math.max(0, deadline - this.captureNow())));
+    }
+  }
+
+  async #findTurn(threadId, turnId, pageLimit, deadline) {
+    let cursor = null;
+    const seen = new Set();
+    for (let page = 0; page < pageLimit; page += 1) {
+      const remainingMs = deadline - this.captureNow();
+      if (remainingMs <= 0) return { turn: null, status: null, error: 'capture_timeout' };
+      const result = await this.request('thread/turns/list', {
+        threadId, cursor, limit: CAPTURE_PAGE_SIZE, sortDirection: 'desc', itemsView: 'notLoaded',
+      }, remainingMs);
+      if (!result || !Array.isArray(result.data) || !(typeof result.nextCursor === 'string' || result.nextCursor === null)) {
+        return { turn: null, status: null, error: 'invalid_turns_response' };
+      }
+      if (result.data.some((item) => !item || typeof item.id !== 'string' || !TURN_STATUSES.has(item.status))) {
+        return { turn: null, status: null, error: 'invalid_turns_response' };
+      }
+      const turn = result.data.find((item) => item?.id === turnId);
+      if (turn) {
+        return { turn, status: turn.status, error: null };
+      }
+      if (result.nextCursor === null) return { turn: null, status: null, error: null };
+      if (seen.has(result.nextCursor)) return { turn: null, status: null, error: 'pagination_cursor_cycle' };
+      seen.add(result.nextCursor);
+      cursor = result.nextCursor;
+    }
+    return { turn: null, status: null, error: 'capture_page_limit' };
+  }
+
+  async #readTurnFinal(threadId, turnId, pageLimit, deadline) {
+    let cursor = null;
+    let explicitFinal = null;
+    let legacyFinal = null;
+    const seen = new Set();
+    for (let page = 0; page < pageLimit; page += 1) {
+      const remainingMs = deadline - this.captureNow();
+      if (remainingMs <= 0) return { found: false, error: 'capture_timeout' };
+      const result = await this.request('thread/items/list', {
+        threadId, turnId, cursor, limit: CAPTURE_PAGE_SIZE, sortDirection: 'asc',
+      }, remainingMs);
+      if (!result || !Array.isArray(result.data) || !(typeof result.nextCursor === 'string' || result.nextCursor === null)) {
+        return { found: false, error: 'invalid_items_response' };
+      }
+      for (const entry of result.data) {
+        if (!entry || entry.turnId !== turnId || !entry.item || typeof entry.item.type !== 'string') {
+          return { found: false, error: 'invalid_items_response' };
+        }
+        if (entry.item.type !== 'agentMessage') continue;
+        if (typeof entry.item.id !== 'string' || !entry.item.id || typeof entry.item.text !== 'string'
+          || !['commentary', 'final_answer', null].includes(entry.item.phase)) {
+          return { found: false, error: 'invalid_items_response' };
+        }
+        if (entry.item.phase === 'final_answer') explicitFinal = { text: entry.item.text, phase: 'final_answer' };
+        else if (entry.item.phase === null) legacyFinal = { text: entry.item.text, phase: null };
+      }
+      if (result.nextCursor === null) {
+        const selected = explicitFinal ?? legacyFinal;
+        return selected ? { ...selected, found: true, error: null } : { found: false, error: null };
+      }
+      if (seen.has(result.nextCursor)) return { found: false, error: 'pagination_cursor_cycle' };
+      seen.add(result.nextCursor);
+      cursor = result.nextCursor;
+    }
+    return { found: false, error: 'capture_page_limit' };
+  }
 
   archiveThread(threadId) {
     if (typeof threadId !== 'string' || !threadId) return Promise.reject(new Error('invalid thread id'));

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -12,7 +12,7 @@ const fake = fileURLToPath(new URL('./fixtures/fake-acp.mjs', import.meta.url));
 const server = fileURLToPath(new URL('../scripts/cursor-subagent-mcp.mjs', import.meta.url));
 const cursorAgentGolden = JSON.parse(readFileSync(fileURLToPath(new URL('./fixtures/cursor-agent-v20260825.golden.json', import.meta.url)), 'utf8'));
 const cwd = process.cwd();
-const fakeEnvNames = ['CURSOR_AGENT_COMMAND', 'CURSOR_SUBAGENT_ADAPTER_ARGS', 'CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH', 'FAKE_ACP_PENDING', 'FAKE_ACP_CALLBACK_VARIANT', 'FAKE_ACP_FS_VARIANT', 'FAKE_ACP_LOG', 'FAKE_ACP_SAFE_EVIDENCE', 'FAKE_ACP_FOLLOWUP_RELEASE_PATH', 'FAKE_ACP_PATH', 'FAKE_ACP_CONTENT', 'FAKE_ACP_LINE', 'FAKE_ACP_LIMIT', 'FAKE_ACP_RESULT', 'FAKE_ACP_BAD_ADMISSION', 'FAKE_ACP_BAD_CAPABILITIES', 'FAKE_ACP_BAD_PROMPT_RESULT', 'FAKE_ACP_STOP_REASON', 'FAKE_ACP_VERSION', 'FAKE_ACP_VERSION_MODE', 'FAKE_ACP_EXIT_ON_PROMPT', 'FAKE_ACP_EXIT_AFTER_RESULT', 'FAKE_ACP_STDOUT_EOF_ON_PROMPT', 'FAKE_ACP_INVALID_UTF8', 'FAKE_ACP_INVALID_FRAME', 'FAKE_ACP_INIT_FRAME', 'FAKE_ACP_INIT_RESPONSE_VARIANT', 'FAKE_ACP_INIT_ERROR_MESSAGE', 'FAKE_ACP_SESSION_VARIANT', 'FAKE_ACP_PROMPT_RESPONSE_VARIANT', 'FAKE_ACP_FRAME_VARIANT', 'FAKE_ACP_DELAY_INIT_MS', 'FAKE_ACP_DELAY_RESULT_MS', 'FAKE_ACP_DELAY_SET_MODE_MS', 'FAKE_ACP_IGNORE_CANCEL', 'FAKE_ACP_CRLF', 'FAKE_ACP_REQUIRE_POLICY', 'FAKE_ACP_EXPECT_DEFAULT_ARGV', 'FAKE_ACP_REJECT_PROMPT', 'FAKE_ACP_PROMPT_ERROR_MESSAGE', 'FAKE_ACP_EXPECT_MODEL_ARGV', 'FAKE_ACP_EXPECT_PLUGIN_DIRS', 'FAKE_ACP_ARGV_LOG', 'FAKE_ACP_LOAD_VARIANT', 'FAKE_ACP_PROGRESS_TEXT', 'FAKE_ACP_NOISE_UPDATES', 'FAKE_ACP_SECOND_PROGRESS_TEXT', 'FAKE_ACP_SECOND_PROGRESS_MS', 'FAKE_ACP_HOLD_PROMPT', 'FAKE_ACP_SET_MODE_LOG', 'FAKE_ACP_SET_MODE_VARIANT', 'FAKE_ACP_COLLAB'];
+const fakeEnvNames = ['CURSOR_AGENT_COMMAND', 'CURSOR_SUBAGENT_ADAPTER_ARGS', 'CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH', 'FAKE_ACP_PENDING', 'FAKE_ACP_CALLBACK_VARIANT', 'FAKE_ACP_FS_VARIANT', 'FAKE_ACP_LOG', 'FAKE_ACP_SAFE_EVIDENCE', 'FAKE_ACP_FOLLOWUP_RELEASE_PATH', 'FAKE_ACP_PATH', 'FAKE_ACP_CONTENT', 'FAKE_ACP_LINE', 'FAKE_ACP_LIMIT', 'FAKE_ACP_RESULT', 'FAKE_ACP_BAD_ADMISSION', 'FAKE_ACP_BAD_CAPABILITIES', 'FAKE_ACP_BAD_PROMPT_RESULT', 'FAKE_ACP_STOP_REASON', 'FAKE_ACP_VERSION', 'FAKE_ACP_VERSION_MODE', 'FAKE_ACP_UNLINK_COMMAND_ON_VERSION', 'FAKE_ACP_EXIT_ON_PROMPT', 'FAKE_ACP_EXIT_AFTER_RESULT', 'FAKE_ACP_STDOUT_EOF_ON_PROMPT', 'FAKE_ACP_INVALID_UTF8', 'FAKE_ACP_INVALID_FRAME', 'FAKE_ACP_INIT_FRAME', 'FAKE_ACP_INIT_RESPONSE_VARIANT', 'FAKE_ACP_INIT_ERROR_MESSAGE', 'FAKE_ACP_SESSION_VARIANT', 'FAKE_ACP_PROMPT_RESPONSE_VARIANT', 'FAKE_ACP_FRAME_VARIANT', 'FAKE_ACP_DELAY_INIT_MS', 'FAKE_ACP_DELAY_RESULT_MS', 'FAKE_ACP_DELAY_SET_MODE_MS', 'FAKE_ACP_IGNORE_CANCEL', 'FAKE_ACP_CRLF', 'FAKE_ACP_REQUIRE_POLICY', 'FAKE_ACP_EXPECT_DEFAULT_ARGV', 'FAKE_ACP_REJECT_PROMPT', 'FAKE_ACP_PROMPT_ERROR_MESSAGE', 'FAKE_ACP_EXPECT_MODEL_ARGV', 'FAKE_ACP_EXPECT_PLUGIN_DIRS', 'FAKE_ACP_ARGV_LOG', 'FAKE_ACP_LOAD_VARIANT', 'FAKE_ACP_PROGRESS_TEXT', 'FAKE_ACP_NOISE_UPDATES', 'FAKE_ACP_SECOND_PROGRESS_TEXT', 'FAKE_ACP_SECOND_PROGRESS_MS', 'FAKE_ACP_HOLD_PROMPT', 'FAKE_ACP_SET_MODE_LOG', 'FAKE_ACP_SET_MODE_VARIANT', 'FAKE_ACP_COLLAB'];
 
 function withFake(t, extra = {}) {
   const old = Object.fromEntries(fakeEnvNames.map((name) => [name, process.env[name]]));
@@ -51,8 +51,7 @@ function isolatedFakeEnvironment(overrides = {}) {
 function withDefaultFake(t) {
   const root = mkdtempSync(join(tmpdir(), 'cursor-default-argv-'));
   const executable = join(root, 'agent');
-  copyFileSync(fake, executable);
-  chmodSync(executable, 0o755);
+  symlinkSync(fake, executable);
   const env = isolatedFakeEnvironment({ PATH: `${root}:${process.env.PATH || ''}`, FAKE_ACP_REQUIRE_POLICY: '1', FAKE_ACP_EXPECT_DEFAULT_ARGV: '1' });
   delete env.CURSOR_AGENT_COMMAND;
   delete env.CURSOR_SUBAGENT_ADAPTER_ARGS;
@@ -60,6 +59,24 @@ function withDefaultFake(t) {
   const runtime = new Runtime({ env, roots: [cwd] });
   t.after(() => rmSync(root, { recursive: true, force: true }));
   return runtime;
+}
+
+async function fireInitBudgetDeadline(operation) {
+  const originalSetTimeout = globalThis.setTimeout;
+  let expire;
+  globalThis.setTimeout = (callback, delay, ...args) => {
+    if (delay === LIMITS.initMs) { expire = () => callback(...args); return { deadlineFixture: true }; }
+    return originalSetTimeout(callback, delay, ...args);
+  };
+  try {
+    const pending = operation();
+    assert.equal(typeof expire, 'function');
+    expire();
+    globalThis.setTimeout = originalSetTimeout;
+    return await pending;
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+  }
 }
 
 async function waitTerminal(runtime, sessionId, turnId, afterEventId = 0) {
@@ -135,11 +152,13 @@ test('runtime reports spawn failure when ACP disappears after its admitted versi
   const root = mkdtempSync(join(tmpdir(), 'cursor-vanishing-agent-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const executable = join(root, 'agent');
-  writeFileSync(executable, `#!${process.execPath}\nconst { unlinkSync } = require('node:fs');\nif (process.argv.includes('--version')) { unlinkSync(__filename); process.stdout.write('2026.08.25-3e8eec8\\n'); }\n`, 'utf8');
-  chmodSync(executable, 0o755);
-
-  const runtime = withFake(t);
-  process.env.CURSOR_AGENT_COMMAND = executable;
+  symlinkSync(fake, executable);
+  const env = isolatedFakeEnvironment({
+    CURSOR_AGENT_COMMAND: executable,
+    FAKE_ACP_UNLINK_COMMAND_ON_VERSION: executable,
+  });
+  delete env.CURSOR_SUBAGENT_ADAPTER_ARGS;
+  const runtime = new Runtime({ env, roots: [cwd] });
   const envelope = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
   assert.equal(envelope.session_state, 'tombstone');
   assert.equal(envelope.failure_kind, 'spawn');
@@ -181,13 +200,14 @@ test('adapter admission failure is an allocated init tombstone and releases capa
   for (const session of admitted) await runtime.call('cursor_close_session', { session_id: session.session_id });
 });
 
-test('actual initialize deadline produces an init_timeout tombstone', { timeout: LIMITS.initMs + 5_000 }, async (t) => {
-  const runtime = withFake(t, { env: { FAKE_ACP_DELAY_INIT_MS: String(LIMITS.initMs + 2_000) } });
-  const started = Date.now();
-  const failed = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
+test('actual initialize deadline produces an init_timeout tombstone', async (t) => {
+  const runtime = withInjectedFake(t);
+  const failed = await fireInitBudgetDeadline(
+    () => runtime.call('cursor_start_session', { cwd, mode: 'ask' }),
+  );
   assert.equal(failed.session_state, 'tombstone');
   assert.equal(failed.failure_kind, 'init_timeout');
-  assert.ok(Date.now() - started >= LIMITS.initMs - 250);
+  assert.deepEqual(failed.terminal_reason, { text: 'init_timeout', truncated: false });
 });
 
 test('adapter admission rejects incompatible and unusable Cursor probes', async (t) => {
@@ -330,9 +350,12 @@ test('runtime rejects a working directory outside its admitted roots', async (t)
   });
 });
 
-test('runtime rejects an unsupported session mode', async () => {
+test('runtime rejects an unsupported session mode before start or resume', async () => {
   const runtime = new Runtime({ roots: [cwd] });
   await assert.rejects(runtime.call('cursor_start_session', { cwd, mode: 'review' }), {
+    error_code: 'invalid_args',
+  });
+  await assert.rejects(runtime.call('cursor_resume_session', { cwd, cursor_session_id: 'cursor-resume', mode: 'review' }), {
     error_code: 'invalid_args',
   });
 });
@@ -345,18 +368,41 @@ test('runtime rejects lookup of an unknown session', async () => {
 });
 
 test('runtime rejects lookup of an unknown turn in a live session', async (t) => {
-  const runtime = withFake(t);
+  const root = mkdtempSync(join(tmpdir(), 'cursor-runtime-unknown-turn-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const log = join(root, 'wire.jsonl');
+  const runtime = withInjectedFake(t, { env: { FAKE_ACP_HOLD_PROMPT: '1', FAKE_ACP_LOG: log } });
   const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
+  const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'hold' });
+  const providerMessages = readJsonLines(log).length;
   await assert.rejects(runtime.call('cursor_cancel', { session_id: session.session_id, turn_id: 'missing' }), {
     error_code: 'unknown_turn',
   });
+  assert.equal((await runtime.call('cursor_session_status', { session_id: session.session_id })).active_turn.turn_id, turn.turn_id);
+  assert.equal(readJsonLines(log).length, providerMessages);
   await runtime.call('cursor_close_session', { session_id: session.session_id });
 });
 
 test('runtime rejects a wait cursor beyond the published event stream', async (t) => {
-  const runtime = withFake(t);
+  const root = mkdtempSync(join(tmpdir(), 'cursor-runtime-invalid-wait-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const log = join(root, 'wire.jsonl');
+  const runtime = withInjectedFake(t, { env: { FAKE_ACP_HOLD_PROMPT: '1', FAKE_ACP_LOG: log } });
   const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
-  const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'one' });
+  const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'hold' });
+  const providerMessages = readJsonLines(log).length;
+
+  for (const args of [
+    {},
+    { turn_id: turn.turn_id },
+    { session_id: session.session_id },
+  ]) await assert.rejects(runtime.call('cursor_wait', args), { error_code: 'invalid_args' });
+  await assert.rejects(runtime.call('cursor_wait', {
+    session_id: 'missing', turn_id: turn.turn_id,
+  }), { error_code: 'unknown_session' });
+  await assert.rejects(runtime.call('cursor_wait', {
+    session_id: session.session_id, turn_id: 'missing',
+  }), { error_code: 'unknown_turn' });
   for (const after_event_id of [-1, 1.5, Number.MAX_SAFE_INTEGER]) {
     await assert.rejects(runtime.call('cursor_wait', {
       session_id: session.session_id,
@@ -365,7 +411,29 @@ test('runtime rejects a wait cursor beyond the published event stream', async (t
       timeout_ms: 1_000,
     }), { error_code: 'invalid_args' });
   }
-  await runtime.call('cursor_close_session', { session_id: session.session_id });
+  for (const after_progress_revision of [-1, 1.5, Number.MAX_SAFE_INTEGER]) {
+    await assert.rejects(runtime.call('cursor_wait', {
+      session_id: session.session_id,
+      turn_id: turn.turn_id,
+      after_progress_revision,
+      timeout_ms: 1_000,
+    }), { error_code: 'invalid_args' });
+  }
+
+  const status = await runtime.call('cursor_session_status', { session_id: session.session_id });
+  assert.equal(status.active_turn.turn_id, turn.turn_id);
+  assert.equal(status.active_turn.turn_status, 'running');
+  assert.equal(readJsonLines(log).length, providerMessages);
+
+  const waited = await runtime.call('cursor_wait', {
+    session_id: session.session_id, turn_id: turn.turn_id, after_event_id: 0, timeout_ms: 1_000,
+  });
+  assert.equal(waited.turn_status, 'running');
+  assert.equal(waited.wait_timeout, false);
+  assert.equal(readJsonLines(log).length, providerMessages);
+  const closed = await runtime.call('cursor_close_session', { session_id: session.session_id });
+  assert.equal(closed.session_state, 'tombstone');
+  assert.equal(closed.turn_status, 'cancelled');
 });
 
 test('runtime rejects a wait interval outside the public range', async (t) => {
@@ -789,10 +857,23 @@ test('plan decisions use adapter-owned wire encoding and close settles pending o
   const answered = await runtime.call('cursor_answer_plan', { session_id: session.session_id, turn_id: turn.turn_id, request_id: 'plan1', decision: 'accept' }); await waitTerminal(runtime, session.session_id, turn.turn_id, answered.last_event_id);
   assert.deepEqual(lastLogged(log).result, { outcome: { outcome: 'accepted' } }); await runtime.call('cursor_close_session', { session_id: session.session_id });
 
-  const closeRoot = mkdtempSync(join(tmpdir(), 'cursor-runtime-close-pending-')); t.after(() => rmSync(closeRoot, { recursive: true, force: true })); const closeLog = join(closeRoot, 'wire.jsonl');
-  const cancelledRuntime = withFake(t, { pending: 'question', env: { FAKE_ACP_LOG: closeLog } }); const cancelledSession = await cancelledRuntime.call('cursor_start_session', { cwd, mode: 'ask' }); const cancelledTurn = await cancelledRuntime.call('cursor_send_prompt', { session_id: cancelledSession.session_id, prompt: 'ask' }); await cancelledRuntime.call('cursor_wait', { session_id: cancelledSession.session_id, turn_id: cancelledTurn.turn_id, after_event_id: cancelledTurn.last_event_id, timeout_ms: 1_000 });
-  await cancelledRuntime.call('cursor_close_session', { session_id: cancelledSession.session_id });
-  assert.deepEqual(readJsonLines(closeLog).filter((message) => message.id === 'q1'), [{ jsonrpc: '2.0', id: 'q1', result: { outcome: { outcome: 'cancelled' } } }]);
+  for (const closedChannel of [false, true]) {
+    const closeRoot = mkdtempSync(join(tmpdir(), 'cursor-runtime-close-pending-')); t.after(() => rmSync(closeRoot, { recursive: true, force: true })); const closeLog = join(closeRoot, 'wire.jsonl');
+    const cancelledRuntime = withInjectedFake(t, { pending: 'question', env: { FAKE_ACP_LOG: closeLog } });
+    const cancelledSession = await cancelledRuntime.call('cursor_start_session', { cwd, mode: 'ask' });
+    const cancelledTurn = await cancelledRuntime.call('cursor_send_prompt', { session_id: cancelledSession.session_id, prompt: 'ask' });
+    const pending = await cancelledRuntime.call('cursor_wait', { session_id: cancelledSession.session_id, turn_id: cancelledTurn.turn_id, after_event_id: cancelledTurn.last_event_id, timeout_ms: 1_000 });
+    assert.equal(pending.pending.length, 1);
+    // Close the real request pipe while an interactive request is pending.
+    // Public close must still settle the turn if its cancellation reply cannot be sent.
+    if (closedChannel) cancelledRuntime.sessions.get(cancelledSession.session_id).child.stdin.destroy();
+    const closed = await cancelledRuntime.call('cursor_close_session', { session_id: cancelledSession.session_id });
+    assert.equal(closed.session_state, 'tombstone');
+    const terminal = await cancelledRuntime.call('cursor_wait', { session_id: cancelledSession.session_id, turn_id: cancelledTurn.turn_id });
+    assert.equal(terminal.turn_status, 'cancelled');
+    assert.equal(terminal.pending?.length ?? 0, 0);
+    if (!closedChannel) assert.deepEqual(readJsonLines(closeLog).filter((message) => message.id === 'q1'), [{ jsonrpc: '2.0', id: 'q1', result: { outcome: { outcome: 'cancelled' } } }]);
+  }
 });
 
 test('ambiguous permission and unknown callbacks are rejected without pending publication', async (t) => {
@@ -1307,6 +1388,9 @@ test('public live-session and tombstone capacity limits retain only admitted rec
     live.push(await liveRuntime.call('cursor_start_session', { cwd, mode: 'ask' }));
   }
   await assert.rejects(liveRuntime.call('cursor_start_session', { cwd, mode: 'ask' }), { error_code: 'resource_limit' });
+  await assert.rejects(liveRuntime.call('cursor_resume_session', {
+    cwd, cursor_session_id: 'cursor-resume-at-capacity', mode: 'ask',
+  }), { error_code: 'resource_limit' });
   for (const session of live) await liveRuntime.call('cursor_close_session', { session_id: session.session_id });
 
   const tombstoneRuntime = withFake(t);
@@ -1343,6 +1427,259 @@ test('bounded result text preserves UTF-8 code points', async (t) => {
   assert.equal(failed.provider_error.message.truncated, true);
   assert.equal(Buffer.from(failed.provider_error.message.text, 'utf8').toString('utf8'), failed.provider_error.message.text);
   assert.ok(Buffer.byteLength(failed.provider_error.message.text, 'utf8') <= LIMITS.textBytes);
+});
+
+test('full terminal result is paged without losing its Unicode tail or mutating runtime state', async (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'cursor-full-result-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const programPath = join(root, 'program.json');
+  const providerLog = join(root, 'provider.jsonl');
+  const full = `${'a'.repeat(7_998)}😀${'b'.repeat(8_003)}TAIL_MARKER`;
+  writeFileSync(programPath, JSON.stringify({
+    kind: 'fake-acp',
+    steps: [{ type: 'terminal', step_id: 'terminal-1', turn_status: 'completed', result_text: full }],
+  }));
+  const runtime = withInjectedFake(t, { env: {
+    CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH: programPath,
+    FAKE_ACP_LOG: providerLog,
+  } });
+  const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
+  const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'long result' });
+  const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id);
+  assert.equal(terminal.result.truncated, true);
+  assert.equal(terminal.result.text.includes('TAIL_MARKER'), false);
+  assert.equal(terminal.terminal_receipt.result_sha256, createHash('sha256').update(terminal.result.text).digest('hex'));
+
+  const record = runtime.sessions.get(session.session_id);
+  const before = {
+    eventId: record.nextEvent,
+    idleTimer: record.idleTimer,
+    delivered: record.terminalWaitDelivered,
+    providerMessages: readJsonLines(providerLog).length,
+  };
+  const pages = [];
+  let offset = 0;
+  do {
+    const page = await runtime.call('cursor_read_result', { session_id: session.session_id, turn_id: turn.turn_id, offset });
+    pages.push(page);
+    if (page.eof) break;
+    offset = page.next_offset;
+  } while (true);
+  assert.equal(pages.map((page) => page.text).join(''), full);
+  assert.equal(pages[0].next_offset, 7_998);
+  assert.equal(pages.at(-1).text.endsWith('TAIL_MARKER'), true);
+  assert.equal(pages.at(-1).total_bytes, Buffer.byteLength(full));
+  assert.equal(pages.at(-1).sha256, createHash('sha256').update(full).digest('hex'));
+  assert.deepEqual(await runtime.call('cursor_read_result', {
+    session_id: session.session_id, turn_id: turn.turn_id, offset: pages[0].next_offset,
+  }), pages[1]);
+  assert.deepEqual(await runtime.call('cursor_read_result', {
+    session_id: session.session_id, turn_id: turn.turn_id, offset: Buffer.byteLength(full),
+  }), {
+    session_id: session.session_id, turn_id: turn.turn_id, offset: Buffer.byteLength(full),
+    next_offset: null, eof: true, text: '', total_bytes: Buffer.byteLength(full),
+    sha256: createHash('sha256').update(full).digest('hex'),
+  });
+  for (const invalidOffset of [-1, 1.5, 7_999, Buffer.byteLength(full) + 1]) {
+    await assert.rejects(runtime.call('cursor_read_result', {
+      session_id: session.session_id, turn_id: turn.turn_id, offset: invalidOffset,
+    }), { error_code: 'invalid_args' });
+  }
+  assert.deepEqual({
+    eventId: record.nextEvent,
+    idleTimer: record.idleTimer,
+    delivered: record.terminalWaitDelivered,
+    providerMessages: readJsonLines(providerLog).length,
+  }, before);
+});
+
+test('full result read handles empty, active, null, replaced and retained closed turns', async (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'cursor-result-retention-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const programPath = join(root, 'program.json');
+  writeFileSync(programPath, JSON.stringify({
+    kind: 'fake-acp',
+    steps: [{ type: 'terminal', step_id: 'terminal-1', turn_status: 'completed', result_text: '' }],
+  }));
+  const emptyRuntime = withInjectedFake(t, { env: { CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH: programPath } });
+  const emptySession = await emptyRuntime.call('cursor_start_session', { cwd, mode: 'ask' });
+  const emptyTurn = await emptyRuntime.call('cursor_send_prompt', { session_id: emptySession.session_id, prompt: 'empty' });
+  await waitTerminal(emptyRuntime, emptySession.session_id, emptyTurn.turn_id, emptyTurn.last_event_id);
+  assert.deepEqual(await emptyRuntime.call('cursor_read_result', {
+    session_id: emptySession.session_id, turn_id: emptyTurn.turn_id,
+  }), {
+    session_id: emptySession.session_id, turn_id: emptyTurn.turn_id, offset: 0,
+    next_offset: null, eof: true, text: '', total_bytes: 0,
+    sha256: createHash('sha256').update('').digest('hex'),
+  });
+
+  const activeRuntime = withInjectedFake(t, { env: { FAKE_ACP_HOLD_PROMPT: '1' } });
+  const activeSession = await activeRuntime.call('cursor_start_session', { cwd, mode: 'ask' });
+  const activeTurn = await activeRuntime.call('cursor_send_prompt', { session_id: activeSession.session_id, prompt: 'active' });
+  await assert.rejects(activeRuntime.call('cursor_read_result', {
+    session_id: activeSession.session_id, turn_id: activeTurn.turn_id,
+  }), { error_code: 'protocol_error' });
+  await assert.rejects(activeRuntime.call('cursor_read_result', {
+    session_id: activeSession.session_id, turn_id: 'unknown-turn',
+  }), { error_code: 'unknown_turn' });
+  await assert.rejects(activeRuntime.call('cursor_read_result', {
+    session_id: 'unknown-session', turn_id: activeTurn.turn_id,
+  }), { error_code: 'unknown_session' });
+
+  const failedRuntime = withInjectedFake(t, { env: { FAKE_ACP_REJECT_PROMPT: '1' } });
+  const failedSession = await failedRuntime.call('cursor_start_session', { cwd, mode: 'ask' });
+  const failedTurn = await failedRuntime.call('cursor_send_prompt', { session_id: failedSession.session_id, prompt: 'fail' });
+  await waitTerminal(failedRuntime, failedSession.session_id, failedTurn.turn_id, failedTurn.last_event_id);
+  await assert.rejects(failedRuntime.call('cursor_read_result', {
+    session_id: failedSession.session_id, turn_id: failedTurn.turn_id,
+  }), { error_code: 'protocol_error' });
+
+  const runtime = withInjectedFake(t, { env: { FAKE_ACP_RESULT: 'retained' } });
+  const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
+  const first = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'first' });
+  await waitTerminal(runtime, session.session_id, first.turn_id, first.last_event_id);
+  const second = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'second' });
+  assert.equal((await runtime.call('cursor_read_result', { session_id: session.session_id, turn_id: first.turn_id })).text, 'retained');
+  await waitTerminal(runtime, session.session_id, second.turn_id, second.last_event_id);
+  await assert.rejects(runtime.call('cursor_read_result', {
+    session_id: session.session_id, turn_id: first.turn_id,
+  }), { error_code: 'unknown_turn' });
+  await runtime.call('cursor_close_session', { session_id: session.session_id });
+  assert.equal((await runtime.call('cursor_read_result', { session_id: session.session_id, turn_id: second.turn_id })).text, 'retained');
+  runtime.sessions.get(session.session_id).tombstonedAt = Date.now() - LIMITS.retentionMs;
+  await assert.rejects(runtime.call('cursor_read_result', {
+    session_id: session.session_id, turn_id: second.turn_id,
+  }), { error_code: 'unknown_session' });
+});
+
+test('retained result overflow fails explicitly without publishing a partial result', async (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'cursor-result-overflow-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const exactProgramPath = join(root, 'exact-program.json');
+  writeFileSync(exactProgramPath, JSON.stringify({
+    kind: 'fake-acp',
+    steps: [{
+      type: 'terminal', step_id: 'terminal-exact', turn_status: 'completed',
+      progress_text: 'a'.repeat(LIMITS.resultBytes / 2), result_text: 'b'.repeat(LIMITS.resultBytes / 2),
+    }],
+  }));
+  const exactRuntime = withInjectedFake(t, { env: { CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH: exactProgramPath } });
+  const exactSession = await exactRuntime.call('cursor_start_session', { cwd, mode: 'ask' });
+  const exactTurn = await exactRuntime.call('cursor_send_prompt', { session_id: exactSession.session_id, prompt: 'exact cap' });
+  const exactTerminal = await waitTerminal(exactRuntime, exactSession.session_id, exactTurn.turn_id, exactTurn.last_event_id);
+  assert.equal(exactTerminal.turn_status, 'completed');
+  const exactTail = await exactRuntime.call('cursor_read_result', {
+    session_id: exactSession.session_id, turn_id: exactTurn.turn_id, offset: LIMITS.resultBytes - 1,
+  });
+  assert.deepEqual({ text: exactTail.text, total_bytes: exactTail.total_bytes, eof: exactTail.eof }, {
+    text: 'b', total_bytes: LIMITS.resultBytes, eof: true,
+  });
+
+  const programPath = join(root, 'program.json');
+  writeFileSync(programPath, JSON.stringify({
+    kind: 'fake-acp',
+    steps: [{
+      type: 'terminal', step_id: 'terminal-1', turn_status: 'completed',
+      progress_text: 'a'.repeat(600_000), result_text: 'b'.repeat(500_000),
+    }],
+  }));
+  const runtime = withInjectedFake(t, { env: { CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH: programPath } });
+  const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
+  const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'overflow' });
+  const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id);
+  assert.equal(terminal.turn_status, 'failed');
+  assert.deepEqual(terminal.terminal_reason, { text: 'terminal_result_limit', truncated: false });
+  assert.equal(Object.hasOwn(terminal, 'result'), false);
+  assert.equal(terminal.terminal_receipt.result_sha256, null);
+  assert.equal(terminal.terminal_receipt.result_truncated, false);
+  const status = await runtime.call('cursor_session_status', { session_id: session.session_id });
+  assert.equal(status.last_terminal_turn.result, null);
+  await assert.rejects(runtime.call('cursor_read_result', {
+    session_id: session.session_id, turn_id: turn.turn_id,
+  }), { error_code: 'protocol_error' });
+});
+
+test('prompt response seals one immutable terminal before later same-batch updates', async (t) => {
+  for (const lateText of ['late', 'x'.repeat(LIMITS.resultBytes + 1)]) {
+    const runtime = withInjectedFake(t, { env: { FAKE_ACP_HOLD_PROMPT: '1' } });
+    const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
+    const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'wire order' });
+    const record = runtime.sessions.get(session.session_id);
+    const [promptId] = record.rpc.keys();
+    assert.ok(promptId);
+    record.receive(JSON.stringify({ jsonrpc: '2.0', id: Number(promptId), result: { stopReason: 'end_turn' } }));
+    const receipt = structuredClone(record.last.terminal_receipt);
+    record.sessionUpdate({
+      params: { sessionId: 'fake', update: { sessionUpdate: 'agent_message_chunk', content: { text: lateText } } },
+    });
+    const terminal = await runtime.call('cursor_wait', {
+      session_id: session.session_id, turn_id: turn.turn_id,
+      after_event_id: turn.last_event_id, timeout_ms: 1_000,
+    });
+    assert.equal(terminal.turn_status, 'completed');
+    assert.deepEqual(terminal.result, { text: '', truncated: false });
+    assert.equal((await runtime.call('cursor_read_result', {
+      session_id: session.session_id, turn_id: turn.turn_id,
+    })).text, '');
+    assert.equal(record.events.filter((event) => event.kind === 'result' && event.turn_id === turn.turn_id).length, 1);
+    assert.deepEqual(record.last.terminal_receipt, receipt);
+  }
+});
+
+test('provider error without a message seals the turn before a same-batch update', async (t) => {
+  const runtime = withInjectedFake(t, { env: { FAKE_ACP_HOLD_PROMPT: '1' } });
+  const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
+  const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'provider error order' });
+  const record = runtime.sessions.get(session.session_id);
+  const [promptId] = record.rpc.keys();
+  record.receive(JSON.stringify({ jsonrpc: '2.0', id: Number(promptId), error: { code: -32000 } }));
+  record.sessionUpdate({
+    params: { sessionId: 'fake', update: { sessionUpdate: 'agent_message_chunk', content: { text: 'late' } } },
+  });
+  const terminal = await runtime.call('cursor_wait', {
+    session_id: session.session_id, turn_id: turn.turn_id,
+    after_event_id: turn.last_event_id, timeout_ms: 1_000,
+  });
+  assert.equal(terminal.turn_status, 'failed');
+  assert.deepEqual(terminal.provider_error, {
+    code: -32000, message: { text: 'ACP provider error', truncated: false },
+  });
+  assert.equal(record.events.filter((event) => event.kind === 'result' && event.turn_id === turn.turn_id).length, 1);
+});
+
+test('many small result chunks use one bounded accumulator through exact cap and overflow', async (t) => {
+  const runtime = withInjectedFake(t, { env: { FAKE_ACP_HOLD_PROMPT: '1' } });
+  const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
+  const chunk = 'x'.repeat(256);
+  const update = { params: { sessionId: 'fake', update: { sessionUpdate: 'agent_message_chunk', content: { text: chunk } } } };
+
+  const exact = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'exact small chunks' });
+  const record = runtime.sessions.get(session.session_id);
+  for (let index = 0; index < LIMITS.resultBytes / 256; index += 1) record.sessionUpdate(update);
+  const [exactPromptId] = record.rpc.keys();
+  record.receive(JSON.stringify({ jsonrpc: '2.0', id: Number(exactPromptId), result: { stopReason: 'end_turn' } }));
+  const exactTerminal = await runtime.call('cursor_wait', {
+    session_id: session.session_id, turn_id: exact.turn_id,
+    after_event_id: exact.last_event_id, timeout_ms: 1_000,
+  });
+  assert.equal(exactTerminal.turn_status, 'completed');
+  const exactTail = await runtime.call('cursor_read_result', {
+    session_id: session.session_id, turn_id: exact.turn_id, offset: LIMITS.resultBytes - 1,
+  });
+  assert.deepEqual({ text: exactTail.text, total_bytes: exactTail.total_bytes, eof: exactTail.eof }, {
+    text: 'x', total_bytes: LIMITS.resultBytes, eof: true,
+  });
+
+  const overflow = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'overflow small chunks' });
+  for (let index = 0; index < LIMITS.resultBytes / 256; index += 1) record.sessionUpdate(update);
+  record.sessionUpdate({ params: { sessionId: 'fake', update: { sessionUpdate: 'agent_message_chunk', content: { text: 'y' } } } });
+  const failed = await runtime.call('cursor_wait', {
+    session_id: session.session_id, turn_id: overflow.turn_id,
+    after_event_id: overflow.last_event_id, timeout_ms: 1_000,
+  });
+  assert.equal(failed.turn_status, 'failed');
+  assert.deepEqual(failed.terminal_reason, { text: 'terminal_result_limit', truncated: false });
+  assert.equal(record.events.filter((event) => event.kind === 'result' && event.turn_id === overflow.turn_id).length, 1);
 });
 
 test('child exit and malformed ACP UTF-8 fail an allocated active turn', async (t) => {
@@ -1386,7 +1723,8 @@ test('fixed resource limits remain the frozen v1 public values', () => {
     initMs: 15_000, turnMs: 3_600_000, idleMs: 900_000, waitDefaultMs: 30_000,
     waitMinMs: 1_000, waitMaxMs: 180_000, live: 8, pending: 8, waiters: 8,
     tombstones: 64, events: 256, graceMs: 5_000, retentionMs: 300_000,
-    inputBytes: 64_000, textBytes: 8_000, progressBytes: 512, fsBytes: 1_048_576, frameBytes: 1_048_576,
+    inputBytes: 64_000, textBytes: 8_000, progressBytes: 512, fsBytes: 1_048_576,
+    resultBytes: 1_048_576, resultPageBytes: 8_000, frameBytes: 1_048_576,
   });
 });
 
@@ -1546,9 +1884,16 @@ test('child exit after a completed turn tombstones the session without rewriting
   assert.deepEqual(status.last_terminal_turn.result, completed.result);
 });
 
-test('close is repeatable for a retained tombstone', async (t) => {
-  const runtime = withFake(t);
+test('unknown close preserves a live wrapper and valid close remains repeatable', async (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'cursor-runtime-unknown-close-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const log = join(root, 'wire.jsonl');
+  const runtime = withInjectedFake(t, { env: { FAKE_ACP_LOG: log } });
   const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
+  const providerMessages = readJsonLines(log).length;
+  await assert.rejects(runtime.call('cursor_close_session', { session_id: 'missing' }), { error_code: 'unknown_session' });
+  assert.equal((await runtime.call('cursor_session_status', { session_id: session.session_id })).session_state, 'live');
+  assert.equal(readJsonLines(log).length, providerMessages);
   const first = await runtime.call('cursor_close_session', { session_id: session.session_id });
   const second = await runtime.call('cursor_close_session', { session_id: session.session_id });
   assert.equal(first.session_state, 'tombstone');
@@ -1881,6 +2226,8 @@ test('plugin directories are canonical per-session argv without ACP mutation', a
   await assert.rejects(runtime.call('cursor_start_session', { cwd: root, mode: 'ask', plugin_dirs: [] }), { error_code: 'invalid_args' });
   await assert.rejects(runtime.call('cursor_start_session', { cwd: root, mode: 'ask', plugin_dirs: [join(root, 'missing')] }), { error_code: 'scope_rejected' });
   await assert.rejects(runtime.call('cursor_start_session', { cwd: root, mode: 'ask', plugin_dirs: [tmpdir()] }), { error_code: 'scope_rejected' });
+  await assert.rejects(runtime.call('cursor_start_session', { cwd: root, mode: 'ask', plugin_dirs: [join(first, 'mcp.json')] }), { error_code: 'scope_rejected' });
+  await assert.rejects(runtime.call('cursor_start_session', { cwd: root, mode: 'ask', plugin_dirs: [''] }), { error_code: 'invalid_args' });
 });
 
 test('adapter rejects ambiguous nested model parameters before allocation', async () => {
@@ -2302,8 +2649,9 @@ test('mode transition excludes concurrent prompts and mode changes', async (t) =
 test('cursor_set_mode terminalizes a session when the provider never replies', async (t) => {
   const runtime = withInjectedFake(t, { env: { FAKE_ACP_SET_MODE_VARIANT: 'no-response' } });
   const session = await runtime.call('cursor_start_session', { cwd, mode: 'agent' });
-  const transition = runtime.call('cursor_set_mode', { session_id: session.session_id, mode: 'ask' });
-  await assert.rejects(transition, { error_code: 'mode_timeout' });
+  await assert.rejects(fireInitBudgetDeadline(
+    () => runtime.call('cursor_set_mode', { session_id: session.session_id, mode: 'ask' }),
+  ), { error_code: 'mode_timeout' });
   const status = await runtime.call('cursor_session_status', { session_id: session.session_id });
   assert.equal(status.session_state, 'tombstone');
   assert.equal(status.mode, 'agent');

@@ -7,7 +7,8 @@ Runtime SHALL быть единственным владельцем MCP schemas
 `cursor_delegate({cwd,mode,prompt,model?,effort?,fast?,plugin_dirs?})`,
 `cursor_resume_session({cwd,cursor_session_id,mode,model?,effort?,fast?,plugin_dirs?})`,
 `cursor_set_mode({session_id,mode})`, `cursor_send_prompt({session_id,prompt})`,
-`cursor_session_status({session_id})`, `cursor_wait({session_id,turn_id,after_event_id?,after_progress_revision?,timeout_ms?})`,
+`cursor_session_status({session_id})`, `cursor_read_result({session_id,turn_id,offset?})`,
+`cursor_wait({session_id,turn_id,after_event_id?,after_progress_revision?,timeout_ms?})`,
 `cursor_answer_question({session_id,turn_id,request_id,outcome,answers?})`,
 `cursor_answer_plan({session_id,turn_id,request_id,decision})`,
 `cursor_answer_permission({session_id,turn_id,request_id,decision})`,
@@ -29,6 +30,7 @@ absolute directory, `mode` exactly `ask|plan|agent`; `decision` exactly
 | `cursor_send_prompt` | `session_id`, `prompt` | — | `ActionEnvelope` |
 | `cursor_session_status` | `session_id` | — | `SessionEnvelope` |
 | `cursor_wait` | `session_id`, `turn_id` | `after_event_id`, `after_progress_revision`, `timeout_ms` | `WaitDeltaEnvelope` |
+| `cursor_read_result` | `session_id`, `turn_id` | `offset` | `ResultPage` |
 | `cursor_answer_question` | `session_id`, `turn_id`, `request_id`, `outcome` | `answers` | `ActionEnvelope` |
 | plan/permission answer | `session_id`, `turn_id`, `request_id`, `decision` | — | `ActionEnvelope` |
 | `cursor_cancel` | `session_id`, `turn_id` | — | terminal `ActionEnvelope` |
@@ -48,7 +50,9 @@ turn before allocating `turn_id`; rejection creates no turn/event. `TurnSnapshot
 is `{turn_id,turn_status,result:null|BoundedText,terminal_reason:null|BoundedText,pending:PendingRequest[]}`.
 `BoundedText` is `{text:string,truncated:boolean}`. Public input larger than 64 000
 UTF-8 bytes is rejected before allocation; Cursor/OS-derived result, reason and
-context text are truncated to 8 000 bytes only through `BoundedText`.
+context text use the derived-text bound only through `BoundedText`.
+For a completed result this is a preview; full text is retained separately
+under «Полное чтение terminal result».
 `PendingRequest` is `{request_id,kind,context}`. `context` is a bounded discriminated
 union: question `{title:null|BoundedText,questions:Question[]}`, plan
 `{title:null|BoundedText,body:BoundedText}`, permission
@@ -117,8 +121,15 @@ and receipt exactly once; repeated waits for that same retained turn omit both.
 Subsequent mutation acknowledgements MAY carry the compact immutable receipt of
 the affected or most recently delivered terminal turn, but MUST omit
 `last_terminal_turn` and MUST NOT redeliver its bounded result. The full retained
-snapshot is otherwise available only through explicit
-`cursor_session_status`.
+snapshot preview is otherwise available only through explicit
+`cursor_session_status`; full text is read through `cursor_read_result`.
+`ResultPage` is the closed object
+`{session_id,turn_id,offset,next_offset,eof,text,total_bytes,sha256}`. Offsets
+and total are nonnegative safe integers in UTF-8 bytes; `offset` defaults to
+zero, `next_offset` is null exactly at EOF, `eof` is boolean, `text` is a string
+and `sha256` is the lowercase full-text SHA-256 hex digest. Paging behavior
+belongs to «Полное чтение terminal result», numeric bounds to
+«Нормативные limits runtime».
 Every successful tool result is `CallToolResult{isError:false,content:[{type:"text",
 text:JSON.stringify(the declared envelope)}]}`; it has no `structuredContent`.
 Every domain/tool error is a successful JSON-RPC result `CallToolResult` with
@@ -126,10 +137,22 @@ Every domain/tool error is a successful JSON-RPC result `CallToolResult` with
 `structuredContent` and output schemas are outside v1 scope. `error_code` is exactly one of
 `invalid_args|unknown_session|unknown_turn|unknown_request|resource_limit|protocol_error|scope_rejected|invalid_text_encoding|mode_timeout`. JSON-RPC `error` with integer
 code is reserved for malformed JSON-RPC or unknown method.
+For every existing-session tool, `unknown_session` and, where applicable,
+`unknown_turn` MUST be returned before tool-specific provider dispatch, state
+transition or effect; bounded tombstone eviction remains independent lifecycle
+housekeeping and does not turn a rejected call into a dispatched operation.
+Tool-local validation errors for wait address/cursors/timeout, result-read
+address/offset, set-mode session/mode and answer address/request/answer shape
+MUST be returned before that call creates a waiter/timer, dispatches to the
+provider, changes session/turn state or performs the requested effect. This
+does not promise that every malformed nested field is rejected before an
+otherwise valid session lookup, and bounded tombstone housekeeping retains the
+same carveout.
 For an answer-tool error caused by an unknown/stale `request_id` on a live turn,
 the error MUST additionally include `recovery:{session_id,turn_id,last_event_id,
 pending:[{request_id,kind}]}`. It MUST NOT include pending context, permission
 locations, raw ACP payload, or an automatic decision.
+
 `RuntimeEvent.kind` is exactly `lifecycle|pending|result|todos|task|image`.
 `RuntimeEvent` is `{event_id,kind,turn_id:null|string,payload}` where lifecycle
 payload is `{scope:"session"|"turn",from,to}`. Session states are exactly
@@ -142,6 +165,11 @@ todos `{merge:boolean,todos:[{id,content:{text,truncated},status:"pending"|"in_p
 task `{description:{text,truncated},type?:{text,truncated},model?:{text,truncated},duration?:number}`
 or image `{description?:{text,truncated},path?:{text,truncated}}`.
 State changes emit their stated event after storing the snapshot; eviction emits none.
+
+#### Scenario: Tool-local invalid input rejected before requested effect
+- **WHEN** wait, result-read, set-mode or answer input fails its local validation
+- **THEN** runtime returns the normalized domain error before waiter/timer
+  creation, provider dispatch, state transition or the requested effect
 
 #### Scenario: Новый prompt во время active turn
 - **WHEN** `cursor_send_prompt` получает session с active turn
@@ -355,10 +383,11 @@ Runtime MUST применять следующую таблицу.
 | events | 256 | FIFO: lowest `event_id`; update earliest watermark/events_lost |
 | shutdown grace / tombstone retention | 5 000 / 300 000 ms | shared shutdown / unknown after retention |
 | public input / derived text / FS file | 64 000 / 8 000 / 1 048 576 UTF-8 bytes | reject input / BoundedText truncation / resource_limit |
+| retained result per turn / result page | 1 048 576 / 8 000 UTF-8 bytes | explicit terminal failure / Unicode-safe page |
 | ACP NDJSON frame / normalized pending context | 1 048 576 / 64 000 UTF-8 bytes | protocol_error / resource_limit before publication |
 
 These are internal constants, not operator configuration. Idle TTL starts after init success and terminal completion, stops while active
-turn exists, and status/wait do not reset it. Tombstone retention starts once at
+turn exists, and status/wait/read do not reset it. Tombstone retention starts once at
 `tombstoned_at` and close/read never reset it. Event IDs never wrap; exhaustion is
 unreachable under the bounded local-session contract and has no public failure kind.
 
@@ -406,8 +435,10 @@ accepted `agent_message_chunk` text only. The reply contains the current revisio
 and at most 512 UTF-8 bytes only when it advanced; it never exposes thought,
 tool payload, transcript archive or provider frame.
 Progress state is independent from the bounded terminal-result accumulator:
-each accepted nonempty chunk advances the monotonic revision even after the
-terminal accumulator saturates. Runtime retains only the newest bounded
+each accepted nonempty chunk advances the monotonic revision after the
+preview saturates while the retained full result remains within its cap;
+crossing that cap terminalizes through «Полное чтение terminal result».
+Progress retains only the newest bounded
 512-byte excerpt, so multiple updates between waits MAY coalesce; it MUST NOT
 retain an array of raw chunks.
 
@@ -498,3 +529,51 @@ image references and other provider data are never published.
   control-plane timeout
 - **THEN** the operation returns `mode_timeout`, the wrapper becomes a
   tombstone, and no prompt or second transition is allocated
+
+
+### Requirement: Полное чтение terminal result
+Runtime MUST retain the exact concatenated normalized ACP agent-message text
+up to the retained-result bound, rather than truncating the accumulator to
+preview size. Thinking, tools and private archives are not result sources.
+This is the existing public agent-text stream, not a claim of provider-side
+final-phase separation. The bounded preview and its immutable terminal receipt
+remain compatible: receipt hash describes preview bytes, `ResultPage.sha256`
+describes the full retained result. Empty completed text is a valid full result.
+
+`cursor_read_result` MUST synchronously read only the addressed retained last
+terminal turn with a non-null result. It MUST NOT call the provider, create a
+turn/event, change wait delivery state, or refresh idle/retention timers. It
+returns the largest whole-code-point prefix from `offset` within the page
+bound, with exact next offset; concatenating sequential pages from zero to EOF
+reproduces the result and its full digest without omission or duplication.
+At `offset = total_bytes` return empty text and EOF. A negative, noninteger,
+out-of-range or non-code-point-boundary offset returns `invalid_args`.
+Unknown session/turn uses existing errors; an active turn or null result uses
+`protocol_error`. Repeating a read is idempotent. A retained previous terminal
+result remains readable while a newer turn runs, until that newer turn becomes
+the retained last terminal. Close preserves reads only within existing
+tombstone retention/eviction; expired or replaced data is not reconstructed.
+No disk spool, persistent registry, separate result lifecycle or archive API is
+introduced: storage belongs to the existing active and last-terminal turns.
+
+If accepted text would exceed the retained-result limit, runtime MUST stop that
+turn through the existing failed-turn shutdown path with bounded reason
+`terminal_result_limit`, null result and no full-result digest. Partial text
+MUST NOT be published as a complete result or silently clipped to success.
+A prefix is not recovered by asking the provider to regenerate the answer.
+
+#### Scenario: Long review remains completely readable
+- **WHEN** a completed review exceeds the preview bound within the retained limit
+- **THEN** terminal wait delivers a truncated preview once; sequential explicit
+  reads recover every finding including the tail, with a matching full digest
+
+#### Scenario: UTF-8 page and retention boundaries
+- **WHEN** pages cross multibyte characters, a page is repeated, or the caller
+  reads after close while the terminal turn remains retained
+- **THEN** exact text and stable offsets/digest are preserved without provider
+  calls, events or timer extension; replaced/evicted IDs use existing errors
+
+#### Scenario: Result exceeds the storage limit
+- **WHEN** agent text crosses the retained-result cap
+- **THEN** the turn fails with `terminal_result_limit` and null result; caller
+  cannot mistake a partial preview or digest for complete review evidence

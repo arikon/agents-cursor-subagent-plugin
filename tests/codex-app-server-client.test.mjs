@@ -7,7 +7,24 @@ import test from 'node:test';
 import { CodexAppServerClient } from '../scripts/codex-app-server-client.mjs';
 
 const fake = fileURLToPath(new URL('./fixtures/fake-app-server.mjs', import.meta.url));
+
+function deterministicCaptureClock(start = 0) {
+  let current = start;
+  return {
+    now: () => current,
+    sleep: async (delayMs) => { current += delayMs; },
+  };
+}
+
+function positionedCaptureTimeoutClock(...readings) {
+  let index = 0;
+  return {
+    now: () => readings[Math.min(index++, readings.length - 1)],
+    sleep: async () => { throw new Error('positioned capture timeout must not poll'); },
+  };
+}
 const golden = new URL('./fixtures/codex-app-server-v01521.golden.json', import.meta.url);
+const captureGolden = new URL('./fixtures/codex-app-server-v01534.golden.json', import.meta.url);
 
 test('versioned golden fixes the admitted persistent-turn and skill-load surface', async () => {
   const contract = JSON.parse(await readFile(golden, 'utf8'));
@@ -30,6 +47,33 @@ test('versioned golden fixes the admitted persistent-turn and skill-load surface
     { type: 'skill', fields: ['name', 'path'] },
     { type: 'mention', fields: ['name', 'path'], path_prefix: 'plugin://' },
   ]);
+});
+
+test('current versioned golden fixes the paginated final-capture surface', async () => {
+  const contract = JSON.parse(await readFile(captureGolden, 'utf8'));
+  assert.equal(contract.codex_version, 'codex-cli 0.153.4');
+  assert.match(contract.executable_sha256, /^[a-f0-9]{64}$/);
+  assert.equal(contract.executable_bytes, 220585024);
+  assert.equal(Object.keys(contract.generated_schema_sha256).length, 8);
+  assert.equal(Object.values(contract.generated_schema_sha256).every((digest) => /^[a-f0-9]{64}$/.test(digest)), true);
+  assert.deepEqual(contract.capture_methods, ['thread/turns/list', 'thread/items/list']);
+  assert.deepEqual(contract.turns_list, {
+    params: ['threadId', 'cursor', 'limit', 'sortDirection', 'itemsView'],
+    response: ['data', 'nextCursor', 'backwardsCursor'],
+    terminal_statuses: ['completed', 'interrupted', 'failed'],
+  });
+  assert.deepEqual(contract.items_list, {
+    params: ['threadId', 'turnId', 'cursor', 'limit', 'sortDirection'],
+    response: ['data', 'nextCursor', 'backwardsCursor'], entry: ['turnId', 'item'],
+  });
+  assert.deepEqual(contract.agent_message, {
+    type: 'agentMessage', fields: ['id', 'text', 'phase'], phases: ['commentary', 'final_answer', null],
+    selection: 'last final_answer; otherwise last phase-null message in the exact terminal turn',
+  });
+  assert.deepEqual(contract.capture_evidence, {
+    fields: ['text', 'turn_id', 'turn_status', 'phase', 'source', 'completeness', 'error_code'],
+    source: 'thread/items/list', completeness: ['complete', 'confirmed_missing', 'incomplete'], max_text_bytes: 1_000_000,
+  });
 });
 
 test('app-server client normalizes positive installed-skill evidence', async () => {
@@ -83,7 +127,14 @@ test('app-server client preserves diagnostics and a missing optional plugin iden
     await client.initialize();
     const evidence = await client.skillLoadEvidence('/fixture', 'skill');
     assert.equal(evidence.plugin_id, null);
-    assert.deepEqual(client.notifications, [{ method: 'adapter/ready', params: null }]);
+    assert.equal(client.notifications.length, 1);
+    assert.deepEqual(
+      { method: client.notifications[0].method, params: client.notifications[0].params },
+      { method: 'adapter/ready', params: null },
+    );
+    assert.equal(Number.isSafeInteger(client.notifications[0].at_ms), true);
+    assert.equal(client.clientRequests.some(({ method }) => method === 'initialize'), true);
+    assert.equal(client.clientRequests.every((request) => !Object.hasOwn(request, 'params')), true);
     assert.equal(Buffer.concat(client.stderr).toString('utf8'), 'adapter diagnostic');
   } finally { await client.close(); }
 });
@@ -94,6 +145,183 @@ test('app-server client starts an isolated thread through the public request con
     await client.initialize();
     assert.deepEqual(await client.startThread({ ephemeral: true }), { thread: { id: 'isolated-thread' } });
   } finally { await client.close(); }
+});
+
+test('app-server client captures an exact final across paginated turns and items', async () => {
+  const client = new CodexAppServerClient(process.execPath, [fake], { ...process.env, FAKE_APP_SERVER_MODE: 'capture-paginated' });
+  try {
+    await client.initialize();
+    assert.deepEqual(await client.captureTurnFinal('thread', 'evaluated-turn', { timeoutMs: 1_000 }), {
+      text: 'PAGINATED FINAL', turn_id: 'evaluated-turn', turn_status: 'completed', phase: 'final_answer',
+      source: 'thread/items/list', completeness: 'complete', error_code: null,
+    });
+    assert.deepEqual(client.clientRequests.map(({ method }) => method),
+      ['initialize', 'thread/turns/list', 'thread/turns/list', 'thread/items/list', 'thread/items/list']);
+  } finally { await client.close(); }
+});
+
+test('app-server client waits for a late indexed final', async () => {
+  const client = new CodexAppServerClient(process.execPath, [fake], { ...process.env, FAKE_APP_SERVER_MODE: 'capture-late' }, deterministicCaptureClock());
+  try {
+    await client.initialize();
+    assert.deepEqual(await client.captureTurnFinal('thread', 'evaluated-turn', { timeoutMs: 100, pollIntervalMs: 10 }), {
+      text: 'LATE FINAL', turn_id: 'evaluated-turn', turn_status: 'completed', phase: 'final_answer',
+      source: 'thread/items/list', completeness: 'complete', error_code: null,
+    });
+  } finally { await client.close(); }
+});
+
+test('app-server client distinguishes a confirmed missing final from an empty final', async () => {
+  const missing = new CodexAppServerClient(process.execPath, [fake], { ...process.env, FAKE_APP_SERVER_MODE: 'capture-absent' }, deterministicCaptureClock());
+  const empty = new CodexAppServerClient(process.execPath, [fake], { ...process.env, FAKE_APP_SERVER_MODE: 'capture-empty' });
+  try {
+    await Promise.all([missing.initialize(), empty.initialize()]);
+    assert.deepEqual(await missing.captureTurnFinal('thread', 'evaluated-turn', { timeoutMs: 200, pollIntervalMs: 200 }), {
+      text: null, turn_id: 'evaluated-turn', turn_status: 'completed', phase: null,
+      source: 'thread/items/list', completeness: 'confirmed_missing', error_code: null,
+    });
+    assert.deepEqual(await empty.captureTurnFinal('thread', 'evaluated-turn', { timeoutMs: 1_000 }), {
+      text: '', turn_id: 'evaluated-turn', turn_status: 'completed', phase: 'final_answer',
+      source: 'thread/items/list', completeness: 'complete', error_code: null,
+    });
+  } finally { await Promise.all([missing.close(), empty.close()]); }
+});
+
+test('app-server client records the admitted legacy null phase', async () => {
+  const client = new CodexAppServerClient(process.execPath, [fake], { ...process.env, FAKE_APP_SERVER_MODE: 'capture-legacy' });
+  try {
+    await client.initialize();
+    assert.deepEqual(await client.captureTurnFinal('thread', 'evaluated-turn', { timeoutMs: 1_000 }), {
+      text: 'LEGACY FINAL', turn_id: 'evaluated-turn', turn_status: 'completed', phase: null,
+      source: 'thread/items/list', completeness: 'complete', error_code: null,
+    });
+  } finally { await client.close(); }
+});
+
+test('app-server client keeps nonterminal and corrupt extraction incomplete', async () => {
+  const incomplete = new CodexAppServerClient(process.execPath, [fake], { ...process.env, FAKE_APP_SERVER_MODE: 'capture-incomplete' }, deterministicCaptureClock());
+  const corrupt = new CodexAppServerClient(process.execPath, [fake], { ...process.env, FAKE_APP_SERVER_MODE: 'capture-corrupt' });
+  try {
+    await Promise.all([incomplete.initialize(), corrupt.initialize()]);
+    assert.deepEqual(await incomplete.captureTurnFinal('thread', 'evaluated-turn', { timeoutMs: 100, pollIntervalMs: 100 }), {
+      text: null, turn_id: 'evaluated-turn', turn_status: 'inProgress', phase: null,
+      source: 'thread/turns/list', completeness: 'incomplete', error_code: 'turn_not_terminal',
+    });
+    assert.deepEqual(await corrupt.captureTurnFinal('thread', 'evaluated-turn', { timeoutMs: 1_000 }), {
+      text: null, turn_id: 'evaluated-turn', turn_status: null, phase: null,
+      source: 'thread/turns/list', completeness: 'incomplete', error_code: 'invalid_turns_response',
+    });
+  } finally { await Promise.all([incomplete.close(), corrupt.close()]); }
+});
+
+test('app-server client returns exact long text and rejects a pagination cursor cycle', async () => {
+  const long = new CodexAppServerClient(process.execPath, [fake], { ...process.env, FAKE_APP_SERVER_MODE: 'capture-long' });
+  const cycle = new CodexAppServerClient(process.execPath, [fake], { ...process.env, FAKE_APP_SERVER_MODE: 'capture-cycle' });
+  try {
+    await Promise.all([long.initialize(), cycle.initialize()]);
+    const captured = await long.captureTurnFinal('thread', 'evaluated-turn', { timeoutMs: 1_000 });
+    assert.equal(captured.text, 'x'.repeat(100_000));
+    assert.equal(captured.completeness, 'complete');
+    assert.deepEqual(await cycle.captureTurnFinal('thread', 'evaluated-turn', { timeoutMs: 1_000 }), {
+      text: null, turn_id: 'evaluated-turn', turn_status: 'completed', phase: null,
+      source: 'thread/items/list', completeness: 'incomplete', error_code: 'pagination_cursor_cycle',
+    });
+  } finally { await Promise.all([long.close(), cycle.close()]); }
+});
+
+test('app-server client admits the exact text limit and rejects the next byte under default transport limits', async () => {
+  const exact = new CodexAppServerClient(process.execPath, [fake], { ...process.env, FAKE_APP_SERVER_MODE: 'capture-limit' });
+  const oversized = new CodexAppServerClient(process.execPath, [fake], { ...process.env, FAKE_APP_SERVER_MODE: 'capture-oversized' });
+  try {
+    await Promise.all([exact.initialize(), oversized.initialize()]);
+    const captured = await exact.captureTurnFinal('thread', 'evaluated-turn', { timeoutMs: 1_000 });
+    assert.equal(Buffer.byteLength(captured.text), 1_000_000);
+    assert.equal(captured.completeness, 'complete');
+    assert.deepEqual(await oversized.captureTurnFinal('thread', 'evaluated-turn', { timeoutMs: 1_000 }), {
+      text: null, turn_id: 'evaluated-turn', turn_status: 'completed', phase: null,
+      source: 'thread/items/list', completeness: 'incomplete', error_code: 'capture_text_limit',
+    });
+  } finally { await Promise.all([exact.close(), oversized.close()]); }
+});
+
+test('app-server client attributes a corrupt item page to item extraction', async () => {
+  const client = new CodexAppServerClient(process.execPath, [fake], { ...process.env, FAKE_APP_SERVER_MODE: 'capture-corrupt-items' });
+  try {
+    await client.initialize();
+    assert.deepEqual(await client.captureTurnFinal('thread', 'evaluated-turn', { timeoutMs: 1_000 }), {
+      text: null, turn_id: 'evaluated-turn', turn_status: 'completed', phase: null,
+      source: 'thread/items/list', completeness: 'incomplete', error_code: 'invalid_items_response',
+    });
+  } finally { await client.close(); }
+});
+
+test('app-server client applies one deadline to slow pages and caps the page override', async () => {
+  const slow = new CodexAppServerClient(
+    process.execPath,
+    [fake],
+    { ...process.env, FAKE_APP_SERVER_MODE: 'capture-slow' },
+    { requestTimeoutMs: 120_000, ...positionedCaptureTimeoutClock(0, 900) },
+  );
+  const slowItems = new CodexAppServerClient(
+    process.execPath,
+    [fake],
+    { ...process.env, FAKE_APP_SERVER_MODE: 'capture-slow-items' },
+    { requestTimeoutMs: 120_000, ...positionedCaptureTimeoutClock(0, 0, 900) },
+  );
+  try {
+    await Promise.all([slow.initialize(), slowItems.initialize()]);
+    assert.deepEqual(await slow.captureTurnFinal('thread', 'evaluated-turn', { timeoutMs: 1_000 }), {
+      text: null, turn_id: 'evaluated-turn', turn_status: null, phase: null,
+      source: 'thread/turns/list', completeness: 'incomplete', error_code: 'capture_timeout',
+    });
+    assert.deepEqual(await slowItems.captureTurnFinal('thread', 'evaluated-turn', { timeoutMs: 1_000 }), {
+      text: null, turn_id: 'evaluated-turn', turn_status: 'completed', phase: null,
+      source: 'thread/items/list', completeness: 'incomplete', error_code: 'capture_timeout',
+    });
+    await assert.rejects(
+      slow.captureTurnFinal('thread', 'evaluated-turn', { pageLimit: 101 }),
+      /invalid turn capture limits/,
+    );
+    await assert.rejects(slow.captureTurnFinal('', 'evaluated-turn'), /invalid turn capture identity/);
+    await assert.rejects(slow.captureTurnFinal('thread', '', {}), /invalid turn capture identity/);
+    await assert.rejects(slow.captureTurnFinal('thread', 'evaluated-turn', { timeoutMs: -1 }), /invalid turn capture limits/);
+    await assert.rejects(slow.captureTurnFinal('thread', 'evaluated-turn', { pollIntervalMs: -1 }), /invalid turn capture limits/);
+    await assert.rejects(slow.captureTurnFinal('thread', 'evaluated-turn', { pageLimit: 0 }), /invalid turn capture limits/);
+  } finally { await Promise.all([slow.close(), slowItems.close()]); }
+});
+
+test('app-server client rejects an agent message without its required id', async () => {
+  const client = new CodexAppServerClient(process.execPath, [fake], { ...process.env, FAKE_APP_SERVER_MODE: 'capture-missing-id' });
+  try {
+    await client.initialize();
+    assert.deepEqual(await client.captureTurnFinal('thread', 'evaluated-turn', { timeoutMs: 1_000 }), {
+      text: null, turn_id: 'evaluated-turn', turn_status: 'completed', phase: null,
+      source: 'thread/items/list', completeness: 'incomplete', error_code: 'invalid_items_response',
+    });
+  } finally { await client.close(); }
+});
+
+test('app-server client classifies bounded pagination and request failures by source', async () => {
+  const cases = [
+    ['capture-turn-absent', {}, 'thread/turns/list', 'turn_not_found'],
+    ['capture-turn-cycle', {}, 'thread/turns/list', 'pagination_cursor_cycle'],
+    ['capture-turn-page-limit', { pageLimit: 1 }, 'thread/turns/list', 'capture_page_limit'],
+    ['capture-item-page-limit', { pageLimit: 1 }, 'thread/items/list', 'capture_page_limit'],
+    ['capture-turn-error', {}, 'thread/turns/list', 'request_failed'],
+    ['capture-item-error', {}, 'thread/items/list', 'request_failed'],
+    ['capture-invalid-turn-entry', {}, 'thread/turns/list', 'invalid_turns_response'],
+    ['capture-wrong-item-turn', {}, 'thread/items/list', 'invalid_items_response'],
+  ];
+  for (const [mode, options, source, errorCode] of cases) {
+    const client = new CodexAppServerClient(process.execPath, [fake], { ...process.env, FAKE_APP_SERVER_MODE: mode });
+    try {
+      await client.initialize();
+      const captured = await client.captureTurnFinal('thread', 'evaluated-turn', { timeoutMs: 1_000, ...options });
+      assert.equal(captured.completeness, 'incomplete', mode);
+      assert.equal(captured.source, source, mode);
+      assert.equal(captured.error_code, errorCode, mode);
+    } finally { await client.close(); }
+  }
 });
 
 test('app-server client sends the admitted explicit skill input', async () => {

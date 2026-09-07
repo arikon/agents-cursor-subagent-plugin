@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { spawn } from 'node:child_process';
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { lstatSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, relative, resolve } from 'node:path';
 
@@ -8,9 +8,11 @@ import { dirname, isAbsolute, relative, resolve } from 'node:path';
 export const LIMITS = Object.freeze({ initMs: 15_000, turnMs: 3_600_000, idleMs: 900_000,
   waitDefaultMs: 30_000, waitMinMs: 1_000, waitMaxMs: 180_000, live: 8, pending: 8,
   waiters: 8, tombstones: 64, events: 256, graceMs: 5_000, retentionMs: 300_000,
-  inputBytes: 64_000, textBytes: 8_000, progressBytes: 512, fsBytes: 1_048_576, frameBytes: 1_048_576 });
+  inputBytes: 64_000, textBytes: 8_000, progressBytes: 512, fsBytes: 1_048_576,
+  resultBytes: 1_048_576, resultPageBytes: 8_000, frameBytes: 1_048_576 });
 const MCP_VERSION = '2024-11-05';
 const ADMITTED_TASK_SUBAGENT_TYPES = new Set(['computer_use', 'explore', 'video_review', 'browser_use', 'shell', 'vm_setup_helper', 'unspecified']);
+const opaqueId = () => randomBytes(16).toString('base64url');
 
 export class DomainError extends Error {
   constructor(error_code, message, extras = {}) { super(message); this.error_code = error_code; Object.assign(this, extras); }
@@ -273,7 +275,7 @@ const LAUNCH_KEYS = [...MODEL_KEYS, 'plugin_dirs'];
 
 class SessionRecord {
   constructor(runtime, cwd, mode, launch = DEFAULT_LAUNCH) {
-    this.runtime = runtime; this.id = randomUUID(); this.cwd = cwd; this.mode = mode;
+    this.runtime = runtime; this.id = opaqueId(); this.cwd = cwd; this.mode = mode;
     this.model = launch.model; this.effort = launch.effort; this.fast = launch.fast;
     this.plugin_dirs = launch.plugin_dirs;
     this.run_mode = 'auto_review'; this.sandbox = 'enabled'; this.session_state = 'starting';
@@ -293,9 +295,7 @@ class SessionRecord {
   turnState(turn, to) { const from = turn.turn_status; if (from === to) return; turn.turn_status = to; this.emit('lifecycle', turn.turn_id, { scope: 'turn', from, to }); }
   snapshot(turn) { return !turn ? null : { turn_id: turn.turn_id, turn_status: turn.turn_status, result: turn.result, terminal_reason: turn.terminal_reason, pending: [...turn.pending.values()].map((pending) => ({ request_id: pending.request_id, kind: pending.kind, context: pending.context })) }; }
   deliveredReceipt() { return this.last && this.terminalWaitDelivered ? terminalReceipt(this, this.last) : undefined; }
-  envelope(turn = null, { redactLast = false, includeReceipt = false } = {}) {
-    const last = redactLast ? null : this.snapshot(this.last);
-    const receipt = includeReceipt && this.last ? terminalReceipt(this, this.last) : undefined;
+  envelope() {
     return {
       session_id: this.id, session_state: this.session_state, cwd: this.cwd, mode: this.mode,
       model: this.model, effort: this.effort, fast: this.fast,
@@ -303,9 +303,7 @@ class SessionRecord {
       cursor_session_id: this.cursor_session_id, run_mode: this.run_mode, sandbox: this.sandbox,
       failure_kind: this.failure_kind, terminal_reason: this.terminal_reason, last_event_id: this.nextEvent - 1,
       ...(this.provider_error ? { provider_error: this.provider_error } : {}),
-      active_turn: this.snapshot(this.active), last_terminal_turn: last,
-      ...(receipt ? { terminal_receipt: receipt } : {}),
-      ...(turn ? { turn_id: turn.turn_id, turn_status: turn.turn_status } : {}),
+      active_turn: this.snapshot(this.active), last_terminal_turn: this.snapshot(this.last),
     };
   }
   actionEnvelope(turn = null, extra = {}) {
@@ -452,9 +450,9 @@ class SessionRecord {
       } catch (error) { reject(error); }
     });
   }
-  request(method, params) {
+  request(method, params, handlers = {}) {
     const id = this.rpcId++;
-    const promise = new Promise((resolveRpc, reject) => this.rpc.set(String(id), { resolve: resolveRpc, reject }));
+    const promise = new Promise((resolveRpc, reject) => this.rpc.set(String(id), { ...handlers, resolve: resolveRpc, reject }));
     try { this.send({ jsonrpc: '2.0', id, method, params }); }
     catch (error) { this.rpc.delete(String(id)); throw error; }
     return promise;
@@ -469,7 +467,14 @@ class SessionRecord {
       const hasResult = Object.hasOwn(message, 'result'); const hasError = Object.hasOwn(message, 'error');
       if (hasResult === hasError) return this.transportFailure('invalid ACP response');
       const waiter = this.rpc.get(String(message.id)); if (!waiter) return; this.rpc.delete(String(message.id));
-      if (hasError) waiter.reject(providerError(message.error)); else waiter.resolve(message.result); return;
+      if (hasError) {
+        const error = providerError(message.error);
+        try { waiter.onError?.(error); } finally { waiter.reject(error); }
+      } else {
+        try { waiter.onResult?.(message.result); waiter.resolve(message.result); }
+        catch (error) { waiter.reject(error); }
+      }
+      return;
     }
     if (typeof message.method === 'string' && message.method) this.callback(message); else this.transportFailure('invalid ACP JSON-RPC frame');
   }
@@ -507,15 +512,19 @@ class SessionRecord {
     if (!turn || message.params?.sessionId !== this.cursorSessionId || update?.sessionUpdate !== 'agent_message_chunk') return;
     const chunk = update.content?.text;
     if (!validText(chunk)) return this.transportFailure('invalid ACP agent message');
-    // Keep only the runtime-owned bounded diagnostic representation; raw ACP
-    // updates never become a public trace. Thinking/tool/archive payloads are ignored.
-    const aggregate = bounded(`${turn.agent_text || ''}${chunk}`);
+    // Retain only the admitted agent-text stream. Thinking/tool/archive payloads
+    // remain excluded, while the public preview is derived at completion.
+    const chunkBytes = bytes(chunk);
+    if (turn.agent_text_bytes + chunkBytes > LIMITS.resultBytes) {
+      void this.terminalize(turn, 'failed', 'terminal_result_limit');
+      return;
+    }
     if (chunk) {
       turn.progress_revision = (turn.progress_revision || 0) + 1;
       turn.progress_excerpt = bounded(chunk, LIMITS.progressBytes);
     }
-    turn.agent_text = aggregate.text;
-    turn.agent_text_truncated = Boolean(turn.agent_text_truncated || aggregate.truncated);
+    if (chunk) turn.agent_text_parts.push(chunk);
+    turn.agent_text_bytes += chunkBytes;
   }
   collaborationRequest(message) {
     if (message.id === undefined) return;
@@ -574,24 +583,38 @@ class SessionRecord {
     if (this.session_state !== 'live') fail('protocol_error', 'session is not live');
     if (this.modeTransition) fail('protocol_error', 'session mode transition is in progress');
     if (this.active) fail('protocol_error', 'session already has an active turn');
-    this.clearIdle(); const turn = { turn_id: randomUUID(), turn_status: 'running', result: null, terminal_reason: null, terminal_receipt: null, pending: new Map(), timer: null, agent_text: '', agent_text_truncated: false, progress_revision: 0, progress_excerpt: null };
+    this.clearIdle(); const turn = { turn_id: opaqueId(), turn_status: 'running', result: null, full_result: null, full_result_sha256: null, terminal_reason: null, terminal_receipt: null, pending: new Map(), timer: null, agent_text_parts: [], agent_text_bytes: 0, progress_revision: 0, progress_excerpt: null };
     this.active = turn; this.emit('lifecycle', turn.turn_id, { scope: 'turn', from: null, to: 'running' });
     turn.timer = setTimeout(() => this.terminalize(turn, 'timed_out', 'turn deadline exceeded'), LIMITS.turnMs);
     let dispatched;
-    try { dispatched = this.request(ADAPTER.methods.prompt, { sessionId: this.cursorSessionId, prompt: [{ type: 'text', text: prompt }] }); }
+    try {
+      dispatched = this.request(ADAPTER.methods.prompt, { sessionId: this.cursorSessionId, prompt: [{ type: 'text', text: prompt }] }, {
+        onResult: (result) => {
+          try {
+            if (turn.pending.size) fail('protocol_error', 'ACP result with pending request');
+            this.complete(turn, result);
+          } catch (error) {
+            void this.terminalize(turn, 'failed', error.message);
+            throw error;
+          }
+        },
+        onError: (error) => {
+          if (hasProviderError(error)) this.provider_error = error.provider_error;
+          void this.terminalize(turn, 'failed', error.message);
+        },
+      });
+    }
     catch (error) { await this.terminalize(turn, 'failed', error.message); return turn; }
-    dispatched.then((result) => {
-      if (turn.pending.size) this.terminalize(turn, 'failed', 'ACP result with pending request');
-      else { try { this.complete(turn, result); } catch (error) { void this.terminalize(turn, 'failed', error.message); } }
-    }).catch((error) => {
-      if (hasProviderError(error)) this.provider_error = error.provider_error;
-      if (this.active === turn) this.terminalize(turn, 'failed', error.message);
-    });
+    void dispatched.catch(() => {});
     return turn;
   }
   complete(turn, result) {
+    if (this.active !== turn || turn.turn_status !== 'running') return;
     if (!ADAPTER.admitPromptResult(result)) fail('protocol_error', 'ACP prompt response is not admitted');
-    clearTimeout(turn.timer); turn.result = { text: turn.agent_text, truncated: turn.agent_text_truncated }; turn.turn_status = 'completed'; this.emit('result', turn.turn_id, { turn_status: 'completed' }); captureTerminalReceipt(this, turn); this.active = null; this.last = turn; this.terminalWaitDelivered = false; this.armIdle();
+    clearTimeout(turn.timer); turn.full_result = turn.agent_text_parts.join('');
+    turn.agent_text_parts = null; turn.agent_text_bytes = null;
+    turn.full_result_sha256 = createHash('sha256').update(turn.full_result, 'utf8').digest('hex');
+    turn.result = bounded(turn.full_result); turn.turn_status = 'completed'; this.emit('result', turn.turn_id, { turn_status: 'completed' }); captureTerminalReceipt(this, turn); this.active = null; this.last = turn; this.terminalWaitDelivered = false; this.armIdle();
   }
   async answer(turn, requestId, response) {
     const pending = turn.pending.get(requestId); if (!pending) fail('unknown_request', 'unknown pending request');
@@ -625,7 +648,7 @@ class SessionRecord {
       this.emit('pending', turn.turn_id, { action: 'removed', request_id: pending.request_id, request_kind: pending.kind });
       try { this.respond(pending.rawId, ADAPTER.cancelResponse(pending.kind)); } catch { /* shutdown abandons closed transport */ }
     }
-    this.requestAdapterCancel();
+    this.requestAdapterCancel(); turn.agent_text_parts = null; turn.agent_text_bytes = null;
     turn.terminal_reason = bounded(reason); turn.turn_status = status; this.emit('result', turn.turn_id, { turn_status: status }); captureTerminalReceipt(this, turn); this.active = null; this.last = turn; this.terminalWaitDelivered = false; await this.shutdown(turn, reason);
   }
   shutdown(_turn, reason) {
@@ -678,6 +701,27 @@ export class Runtime {
     this.sessions.set(session.id, session); this.live.add(session.id); await session.start(); return session.envelope();
   }
   turn(session, id) { if (session.active?.turn_id === id) return session.active; if (session.last?.turn_id === id) return session.last; fail('unknown_turn', 'unknown turn'); }
+  readResult(args) {
+    assertObject(args, ['session_id', 'turn_id', 'offset'], ['session_id', 'turn_id']);
+    const session = this.session(text(args.session_id, 'session_id'));
+    const turn = this.turn(session, text(args.turn_id, 'turn_id'));
+    if (turn !== session.last || turn.result === null || turn.full_result === null) fail('protocol_error', 'turn has no retained terminal result');
+    const offset = args.offset ?? 0;
+    const encoded = Buffer.from(turn.full_result, 'utf8');
+    if (!Number.isSafeInteger(offset) || offset < 0 || offset > encoded.length) fail('invalid_args', 'invalid result offset');
+    try { decoder.decode(encoded.subarray(0, offset)); } catch { fail('invalid_args', 'result offset is not a UTF-8 boundary'); }
+    let end = Math.min(encoded.length, offset + LIMITS.resultPageBytes);
+    while (end > offset) {
+      try { decoder.decode(encoded.subarray(offset, end)); break; } catch { end -= 1; }
+    }
+    const eof = end === encoded.length;
+    return {
+      session_id: session.id, turn_id: turn.turn_id, offset,
+      next_offset: eof ? null : end, eof,
+      text: encoded.subarray(offset, end).toString('utf8'), total_bytes: encoded.length,
+      sha256: turn.full_result_sha256,
+    };
+  }
   async call(name, args) {
     assertAggregate(args);
     if (name === 'cursor_delegate') {
@@ -709,6 +753,7 @@ export class Runtime {
     if (name === 'cursor_send_prompt') { assertObject(args, ['session_id', 'prompt'], ['session_id', 'prompt']); const session = this.session(text(args.session_id, 'session_id')); const turn = await session.prompt(text(args.prompt, 'prompt')); return session.actionEnvelope(turn); }
     if (name === 'cursor_set_mode') return this.setMode(args);
     if (name === 'cursor_session_status') { assertObject(args, ['session_id'], ['session_id']); return this.session(text(args.session_id, 'session_id')).envelope(); }
+    if (name === 'cursor_read_result') return this.readResult(args);
     if (name === 'cursor_wait') return this.wait(args);
     if (name === 'cursor_cancel') {
       assertObject(args, ['session_id', 'turn_id'], ['session_id', 'turn_id']);
@@ -825,6 +870,7 @@ export const tools = [
   tool('cursor_send_prompt', idFields('session_id', 'prompt'), ['session_id', 'prompt']),
   tool('cursor_set_mode', { ...idFields('session_id'), mode: modeEnum }, ['session_id', 'mode']),
   tool('cursor_session_status', idFields('session_id'), ['session_id']),
+  tool('cursor_read_result', { ...idFields('session_id', 'turn_id'), offset: { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER } }, ['session_id', 'turn_id']),
   tool('cursor_wait', { ...idFields('session_id', 'turn_id'), after_event_id: { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER }, after_progress_revision: { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER }, timeout_ms: { type: 'integer', minimum: LIMITS.waitMinMs, maximum: LIMITS.waitMaxMs } }, ['session_id', 'turn_id']),
   tool('cursor_answer_question', { ...idFields('session_id', 'turn_id', 'request_id'), outcome: { type: 'string', enum: ['answered', 'skipped', 'cancelled'] }, answers: { type: 'array', items: answerItem } }, ['session_id', 'turn_id', 'request_id', 'outcome']),
   tool('cursor_answer_plan', { ...idFields('session_id', 'turn_id', 'request_id'), decision: { type: 'string', enum: ['accept', 'reject'] } }, ['session_id', 'turn_id', 'request_id', 'decision']),
