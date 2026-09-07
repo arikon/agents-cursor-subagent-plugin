@@ -1,0 +1,670 @@
+TAP version 13
+# Subtest: semantic gate accepts a complete five-change contract tree
+ok 1 - semantic gate accepts a complete five-change contract tree
+  ---
+  duration_ms: 26.002417
+  type: 'test'
+  ...
+# Subtest: semantic gate accepts corpus owner requirements from authoritative main specs
+ok 2 - semantic gate accepts corpus owner requirements from authoritative main specs
+  ---
+  duration_ms: 14.021542
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects a programmed corpus row without its facade owner
+ok 3 - semantic gate rejects a programmed corpus row without its facade owner
+  ---
+  duration_ms: 14.067958
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects a row-level copy of the uniform lifecycle owner
+ok 4 - semantic gate rejects a row-level copy of the uniform lifecycle owner
+  ---
+  duration_ms: 12.388416
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects any extra authoritative owner not implied by row semantics
+ok 5 - semantic gate rejects any extra authoritative owner not implied by row semantics
+  ---
+  duration_ms: 14.360958
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects a read effect corpus row without Workspace discipline owner
+ok 6 - semantic gate rejects a read effect corpus row without Workspace discipline owner
+  ---
+  duration_ms: 13.291125
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects a write effect corpus row without Workspace discipline owner
+ok 7 - semantic gate rejects a write effect corpus row without Workspace discipline owner
+  ---
+  duration_ms: 11.111458
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects composite launch progress without every exercised owner
+ok 8 - semantic gate rejects composite launch progress without every exercised owner
+  ---
+  duration_ms: 12.6865
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects resume trace without its runtime owner
+ok 9 - semantic gate rejects resume trace without its runtime owner
+  ---
+  duration_ms: 13.692458
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects addressed wait trace without its runtime owner
+ok 10 - semantic gate rejects addressed wait trace without its runtime owner
+  ---
+  duration_ms: 12.712958
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects full result read without its runtime owner
+ok 11 - semantic gate rejects full result read without its runtime owner
+  ---
+  duration_ms: 11.113292
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects result overflow without its runtime owner
+ok 12 - semantic gate rejects result overflow without its runtime owner
+  ---
+  duration_ms: 11.32425
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects file callback without its derived owner
+ok 13 - semantic gate rejects file callback without its derived owner
+  ---
+  duration_ms: 13.418417
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects failed mode transition without its derived owner
+ok 14 - semantic gate rejects failed mode transition without its derived owner
+  ---
+  duration_ms: 11.530792
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects provider rejection without its derived owner
+ok 15 - semantic gate rejects provider rejection without its derived owner
+  ---
+  duration_ms: 11.2375
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects retention gap without its derived owner
+ok 16 - semantic gate rejects retention gap without its derived owner
+  ---
+  duration_ms: 11.352417
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects turn deadline without its derived owner
+ok 17 - semantic gate rejects turn deadline without its derived owner
+  ---
+  duration_ms: 12.122667
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects missing plugin directory without its derived owner
+ok 18 - semantic gate rejects missing plugin directory without its derived owner
+  ---
+  duration_ms: 12.666208
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects corpus harness_faults missing from its owner spec
+ok 19 - semantic gate rejects corpus harness_faults missing from its owner spec
+  ---
+  duration_ms: 11.5515
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects corpus skill_sensitivity missing from its owner spec
+ok 20 - semantic gate rejects corpus skill_sensitivity missing from its owner spec
+  ---
+  duration_ms: 12.587166
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects drift in an exact owned requirement label
+ok 21 - semantic gate rejects drift in an exact owned requirement label
+  ---
+  duration_ms: 11.067375
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects unknown corpus owner capability
+ok 22 - semantic gate rejects unknown corpus owner capability
+  ---
+  duration_ms: 12.087333
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects unknown corpus owner requirement
+ok 23 - semantic gate rejects unknown corpus owner requirement
+  ---
+  duration_ms: 12.860708
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects expanded corpus owner reference shape
+ok 24 - semantic gate rejects expanded corpus owner reference shape
+  ---
+  duration_ms: 10.692333
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects non-object corpus owner reference
+ok 25 - semantic gate rejects non-object corpus owner reference
+  ---
+  duration_ms: 10.306666
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects malformed corpus owner document
+ok 26 - semantic gate rejects malformed corpus owner document
+  ---
+  duration_ms: 11.881708
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects corpus without scenarios
+ok 27 - semantic gate rejects corpus without scenarios
+  ---
+  duration_ms: 13.280416
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects corpus row without owner requirements
+ok 28 - semantic gate rejects corpus row without owner requirements
+  ---
+  duration_ms: 10.748
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects null corpus row
+ok 29 - semantic gate rejects null corpus row
+  ---
+  duration_ms: 10.902708
+  type: 'test'
+  ...
+# Subtest: semantic gate accepts a registered skip-specs tooling change without a capability delta
+ok 30 - semantic gate accepts a registered skip-specs tooling change without a capability delta
+  ---
+  duration_ms: 14.816209
+  type: 'test'
+  ...
+# Subtest: semantic gate limits capability claims to the Capabilities section
+ok 31 - semantic gate limits capability claims to the Capabilities section
+  ---
+  duration_ms: 13.051625
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects a missing public-invariant index
+ok 32 - semantic gate rejects a missing public-invariant index
+  ---
+  duration_ms: 9.450709
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects an owner reference when the owner has no requirement-id mapping
+ok 33 - semantic gate rejects an owner reference when the owner has no requirement-id mapping
+  ---
+  duration_ms: 11.505667
+  type: 'test'
+  ...
+# Subtest: semantic gate reads only the requested requirement block from a multi-requirement main spec
+ok 34 - semantic gate reads only the requested requirement block from a multi-requirement main spec
+  ---
+  duration_ms: 9.393542
+  type: 'test'
+  ...
+# Subtest: semantic gate treats a main-spec directory without spec.md as having no owner requirements
+ok 35 - semantic gate treats a main-spec directory without spec.md as having no owner requirements
+  ---
+  duration_ms: 9.586583
+  type: 'test'
+  ...
+# Subtest: semantic gate admits a corpus owner requirement declared by the same active change delta
+ok 36 - semantic gate admits a corpus owner requirement declared by the same active change delta
+  ---
+  duration_ms: 11.380875
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects a corpus owner requirement declared only by another change delta
+ok 37 - semantic gate rejects a corpus owner requirement declared only by another change delta
+  ---
+  duration_ms: 10.522834
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects reference-only change without skip_specs marker
+ok 38 - semantic gate rejects reference-only change without skip_specs marker
+  ---
+  duration_ms: 9.504708
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects reference-only change with conflicting skip_specs marker
+ok 39 - semantic gate rejects reference-only change with conflicting skip_specs marker
+  ---
+  duration_ms: 10.180167
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects reference-only change with an invalid owner reference
+ok 40 - semantic gate rejects reference-only change with an invalid owner reference
+  ---
+  duration_ms: 13.022625
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects reference-only change with a missing owner change
+ok 41 - semantic gate rejects reference-only change with a missing owner change
+  ---
+  duration_ms: 9.889
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects reference-only change without an owner reference
+ok 42 - semantic gate rejects reference-only change without an owner reference
+  ---
+  duration_ms: 10.399667
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects reference-only change with artifact traceability drift
+ok 43 - semantic gate rejects reference-only change with artifact traceability drift
+  ---
+  duration_ms: 11.864625
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects reference-only change with an invalid requirement ID
+ok 44 - semantic gate rejects reference-only change with an invalid requirement ID
+  ---
+  duration_ms: 11.136
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects reference-only change with a capability delta
+ok 45 - semantic gate rejects reference-only change with a capability delta
+  ---
+  duration_ms: 10.846167
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects reference-only change with a capability claim
+ok 46 - semantic gate rejects reference-only change with a capability claim
+  ---
+  duration_ms: 11.121458
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects skip_specs on a capability-owning change
+ok 47 - semantic gate rejects skip_specs on a capability-owning change
+  ---
+  duration_ms: 8.959542
+  type: 'test'
+  ...
+# Subtest: CLI contract publishes a terminal success verdict
+ok 48 - CLI contract publishes a terminal success verdict
+  ---
+  duration_ms: 9.630125
+  type: 'test'
+  ...
+# Subtest: CLI contract publishes every semantic failure and a non-zero verdict
+ok 49 - CLI contract publishes every semantic failure and a non-zero verdict
+  ---
+  duration_ms: 9.650792
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects missing project convergence policy
+ok 50 - semantic gate rejects missing project convergence policy
+  ---
+  duration_ms: 10.415417
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects unsupported schema
+ok 51 - semantic gate rejects unsupported schema
+  ---
+  duration_ms: 8.911
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects duplicated project governance
+ok 52 - semantic gate rejects duplicated project governance
+  ---
+  duration_ms: 8.582958
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects missing baseline field
+ok 53 - semantic gate rejects missing baseline field
+  ---
+  duration_ms: 10.338625
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects missing capability declaration
+ok 54 - semantic gate rejects missing capability declaration
+  ---
+  duration_ms: 9.838333
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects duplicated requirement ownership
+ok 55 - semantic gate rejects duplicated requirement ownership
+  ---
+  duration_ms: 9.337833
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects modified requirement without task traceability
+ok 56 - semantic gate rejects modified requirement without task traceability
+  ---
+  duration_ms: 9.238584
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects normative keyword outside delta spec
+ok 57 - semantic gate rejects normative keyword outside delta spec
+  ---
+  duration_ms: 9.667
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects runtime internal leaked into facade artifacts
+ok 58 - semantic gate rejects runtime internal leaked into facade artifacts
+  ---
+  duration_ms: 9.452167
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects missing facade owner reference
+ok 59 - semantic gate rejects missing facade owner reference
+  ---
+  duration_ms: 9.179042
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects missing scenario matrix contract
+ok 60 - semantic gate rejects missing scenario matrix contract
+  ---
+  duration_ms: 10.083667
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects future multi-delegate scope in current tasks
+ok 61 - semantic gate rejects future multi-delegate scope in current tasks
+  ---
+  duration_ms: 8.771791
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects runtime wire term leaked into facade spec
+ok 62 - semantic gate rejects runtime wire term leaked into facade spec
+  ---
+  duration_ms: 8.544417
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects missing runtime SSOT claim
+ok 63 - semantic gate rejects missing runtime SSOT claim
+  ---
+  duration_ms: 10.092333
+  type: 'test'
+  ...
+# Subtest: semantic gate resolves a registered change from the archive
+ok 64 - semantic gate resolves a registered change from the archive
+  ---
+  duration_ms: 10.760166
+  type: 'test'
+  ...
+# Subtest: semantic gate diagnoses missing and ambiguous roots for every registered role
+ok 65 - semantic gate diagnoses missing and ambiguous roots for every registered role
+  ---
+  duration_ms: 81.573459
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects an empty capability spec
+ok 66 - semantic gate rejects an empty capability spec
+  ---
+  duration_ms: 10.345542
+  type: 'test'
+  ...
+# Subtest: semantic gate admits an owner-approved complete replacement without requiring stale source lines
+ok 67 - semantic gate admits an owner-approved complete replacement without requiring stale source lines
+  ---
+  duration_ms: 9.24775
+  type: 'test'
+  ...
+# Subtest: semantic gate admits an archived replacement only after its exact delta is synced to main
+ok 68 - semantic gate admits an archived replacement only after its exact delta is synced to main
+  ---
+  duration_ms: 15.780958
+  type: 'test'
+  ...
+# Subtest: archived additive delta preserves a rewrapped predecessor with a same-paragraph addition after exact supersession
+ok 69 - archived additive delta preserves a rewrapped predecessor with a same-paragraph addition after exact supersession
+  ---
+  duration_ms: 11.341625
+  type: 'test'
+  ...
+# Subtest: archived additive history rejects a delta that drops its predecessor contract
+ok 70 - archived additive history rejects a delta that drops its predecessor contract
+  ---
+  duration_ms: 13.340625
+  type: 'test'
+  ...
+# Subtest: archived additive history preserves the nearest earlier modifier rather than only the original owner
+ok 71 - archived additive history preserves the nearest earlier modifier rather than only the original owner
+  ---
+  duration_ms: 16.038208
+  type: 'test'
+  ...
+# Subtest: archived additive history does not use a replacement that remains active
+ok 72 - archived additive history does not use a replacement that remains active
+  ---
+  duration_ms: 10.798333
+  type: 'test'
+  ...
+# Subtest: archived additive history rejects a active nearest predecessor
+ok 73 - archived additive history rejects a active nearest predecessor
+  ---
+  duration_ms: 11.982584
+  type: 'test'
+  ...
+# Subtest: archived additive history rejects a ambiguous nearest predecessor
+ok 74 - archived additive history rejects a ambiguous nearest predecessor
+  ---
+  duration_ms: 11.082417
+  type: 'test'
+  ...
+# Subtest: archived additive history rejects a missing nearest predecessor
+ok 75 - archived additive history rejects a missing nearest predecessor
+  ---
+  duration_ms: 10.562041
+  type: 'test'
+  ...
+# Subtest: archived additive history rejects a missing-block nearest predecessor
+ok 76 - archived additive history rejects a missing-block nearest predecessor
+  ---
+  duration_ms: 12.027917
+  type: 'test'
+  ...
+# Subtest: stacked replacement admits registered modified and owned ADDED sources before main sync
+ok 77 - stacked replacement admits registered modified and owned ADDED sources before main sync
+  ---
+  duration_ms: 19.519875
+  type: 'test'
+  ...
+# Subtest: stacked replacement rejects unknown
+ok 78 - stacked replacement rejects unknown
+  ---
+  duration_ms: 10.9775
+  type: 'test'
+  ...
+# Subtest: stacked replacement rejects self
+ok 79 - stacked replacement rejects self
+  ---
+  duration_ms: 9.389875
+  type: 'test'
+  ...
+# Subtest: stacked replacement rejects later
+ok 80 - stacked replacement rejects later
+  ---
+  duration_ms: 10.037167
+  type: 'test'
+  ...
+# Subtest: stacked replacement rejects unowned
+ok 81 - stacked replacement rejects unowned
+  ---
+  duration_ms: 10.8485
+  type: 'test'
+  ...
+# Subtest: stacked replacement rejects missing file
+ok 82 - stacked replacement rejects missing file
+  ---
+  duration_ms: 9.035458
+  type: 'test'
+  ...
+# Subtest: stacked replacement rejects missing block
+ok 83 - stacked replacement rejects missing block
+  ---
+  duration_ms: 9.906792
+  type: 'test'
+  ...
+# Subtest: stacked replacement rejects source drift
+ok 84 - stacked replacement rejects source drift
+  ---
+  duration_ms: 10.6025
+  type: 'test'
+  ...
+# Subtest: stacked replacement rejects replacement drift
+ok 85 - stacked replacement rejects replacement drift
+  ---
+  duration_ms: 10.903458
+  type: 'test'
+  ...
+# Subtest: stacked replacement rejects missing reason
+ok 86 - stacked replacement rejects missing reason
+  ---
+  duration_ms: 9.15325
+  type: 'test'
+  ...
+# Subtest: stacked replacement rejects invalid source digest
+ok 87 - stacked replacement rejects invalid source digest
+  ---
+  duration_ms: 10.877833
+  type: 'test'
+  ...
+# Subtest: stacked replacement rejects missing replacement digest
+ok 88 - stacked replacement rejects missing replacement digest
+  ---
+  duration_ms: 9.739417
+  type: 'test'
+  ...
+# Subtest: stacked replacement rejects undefined source
+ok 89 - stacked replacement rejects undefined source
+  ---
+  duration_ms: 10.316834
+  type: 'test'
+  ...
+# Subtest: stacked archive requires ordered lifecycle and exact predecessor main sync
+ok 90 - stacked archive requires ordered lifecycle and exact predecessor main sync
+  ---
+  duration_ms: 18.588542
+  type: 'test'
+  ...
+# Subtest: stacked consumer cannot archive while its source remains active
+ok 91 - stacked consumer cannot archive while its source remains active
+  ---
+  duration_ms: 10.124375
+  type: 'test'
+  ...
+# Subtest: replacement lineage admits a registered future supersession without trusting mutable current text
+ok 92 - replacement lineage admits a registered future supersession without trusting mutable current text
+  ---
+  duration_ms: 0.155917
+  type: 'test'
+  ...
+# Subtest: replacement lineage terminates when registered replacements contain a cycle
+ok 93 - replacement lineage terminates when registered replacements contain a cycle
+  ---
+  duration_ms: 0.054
+  type: 'test'
+  ...
+# Subtest: eval replacement rejects stale hardcoded corpus counts outside the corpus
+ok 94 - eval replacement rejects stale hardcoded corpus counts outside the corpus
+  ---
+  duration_ms: 0.551792
+  type: 'test'
+  ...
+# Subtest: semantic gate applies the fixed corpus-count rule to the interactive eval modification
+ok 95 - semantic gate applies the fixed corpus-count rule to the interactive eval modification
+  ---
+  duration_ms: 9.943583
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects an unreasoned replacement bypass
+ok 96 - semantic gate rejects an unreasoned replacement bypass
+  ---
+  duration_ms: 11.147875
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects a replacement when the frozen source digest drifts
+ok 97 - semantic gate rejects a replacement when the frozen source digest drifts
+  ---
+  duration_ms: 8.984583
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects missing modified delta
+ok 98 - semantic gate rejects missing modified delta
+  ---
+  duration_ms: 8.536375
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects orphaned authority rule
+ok 99 - semantic gate rejects orphaned authority rule
+  ---
+  duration_ms: 9.929792
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects incomplete modified requirement copy
+ok 100 - semantic gate rejects incomplete modified requirement copy
+  ---
+  duration_ms: 8.940292
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects incomplete EvalResultV1
+ok 101 - semantic gate rejects incomplete EvalResultV1
+  ---
+  duration_ms: 9.190542
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects unconditional transcript
+ok 102 - semantic gate rejects unconditional transcript
+  ---
+  duration_ms: 8.377333
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects invalid external adapter eval status
+ok 103 - semantic gate rejects invalid external adapter eval status
+  ---
+  duration_ms: 9.653417
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects inaccurate owner reference
+ok 104 - semantic gate rejects inaccurate owner reference
+  ---
+  duration_ms: 8.547583
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects an unregistered active directory without a baseline
+ok 105 - semantic gate rejects an unregistered active directory without a baseline
+  ---
+  duration_ms: 9.745
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects an unregistered active directory with a baseline
+ok 106 - semantic gate rejects an unregistered active directory with a baseline
+  ---
+  duration_ms: 9.552125
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects a registered active change without a baseline
+ok 107 - semantic gate rejects a registered active change without a baseline
+  ---
+  duration_ms: 9.476166
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects missing node-supervisor owner
+ok 108 - semantic gate rejects missing node-supervisor owner
+  ---
+  duration_ms: 8.350041
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects broken NTS id mapping
+ok 109 - semantic gate rejects broken NTS id mapping
+  ---
+  duration_ms: 8.3875
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects missing NTS task trace
+ok 110 - semantic gate rejects missing NTS task trace
+  ---
+  duration_ms: 10.220125
+  type: 'test'
+  ...
+1..110
+# tests 110
+# suites 0
+# pass 110
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1336.011417

@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "status": "passed",
+  "exact_rebuild_matches": true,
+  "counts": {
+    "total": 60,
+    "complete": 60
+  },
+  "strict": "strict-final.json",
+  "semantic": "semantic-final/result.json",
+  "coverage_audit": "coverage-accepted/zero-counter-audit.json",
+  "closeout": "../../closeout-proof.json"
+}

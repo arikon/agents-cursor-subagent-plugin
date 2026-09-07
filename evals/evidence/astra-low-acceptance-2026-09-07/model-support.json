@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-09-07T15:02:26.337Z",
+  "executable": "/Applications/ChatGPT.app/Contents/Resources/codex",
+  "initialize": {
+    "userAgent": "Codex Desktop/0.153.4 (Mac OS 26.5.0; arm64) dumb (cursor-skill-evals; 1)",
+    "codexHome": "/Users/arikon/.codex",
+    "platformFamily": "unix",
+    "platformOs": "macos"
+  },
+  "request": {
+    "method": "model/list",
+    "params": {
+      "cursor": null,
+      "includeHidden": true,
+      "limit": 100
+    }
+  },
+  "model": {
+    "id": "gpt-6-astra",
+    "model": "gpt-6-astra",
+    "upgrade": null,
+    "upgradeInfo": null,
+    "availabilityNux": {
+      "message": "This is GPT-6, a new generation of intelligence. Astra is state-of-the-art in coding, computer use, science, and professional work. Give it a hard problem, a half-formed idea, or anything you've been meaning to build. See where it takes you."
+    },
+    "displayName": "GPT-6-Astra",
+    "description": "Our most capable model for complex, demanding work.",
+    "modelSpecialty": null,
+    "hidden": false,
+    "supportedReasoningEfforts": [
+      {
+        "reasoningEffort": "low",
+        "description": "Fast responses with lighter reasoning"
+      },
+      {
+        "reasoningEffort": "medium",
+        "description": "Balances speed and reasoning depth for everyday tasks"
+      },
+      {
+        "reasoningEffort": "high",
+        "description": "Greater reasoning depth for complex problems"
+      },
+      {
+        "reasoningEffort": "xhigh",
+        "description": "Extra high reasoning depth for complex problems"
+      },
+      {
+        "reasoningEffort": "max",
+        "description": "Maximum reasoning depth for the hardest problems"
+      },
+      {
+        "reasoningEffort": "ultra",
+        "description": "Maximum reasoning with automatic task delegation"
+      }
+    ],
+    "defaultReasoningEffort": "medium",
+    "inputModalities": [
+      "text",
+      "image"
+    ],
+    "supportsPersonality": false,
+    "multiAgentVersion": "v2",
+    "additionalSpeedTiers": [
+      "fast"
+    ],
+    "serviceTiers": [
+      {
+        "id": "priority",
+        "name": "Fast",
+        "description": "2x speed, increased usage"
+      }
+    ],
+    "defaultServiceTier": null,
+    "isDefault": true
+  }
+}

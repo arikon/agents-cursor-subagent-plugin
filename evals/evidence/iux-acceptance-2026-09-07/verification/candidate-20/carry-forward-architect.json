@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "reviewer": "baseline_scope",
+  "verdict": "CLEAR",
+  "scope": "User-approved narrow high carry-forward implementation and owner baseline update",
+  "conditions": "Fresh diagnostic high serial1 and medium serial3 at current candidate/concurrency12; old high serial3 remains concurrency4 and carried-forward; current coverage audit required.",
+  "resolved_findings": [
+    "Exact package hashes computed with package owner functions, allowing only README change",
+    "Single hashed proof reference in acceptance, no provenance duplication",
+    "No duplicated target_inputs",
+    "Exact first prompt-check and step_id",
+    "Separate no-reuse drift and allowed carry scenarios",
+    "Fresh diagnostic retained"
+  ]
+}

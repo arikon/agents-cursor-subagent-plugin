@@ -1052,15 +1052,33 @@ test('stdio recording proxy publishes only bounded public fields from malformed 
   assert.doesNotMatch(JSON.stringify(published), /private|x{100}|k{100}/);
 });
 
-test('stdio recording proxy does not publish evidence when no tool call was observed', async (t) => {
+test('stdio recording proxy publishes an empty startup transcript and replaces it after the first tool call', async (t) => {
   const root = await mkdtemp(join(tmpdir(), 'cursor-eval-proxy-empty-')); t.after(() => rm(root, { recursive: true, force: true }));
   const evidence = join(root, 'mcp.json');
-  const child = spawn(process.execPath, [recorder, '-e', 'process.exit(0)'], {
+  const target = `const readline=require('node:readline');readline.createInterface({input:process.stdin}).on('line',(line)=>{const request=JSON.parse(line);process.stdout.write(JSON.stringify({jsonrpc:'2.0',id:request.id,result:{isError:false,content:[{type:'text',text:'{}'}]}})+'\\n');});`;
+  const child = spawn(process.execPath, [recorder, '-e', target], {
     env: { ...process.env, CURSOR_EVAL_MCP_EVIDENCE: evidence }, stdio: ['pipe', 'ignore', 'pipe'],
   });
+  const publishedWithCalls = async (minimum) => {
+    const deadline = Date.now() + 2_000;
+    while (Date.now() < deadline) {
+      try {
+        const value = JSON.parse(await readFile(evidence, 'utf8'));
+        if (value.transcript?.length >= minimum) return value;
+      } catch (error) { if (error.code !== 'ENOENT') throw error; }
+      await new Promise((resolveWait) => setTimeout(resolveWait, 10));
+    }
+    throw new Error(`recording proxy did not publish ${minimum} calls`);
+  };
+  child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 'initialize', method: 'initialize', params: {} })}\n`);
+  assert.deepEqual(await publishedWithCalls(0), { schema_version: 1, transcript: [], dropped_calls: 0 });
+  child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 'call', method: 'tools/call',
+    params: { name: 'cursor_wait', arguments: { session_id: 'S', turn_id: 'T' } } })}\n`);
+  const replaced = await publishedWithCalls(1);
+  assert.deepEqual(replaced.transcript.map(({ tool }) => tool), ['cursor_wait']);
   child.stdin.end();
   const [code] = await once(child, 'close'); assert.equal(code, 0);
-  assert.deepEqual(await readdir(root), []);
+  assert.deepEqual(await readdir(root), ['mcp.json']);
 });
 
 for (const [name, target, expectedCode] of [

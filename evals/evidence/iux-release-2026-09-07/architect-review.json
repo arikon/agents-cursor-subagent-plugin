@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "verdict": "CLEAR",
+  "classification": "implementation_concern",
+  "scope": "historical archived additive semantic validation after exact replacement sync",
+  "source_sha256": "9328c5562f7575d6ca3df9668056c941851bc13cdce95c9baffdf2aa710810a1",
+  "tests_sha256": "e4904fd14836647a3d080fdf0668d5f1b5f1f5721329784357edb0a000551422",
+  "findings": [],
+  "rationale": "Historical-only paragraph normalization and nearest archived predecessor are required after later archived exact replacement reaches current main. Active and exact-digest paths remain unchanged; frozen requirements and archives remain unchanged.",
+  "subsequent_test_only_regression": {
+    "sha256": "a3b06c9faeec9ee034465052c99000e2cca77348c701801256f94938a03f544c",
+    "focused_passed": 110,
+    "scenarios": "nearest modifier, dropped modifier-only line, unrelated successor, trailing paragraph, empty capability directory",
+    "product_unchanged": true,
+    "empty_directory_fixture": "corpus-enabled same-change positive"
+  }
+}

@@ -184,15 +184,18 @@ function observeRequest(message) {
   transcript.push(entry);
   if (callId !== null) pendingCalls.set(callKey(message.id), entry);
 }
+function schedulePublication() {
+  publication = publication.then(publish).catch((error) => {
+    publicationFailure ??= error;
+    failProxy(error.message);
+  });
+}
 function observeResponse(message) {
   if (!message || !Object.hasOwn(message, 'id')) return;
   const key = callKey(message.id); const entry = pendingCalls.get(key);
   if (!entry) return;
   pendingCalls.delete(key); entry.response = compactResponse(message, entry);
-  publication = publication.then(publish).catch((error) => {
-    publicationFailure ??= error;
-    failProxy(error.message);
-  });
+  schedulePublication();
 }
 function evalFaultHandshake() {
   return isAbsolute(process.env.CURSOR_EVAL_MCP_EVIDENCE || '')
@@ -251,7 +254,7 @@ function stopChild() {
 }
 async function publish() {
   const destination = process.env.CURSOR_EVAL_MCP_EVIDENCE;
-  if (!destination || transcript.length === 0) return;
+  if (!destination) return;
   await mkdir(dirname(destination), { recursive: true });
   const temporary = `${destination}.${process.pid}.tmp`;
   const serialized = JSON.stringify({ schema_version: 1, transcript, dropped_calls: droppedCalls });
@@ -281,7 +284,10 @@ function forwardInputFrame(frame, terminated) {
   if (terminated) child.stdin.write('\n');
 }
 function observeOutputFrame(frame) {
-  try { observeResponse(parseFrame(frame)); } catch {}
+  try {
+    observeResponse(parseFrame(frame));
+    if (transcript.length === 0) schedulePublication();
+  } catch {}
 }
 function forwardOutputFrame(frame, terminated) {
   observeOutputFrame(frame);

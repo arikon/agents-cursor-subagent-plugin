@@ -1,0 +1,2 @@
+{"type":"test:summary","data":{"success":true,"counts":{"tests":13,"failed":0,"passed":13,"cancelled":0,"skipped":0,"todo":0,"topLevel":13,"suites":0},"duration_ms":16541.650041,"file":"/Users/arikon/projects/codex-cursor-subagent-plugin/tests/eval-closeout.test.mjs"}}
+{"type":"test:summary","data":{"success":true,"counts":{"tests":13,"failed":0,"passed":13,"cancelled":0,"skipped":0,"todo":0,"topLevel":13,"suites":0},"duration_ms":16621.681375}}

@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "kind": "critic-initial-path-and-default-concurrency",
+  "source_freeze": {
+    "path": "candidate/frozen-inputs-19.json",
+    "bytes": 7060,
+    "sha256": "dc4b11415af613c8d4fd677124724d720363aa10ff47c951ea2d81232a7470b3"
+  },
+  "source_corpus": {
+    "path": "candidate/carry-forward-high-19/corpus.before.json",
+    "bytes": 77746,
+    "sha256": "edb012d5810a8041607d6430326826b935d4a4ac1a9c6cd7f5805a089d5a8686"
+  },
+  "source_inputs": [
+    {
+      "path": "README.md",
+      "ref": {
+        "path": "candidate/carry-forward-high-19/README.before.md",
+        "bytes": 17456,
+        "sha256": "38567cff9fdb9c72d66c747b6d1992967a266ceb64968fe13d1f1c4be377462c"
+      }
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "ref": {
+        "path": "candidate/carry-forward-high-19/matrix.before.mjs",
+        "bytes": 14828,
+        "sha256": "90d7b21b5bc7fddbb1450b4ee8b6237181cf15fc9c44f7a9116900b1c81a76f7"
+      }
+    }
+  ],
+  "package_paths": [
+    ".codex-plugin/plugin.json",
+    "README.md",
+    "scripts/cursor-subagent-bootstrap.mjs",
+    "scripts/cursor-subagent-mcp.mjs",
+    "scripts/recording-mcp-proxy.mjs",
+    "skills/cursor-subagent/SKILL.md",
+    "skills/cursor-subagent/agents/openai.yaml"
+  ]
+}

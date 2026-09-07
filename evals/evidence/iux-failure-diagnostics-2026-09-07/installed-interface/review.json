@@ -1,0 +1,55 @@
+{
+  "source": "schema generated from installed Codex app-server during candidate21 verification; freshly inspected for this diagnostic-only projection",
+  "client_version": "codex-cli 0.153.4",
+  "files": [
+    {
+      "path": "TurnStartedNotification.json",
+      "bytes": 54787,
+      "sha256": "d4b59fd396cadfc2377f60c9f9f4c9367dca95362baadf7817c74e1b9c910c4d"
+    },
+    {
+      "path": "ThreadStatusChangedNotification.json",
+      "bytes": 2207,
+      "sha256": "26f3c60c1b73f7fa2d31c74429cdc36f8746c76c33e3d314b3fb61d3661f05f6"
+    },
+    {
+      "path": "McpServerElicitationRequestParams.json",
+      "bytes": 13636,
+      "sha256": "5cbeb6bc702d2efa076da4c1dfb00672c970c1bad747031eb880b9ab907815c0"
+    },
+    {
+      "path": "ServerRequest.json",
+      "bytes": 51758,
+      "sha256": "38bb1c9dbb1dda2a688a7c8712b04319fe6ee2ed28b54acd2f5fd341d25567ff"
+    }
+  ],
+  "whitelist": {
+    "turn": [
+      "id",
+      "status",
+      "error.message",
+      "error.codexErrorInfo (string only)"
+    ],
+    "thread_status": [
+      "type",
+      "activeFlags"
+    ],
+    "active_flags": [
+      "waitingOnApproval",
+      "waitingOnUserInput"
+    ],
+    "server_request": [
+      "id",
+      "method",
+      "params.serverName",
+      "params._meta.codex_approval_kind (existing admitted elicitation helper)"
+    ],
+    "excluded": [
+      "turn.items text",
+      "raw params",
+      "additionalDetails",
+      "object codexErrorInfo",
+      "private history"
+    ]
+  }
+}

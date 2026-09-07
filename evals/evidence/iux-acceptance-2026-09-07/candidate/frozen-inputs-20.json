@@ -1,0 +1,197 @@
+{
+  "schema_version": 1,
+  "frozen_at": "2026-09-07T13:18:27.719416+00:00",
+  "evaluator": {
+    "files": [
+      {
+        "path": ".codex-plugin/plugin.json",
+        "bytes": 715,
+        "sha256": "a46b9e12e4a1e0cd11040f0c60edd4f9da99c021c5ae2d8d2cf5bf48053cf994"
+      },
+      {
+        "path": "README.md",
+        "bytes": 17457,
+        "sha256": "941be46dc1787dc975d24f316360404af0b077ce21f4336eccb45de199f9efd4"
+      },
+      {
+        "path": "scripts/codex-app-server-client.mjs",
+        "bytes": 14060,
+        "sha256": "f5fa4850c7228aa9ed4b4a0661f2d1dbabae2ffe95ec86b98e3e0ffc36cf4200"
+      },
+      {
+        "path": "scripts/cursor-eval-scenario.mjs",
+        "bytes": 68824,
+        "sha256": "f45f2d9db65de4f19051f7ccd8458fd7b166d4784ebb030c8dd10cd21ea5372b"
+      },
+      {
+        "path": "scripts/cursor-skill-eval.mjs",
+        "bytes": 9672,
+        "sha256": "ac4e06e7cfc0fd4f9fed27f019ccdcffb1c1c959975ba69385ccb0222eed2562"
+      },
+      {
+        "path": "scripts/cursor-subagent-bootstrap.mjs",
+        "bytes": 52347,
+        "sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1"
+      },
+      {
+        "path": "scripts/cursor-subagent-mcp.mjs",
+        "bytes": 65395,
+        "sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331"
+      },
+      {
+        "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+        "bytes": 14829,
+        "sha256": "df614f7e8c2770a8e796716a1f02c753da9ee918d24f47c9e8c9bb9b6f70cd3a"
+      },
+      {
+        "path": "scripts/node-test-reporter-v22.mjs",
+        "bytes": 834,
+        "sha256": "51ac5c6e8a019c83e4deb101b209146c3e953069e42a593d862a45b1ade4834f"
+      },
+      {
+        "path": "scripts/recording-mcp-proxy.mjs",
+        "bytes": 16841,
+        "sha256": "2df45550eeae34b051a5ad99b213f48f9e212c3be4a0d1a41bdfdd8c16b48e7e"
+      },
+      {
+        "path": "scripts/run-cursor-skill-eval.mjs",
+        "bytes": 24044,
+        "sha256": "4e0b46f8eb8de0d8e76936d26102c6ed28c426e56d16aef8681c86910d528a61"
+      },
+      {
+        "path": "scripts/run-node-tests.mjs",
+        "bytes": 20857,
+        "sha256": "0ab147c2456df7836e70f2502a9c758f59a51e9a1f173c1cb44838f51c881bae"
+      },
+      {
+        "path": "skills/cursor-subagent/SKILL.md",
+        "bytes": 19410,
+        "sha256": "6925bc2ac347f331713df5ee78cf2cba8a9eb8fd587bfbb949b8a86497dbe593"
+      },
+      {
+        "path": "skills/cursor-subagent/agents/openai.yaml",
+        "bytes": 251,
+        "sha256": "7e2b2b72bb12d9f72c780db5b31fc7b0d5d0a320f67da4a2701af079453e322e"
+      },
+      {
+        "path": "tests/codex-client-integration.test.mjs",
+        "bytes": 117982,
+        "sha256": "d4cfd209f1e5310b5cadc00cc0964305ace5e5e85bb7c03dede8f8b41de3f10e"
+      },
+      {
+        "path": "tests/fixtures/accelerate-turn-timeout.mjs",
+        "bytes": 324,
+        "sha256": "7be784d43416c5e2a3b0a81965a9ae1a72fa525f9352dad123b1776720e7175f"
+      },
+      {
+        "path": "tests/fixtures/codex-app-server-v01521.golden.json",
+        "bytes": 1574,
+        "sha256": "79a22cf5b9ae694ce0c5103251ae3e5ae9886717ef850d5318bf864998c3cb33"
+      },
+      {
+        "path": "tests/fixtures/codex-app-server-v01534.golden.json",
+        "bytes": 1987,
+        "sha256": "860abe7af9a1823190ccbb6f0d738f34224a3c8395efc2a997396bf5f4cf5594"
+      },
+      {
+        "path": "tests/fixtures/codex-v01521-adapter.golden.json",
+        "bytes": 1700,
+        "sha256": "ad5db7340fcbe9a43ff21e6febf1bfc4dbf148a46c8998ff6607af80983747a5"
+      },
+      {
+        "path": "tests/fixtures/codex-v01521-adapter.mjs",
+        "bytes": 10187,
+        "sha256": "e04a4a4b48457191c8374e86e6e1eb93923759319b08eb2a165ea2f3b9cff71d"
+      },
+      {
+        "path": "tests/fixtures/codex-v01534-adapter.golden.json",
+        "bytes": 1643,
+        "sha256": "d45e7ee51aa33f24b653501a7b16af34a8465b823015d320f3f3a99ec69ea1f7"
+      },
+      {
+        "path": "tests/fixtures/codex-v01534-adapter.mjs",
+        "bytes": 125,
+        "sha256": "5ad4cb1117c27ae112e4fe610d4fe155f121c05a77fb0458a6a27c36fc4c2e5e"
+      },
+      {
+        "path": "tests/fixtures/cursor-agent-v20260825.golden.json",
+        "bytes": 4630,
+        "sha256": "476241fb75a582eba3c38b79f9111fe3fc3570d31bcfa9be71a84de769217eb9"
+      },
+      {
+        "path": "tests/fixtures/fake-acp.mjs",
+        "bytes": 32574,
+        "sha256": "4e152fb5bad738d7fd6bdccd00747c6842742c2f9a726bf64134c3001d2840b3"
+      },
+      {
+        "path": "tests/fixtures/fake-codex-adapter-core.mjs",
+        "bytes": 9879,
+        "sha256": "5d4275b817a199a0e137306bce68473a433b285deb59455cef7e5ede129c1a06"
+      },
+      {
+        "path": "tests/fixtures/fake-codex-adapter.mjs",
+        "bytes": 616,
+        "sha256": "cbf0d2161be737265f4ff2928b3c4922fc57fdae3ba0d7cba6d813218d9f258e"
+      },
+      {
+        "path": "tests/fixtures/fake-mcp-version.mjs",
+        "bytes": 669,
+        "sha256": "44fa5a1b1acc368845b279844602cb2a078315d52ac65a34b1b91ea3b19b1310"
+      },
+      {
+        "path": "tests/fixtures/fake-ollama-responses.mjs",
+        "bytes": 12859,
+        "sha256": "d7c6aaa17cae68ec93fbdbf522abd72c19f7b1889d2eddf6e165fd6641422433"
+      },
+      {
+        "path": "tests/fixtures/node-test-reporter-v22.23.1.golden.json",
+        "bytes": 3437,
+        "sha256": "6d2c0e0ba90c0f74a91f4cf7d9f0705f8d649f9ad874765ada6539ac1e12b02c"
+      },
+      {
+        "path": "tests/fixtures/release-fake-acp.mjs",
+        "bytes": 264,
+        "sha256": "98cd6d4735d9a764e2eb74c307f0fc48a87c015b29637a83bc04e6dee2157644"
+      },
+      {
+        "path": "tests/release-e2e.test.mjs",
+        "bytes": 36135,
+        "sha256": "38896f98ae6a09c87932c735c834e01f2dc841a813dccd41c37724d921daf4a2"
+      }
+    ],
+    "selected_runner": "scripts/run-cursor-skill-eval.mjs",
+    "digest": {
+      "bytes": 4341,
+      "sha256": "0d8684d4faf798770f0d9e2be52a5f5c6a106941973ba174263ed8f1721516ed"
+    }
+  },
+  "corpus": {
+    "bytes": 77732,
+    "sha256": "057b69997e8eed16d4c592628e0054a66f4cf09283749b272acecc31af98ad49"
+  },
+  "skill": {
+    "bytes": 19410,
+    "sha256": "6925bc2ac347f331713df5ee78cf2cba8a9eb8fd587bfbb949b8a86497dbe593"
+  },
+  "coverage_sources_digest": {
+    "bytes": 2181,
+    "sha256": "9710cb2e062739bb60e8ba0412627c28ea243891bf4ae87b467814878aee561d"
+  },
+  "verification": {
+    "unit_previous_full": "verification/candidate-19/unit/result.json",
+    "matrix_unit": "verification/candidate-20/matrix-unit/result.json",
+    "corpus_unit": "verification/candidate-20/corpus-unit/result.json",
+    "carry_forward_unit": "verification/candidate-20/carry-forward-unit-complete/result.json",
+    "coverage": "verification/candidate-20/coverage-complete/2026-09-07T13-14-09-522Z-coverage-15647e79-434e-42b5-beea-8c9671851a2b/result.json",
+    "coverage_audit": "verification/candidate-20/coverage-accepted/zero-counter-audit.json",
+    "release": "verification/candidate-20/release/2026-09-07T13-12-46-755Z-release-bf615552-ca38-4a3f-8afa-8b9af6b76ff9/result.json",
+    "semantic": "verification/candidate-20/semantic-cli.json",
+    "architect": "verification/candidate-20/carry-forward-architect.json",
+    "critic": "verification/candidate-20/carry-forward-critic.json"
+  },
+  "high_carry_forward": {
+    "path": "candidate/carry-forward-high-19/proof.json",
+    "bytes": 1277,
+    "sha256": "511344e9feedf03acc0439d9bca8966aaa53822aa60967f87ac78706eb479da2"
+  }
+}

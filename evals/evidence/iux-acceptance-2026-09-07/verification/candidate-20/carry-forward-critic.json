@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "reviewer": "eval_contract",
+  "baseline_violations": [],
+  "reviewed_concern": "Package paths enumeration completeness",
+  "disposition": "Original finding withdrawn after verification that both recomputed package hashes must equal authoritative candidate hashes. Actual seven-file source hash matches high19. Enumeration is evidence, not a duplicate package allowlist."
+}

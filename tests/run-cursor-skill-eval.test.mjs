@@ -617,6 +617,31 @@ test('capture admission remains exact while report semantics stay unchecked', ()
   assert.deepEqual({ status: missingEarlierTurn.eval_status, stage: missingEarlierTurn.failure_stage, code: missingEarlierTurn.error_code },
     { status: 'integration_failure', stage: 'inspection', code: 'capture_invalid' });
 
+  const emptyArguments = createHash('sha256').update('{}').digest('hex');
+  const prefixRecovery = evaluateScenario(multiTurn, {
+    trace: [], callbacks: [], effects: [], actual_task_outcome: 'failed',
+    captured_finals: capturedFinalsFor(multiTurn).slice(0, 1),
+    transcript: { calls: [
+      { tool: 'cursor_delegate', request: { mode: 'ask' }, response: { ok: true, session_id: 'S', turn_id: 'T' } },
+      { tool: 'cursor_wait', request: { session_id: 'wrong', turn_id: 'wrong', arguments_without_session_turn_sha256: emptyArguments },
+        response: { ok: false, error_code: 'unknown_session' } },
+      { tool: 'cursor_wait', request: { session_id: 'S', turn_id: 'T', arguments_without_session_turn_sha256: emptyArguments },
+        response: { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'completed' } },
+    ], dropped_calls: 0, turn_call_ranges: [{ start: 0, end: 3 }], unexpected_input_requests: 0 },
+  });
+  assert.equal(prefixRecovery.eval_status, 'agent_behavior_mismatch');
+  assert.deepEqual(prefixRecovery.recovered_calls.map(({ correction_kind: kind }) => kind), ['address']);
+  for (const turnStatus of ['failed', 'interrupted']) {
+    const invalidPrefix = capturedFinalsFor(multiTurn).slice(0, 1);
+    invalidPrefix[0].turn_status = turnStatus;
+    const invalid = evaluateScenario(multiTurn, {
+      trace: [], callbacks: [], effects: [], actual_task_outcome: 'failed',
+      captured_finals: invalidPrefix, transcript: { calls: [], dropped_calls: 0 },
+    });
+    assert.deepEqual({ status: invalid.eval_status, code: invalid.error_code },
+      { status: 'integration_failure', code: 'capture_invalid' });
+  }
+
   const observedFailure = evaluateScenario(scenario, {
     ...observationsFor(scenario), actual_task_outcome: 'failed', captured_finals: [],
   });
@@ -715,7 +740,7 @@ test('eval runner bounds an untrusted unknown scenario name in its public result
 test('runner selects each lane and propagates the scenario environment expected by its harness', async () => {
   const cases = [
     ['client-happy', { CURSOR_EVAL_REAL_CODEX: '1' }, 'client-integration', 'credential-free client integration', { CURSOR_EVAL_REAL_CODEX: '1' }],
-    ['model-question', { CURSOR_EVAL_HOSTED_CODEX: '1' }, 'model-behavior', 'hosted Codex', { CURSOR_EVAL_HOSTED_CODEX: '1', CURSOR_EVAL_INJECT_STALE_QUESTION_ONCE: '1' }],
+    ['model-question', { CURSOR_EVAL_HOSTED_CODEX: '1', CURSOR_EVAL_EVIDENCE_ROOT: '/tmp/retained-eval-evidence' }, 'model-behavior', 'hosted Codex', { CURSOR_EVAL_HOSTED_CODEX: '1', CURSOR_EVAL_INJECT_STALE_QUESTION_ONCE: '1' }],
     ['model-mode-protocol-recovery', { CURSOR_EVAL_HOSTED_CODEX: '1' }, 'model-behavior', 'hosted Codex', { CURSOR_EVAL_INJECT_MODE_PROTOCOL_ERROR_ONCE: '1' }],
     ['model-active-followup', { CURSOR_EVAL_HOSTED_CODEX: '1' }, 'model-behavior', 'hosted Codex', { FAKE_ACP_ACCELERATE_WAIT_TIMEOUT: '1' }],
     ['model-launch-progress', { CURSOR_EVAL_HOSTED_CODEX: '1' }, 'model-behavior', 'hosted Codex', {}],
@@ -729,6 +754,7 @@ test('runner selects each lane and propagates the scenario environment expected 
     assert.equal(assertEvalResultV1(result).eval_status, 'pass', JSON.stringify(result)); assert.equal(result.lane, lane); assert.equal(observed.pattern, pattern);
     for (const [name, value] of Object.entries(expectedEnv)) assert.equal(observed.env[name], value);
     assert.equal(observed.env.CURSOR_EVAL_WORKSPACE, '/tmp/fixture/workspace');
+    assert.equal(observed.env.CURSOR_EVAL_EVIDENCE_ROOT, env.CURSOR_EVAL_EVIDENCE_ROOT || join(tmpdir(), 'cursor-eval-evidence'));
     assert.deepEqual(JSON.parse(observed.env.CURSOR_EVAL_SCENARIO_PAYLOAD).scenario_id, scenarioId);
     assert.match(observed.env.CURSOR_EVAL_SCENARIO_SHA256, /^[a-f0-9]{64}$/);
     assert.equal(Number.isSafeInteger(Number(observed.env.CURSOR_EVAL_SCENARIO_BYTES)), true);
@@ -1146,6 +1172,34 @@ test('child-result parser admits only complete recovery context while preserving
     assert.throws(() => parseChildResult(JSON.stringify(child), 'model-question', { scenario }),
       (error) => error.evalCode === 'child_result_invalid');
   }
+});
+
+test('child-result parser admits only a contiguous capture prefix for a behavior mismatch', () => {
+  const scenario = scenarioById.get('model-question');
+  const mismatch = JSON.parse(encodedChildResult('model-question'));
+  mismatch.captured_finals.pop();
+  mismatch.observations.assertion_outcome = 'fail';
+  mismatch.observations.eval_status = 'agent_behavior_mismatch';
+  mismatch.transcript = { calls: [], dropped_calls: 0,
+    turn_call_ranges: [{ start: 0, end: 0 }], unexpected_input_requests: 0 };
+  assert.equal(parseChildResult(JSON.stringify(mismatch), 'model-question', { scenario }).captured_finals.length, 1);
+
+  for (const mutate of [
+    (child) => { child.observations.assertion_outcome = 'pass'; child.observations.eval_status = 'pass'; },
+    (child) => { child.observations.assertion_outcome = 'not_observed'; child.observations.eval_status = 'integration_failure'; },
+    (child) => { child.captured_finals[0].turn_index = 2; },
+    (child) => { child.captured_finals[0].turn_status = 'failed'; },
+    (child) => { child.captured_finals[0].turn_status = 'interrupted'; },
+  ]) {
+    const invalid = structuredClone(mismatch);
+    mutate(invalid);
+    assert.throws(() => parseChildResult(JSON.stringify(invalid), 'model-question', { scenario }),
+      (error) => error.evalCode === 'capture_invalid');
+  }
+  const incomplete = structuredClone(mismatch);
+  incomplete.captured_finals[0].completeness = 'incomplete';
+  assert.equal(parseChildResult(JSON.stringify(incomplete), 'model-question', { scenario })
+    .captured_finals[0].completeness, 'incomplete');
 });
 
 test('child-result parser preserves the explicit compatibility defaults for partial observations and package references', () => {

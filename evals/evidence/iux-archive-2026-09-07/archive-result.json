@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "change": "improve-interactive-acp-ux",
+  "schema": "spec-driven",
+  "archived": true,
+  "source": "openspec/changes/improve-interactive-acp-ux",
+  "target": "openspec/changes/archive/2026-09-07-improve-interactive-acp-ux",
+  "task_counts": {
+    "complete": 61,
+    "total": 61
+  },
+  "sync": {
+    "capabilities": 5,
+    "added": 8,
+    "modified": 17,
+    "removed": 0,
+    "renamed": 0,
+    "exact_delta_blocks": 25,
+    "unrelated_preserved_blocks": 15
+  },
+  "files": [
+    {
+      "path": "openspec/changes/archive/2026-09-07-improve-interactive-acp-ux/.openspec.yaml",
+      "bytes": 40,
+      "sha256": "7555aa06e53ea191a4fd7854f1fcf46ceb785a0f87b18154b84981bfe40bce5e"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-07-improve-interactive-acp-ux/coverage-review.md",
+      "bytes": 14994,
+      "sha256": "db8d26bdefd498255466d76a5c59c698b4185b068d99b058bab7fb0a32748bce"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-07-improve-interactive-acp-ux/design.md",
+      "bytes": 74615,
+      "sha256": "adf76b4fbdee8f3cb30942b9d89763831dc6405a0a61b04da211531dbe16fca5"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-07-improve-interactive-acp-ux/proposal.md",
+      "bytes": 16521,
+      "sha256": "b35bee6f9efbf61e4023ee02170b1eba157426bc4bdc15c86a99f8c72f0f7da2"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-07-improve-interactive-acp-ux/specs/cursor-acp-session-runtime/spec.md",
+      "bytes": 39330,
+      "sha256": "5820ea32e1a1f584e17c2c30b0619db48a6db7e377b29f54251aeb3359f1d461"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-07-improve-interactive-acp-ux/specs/cursor-plugin-distribution/spec.md",
+      "bytes": 12017,
+      "sha256": "49ee53a4a9e6b0a6571572bda5343d11f80645af1f4cbd67bced10b5bd817435"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-07-improve-interactive-acp-ux/specs/cursor-subagent-skill-evals/spec.md",
+      "bytes": 91255,
+      "sha256": "9f9bd98a23d15618544d3e5f6f0e9e8c12dbf53f1d67d352bbcdb8caee8f0dab"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-07-improve-interactive-acp-ux/specs/cursor-task-delegation/spec.md",
+      "bytes": 29762,
+      "sha256": "71913bd7e6251540b4ff23f98028009765ff8a800e5201116e66eda6a0010e64"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-07-improve-interactive-acp-ux/specs/node-test-supervision/spec.md",
+      "bytes": 8854,
+      "sha256": "54a080af1e132cc575c144564f07df71cb51eacfbbef2e15acf7e97141ff3517"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-07-improve-interactive-acp-ux/tasks.md",
+      "bytes": 34445,
+      "sha256": "b73bc071071aa1e59f96d5dce71387e3c4fc716e554f6dc74b1cc014455e0896"
+    }
+  ],
+  "verification": {
+    "archived_strict": {
+      "passed": 11,
+      "failed": 0
+    },
+    "main_specs_strict": {
+      "passed": 6,
+      "failed": 0
+    },
+    "semantic": {
+      "passed": 11,
+      "failed": 0,
+      "scope": "isolated release index without separate simplify-task-state-wait draft"
+    }
+  }
+}

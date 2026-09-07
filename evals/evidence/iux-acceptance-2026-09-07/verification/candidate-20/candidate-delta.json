@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "previous_freeze": "candidate/frozen-inputs-19.json",
+  "changes": [
+    {
+      "path": "evals/cursor-subagent-scenarios.v1.json",
+      "classification": "overengineering",
+      "repair": "Remove only changed.md from first critic prompt required_fragments; snapshot/digest/markers and second-turn delta requirements retained.",
+      "authority": "Prior architect and corpus reviewer agreement."
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "classification": "implementation_concern",
+      "repair": "Default concurrency 8 to 12; README and existing observable pool test updated.",
+      "authority": "Explicit user request to change default to 12."
+    }
+  ],
+  "prior_medium_counts": {
+    "total": 78,
+    "pass": 77,
+    "agent_behavior_mismatch": 1,
+    "integration_failure": 0,
+    "skipped": 0
+  },
+  "prior_result_preserved": true
+}

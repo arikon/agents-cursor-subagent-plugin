@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "reviewer": "independent carry_forward_tests; parent source and auditor verification",
+  "verdict": "PASS",
+  "raw_queue_review": "All 92 zero counters inspected through exact-source prior reuse and explicit residual review",
+  "totals": {
+    "zero_counters": 92,
+    "classified": 92,
+    "unclassified": 0,
+    "added": 1,
+    "removed": 1
+  },
+  "classification_counts": {
+    "external_hosted_gate": 1,
+    "observable_contract_already_owned": 30,
+    "realistic_failure_already_owned": 19,
+    "unreachable_defensive": 42
+  },
+  "residual": {
+    "path": "scripts/cursor-eval-scenario.mjs",
+    "line": 769,
+    "metric": "branches",
+    "occurrence": 2,
+    "raw_counts": [
+      51,
+      0,
+      1
+    ],
+    "classification": "unreachable_defensive",
+    "reason": "validRecoveryContext proves contiguous turn ranges cover every iterated call before findIndex can run; current source is identical to prior accepted review"
+  },
+  "no_new_exclusions": true,
+  "no_product_scope_reduction": true
+}

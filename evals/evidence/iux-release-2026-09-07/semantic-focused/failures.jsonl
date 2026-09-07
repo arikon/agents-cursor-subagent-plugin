@@ -1,0 +1,2 @@
+{"type":"test:summary","data":{"success":true,"counts":{"tests":109,"failed":0,"passed":109,"cancelled":0,"skipped":0,"todo":0,"topLevel":109,"suites":0},"duration_ms":1336.332375,"file":"/Users/arikon/projects/codex-cursor-subagent-plugin/tests/check-openspec-semantics.test.mjs"}}
+{"type":"test:summary","data":{"success":true,"counts":{"tests":109,"failed":0,"passed":109,"cancelled":0,"skipped":0,"todo":0,"topLevel":109,"suites":0},"duration_ms":1399.449959}}

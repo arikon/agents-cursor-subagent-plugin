@@ -1,0 +1,353 @@
+TAP version 13
+# Subtest: corpus-owned scenario inventory, materialization and pure oracle stay in one process
+ok 1 - corpus-owned scenario inventory, materialization and pure oracle stay in one process
+  ---
+  duration_ms: 227.916292
+  type: 'test'
+  ...
+# scenario counts {"admission":28,"materialization":28,"oracle":27,"packageReference":1}
+# Subtest: materialization preserves literal non-fixture authority targets and rejects an oversized admitted payload
+ok 2 - materialization preserves literal non-fixture authority targets and rejects an oversized admitted payload
+  ---
+  duration_ms: 4.912542
+  type: 'test'
+  ...
+# Subtest: capture admission remains exact while report semantics stay unchecked
+ok 3 - capture admission remains exact while report semantics stay unchecked
+  ---
+  duration_ms: 1.011333
+  type: 'test'
+  ...
+# Subtest: event-burst callback failure remains an execution mismatch with complete capture evidence
+ok 4 - event-burst callback failure remains an execution mismatch with complete capture evidence
+  ---
+  duration_ms: 0.224792
+  type: 'test'
+  ...
+# Subtest: interaction and continuation components remain mechanical while prose semantics stay unchecked
+ok 5 - interaction and continuation components remain mechanical while prose semantics stay unchecked
+  ---
+  duration_ms: 0.378875
+  type: 'test'
+  ...
+# Subtest: long-result corpus rows keep the exact preview boundary and overflow recovery contract
+ok 6 - long-result corpus rows keep the exact preview boundary and overflow recovery contract
+  ---
+  duration_ms: 0.11625
+  type: 'test'
+  ...
+# Subtest: eval runner emits exactly one bounded lane-specific skipped EvalResultV1
+ok 7 - eval runner emits exactly one bounded lane-specific skipped EvalResultV1
+  ---
+  duration_ms: 174.086375
+  type: 'test'
+  ...
+# Subtest: eval runner returns a bounded machine-readable integration failure for an unknown scenario
+ok 8 - eval runner returns a bounded machine-readable integration failure for an unknown scenario
+  ---
+  duration_ms: 55.539583
+  type: 'test'
+  ...
+# Subtest: eval runner defaults to the credential-free client scenario when no scenario is supplied
+ok 9 - eval runner defaults to the credential-free client scenario when no scenario is supplied
+  ---
+  duration_ms: 54.741542
+  type: 'test'
+  ...
+# Subtest: eval runner bounds an untrusted unknown scenario name in its public result
+ok 10 - eval runner bounds an untrusted unknown scenario name in its public result
+  ---
+  duration_ms: 55.868875
+  type: 'test'
+  ...
+# Subtest: runner selects each lane and propagates the scenario environment expected by its harness
+ok 11 - runner selects each lane and propagates the scenario environment expected by its harness
+  ---
+  duration_ms: 24.036833
+  type: 'test'
+  ...
+# Subtest: runner reports evaluator inventory failures and frozen digest drift before starting a harness
+ok 12 - runner reports evaluator inventory failures and frozen digest drift before starting a harness
+  ---
+  duration_ms: 8.487833
+  type: 'test'
+  ...
+# Subtest: runner has a bounded default failure when an admitted corpus has no client scenario
+ok 13 - runner has a bounded default failure when an admitted corpus has no client scenario
+  ---
+  duration_ms: 2.89475
+  type: 'test'
+  ...
+# Subtest: cleanup failure overrides a behavior mismatch after evidence publication
+ok 14 - cleanup failure overrides a behavior mismatch after evidence publication
+  ---
+  duration_ms: 3.575083
+  type: 'test'
+  ...
+# Subtest: publication failure has integration precedence and still performs cleanup
+ok 15 - publication failure has integration precedence and still performs cleanup
+  ---
+  duration_ms: 3.889375
+  type: 'test'
+  ...
+# Subtest: runner and fixture setup catches always return valid stage-specific EvalResultV1 objects
+ok 16 - runner and fixture setup catches always return valid stage-specific EvalResultV1 objects
+  ---
+  duration_ms: 11.326417
+  type: 'test'
+  ...
+# Subtest: runner admits string corpus input and rejects empty or oversized corpus bytes before fixture setup
+ok 17 - runner admits string corpus input and rejects empty or oversized corpus bytes before fixture setup
+  ---
+  duration_ms: 2.62675
+  type: 'test'
+  ...
+# Subtest: runner preserves adapter-admission classification from an enabled harness boundary
+ok 18 - runner preserves adapter-admission classification from an enabled harness boundary
+  ---
+  duration_ms: 3.723417
+  type: 'test'
+  ...
+# Subtest: runner owns the disposable fixture lifecycle by default
+ok 19 - runner owns the disposable fixture lifecycle by default
+  ---
+  duration_ms: 10.66925
+  type: 'test'
+  ...
+# Subtest: runner normalizes a harness infrastructure failure without child evidence
+ok 20 - runner normalizes a harness infrastructure failure without child evidence
+  ---
+  duration_ms: 2.6795
+  type: 'test'
+  ...
+# Subtest: runner does not publish durable evidence before complete programmed or package proof
+ok 21 - runner does not publish durable evidence before complete programmed or package proof
+  ---
+  duration_ms: 6.564834
+  type: 'test'
+  ...
+# Subtest: runner distinguishes malformed proof inspection from missing runner evidence
+ok 22 - runner distinguishes malformed proof inspection from missing runner evidence
+  ---
+  duration_ms: 5.059417
+  type: 'test'
+  ...
+# Subtest: runner treats missing child evidence as an integration failure before behavior classification
+ok 23 - runner treats missing child evidence as an integration failure before behavior classification
+  ---
+  duration_ms: 2.015583
+  type: 'test'
+  ...
+# Subtest: published evidence is emitted after cleanup with exact child provenance and the final EvalResultV1
+ok 24 - published evidence is emitted after cleanup with exact child provenance and the final EvalResultV1
+  ---
+  duration_ms: 2.5345
+  type: 'test'
+  ...
+# Subtest: actual failure outcomes are classified without grading reported prose
+ok 25 - actual failure outcomes are classified without grading reported prose
+  ---
+  duration_ms: 5.2
+  type: 'test'
+  ...
+# Subtest: runner rejects the removed skill sensitivity probe instead of silently passing it
+ok 26 - runner rejects the removed skill sensitivity probe instead of silently passing it
+  ---
+  duration_ms: 2.21675
+  type: 'test'
+  ...
+# Subtest: cleanup failure remains the primary stage when failure-artifact publication also fails
+ok 27 - cleanup failure remains the primary stage when failure-artifact publication also fails
+  ---
+  duration_ms: 2.722792
+  type: 'test'
+  ...
+# Subtest: child cleanup failure takes precedence over otherwise successful scenario evidence
+ok 28 - child cleanup failure takes precedence over otherwise successful scenario evidence
+  ---
+  duration_ms: 2.871916
+  type: 'test'
+  ...
+# Subtest: package integration failure without a harness code uses the stable child failure fallback
+ok 29 - package integration failure without a harness code uses the stable child failure fallback
+  ---
+  duration_ms: 2.655416
+  type: 'test'
+  ...
+# Subtest: published evidence classifies a partial child proof as integration failure and normalizes optional sections
+ok 30 - published evidence classifies a partial child proof as integration failure and normalizes optional sections
+  ---
+  duration_ms: 3.042042
+  type: 'test'
+  ...
+# Subtest: child-result parser normalizes exact provenance and builds the closed private manifest
+ok 31 - child-result parser normalizes exact provenance and builds the closed private manifest
+  ---
+  duration_ms: 1.69925
+  type: 'test'
+  ...
+# Subtest: child-result parser admits only complete recovery context while preserving legacy transcripts
+ok 32 - child-result parser admits only complete recovery context while preserving legacy transcripts
+  ---
+  duration_ms: 1.3455
+  type: 'test'
+  ...
+# Subtest: child-result parser preserves the explicit compatibility defaults for partial observations and package references
+ok 33 - child-result parser preserves the explicit compatibility defaults for partial observations and package references
+  ---
+  duration_ms: 1.073083
+  type: 'test'
+  ...
+# Subtest: child-result parser rejects malformed JSON and oversized evidence
+ok 34 - child-result parser rejects malformed JSON and oversized evidence
+  ---
+  duration_ms: 0.315833
+  type: 'test'
+  ...
+# Subtest: child-result parser rejects every required evidence-contract violation
+ok 35 - child-result parser rejects every required evidence-contract violation
+  ---
+  duration_ms: 1.596834
+  type: 'test'
+  ...
+# Subtest: child-result parser rejects corpus and materialized payload digest mismatches before behavior verdict
+ok 36 - child-result parser rejects corpus and materialized payload digest mismatches before behavior verdict
+  ---
+  duration_ms: 0.512459
+  type: 'test'
+  ...
+# Subtest: child-result parser separates malformed final capture from a generic child contract failure
+ok 37 - child-result parser separates malformed final capture from a generic child contract failure
+  ---
+  duration_ms: 0.741625
+  type: 'test'
+  ...
+# Subtest: published evidence retains the normalized bounded provider route trace
+ok 38 - published evidence retains the normalized bounded provider route trace
+  ---
+  duration_ms: 5.18
+  type: 'test'
+  ...
+# Subtest: harness returns validated child evidence and bounded diagnostics after a successful child exit
+ok 39 - harness returns validated child evidence and bounded diagnostics after a successful child exit
+  ---
+  duration_ms: 1.70325
+  type: 'test'
+  ...
+# Subtest: harness validates configured scenario and corpus digests at the process boundary
+ok 40 - harness validates configured scenario and corpus digests at the process boundary
+  ---
+  duration_ms: 0.423
+  type: 'test'
+  ...
+# Subtest: harness routes its configured test through the canonical Node supervisor
+ok 41 - harness routes its configured test through the canonical Node supervisor
+  ---
+  duration_ms: 0.374833
+  type: 'test'
+  ...
+# Subtest: harness tolerates a canonical supervisor result without optional failure details
+ok 42 - harness tolerates a canonical supervisor result without optional failure details
+  ---
+  duration_ms: 0.191375
+  type: 'test'
+  ...
+# Subtest: harness reads child evidence through its production filesystem adapter
+ok 43 - harness reads child evidence through its production filesystem adapter
+  ---
+  duration_ms: 4.726042
+  type: 'test'
+  ...
+# Subtest: harness executes its canonical supervisor adapter for an admitted eval test
+ok 44 - harness executes its canonical supervisor adapter for an admitted eval test
+  ---
+  duration_ms: 151.155834
+  type: 'test'
+  ...
+# Subtest: harness maps child scenario evidence to a scenario-contract mismatch
+ok 45 - harness maps child scenario evidence to a scenario-contract mismatch
+  ---
+  duration_ms: 0.361834
+  type: 'test'
+  ...
+# Subtest: canonical supervisor infrastructure failure dominates recorded behavior mismatch
+ok 46 - canonical supervisor infrastructure failure dominates recorded behavior mismatch
+  ---
+  duration_ms: 0.2145
+  type: 'test'
+  ...
+# Subtest: harness distinguishes generic child failure from a scenario-contract mismatch
+ok 47 - harness distinguishes generic child failure from a scenario-contract mismatch
+  ---
+  duration_ms: 0.495084
+  type: 'test'
+  ...
+# Subtest: harness preserves a hosted turn interruption instead of reporting invalid child JSON
+ok 48 - harness preserves a hosted turn interruption instead of reporting invalid child JSON
+  ---
+  duration_ms: 0.193709
+  type: 'test'
+  ...
+# Subtest: harness reports missing or invalid child-result evidence before exit status
+ok 49 - harness reports missing or invalid child-result evidence before exit status
+  ---
+  duration_ms: 0.146041
+  type: 'test'
+  ...
+# Subtest: harness classifies canonical-supervisor spawn errors with a stable eval code
+ok 50 - harness classifies canonical-supervisor spawn errors with a stable eval code
+  ---
+  duration_ms: 0.068292
+  type: 'test'
+  ...
+# Subtest: harness maps the canonical supervisor deadline without owning another kill loop
+ok 51 - harness maps the canonical supervisor deadline without owning another kill loop
+  ---
+  duration_ms: 0.067334
+  type: 'test'
+  ...
+# Subtest: evidence publisher writes one final document outside the fixture root
+ok 52 - evidence publisher writes one final document outside the fixture root
+  ---
+  duration_ms: 3.4225
+  type: 'test'
+  ...
+# Subtest: evidence publisher rejects a destination inside the disposable fixture
+ok 53 - evidence publisher rejects a destination inside the disposable fixture
+  ---
+  duration_ms: 0.161542
+  type: 'test'
+  ...
+# Subtest: evidence publisher rejects a document beyond the public evidence limit
+ok 54 - evidence publisher rejects a document beyond the public evidence limit
+  ---
+  duration_ms: 4.787167
+  type: 'test'
+  ...
+# Subtest: CLI emits a single runner-termination result when SIGTERM wins the race
+ok 55 - CLI emits a single runner-termination result when SIGTERM wins the race
+  ---
+  duration_ms: 8.037541
+  type: 'test'
+  ...
+# Subtest: CLI converts an unhandled evaluation rejection to EvalResultV1
+ok 56 - CLI converts an unhandled evaluation rejection to EvalResultV1
+  ---
+  duration_ms: 6.123208
+  type: 'test'
+  ...
+# Subtest: CLI exit code reflects every enabled eval classifier while preserving one result
+ok 57 - CLI exit code reflects every enabled eval classifier while preserving one result
+  ---
+  duration_ms: 0.660334
+  type: 'test'
+  ...
+1..57
+# tests 57
+# suites 0
+# pass 57
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 967.0565

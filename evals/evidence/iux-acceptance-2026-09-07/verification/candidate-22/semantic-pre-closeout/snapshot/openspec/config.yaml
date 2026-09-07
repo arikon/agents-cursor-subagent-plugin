@@ -1,0 +1,12 @@
+schema: spec-driven
+
+context: |
+  Language: ru
+  All artifacts must be written in ru.
+  Keep OpenSpec structural headings and SHALL/MUST keywords in English.
+  Project-wide OpenSpec governance, review convergence and semantic-gate policy
+  are defined only in AGENTS.md. Read it before creating or reviewing artifacts.
+
+rules:
+  design:
+    - Follow the v1 Contract Baseline structure defined in AGENTS.md; index owner requirements instead of copying their normative text.

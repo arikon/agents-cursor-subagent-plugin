@@ -1,0 +1,19 @@
+{
+  "status": "passed",
+  "counts": {
+    "total": 26,
+    "pass": 26,
+    "agent_behavior_mismatch": 0,
+    "integration_failure": 0,
+    "skipped": 0
+  },
+  "candidate_digest": {
+    "sha256": "bb0cccadadf7bb404a254cf5addee64f6f691b2cbc10e18ec3dc302b4b01d0a7",
+    "bytes": 559
+  },
+  "artifact_count": 183,
+  "model": "gpt-6-astra",
+  "effort": "low",
+  "concurrency": 12,
+  "digest_stable": true
+}

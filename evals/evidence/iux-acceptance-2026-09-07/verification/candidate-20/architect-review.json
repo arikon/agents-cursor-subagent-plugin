@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "verdict": "CLEAR",
+  "reviewer": "baseline_scope",
+  "findings": [
+    {
+      "classification": "overengineering",
+      "resolution": "Removed only first-turn changed.md literal; owner eval spec lines628-632 requires exact changed path on second turn only."
+    },
+    {
+      "classification": "implementation_concern",
+      "resolution": "User-requested concurrency12 is consistent across runner, README, observable pool test; existing1..16cap and finalizer equal-concurrency gate retained."
+    }
+  ],
+  "public_baseline_expanded": false,
+  "coverage_audit": "separate_pending"
+}

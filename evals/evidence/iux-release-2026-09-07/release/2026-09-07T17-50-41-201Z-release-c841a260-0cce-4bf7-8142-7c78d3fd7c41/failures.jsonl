@@ -1,0 +1,2 @@
+{"type":"test:summary","data":{"success":true,"counts":{"tests":12,"failed":0,"passed":12,"cancelled":0,"skipped":0,"todo":0,"topLevel":12,"suites":0},"duration_ms":2360.879083,"file":"/private/tmp/iux-release-20260907174354/tests/release-e2e.test.mjs","entryFile":"/private/tmp/iux-release-20260907174354/tests/release-e2e.test.mjs"}}
+{"type":"test:summary","data":{"success":true,"counts":{"tests":12,"failed":0,"passed":12,"cancelled":0,"skipped":0,"todo":0,"topLevel":12,"suites":0},"duration_ms":2436.182333}}

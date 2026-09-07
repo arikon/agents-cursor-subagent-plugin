@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "scenario_id": "client-happy",
+  "lane": "model-behavior",
+  "eval_status": "agent_behavior_mismatch",
+  "actual_task_outcome": "not_observed",
+  "reported_task_outcome": "succeeded",
+  "fixture_assertion_outcome": "fail",
+  "evidence_publication_status": "published",
+  "cleanup_status": "succeeded",
+  "failure_stage": "scenario",
+  "error_code": "required_wait_missing",
+  "observed_tool_sequence": ["cursor_delegate", "cursor_close_session"],
+  "required_tool_sequence": ["cursor_delegate", "cursor_wait", "cursor_close_session"],
+  "notes": "Hosted Codex authenticated lane; isolated thread was archived after the run. Raw model, provider, ACP and authorization payloads were not retained."
+}

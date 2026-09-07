@@ -1,0 +1,119 @@
+[
+  {
+    "path": "scripts/cursor-eval-scenario.mjs",
+    "source_sha256": "6804e403c718ee7a7aa9556ee99c163c27333ae6dc7fed412d25027b6bab8347",
+    "metric": "branches",
+    "line": 451,
+    "occurrence": 3,
+    "classification": "unreachable_defensive",
+    "disposition": "Scenario admission at lines 424-432 requires mutually exclusive fixture_predicate shapes for inject-mode-protocol-error-once and reject-mode, so their conjunction is rejected before this guard."
+  },
+  {
+    "path": "scripts/cursor-eval-scenario.mjs",
+    "source_sha256": "6804e403c718ee7a7aa9556ee99c163c27333ae6dc7fed412d25027b6bab8347",
+    "metric": "branches",
+    "line": 737,
+    "occurrence": 2,
+    "classification": "observable_contract_already_owned",
+    "disposition": "Recovery variation tests at tests/cursor-skill-eval.test.mjs:47-78 and 126-180 own fail-closed handling for missing or malformed argument proof and changed projections; an absent request produces the same no-recovery result."
+  },
+  {
+    "path": "scripts/cursor-eval-scenario.mjs",
+    "source_sha256": "6804e403c718ee7a7aa9556ee99c163c27333ae6dc7fed412d25027b6bab8347",
+    "metric": "branches",
+    "line": 769,
+    "occurrence": 3,
+    "classification": "unreachable_defensive",
+    "disposition": "validRecoveryContext at lines 709-720 requires contiguous ranges from zero through calls.length, so every iterated call index belongs to exactly one range."
+  },
+  {
+    "path": "scripts/recording-mcp-proxy.mjs",
+    "source_sha256": "767158d64395dda4d5fff2a563ee72458cbdd778715d9997d0b4bfc312558a63",
+    "metric": "branches",
+    "line": 42,
+    "occurrence": 1,
+    "classification": "unreachable_defensive",
+    "disposition": "All admitted request and response objects are JSON.parse outputs through parseFrame at line 213; JSON object values cannot carry a null prototype."
+  },
+  {
+    "path": "scripts/recording-mcp-proxy.mjs",
+    "source_sha256": "767158d64395dda4d5fff2a563ee72458cbdd778715d9997d0b4bfc312558a63",
+    "metric": "branches",
+    "line": 51,
+    "occurrence": 1,
+    "classification": "unreachable_defensive",
+    "disposition": "The only caller at line 161 invokes compactPending after Array.isArray(payload.pending), so its non-array fallback cannot execute."
+  },
+  {
+    "path": "scripts/recording-mcp-proxy.mjs",
+    "source_sha256": "767158d64395dda4d5fff2a563ee72458cbdd778715d9997d0b4bfc312558a63",
+    "metric": "branches",
+    "line": 203,
+    "occurrence": 1,
+    "classification": "observable_contract_already_owned",
+    "disposition": "The partial-handshake test at tests/cursor-skill-eval.test.mjs:764-796 proves that an invalid program path disables fixture injection and preserves the original request; an omitted final operand has the same observable result."
+  },
+  {
+    "path": "scripts/recording-mcp-proxy.mjs",
+    "source_sha256": "767158d64395dda4d5fff2a563ee72458cbdd778715d9997d0b4bfc312558a63",
+    "metric": "branches",
+    "line": 216,
+    "occurrence": 2,
+    "classification": "realistic_failure_already_owned",
+    "disposition": "Backpressure tests at tests/cursor-skill-eval.test.mjs:655-683 and 994-1004 prove that accepted output drains before exit; whether the final callback finds queued waiters is scheduler-dependent."
+  },
+  {
+    "path": "scripts/recording-mcp-proxy.mjs",
+    "source_sha256": "767158d64395dda4d5fff2a563ee72458cbdd778715d9997d0b4bfc312558a63",
+    "metric": "branches",
+    "line": 227,
+    "occurrence": 1,
+    "classification": "realistic_failure_already_owned",
+    "disposition": "The same backpressure tests own the wait-for-output contract; entering the promise arm depends on child-close versus stdout-callback scheduling."
+  },
+  {
+    "path": "scripts/recording-mcp-proxy.mjs",
+    "source_sha256": "767158d64395dda4d5fff2a563ee72458cbdd778715d9997d0b4bfc312558a63",
+    "metric": "branches",
+    "line": 230,
+    "occurrence": 1,
+    "classification": "realistic_failure_already_owned",
+    "disposition": "The publication-failure test at tests/cursor-skill-eval.test.mjs:867-891 owns controlled child teardown without an unhandled error; later queued failure callbacks are idempotent re-entry into that same boundary."
+  },
+  {
+    "path": "scripts/recording-mcp-proxy.mjs",
+    "source_sha256": "767158d64395dda4d5fff2a563ee72458cbdd778715d9997d0b4bfc312558a63",
+    "metric": "branches",
+    "line": 250,
+    "occurrence": 1,
+    "classification": "realistic_failure_already_owned",
+    "disposition": "SIGTERM, SIGKILL fallback and owner-loss tests at tests/cursor-skill-eval.test.mjs:1084-1114 own child termination; repeated stop requests are an idempotent teardown race."
+  },
+  {
+    "path": "scripts/recording-mcp-proxy.mjs",
+    "source_sha256": "767158d64395dda4d5fff2a563ee72458cbdd778715d9997d0b4bfc312558a63",
+    "metric": "branches",
+    "line": 297,
+    "occurrence": 1,
+    "classification": "realistic_failure_already_owned",
+    "disposition": "Oversized-input tests at tests/cursor-skill-eval.test.mjs:961-979 own fail-closed input teardown; discarding later buffered stdin data is part of the same failure boundary."
+  },
+  {
+    "path": "scripts/recording-mcp-proxy.mjs",
+    "source_sha256": "767158d64395dda4d5fff2a563ee72458cbdd778715d9997d0b4bfc312558a63",
+    "metric": "branches",
+    "line": 309,
+    "occurrence": 1,
+    "classification": "realistic_failure_already_owned",
+    "disposition": "The oversized-provider-frame and publication-failure tests at tests/cursor-skill-eval.test.mjs:867-891 and 981-992 own absence of partial output or evidence; late buffered stdout belongs to that teardown boundary."
+  },
+  {
+    "path": "scripts/recording-mcp-proxy.mjs",
+    "source_sha256": "767158d64395dda4d5fff2a563ee72458cbdd778715d9997d0b4bfc312558a63",
+    "metric": "functions",
+    "line": 227,
+    "occurrence": 1,
+    "classification": "realistic_failure_already_owned",
+    "disposition": "Backpressure tests at tests/cursor-skill-eval.test.mjs:655-683 and 994-1004 own the output-drain promise; execution of its resolver callback is scheduler-dependent."
+  }
+]

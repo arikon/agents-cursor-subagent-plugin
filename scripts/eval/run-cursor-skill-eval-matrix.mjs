@@ -28,7 +28,7 @@ if (!Number.isSafeInteger(progressMs) || progressMs < 10 || progressMs > 30_000)
   throw new Error('CURSOR_EVAL_MATRIX_PROGRESS_MS must be an integer from 10 through 30000');
 }
 const concurrency = process.env.CURSOR_EVAL_MATRIX_CONCURRENCY === undefined
-  ? 8 : Number(process.env.CURSOR_EVAL_MATRIX_CONCURRENCY);
+  ? 12 : Number(process.env.CURSOR_EVAL_MATRIX_CONCURRENCY);
 if (!Number.isSafeInteger(concurrency) || concurrency < 1 || concurrency > 16) {
   throw new Error('CURSOR_EVAL_MATRIX_CONCURRENCY must be an integer from 1 through 16');
 }

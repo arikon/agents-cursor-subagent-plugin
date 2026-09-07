@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "path": "scripts/cursor-eval-scenario.mjs",
+      "source_sha256": "6804e403c718ee7a7aa9556ee99c163c27333ae6dc7fed412d25027b6bab8347",
+      "metric": "branches",
+      "line": 769,
+      "occurrence": 2,
+      "classification": "unreachable_defensive",
+      "disposition": "Recovery normalization first validates contiguous turn_call_ranges covering every call index through validRecoveryContext at lines 709-720 and its entry guard at 743. Therefore findIndex at 768 cannot return -1 for an iterated call. This is the same-source defensive counter previously reviewed at occurrence 2; the immediately preceding audit recorded it as occurrence 3."
+    }
+  ]
+}

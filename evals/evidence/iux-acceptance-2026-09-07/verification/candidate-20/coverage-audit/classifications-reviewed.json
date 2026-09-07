@@ -1,0 +1,176 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "path": "scripts/check-openspec-semantics.mjs",
+      "source_sha256": "910e75ee9dd24caf4e7cfc68a9ff4fd600d98ea257cbdd955672c872cda03265",
+      "metric": "branches",
+      "line": 147,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "Delta spec disappears only between prior directory enumeration and read in a stable admitted snapshot."
+    },
+    {
+      "path": "scripts/check-openspec-semantics.mjs",
+      "source_sha256": "910e75ee9dd24caf4e7cfc68a9ff4fd600d98ea257cbdd955672c872cda03265",
+      "metric": "branches",
+      "line": 574,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "Import-only coverage CLI guard; separately executed node scripts/check-openspec-semantics.mjs foreground exit0, 12 changes; success/failure functions owned by tests 670-687."
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 83,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "Malformed adapter args fail closed before ACP admission; runtime.test.mjs 256-263."
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 221,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "Malformed/empty question list rejected before pending publication; runtime.test.mjs 890-924."
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 225,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "Missing/empty options rejected before pending publication; runtime.test.mjs 890-924."
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 228,
+      "occurrence": 2,
+      "classification": "observable_contract_already_owned",
+      "disposition": "Duplicate/invalid option rejected before pending publication; runtime.test.mjs 890-924."
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 233,
+      "occurrence": 5,
+      "classification": "observable_contract_already_owned",
+      "disposition": "Optional plan title/body fallback observed as title:null and fallback body; runtime.test.mjs 1087-1095."
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 607,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Closed request channel prompt failure and child-exit terminalization observed; runtime.test.mjs 1327-1333,1685-1689. Same source hash V8 branch counter churn verified by archive_readiness."
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "df614f7e8c2770a8e796716a1f02c753da9ee918d24f47c9e8c9bb9b6f70cd3a",
+      "metric": "lines",
+      "line": 142,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "Fallback after assertEvalResultV1 on locally synthesized canonical integration_failure cannot execute in admitted flow."
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "df614f7e8c2770a8e796716a1f02c753da9ee918d24f47c9e8c9bb9b6f70cd3a",
+      "metric": "lines",
+      "line": 143,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "Fallback after assertEvalResultV1 on locally synthesized canonical integration_failure cannot execute in admitted flow."
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "df614f7e8c2770a8e796716a1f02c753da9ee918d24f47c9e8c9bb9b6f70cd3a",
+      "metric": "lines",
+      "line": 144,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "Fallback after assertEvalResultV1 on locally synthesized canonical integration_failure cannot execute in admitted flow."
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "df614f7e8c2770a8e796716a1f02c753da9ee918d24f47c9e8c9bb9b6f70cd3a",
+      "metric": "lines",
+      "line": 145,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "Fallback after assertEvalResultV1 on locally synthesized canonical integration_failure cannot execute in admitted flow."
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "df614f7e8c2770a8e796716a1f02c753da9ee918d24f47c9e8c9bb9b6f70cd3a",
+      "metric": "lines",
+      "line": 146,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "Fallback after assertEvalResultV1 on locally synthesized canonical integration_failure cannot execute in admitted flow."
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "df614f7e8c2770a8e796716a1f02c753da9ee918d24f47c9e8c9bb9b6f70cd3a",
+      "metric": "lines",
+      "line": 235,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "Owned artifact publishers create only regular files/directories."
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "df614f7e8c2770a8e796716a1f02c753da9ee918d24f47c9e8c9bb9b6f70cd3a",
+      "metric": "branches",
+      "line": 24,
+      "occurrence": 1,
+      "classification": "external_hosted_gate",
+      "disposition": "Production evaluator selected by separate authenticated hosted matrix lane."
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "df614f7e8c2770a8e796716a1f02c753da9ee918d24f47c9e8c9bb9b6f70cd3a",
+      "metric": "branches",
+      "line": 141,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "Fallback after assertEvalResultV1 on locally synthesized canonical integration_failure cannot execute in admitted flow."
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "df614f7e8c2770a8e796716a1f02c753da9ee918d24f47c9e8c9bb9b6f70cd3a",
+      "metric": "branches",
+      "line": 158,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Foreground interruption test eval-matrix.test.mjs 206-215 verifies exit130 and no partial aggregate; empty active-child set is scheduler arm."
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "df614f7e8c2770a8e796716a1f02c753da9ee918d24f47c9e8c9bb9b6f70cd3a",
+      "metric": "branches",
+      "line": 192,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "parseScenarioCorpus admits only nonempty corpus; empty-results rate is fail-closed guard."
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "df614f7e8c2770a8e796716a1f02c753da9ee918d24f47c9e8c9bb9b6f70cd3a",
+      "metric": "branches",
+      "line": 234,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "Owned artifact publishers create only regular files/directories."
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-09-07T15:25:29.084Z",
+  "reviewer": "independent archive_readiness verifier",
+  "verdict": "PASS",
+  "archive_ready": true,
+  "archived": false,
+  "task_counts": {
+    "complete": 60,
+    "total": 60
+  },
+  "dimensions": {
+    "completeness": "all 60 tasks complete; IUX-3/IUX-19/IUX-20 coverage retained from prior review plus current delta",
+    "correctness": "runtime/skill/eval/finalizer contracts validated; current diagnostic and medium passed; historical high has own source inputs",
+    "coherence": "single IUX-19 owner, no compatibility engine, explicit source/current candidate boundary, exact idempotent publication"
+  },
+  "evidence": {
+    "closeout": {
+      "path": "closeout-proof.json",
+      "bytes": 17727,
+      "sha256": "7bbf41dcfa177478ea5546d526f7ffc85cd0b2ceb1e3434e67f9be33b0bc2eab"
+    },
+    "publication": {
+      "path": "verification/candidate-22/publication-verification.json",
+      "bytes": 321,
+      "sha256": "62c796ef145e1cb7f47ca518993a721ee577badb76737b52eeeea121f171fe8a"
+    },
+    "coverage_audit": {
+      "path": "verification/candidate-22/coverage-accepted/zero-counter-audit.json",
+      "bytes": 70477,
+      "sha256": "d489b9880a02a77311ceee74c66e838ff8f2c5b9d886fa1af51167248bbf3bba"
+    },
+    "strict": {
+      "path": "verification/candidate-22/strict-final.json",
+      "bytes": 164,
+      "sha256": "1f70233ee2c9fb1740e2c80bdfb2e38a0f232b603ae5711f347ad6fe6458b2a9"
+    },
+    "semantic": {
+      "path": "verification/candidate-22/semantic-final/result.json",
+      "bytes": 358,
+      "sha256": "cdce5f40ffc2e7b7f0a73100ffe3ebd474d67112f9e6c142cd62852fc2ac9bd1"
+    },
+    "architect": {
+      "path": "verification/candidate-22/architect-final-review.json",
+      "bytes": 930,
+      "sha256": "ea709cab5d341f148220e2b666d978ae5928942f1a21b4bed1d9edb10d0e9e1e"
+    },
+    "forensics": {
+      "path": "verification/candidate-22/high-failure-investigation.md",
+      "bytes": 4310,
+      "sha256": "ac5b5fe3566e479e9efb8f29e0e58702784804eaaecaff7019424ad6c33e34b5"
+    }
+  },
+  "independent_digest_validation": {
+    "reference_objects": 39,
+    "unique_files": 37,
+    "missing": 0,
+    "mismatches": 0
+  },
+  "critical": [],
+  "warnings": [],
+  "limits": [
+    "Global semantic failure is confined to the separate simplify-task-state-wait draft explicitly excluded by user",
+    "High05 is a preserved historical reference, not current-candidate high acceptance",
+    "Additional high07 76/78 retained; exact root cause of two pre-proof timeouts is not recoverable from retained diagnostics",
+    "No archive operation performed"
+  ]
+}

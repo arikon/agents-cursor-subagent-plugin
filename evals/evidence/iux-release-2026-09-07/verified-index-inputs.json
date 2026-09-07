@@ -1,0 +1,996 @@
+{
+  "schema_version": 1,
+  "snapshot": "/private/tmp/iux-release-20260907174354",
+  "scope": "all indexed files excluding immutable evals/evidence artifacts",
+  "files": [
+    {
+      "path": ".claude-plugin/marketplace.json",
+      "mode": "100644",
+      "git_blob": "a172c918633e44fb44eb3a9130930397db41b9df",
+      "sha256": "2f14a35e47da215671d3de1b9b3fdfbdf4cd7fc460c4b0c891704f3048d2c86b",
+      "bytes": 469
+    },
+    {
+      "path": ".claude-plugin/plugin.json",
+      "mode": "100644",
+      "git_blob": "fe838add4c4d976bb94f9ddb85a8976449b6362c",
+      "sha256": "36d68f7566ec46990a9c64fbae4c2425e3faed151f38eee02983382d625cfdf8",
+      "bytes": 506
+    },
+    {
+      "path": ".codex-plugin/plugin.json",
+      "mode": "100644",
+      "git_blob": "7241781b0a8ea73b266cfbebfc428da86ecc30ce",
+      "sha256": "f2795ad114b673ee1724ebc4f05ae312bf0bb7d3e4749a5415c022c6cfb7b908",
+      "bytes": 715
+    },
+    {
+      "path": ".mcp.json",
+      "mode": "100644",
+      "git_blob": "33e5e61795465ec071a297d773c295b4cb8ac3d7",
+      "sha256": "58e1788fa97a69dac5c8620996e01ac5032817e1b8b4c8a1fa10662997acc529",
+      "bytes": 233
+    },
+    {
+      "path": "AGENTS.md",
+      "mode": "100644",
+      "git_blob": "67e6461a60fcdcbbcd237d5e141df088d6284710",
+      "sha256": "e01a6304b92bc405957772f0eaf7170930dde6245f7599dc645cd0758dbfa4ed",
+      "bytes": 12929
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "git_blob": "f0f503e3f9a1e80dd8b34bfa0f271f7ada26a0c9",
+      "sha256": "0efc9c36b0064cf1735a66e2dc6f42db7bebd6ab91e33ae0e98c7cc81dbc2cea",
+      "bytes": 18477
+    },
+    {
+      "path": "evals/cursor-skill-eval-baseline-gpt-6-astra-low-2026-09-07.json",
+      "mode": "100644",
+      "git_blob": "bf5d72710e13b1d048fa0e50e9c96127f1806141",
+      "sha256": "30cc3cf2f6d4a2a94c529b69638cc46e5984f84de1d7877fb7b2418f82ba7f60",
+      "bytes": 6617
+    },
+    {
+      "path": "evals/cursor-skill-eval-baseline-gpt-6-astra-low-2026-09-07.md",
+      "mode": "100644",
+      "git_blob": "5e1ab200ff946fba0a2474b0abfbe14c10bc3cc0",
+      "sha256": "aa445ffb7baa4f57086b7db33cdcfbfab3302da80942b189d9f70955598d62f7",
+      "bytes": 2558
+    },
+    {
+      "path": "evals/cursor-skill-eval-matrix-2026-09-06.md",
+      "mode": "100644",
+      "git_blob": "c1e1a26457b782c0b14f1ad902c607063f06dfb3",
+      "sha256": "0a457f1d7054789b6d0deb322c212a043128b9bb3490c43c9599bbbb5cf16c1c",
+      "bytes": 2280
+    },
+    {
+      "path": "evals/cursor-skill-eval-matrix-baseline-2026-09-06.json",
+      "mode": "100644",
+      "git_blob": "eef5c144ed0bb8bed33158101b8b9a5ad4fc4a01",
+      "sha256": "dc8e6cc4c7081e29a61dc523ed66af62140248f983164793a623e2949dfd375b",
+      "bytes": 29535
+    },
+    {
+      "path": "evals/cursor-skill-eval-matrix.plan.v1.json",
+      "mode": "100644",
+      "git_blob": "bad6d304ec341ce0eeed10baf8ba426c9c815ad4",
+      "sha256": "cdf8db1d56f7bd9aee95c4094617c38c5c306165723ccb55fa027099adaa9057",
+      "bytes": 489
+    },
+    {
+      "path": "evals/cursor-subagent-scenarios.v1.json",
+      "mode": "100644",
+      "git_blob": "8f9d72c9d5fea834efe9527d2e8d988fbff06fef",
+      "sha256": "d66ef2c37844a32602b3580134373496b5706c79e9da4fe8d15a33f515b6ff22",
+      "bytes": 78148
+    },
+    {
+      "path": "glama.json",
+      "mode": "100644",
+      "git_blob": "7bfbb72158495f1d6d2767f08fe472e451f9b2d6",
+      "sha256": "8741041c5ab0d5cd8786e92689e3330e01a7e823dbbfd52ca875a58c6fcd32c4",
+      "bytes": 89
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-03-add-cursor-delegation-workflow/.openspec.yaml",
+      "mode": "100644",
+      "git_blob": "032461ff9fabbf3f9d3ee05069937b5d3e5d2252",
+      "sha256": "0f57d5a958ae5cc6cd1484325810d733a1ab1a162d2f257b3adcc87769990a3a",
+      "bytes": 40
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-03-add-cursor-delegation-workflow/design.md",
+      "mode": "100644",
+      "git_blob": "72debb0ef092abcb5350cb8746bbc0acfd19b735",
+      "sha256": "2076ffc1e9d585c10b9eaf00dee15d6f480bdb45996de64ced04828504e5970c",
+      "bytes": 2076
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-03-add-cursor-delegation-workflow/proposal.md",
+      "mode": "100644",
+      "git_blob": "663a5eb32e7bf94aff149e15245680daaff46fe7",
+      "sha256": "ab26dd4ddb1fdf43a513f38cf9d95e1679689b3c076e56625f32937d3c5fa647",
+      "bytes": 1405
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-03-add-cursor-delegation-workflow/specs/cursor-task-delegation/spec.md",
+      "mode": "100644",
+      "git_blob": "973da460f89cddb73b6a025a80e3d79f9c761067",
+      "sha256": "af4ec13ea7fd9089e1a16d144dd2490b6cfcbe2146467bc3b28a893eb16bb0f2",
+      "bytes": 2791
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-03-add-cursor-delegation-workflow/tasks.md",
+      "mode": "100644",
+      "git_blob": "00b564fc146bc52023734c8b4bce8649ac4f2933",
+      "sha256": "92cc331fcde1adc02a710a76d6570646b18ad0694134c2db38e8ccab8a990db6",
+      "bytes": 914
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-03-harden-cursor-acp-session-runtime/.openspec.yaml",
+      "mode": "100644",
+      "git_blob": "032461ff9fabbf3f9d3ee05069937b5d3e5d2252",
+      "sha256": "0f57d5a958ae5cc6cd1484325810d733a1ab1a162d2f257b3adcc87769990a3a",
+      "bytes": 40
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-03-harden-cursor-acp-session-runtime/design.md",
+      "mode": "100644",
+      "git_blob": "8d8aed200221ab816f5cfa807abcf73a7c5f7152",
+      "sha256": "655e9c54df4447e7f3ab69a2be7e3a1cc2cd08e0dbd334f1b819fd8bc7d964eb",
+      "bytes": 4637
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-03-harden-cursor-acp-session-runtime/proposal.md",
+      "mode": "100644",
+      "git_blob": "9e88f5fda08f631e85d25e28072003ec18878948",
+      "sha256": "44f3f921429747b86cd19852f7888829c700a9d6b4b8ef0c7db45b0920647bb1",
+      "bytes": 2191
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-03-harden-cursor-acp-session-runtime/specs/cursor-acp-session-runtime/spec.md",
+      "mode": "100644",
+      "git_blob": "2f50594b1c50b8b4033aab3554a65e1c689ece34",
+      "sha256": "d323b4785fa260a12b14460b718f6ec00639bf998d4ba769a128a8663f74cf0e",
+      "bytes": 28386
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-03-harden-cursor-acp-session-runtime/tasks.md",
+      "mode": "100644",
+      "git_blob": "6f31b5bae141ed2813bdc732da164502aadad275",
+      "sha256": "30446b6538958ecf75e2502e2da2f207daed28a948253b71d8284aeec68d69a9",
+      "bytes": 2405
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-03-package-cursor-subagent-plugin/.openspec.yaml",
+      "mode": "100644",
+      "git_blob": "032461ff9fabbf3f9d3ee05069937b5d3e5d2252",
+      "sha256": "0f57d5a958ae5cc6cd1484325810d733a1ab1a162d2f257b3adcc87769990a3a",
+      "bytes": 40
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-03-package-cursor-subagent-plugin/design.md",
+      "mode": "100644",
+      "git_blob": "b3215a9a1c318bb627e5fefd0a016d4c13050067",
+      "sha256": "745777b81f591d62388f0d5b6ff5c2ea2ea49064ae4701ba79a2b240d68b3e8b",
+      "bytes": 2677
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-03-package-cursor-subagent-plugin/proposal.md",
+      "mode": "100644",
+      "git_blob": "f3ae97a7ac93e5509ac5fc163756ca375c65df53",
+      "sha256": "0bd686455bcbd04d0a5e64fb681f8563c0b55ee7487838651674ce093cb8507e",
+      "bytes": 1457
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-03-package-cursor-subagent-plugin/specs/cursor-plugin-distribution/spec.md",
+      "mode": "100644",
+      "git_blob": "402d202fbc57c76d1c4cffc9ff2faf2d7f6034a1",
+      "sha256": "d42c333ed86e16c39431d5e5529b0c8d3e9339967ac003035fe65dfd895645f1",
+      "bytes": 23195
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-03-package-cursor-subagent-plugin/tasks.md",
+      "mode": "100644",
+      "git_blob": "b1be27950f1fc70cc361f0c84f96e5078633c48a",
+      "sha256": "bfb44cd5b83c3dc7469277ceafc31a6cea274530483071b738decd89ec2c1c94",
+      "bytes": 1906
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-04-add-cursor-subagent-skill-evals/.openspec.yaml",
+      "mode": "100644",
+      "git_blob": "9696e00f11eedeb87cebb23d7c3fe5c042fc309f",
+      "sha256": "964f972c30a1faaf490217c7c29ba15cd54bbaef08447707c3471c20bf44d5ff",
+      "bytes": 40
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-04-add-cursor-subagent-skill-evals/design.md",
+      "mode": "100644",
+      "git_blob": "4dd9433e894ed5ea5d37049d7c1d002dcce87bd1",
+      "sha256": "464fb6d36dafd5b5ce5816b982f32566d204765d0a54946f2636e02c0c0f4cfb",
+      "bytes": 11729
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-04-add-cursor-subagent-skill-evals/evidence/hosted-2026-09-04.json",
+      "mode": "100644",
+      "git_blob": "28746aee9a58b469814664fd95ac559dc37dbeb9",
+      "sha256": "d62123835dae11dc7ea84d97314d727f5dfa6fefcbb738c582657292e546f025",
+      "bytes": 725
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-04-add-cursor-subagent-skill-evals/evidence/hosted-question-2026-09-04.json",
+      "mode": "100644",
+      "git_blob": "be92ad1c08c757fd9d25f177ae3f2b258090e21d",
+      "sha256": "9df09c7738c02540578f5e0b96333f1101fc7be9b69062203ce16ffcdf6cb5f1",
+      "bytes": 728
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-04-add-cursor-subagent-skill-evals/proposal.md",
+      "mode": "100644",
+      "git_blob": "61800f3c409b5fa2d2f52c3b8f1dbb9181406146",
+      "sha256": "89e0f3b8c930053e52a6ee0b4a1044d81875c9074304beb91671889e9e14639d",
+      "bytes": 2321
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-04-add-cursor-subagent-skill-evals/specs/cursor-subagent-skill-evals/spec.md",
+      "mode": "100644",
+      "git_blob": "fe30925e93725a65171d22e258984d3159d46d11",
+      "sha256": "4a5b15e7a0b9774e6a5396120aeef686de98a557a8ba137f21a7c8ca3ff60635",
+      "bytes": 6845
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-04-add-cursor-subagent-skill-evals/specs/cursor-task-delegation/spec.md",
+      "mode": "100644",
+      "git_blob": "c66317f5170a92c51422b5079f4f734035434b81",
+      "sha256": "e74d6bbbef4274957e138309db4b6bd1e9587fee66202dba3bed2a319c030ef8",
+      "bytes": 2804
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-04-add-cursor-subagent-skill-evals/tasks.md",
+      "mode": "100644",
+      "git_blob": "3f952f32c26c795f6075144c9cd429582f950a26",
+      "sha256": "0e049f3279c40364d4c27ead4c1e1edd69bf1b44b75821a886e2df1e8a185505",
+      "bytes": 3594
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-accelerate-node-unit-tests/.openspec.yaml",
+      "mode": "100644",
+      "git_blob": "a8b563bfeb9f5480af7e3b5c0c0d47c66652cc2a",
+      "sha256": "e6bda6d36b39e20ff5aacc32a46eeca39be2a1b5ac9186d37551b39936b24143",
+      "bytes": 57
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-accelerate-node-unit-tests/design.md",
+      "mode": "100644",
+      "git_blob": "19ebf44fb30c4e21d91fc66ed0f43419af3947be",
+      "sha256": "f2d9c206210fea7b4c8da11a7eee1f89a3389dca2773036497c50df07a983118",
+      "bytes": 7953
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-accelerate-node-unit-tests/proposal.md",
+      "mode": "100644",
+      "git_blob": "1b5dd85f7e1931a45c088f372c2da647eec8e9a3",
+      "sha256": "36f96d9938d49113a20c44ca44121e8bd42d460078f68f11639ee39158c9a273",
+      "bytes": 2285
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-accelerate-node-unit-tests/tasks.md",
+      "mode": "100644",
+      "git_blob": "d7d6474f96da69d82a90f9264043cd541c685f7f",
+      "sha256": "dfde0bb9696fd37464e4d21fa5cd53d898fe6f82aa5d2c177aa70ee37272c97c",
+      "bytes": 6467
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-add-claude-code-marketplace-plugin/.openspec.yaml",
+      "mode": "100644",
+      "git_blob": "34f54d2e6ce21c1e2a51ccf1f07d6210960ef329",
+      "sha256": "7555aa06e53ea191a4fd7854f1fcf46ceb785a0f87b18154b84981bfe40bce5e",
+      "bytes": 40
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-add-claude-code-marketplace-plugin/design.md",
+      "mode": "100644",
+      "git_blob": "23fd788452c61fec17fe45747e89b33d017be7a9",
+      "sha256": "69a08548bbebe7473010b913a6b2dffc933044a28f5460336113be23db75695c",
+      "bytes": 6085
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-add-claude-code-marketplace-plugin/proposal.md",
+      "mode": "100644",
+      "git_blob": "421a8d5b234ef1b2b814d4194a427f507c7b7beb",
+      "sha256": "846b3a729bb929c36bf798387d540fe46fc2c2d30b959d976836d80db8458063",
+      "bytes": 1973
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-add-claude-code-marketplace-plugin/specs/claude-code-plugin-distribution/spec.md",
+      "mode": "100644",
+      "git_blob": "d32460bdc54391075784bfee596612192af946c5",
+      "sha256": "9bbe647f43f4871c0f706417b22604c4de537f7a15468943039f470ca34235e7",
+      "bytes": 3494
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-add-claude-code-marketplace-plugin/tasks.md",
+      "mode": "100644",
+      "git_blob": "4a5a5db4eac442241dc836f316c8a6a61ac2aa4e",
+      "sha256": "b75e8bcfe4531723b76557de37cce936adec18caf53632ff00a94024cda211ba",
+      "bytes": 3158
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-add-durable-node-test-supervisor/.openspec.yaml",
+      "mode": "100644",
+      "git_blob": "1d9aeef992c1b5f42711704a7a1a20db51635c90",
+      "sha256": "d612751ea74db7310fb72eea452668b4fe243c950df13937d76bc3c269b740ac",
+      "bytes": 40
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-add-durable-node-test-supervisor/design.md",
+      "mode": "100644",
+      "git_blob": "ed29dd899c55ffee4a0cb43377d99b0946f19c34",
+      "sha256": "366400e96a85ee43e2e5fb03c4b4ed0e737fed7dc60266f3d2508b1d301e9b5d",
+      "bytes": 9423
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-add-durable-node-test-supervisor/proposal.md",
+      "mode": "100644",
+      "git_blob": "8ca5ec4565e292b035f0fac858174b85d1a1cc6b",
+      "sha256": "7232dbc9b1596614c262ec008cc3bc116d7933b75b86e544a0efea2d0536d833",
+      "bytes": 2264
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-add-durable-node-test-supervisor/specs/node-test-supervision/spec.md",
+      "mode": "100644",
+      "git_blob": "f26260352486e05a78e26577be48bd040380cc51",
+      "sha256": "d05fb5fb9bb8ba09d2a1df8d9a2b3ce1217466f9ac0c7e33fd799a75eb89ab23",
+      "bytes": 7157
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-add-durable-node-test-supervisor/tasks.md",
+      "mode": "100644",
+      "git_blob": "f2a1323c6c3348135c778ac72f803ba576b3b910",
+      "sha256": "6ef98653f6e8c3782be6aebe700d188aa3cee60994a5ed0c556ef435d1d3e701",
+      "bytes": 5045
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-expand-cursor-subagent-skill-evals/.openspec.yaml",
+      "mode": "100644",
+      "git_blob": "34f54d2e6ce21c1e2a51ccf1f07d6210960ef329",
+      "sha256": "7555aa06e53ea191a4fd7854f1fcf46ceb785a0f87b18154b84981bfe40bce5e",
+      "bytes": 40
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-expand-cursor-subagent-skill-evals/design.md",
+      "mode": "100644",
+      "git_blob": "4180cb5cf43ccda09748593835befe22063d2c72",
+      "sha256": "eeffa5df93a89047d6bf3f5aafb4967e347c18dee149e4def521b128b1a21644",
+      "bytes": 16609
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-expand-cursor-subagent-skill-evals/proposal.md",
+      "mode": "100644",
+      "git_blob": "2f4b74a0121398a44277bb57a780d831852c2b43",
+      "sha256": "c07b1597914f891480b2096dd1fcb067b850dfcb5a75ccbbd82f9aecd12388d0",
+      "bytes": 3418
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-expand-cursor-subagent-skill-evals/specs/cursor-subagent-skill-evals/spec.md",
+      "mode": "100644",
+      "git_blob": "bdae1acb560f204b5ffb027d1499166df742b7c8",
+      "sha256": "7af616743462361bed058fdbfbeeba952d162c3111f1bb3bc2313621a537defa",
+      "bytes": 24942
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-expand-cursor-subagent-skill-evals/tasks.md",
+      "mode": "100644",
+      "git_blob": "6cc59dad324540244b3fb41a326677cfc2879fbd",
+      "sha256": "07a491d497e189590cb03dd4635b24d7a610a1d27b7904ea2884c0625d876b97",
+      "bytes": 7783
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-harden-test-contracts/.openspec.yaml",
+      "mode": "100644",
+      "git_blob": "34f54d2e6ce21c1e2a51ccf1f07d6210960ef329",
+      "sha256": "7555aa06e53ea191a4fd7854f1fcf46ceb785a0f87b18154b84981bfe40bce5e",
+      "bytes": 40
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-harden-test-contracts/coverage-review.md",
+      "mode": "100644",
+      "git_blob": "4471eb16019f70adb6044f7887e4fa4fa3227f96",
+      "sha256": "1061ae6df1628eff4e9af06a6d46c91b1c3b8617b443613a4a2a3b1d2452f545",
+      "bytes": 3221
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-harden-test-contracts/design.md",
+      "mode": "100644",
+      "git_blob": "6b848276b6c176221df4142bd6490372cb4337c2",
+      "sha256": "902cd399102cde7557950ebb2bb76a2e074efef98de827012019a2cd48ffaa25",
+      "bytes": 4864
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-harden-test-contracts/proposal.md",
+      "mode": "100644",
+      "git_blob": "8d517f8d46f8f167600939f0aea8a4bb698ff4ef",
+      "sha256": "b3badf89bb99a40fde5d00ae60714a21f33a1be8d557db70e2a434a689a158d6",
+      "bytes": 2888
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-harden-test-contracts/specs/cursor-subagent-skill-evals/spec.md",
+      "mode": "100644",
+      "git_blob": "95b5c3d9475e283b2fe566aa268b5c47c35a075e",
+      "sha256": "b9425e8db44ff8cf4f91690cbf60f2e163251534fe5edb5c3248b4fa3b88d7a8",
+      "bytes": 3381
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-harden-test-contracts/specs/node-test-supervision/spec.md",
+      "mode": "100644",
+      "git_blob": "218cab1824675b62f4439aaf70dff1c43437de60",
+      "sha256": "e64942554a1e88c7b7178e52b60f73b0d5c86a1653616903b483ad9b20e09f74",
+      "bytes": 5807
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-harden-test-contracts/tasks.md",
+      "mode": "100644",
+      "git_blob": "f3d8fc1dbf47ac54b96966ddd0c6e35cf0de8dfa",
+      "sha256": "10e16d43d8c7e233af6428aa8bb84916952b253155132ede681b370b17910813",
+      "bytes": 3431
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-parallelize-node-test-lanes/.openspec.yaml",
+      "mode": "100644",
+      "git_blob": "a8b563bfeb9f5480af7e3b5c0c0d47c66652cc2a",
+      "sha256": "e6bda6d36b39e20ff5aacc32a46eeca39be2a1b5ac9186d37551b39936b24143",
+      "bytes": 57
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-parallelize-node-test-lanes/design.md",
+      "mode": "100644",
+      "git_blob": "b8dcf29a89317b8eee9e6bd74144a2c1a72e5f66",
+      "sha256": "ba73f6038f32cd71882f1fb30e08a5421d658be3e4ceb8186306cd19eb9e6278",
+      "bytes": 9745
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-parallelize-node-test-lanes/proposal.md",
+      "mode": "100644",
+      "git_blob": "5a36fd1bfb0bcf5dbee323bc33c845af4eb9d0f1",
+      "sha256": "c30ac964d876a0b5396ac6356fe89f883339afe66c30766e966711d56881b24b",
+      "bytes": 2712
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-parallelize-node-test-lanes/tasks.md",
+      "mode": "100644",
+      "git_blob": "10a3fe490c94a42923e98bcc63cbe220b05068f6",
+      "sha256": "2ad74a83e55852ae4b6839522ba664b9c7b7eb3b4a7ad55582f6777113d0dbbf",
+      "bytes": 12479
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-07-improve-interactive-acp-ux/.openspec.yaml",
+      "mode": "100644",
+      "git_blob": "34f54d2e6ce21c1e2a51ccf1f07d6210960ef329",
+      "sha256": "7555aa06e53ea191a4fd7854f1fcf46ceb785a0f87b18154b84981bfe40bce5e",
+      "bytes": 40
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-07-improve-interactive-acp-ux/coverage-review.md",
+      "mode": "100644",
+      "git_blob": "c53c29bc0e3f295ac59abe6fb68037b6f2946b38",
+      "sha256": "db8d26bdefd498255466d76a5c59c698b4185b068d99b058bab7fb0a32748bce",
+      "bytes": 14994
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-07-improve-interactive-acp-ux/design.md",
+      "mode": "100644",
+      "git_blob": "4238fc5fd1e0e67719cc01446a47d178f083af64",
+      "sha256": "adf76b4fbdee8f3cb30942b9d89763831dc6405a0a61b04da211531dbe16fca5",
+      "bytes": 74615
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-07-improve-interactive-acp-ux/proposal.md",
+      "mode": "100644",
+      "git_blob": "bcac88aac8f546ef28dcc62546d7908d19ab893f",
+      "sha256": "b35bee6f9efbf61e4023ee02170b1eba157426bc4bdc15c86a99f8c72f0f7da2",
+      "bytes": 16521
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-07-improve-interactive-acp-ux/specs/cursor-acp-session-runtime/spec.md",
+      "mode": "100644",
+      "git_blob": "d99fe59680b19d7cd3094e75c3f0fcea25e65fd3",
+      "sha256": "5820ea32e1a1f584e17c2c30b0619db48a6db7e377b29f54251aeb3359f1d461",
+      "bytes": 39330
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-07-improve-interactive-acp-ux/specs/cursor-plugin-distribution/spec.md",
+      "mode": "100644",
+      "git_blob": "83e23cc4b1e62eecfb4434058152568197f9eb77",
+      "sha256": "49ee53a4a9e6b0a6571572bda5343d11f80645af1f4cbd67bced10b5bd817435",
+      "bytes": 12017
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-07-improve-interactive-acp-ux/specs/cursor-subagent-skill-evals/spec.md",
+      "mode": "100644",
+      "git_blob": "60d95eabf3b3903152cbdf623af8356e761f1eb3",
+      "sha256": "9f9bd98a23d15618544d3e5f6f0e9e8c12dbf53f1d67d352bbcdb8caee8f0dab",
+      "bytes": 91255
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-07-improve-interactive-acp-ux/specs/cursor-task-delegation/spec.md",
+      "mode": "100644",
+      "git_blob": "169c8d16f6e0ca7af14b6a1d678b44d81a1e0932",
+      "sha256": "71913bd7e6251540b4ff23f98028009765ff8a800e5201116e66eda6a0010e64",
+      "bytes": 29762
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-07-improve-interactive-acp-ux/specs/node-test-supervision/spec.md",
+      "mode": "100644",
+      "git_blob": "884ea81fd3440784bcb81f0785c1d4b0c332a769",
+      "sha256": "54a080af1e132cc575c144564f07df71cb51eacfbbef2e15acf7e97141ff3517",
+      "bytes": 8854
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-07-improve-interactive-acp-ux/tasks.md",
+      "mode": "100644",
+      "git_blob": "cc3961fe402db6a9f58e02b0d95513e4bd0d6f1a",
+      "sha256": "b73bc071071aa1e59f96d5dce71387e3c4fc716e554f6dc74b1cc014455e0896",
+      "bytes": 34445
+    },
+    {
+      "path": "openspec/config.yaml",
+      "mode": "100644",
+      "git_blob": "78082a95fdfc79d82b910a3e7a02b93b8cbeb07b",
+      "sha256": "8f13ddf542b8634abf1dcd34028bd74ab4998426770b5e86c25e4e2c77d5b274",
+      "bytes": 473
+    },
+    {
+      "path": "openspec/specs/claude-code-plugin-distribution/spec.md",
+      "mode": "100644",
+      "git_blob": "46fc9175af19a8af228430ba8c91f051619f7dd6",
+      "sha256": "34cd416d58c52d8cab912bc07a80fe29b880941688852cb7c28a65328f0b8eba",
+      "bytes": 3538
+    },
+    {
+      "path": "openspec/specs/cursor-acp-session-runtime/spec.md",
+      "mode": "100644",
+      "git_blob": "310f61b1c902d700992373350e7c344745df5ada",
+      "sha256": "e175c8e82747a7fad44aeec84770304832ed3d52b450aabce58a5d86871e1686",
+      "bytes": 53813
+    },
+    {
+      "path": "openspec/specs/cursor-plugin-distribution/spec.md",
+      "mode": "100644",
+      "git_blob": "ae9599f62b9df1a457b8b71a1ca212f7e1a22e21",
+      "sha256": "56688d14284718f3cdb937115ccd5be973a67901329f16cf7ce8ff69d8229eba",
+      "bytes": 23221
+    },
+    {
+      "path": "openspec/specs/cursor-subagent-skill-evals/spec.md",
+      "mode": "100644",
+      "git_blob": "0148e603b721d5186f2e24361dfe31f6a15dd9bb",
+      "sha256": "890ab9c80187a00aaaf46a2756f5c7dbe6126b955b2c131050709407f332aad4",
+      "bytes": 93226
+    },
+    {
+      "path": "openspec/specs/cursor-task-delegation/spec.md",
+      "mode": "100644",
+      "git_blob": "0bfd8eb66686f63ba898d34fde6e134bf2e807bc",
+      "sha256": "c05627425cd4ca6b1776ec8fe23e603b14edd60c98eaefb65aa7fa72b818497f",
+      "bytes": 29917
+    },
+    {
+      "path": "openspec/specs/node-test-supervision/spec.md",
+      "mode": "100644",
+      "git_blob": "4821249f3b1633a144715be1c1ba213f8ad025a2",
+      "sha256": "da0b2e2fcd29065e4bc0fe41c6565aef3ffce20b7bbcf0d57dd7d8b20fdf02bb",
+      "bytes": 14775
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "mode": "100644",
+      "git_blob": "855c104c0898fec2533fd3c4e3d224c6045b1570",
+      "sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "bytes": 28366
+    },
+    {
+      "path": "scripts/check-openspec-semantics.mjs",
+      "mode": "100644",
+      "git_blob": "a6460a190746b67fee7faab7d3efa3486126ab30",
+      "sha256": "9328c5562f7575d6ca3df9668056c941851bc13cdce95c9baffdf2aa710810a1",
+      "bytes": 32752
+    },
+    {
+      "path": "scripts/codex-app-server-client.mjs",
+      "mode": "100644",
+      "git_blob": "4bb3ba875a406850def12b8625d342770b3866aa",
+      "sha256": "f5fa4850c7228aa9ed4b4a0661f2d1dbabae2ffe95ec86b98e3e0ffc36cf4200",
+      "bytes": 14060
+    },
+    {
+      "path": "scripts/cursor-eval-scenario.mjs",
+      "mode": "100644",
+      "git_blob": "848574eec47ffd920e05d4780ec5b56488773282",
+      "sha256": "6804e403c718ee7a7aa9556ee99c163c27333ae6dc7fed412d25027b6bab8347",
+      "bytes": 69135
+    },
+    {
+      "path": "scripts/cursor-skill-eval.mjs",
+      "mode": "100644",
+      "git_blob": "573462a41facde9346d5c70313f1c21f71166872",
+      "sha256": "ac4e06e7cfc0fd4f9fed27f019ccdcffb1c1c959975ba69385ccb0222eed2562",
+      "bytes": 9672
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "mode": "100644",
+      "git_blob": "50d921b2384d428146d761fd9f4979e131682494",
+      "sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "bytes": 52347
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "mode": "100644",
+      "git_blob": "e0aa4233cc718188b88121339956b77b61516366",
+      "sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "bytes": 65395
+    },
+    {
+      "path": "scripts/eval/finalize-cursor-skill-eval.mjs",
+      "mode": "100644",
+      "git_blob": "e7204984259fd5e7e43cc4ca590a81f0b5312a6e",
+      "sha256": "37d1ad9f912b499eb8d06a16acd0d183e9d62a03f2b5a34eab3a1ce9398e89bc",
+      "bytes": 32551
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "mode": "100644",
+      "git_blob": "c63983597cf75a28f1991ba502f681dc9927ad28",
+      "sha256": "df614f7e8c2770a8e796716a1f02c753da9ee918d24f47c9e8c9bb9b6f70cd3a",
+      "bytes": 14829
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-suite.mjs",
+      "mode": "100644",
+      "git_blob": "cbdcf88ca24c74bf52a660216afca01f6982f8d3",
+      "sha256": "9c7369d89ad636e59d554e3e684d1923b045cc33ea2d2d2ff572049deff3fbcf",
+      "bytes": 5041
+    },
+    {
+      "path": "scripts/node-test-reporter-v22.mjs",
+      "mode": "100644",
+      "git_blob": "a58d54c31f669da8f4150276b4c5b20ea8abd0df",
+      "sha256": "51ac5c6e8a019c83e4deb101b209146c3e953069e42a593d862a45b1ade4834f",
+      "bytes": 834
+    },
+    {
+      "path": "scripts/openspec-semantic-registry.mjs",
+      "mode": "100644",
+      "git_blob": "cc49f566dd09e46b8184502ae9594c90ea3e6438",
+      "sha256": "453d5707ec6a99064ff298cf625a2dd963fb36c1fee382924dbe98478a2f0787",
+      "bytes": 13369
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "mode": "100644",
+      "git_blob": "6cf0097a03ab7153a54376e9e8e44e56ee3ce39e",
+      "sha256": "767158d64395dda4d5fff2a563ee72458cbdd778715d9997d0b4bfc312558a63",
+      "bytes": 16936
+    },
+    {
+      "path": "scripts/run-cursor-skill-eval.mjs",
+      "mode": "100644",
+      "git_blob": "e68d323d8db6d832b3eac38d831370bf44a32bc3",
+      "sha256": "dae13e3a0b60fdf5e5e50ce841f6047d62fa76f65d9e969811b60bf65b9bf36a",
+      "bytes": 24395
+    },
+    {
+      "path": "scripts/run-node-tests.mjs",
+      "mode": "100644",
+      "git_blob": "de4e2c723b9925a673033740e125e467357a4d79",
+      "sha256": "0ab147c2456df7836e70f2502a9c758f59a51e9a1f173c1cb44838f51c881bae",
+      "bytes": 20857
+    },
+    {
+      "path": "scripts/run-unit-coverage.mjs",
+      "mode": "100644",
+      "git_blob": "b7ae3b372717d0a7b3b5b0b99fa8d47a7068a7ca",
+      "sha256": "24c50d0b2f517da01e8fb1288d38d267577b48bf2f4e8a3530153e3e1cbad30b",
+      "bytes": 712
+    },
+    {
+      "path": "skills/cursor-subagent/SKILL.md",
+      "mode": "100644",
+      "git_blob": "da22c52a8b8575c1e57a8c4eb3e8af21cdcfd650",
+      "sha256": "6925bc2ac347f331713df5ee78cf2cba8a9eb8fd587bfbb949b8a86497dbe593",
+      "bytes": 19410
+    },
+    {
+      "path": "skills/cursor-subagent/agents/openai.yaml",
+      "mode": "100644",
+      "git_blob": "975d08ab03e510f9a4300617fe121f5597111044",
+      "sha256": "7e2b2b72bb12d9f72c780db5b31fc7b0d5d0a320f67da4a2701af079453e322e",
+      "bytes": 251
+    },
+    {
+      "path": "tests/bootstrap.test.mjs",
+      "mode": "100644",
+      "git_blob": "f075e0a01ebe361f6bac3853699db7ee6207de5f",
+      "sha256": "df1239be241d8df33b8ac84fcef20970daf0145c368e04938efebb24a4fae966",
+      "bytes": 106553
+    },
+    {
+      "path": "tests/check-openspec-semantics.test.mjs",
+      "mode": "100644",
+      "git_blob": "0491d369de28f4994ea31d9856cd628c41a044ae",
+      "sha256": "a3b06c9faeec9ee034465052c99000e2cca77348c701801256f94938a03f544c",
+      "bytes": 61008
+    },
+    {
+      "path": "tests/claude-marketplace-canary.test.mjs",
+      "mode": "100644",
+      "git_blob": "e314e090985c80b08f1ebdefd53534bda6e7fdda",
+      "sha256": "232030d969ee38c63bb91b78903594d78d47cb339a039167f2c82b55a08b4d6a",
+      "bytes": 3573
+    },
+    {
+      "path": "tests/codex-app-server-client.test.mjs",
+      "mode": "100644",
+      "git_blob": "5c266211df5fffa98479bdbb27b2dcd331134ff9",
+      "sha256": "a6b6ff3a94fae099f25f3f807c5673595b5b095db2f9c4b497bff3700638d1af",
+      "bytes": 28757
+    },
+    {
+      "path": "tests/codex-client-integration.test.mjs",
+      "mode": "100644",
+      "git_blob": "e4740bd4f624c1295a6525e4b5be65d642243107",
+      "sha256": "50fddb254387763ef1daa682de1f9446e2aa2dd516a1e010c602353302bbcff1",
+      "bytes": 134278
+    },
+    {
+      "path": "tests/coverage-audit.test.mjs",
+      "mode": "100644",
+      "git_blob": "78d67e9c049ba5247dcbfe3464e8bd00a6a0defd",
+      "sha256": "164c36259e4705db1297cf294a9ae257c1ce35c104c94903c5dea0e25c73e3b9",
+      "bytes": 31924
+    },
+    {
+      "path": "tests/cursor-skill-eval.test.mjs",
+      "mode": "100644",
+      "git_blob": "388498e1e9b2bb5d5b8e3064b8b997afb38ff249",
+      "sha256": "fccaf2eb5c3c3ffb92f48a5227a24499836d24a26ae039d73730403330af2e57",
+      "bytes": 77747
+    },
+    {
+      "path": "tests/eval-closeout.test.mjs",
+      "mode": "100644",
+      "git_blob": "67670b07b0dc211eb70f111a614b9c6c01241ded",
+      "sha256": "55657bc7aa55a081fd8f3672c8957ed86418cb9dd9d4cea0645267bad97fd978",
+      "bytes": 52618
+    },
+    {
+      "path": "tests/eval-matrix.test.mjs",
+      "mode": "100644",
+      "git_blob": "53624e4949bf2a630844432e1bbab05f41248d1a",
+      "sha256": "a3c12b17e999f616ef92bda9d98369b9a70537c7ca3ae74d63e02604350a1221",
+      "bytes": 17903
+    },
+    {
+      "path": "tests/facade.test.mjs",
+      "mode": "100644",
+      "git_blob": "b20384ef199a433faabe0e410f3b49fe3618ef34",
+      "sha256": "e7d3e41b42b7b4c9f16c0cf20c946c3d5eb1218becd3f002a629153a71da6212",
+      "bytes": 4476
+    },
+    {
+      "path": "tests/fixtures/accelerate-turn-timeout.mjs",
+      "mode": "100644",
+      "git_blob": "769dcbbb3e5e0d1a39baa2506b77c101075129d2",
+      "sha256": "7be784d43416c5e2a3b0a81965a9ae1a72fa525f9352dad123b1776720e7175f",
+      "bytes": 324
+    },
+    {
+      "path": "tests/fixtures/codex-app-server-v01521.golden.json",
+      "mode": "100644",
+      "git_blob": "521e5c11b3756dd0b9bfd727426fbe5ac3567ea9",
+      "sha256": "79a22cf5b9ae694ce0c5103251ae3e5ae9886717ef850d5318bf864998c3cb33",
+      "bytes": 1574
+    },
+    {
+      "path": "tests/fixtures/codex-app-server-v01534.golden.json",
+      "mode": "100644",
+      "git_blob": "bfb884c079e66737b96e6ab0a7ea49f4e54710c3",
+      "sha256": "860abe7af9a1823190ccbb6f0d738f34224a3c8395efc2a997396bf5f4cf5594",
+      "bytes": 1987
+    },
+    {
+      "path": "tests/fixtures/codex-v01521-adapter.golden.json",
+      "mode": "100644",
+      "git_blob": "d7f7a7d003186b39a07278741c9a7556305226d6",
+      "sha256": "ad5db7340fcbe9a43ff21e6febf1bfc4dbf148a46c8998ff6607af80983747a5",
+      "bytes": 1700
+    },
+    {
+      "path": "tests/fixtures/codex-v01521-adapter.mjs",
+      "mode": "100644",
+      "git_blob": "2e498e291d29a3a1dd557ed26269a0f32ceef6ef",
+      "sha256": "e04a4a4b48457191c8374e86e6e1eb93923759319b08eb2a165ea2f3b9cff71d",
+      "bytes": 10187
+    },
+    {
+      "path": "tests/fixtures/codex-v01534-adapter.golden.json",
+      "mode": "100644",
+      "git_blob": "651e1a0b7cb8177fee0e14a5edde370d876b3ce8",
+      "sha256": "d45e7ee51aa33f24b653501a7b16af34a8465b823015d320f3f3a99ec69ea1f7",
+      "bytes": 1643
+    },
+    {
+      "path": "tests/fixtures/codex-v01534-adapter.mjs",
+      "mode": "100644",
+      "git_blob": "077d042d2afa4d937a504760a5910a3b952da11f",
+      "sha256": "5ad4cb1117c27ae112e4fe610d4fe155f121c05a77fb0458a6a27c36fc4c2e5e",
+      "bytes": 125
+    },
+    {
+      "path": "tests/fixtures/cursor-agent-v20260825.golden.json",
+      "mode": "100644",
+      "git_blob": "a54ae60ca8ba6e984297d9036be0dfc6668c14d7",
+      "sha256": "476241fb75a582eba3c38b79f9111fe3fc3570d31bcfa9be71a84de769217eb9",
+      "bytes": 4630
+    },
+    {
+      "path": "tests/fixtures/fake-acp.mjs",
+      "mode": "100755",
+      "git_blob": "b7ce3be9ce0388a570f37ee50900a39b69fbda9e",
+      "sha256": "4e152fb5bad738d7fd6bdccd00747c6842742c2f9a726bf64134c3001d2840b3",
+      "bytes": 32574
+    },
+    {
+      "path": "tests/fixtures/fake-app-server.mjs",
+      "mode": "100644",
+      "git_blob": "deb485a0bda168e4211b72002e6851375d57209a",
+      "sha256": "e1297a3e9817e3ed453b22de4a39d7b1fd00286e877fb902305eb5e591cfdb65",
+      "bytes": 9046
+    },
+    {
+      "path": "tests/fixtures/fake-codex-adapter-core.mjs",
+      "mode": "100644",
+      "git_blob": "efa09bec2fe0e9b40d19548bf703e3833137ed4d",
+      "sha256": "5d4275b817a199a0e137306bce68473a433b285deb59455cef7e5ede129c1a06",
+      "bytes": 9879
+    },
+    {
+      "path": "tests/fixtures/fake-codex-adapter.mjs",
+      "mode": "100644",
+      "git_blob": "20a680ba793aa1ab1d73fd76b3cd092da1ff41b5",
+      "sha256": "cbf0d2161be737265f4ff2928b3c4922fc57fdae3ba0d7cba6d813218d9f258e",
+      "bytes": 616
+    },
+    {
+      "path": "tests/fixtures/fake-codex-cli-v01521.mjs",
+      "mode": "100644",
+      "git_blob": "4c1268056b0d04844140e18f64d81bffa3d387df",
+      "sha256": "1b9c0fad2882ea98e16aabd140a2527adf243a82be7f2afa54b3aadedc63ccea",
+      "bytes": 2441
+    },
+    {
+      "path": "tests/fixtures/fake-cursor-agent-status.mjs",
+      "mode": "100755",
+      "git_blob": "d12c7b1082d3937d0c835d2c3f2d41c1f9cc7c51",
+      "sha256": "a70f48be3f083b7bc52b39f7a631ab055aa31ee8513cf1652635b6a538a8ae5d",
+      "bytes": 1623
+    },
+    {
+      "path": "tests/fixtures/fake-eval-matrix-child.mjs",
+      "mode": "100644",
+      "git_blob": "449ad4122f3f8083de1a44af28cf4178099fd221",
+      "sha256": "07197161f14e790ccb585d2c45a6828b01ca0ae28aa2e4fbed17606348c68212",
+      "bytes": 4111
+    },
+    {
+      "path": "tests/fixtures/fake-mcp-version.mjs",
+      "mode": "100644",
+      "git_blob": "fa6883c5dae514eb8ce272aa5178393d67ea9b8c",
+      "sha256": "44fa5a1b1acc368845b279844602cb2a078315d52ac65a34b1b91ea3b19b1310",
+      "bytes": 669
+    },
+    {
+      "path": "tests/fixtures/fake-ollama-responses.mjs",
+      "mode": "100644",
+      "git_blob": "8f9f927351f8b5beebe2bae396726bbe2ff78971",
+      "sha256": "d7c6aaa17cae68ec93fbdbf522abd72c19f7b1889d2eddf6e165fd6641422433",
+      "bytes": 12859
+    },
+    {
+      "path": "tests/fixtures/kill-wait-command.mjs",
+      "mode": "100644",
+      "git_blob": "d81d8308d6bc1f9c45387b5ff8137552511c6974",
+      "sha256": "abb55a9b35474073fba560853f0712cf946eaa7c055eefa2ea248a68778a9fe5",
+      "bytes": 277
+    },
+    {
+      "path": "tests/fixtures/node-test-reporter-v22.23.1.golden.json",
+      "mode": "100644",
+      "git_blob": "da28d3b9105192126fc380852c49077140e97a41",
+      "sha256": "6d2c0e0ba90c0f74a91f4cf7d9f0705f8d649f9ad874765ada6539ac1e12b02c",
+      "bytes": 3437
+    },
+    {
+      "path": "tests/fixtures/release-fake-acp.mjs",
+      "mode": "100644",
+      "git_blob": "9e6174ea5585f08545602d22f805bf46ff94c100",
+      "sha256": "98cd6d4735d9a764e2eb74c307f0fc48a87c015b29637a83bc04e6dee2157644",
+      "bytes": 264
+    },
+    {
+      "path": "tests/fixtures/release-plan-fixture.txt",
+      "mode": "100644",
+      "git_blob": "79c068a73875bab6d0b973169d69e356dceaaef0",
+      "sha256": "bf9a0a0f53b7050fcc90fe3cfd415811b5358bace2ed11c652e913eb3a8ea4e5",
+      "bytes": 20
+    },
+    {
+      "path": "tests/fixtures/run-unit-coverage-loader.mjs",
+      "mode": "100644",
+      "git_blob": "2dc871fa7c7147049663217a12d60bb58d9228bd",
+      "sha256": "8075aefc547c5810373b7400dbfb6e120a6c0b5f1c4fa33add37606a33fd516c",
+      "bytes": 414
+    },
+    {
+      "path": "tests/fixtures/supervisor-process-tree.mjs",
+      "mode": "100644",
+      "git_blob": "c27d5729b5b637ce2a45cf585993c29ee6a21d2c",
+      "sha256": "b858c585a3a667676a73087fd514d43915c2baf2c2163c489e1c0ce6b907d6fe",
+      "bytes": 1392
+    },
+    {
+      "path": "tests/mcp-smoke.test.mjs",
+      "mode": "100644",
+      "git_blob": "3dafb64f261047554fcbebc4e16d4ff5e90cc775",
+      "sha256": "6772303b77e7d3d104b8505f5542bbeaa0a805eb39b8739c858f900f27099935",
+      "bytes": 2740
+    },
+    {
+      "path": "tests/mcp-transport.test.mjs",
+      "mode": "100644",
+      "git_blob": "cd398f25cade4975043b537763095f5cc5651d8f",
+      "sha256": "07aac46cc89020ddac70f11903ac9cf01b193653e32cb177ab3eee6c2e5fe215",
+      "bytes": 15948
+    },
+    {
+      "path": "tests/node-test-reporter-v22.test.mjs",
+      "mode": "100644",
+      "git_blob": "b00b0fb305ab2885dfdc953ef1f37c5f3aeedd88",
+      "sha256": "f2c395131cf6fa66de0324544d8991b1de943a8c19e6fc59def9cd56da7b4073",
+      "bytes": 2202
+    },
+    {
+      "path": "tests/node-test-supervisor.test.mjs",
+      "mode": "100644",
+      "git_blob": "2a5e2ec10e483d4e12909c0772cfdcab3775bf24",
+      "sha256": "b49957fd57fb4b70914e2d54d880aa16db35224013b5b82d9b34ae2e038bafcf",
+      "bytes": 53342
+    },
+    {
+      "path": "tests/release-e2e.test.mjs",
+      "mode": "100644",
+      "git_blob": "357531f8ebacf4440fb79d83521f67ff0fd2899d",
+      "sha256": "38896f98ae6a09c87932c735c834e01f2dc841a813dccd41c37724d921daf4a2",
+      "bytes": 36135
+    },
+    {
+      "path": "tests/run-cursor-skill-eval.test.mjs",
+      "mode": "100644",
+      "git_blob": "42c8f046fda58db3cf0af0ff23d587e53f769bcc",
+      "sha256": "972219067ae31b3a1ba86e991bb20e8e78e8436c9ebf4a152582219417f5e826",
+      "bytes": 115885
+    },
+    {
+      "path": "tests/runtime.test.mjs",
+      "mode": "100644",
+      "git_blob": "5a71741ccaff55ce7259fbb2d43d9c3ac92faada",
+      "sha256": "75d818bfc08ec87aeb607de738a9363a917901488d9516bf2162c5269b21fba9",
+      "bytes": 179150
+    }
+  ],
+  "matched": 141,
+  "mismatches": []
+}

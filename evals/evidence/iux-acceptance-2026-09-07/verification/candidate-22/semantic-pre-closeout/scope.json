@@ -1,0 +1,376 @@
+{
+  "excluded_change": "simplify-task-state-wait",
+  "reason": "Separate follow-up change is explicitly excluded by user from IUX acceptance blocker scope; its previous IUX source binding needs independent rebase.",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 12929,
+      "sha256": "e01a6304b92bc405957772f0eaf7170930dde6245f7599dc645cd0758dbfa4ed"
+    },
+    {
+      "path": "evals/cursor-subagent-scenarios.v1.json",
+      "bytes": 78148,
+      "sha256": "d66ef2c37844a32602b3580134373496b5706c79e9da4fe8d15a33f515b6ff22"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-03-add-cursor-delegation-workflow/.openspec.yaml",
+      "bytes": 40,
+      "sha256": "0f57d5a958ae5cc6cd1484325810d733a1ab1a162d2f257b3adcc87769990a3a"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-03-add-cursor-delegation-workflow/design.md",
+      "bytes": 2076,
+      "sha256": "2076ffc1e9d585c10b9eaf00dee15d6f480bdb45996de64ced04828504e5970c"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-03-add-cursor-delegation-workflow/proposal.md",
+      "bytes": 1405,
+      "sha256": "ab26dd4ddb1fdf43a513f38cf9d95e1679689b3c076e56625f32937d3c5fa647"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-03-add-cursor-delegation-workflow/specs/cursor-task-delegation/spec.md",
+      "bytes": 2791,
+      "sha256": "af4ec13ea7fd9089e1a16d144dd2490b6cfcbe2146467bc3b28a893eb16bb0f2"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-03-add-cursor-delegation-workflow/tasks.md",
+      "bytes": 914,
+      "sha256": "92cc331fcde1adc02a710a76d6570646b18ad0694134c2db38e8ccab8a990db6"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-03-harden-cursor-acp-session-runtime/.openspec.yaml",
+      "bytes": 40,
+      "sha256": "0f57d5a958ae5cc6cd1484325810d733a1ab1a162d2f257b3adcc87769990a3a"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-03-harden-cursor-acp-session-runtime/design.md",
+      "bytes": 4637,
+      "sha256": "655e9c54df4447e7f3ab69a2be7e3a1cc2cd08e0dbd334f1b819fd8bc7d964eb"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-03-harden-cursor-acp-session-runtime/proposal.md",
+      "bytes": 2191,
+      "sha256": "44f3f921429747b86cd19852f7888829c700a9d6b4b8ef0c7db45b0920647bb1"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-03-harden-cursor-acp-session-runtime/specs/cursor-acp-session-runtime/spec.md",
+      "bytes": 28386,
+      "sha256": "d323b4785fa260a12b14460b718f6ec00639bf998d4ba769a128a8663f74cf0e"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-03-harden-cursor-acp-session-runtime/tasks.md",
+      "bytes": 2405,
+      "sha256": "30446b6538958ecf75e2502e2da2f207daed28a948253b71d8284aeec68d69a9"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-03-package-cursor-subagent-plugin/.openspec.yaml",
+      "bytes": 40,
+      "sha256": "0f57d5a958ae5cc6cd1484325810d733a1ab1a162d2f257b3adcc87769990a3a"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-03-package-cursor-subagent-plugin/design.md",
+      "bytes": 2677,
+      "sha256": "745777b81f591d62388f0d5b6ff5c2ea2ea49064ae4701ba79a2b240d68b3e8b"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-03-package-cursor-subagent-plugin/proposal.md",
+      "bytes": 1457,
+      "sha256": "0bd686455bcbd04d0a5e64fb681f8563c0b55ee7487838651674ce093cb8507e"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-03-package-cursor-subagent-plugin/specs/cursor-plugin-distribution/spec.md",
+      "bytes": 23195,
+      "sha256": "d42c333ed86e16c39431d5e5529b0c8d3e9339967ac003035fe65dfd895645f1"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-03-package-cursor-subagent-plugin/tasks.md",
+      "bytes": 1906,
+      "sha256": "bfb44cd5b83c3dc7469277ceafc31a6cea274530483071b738decd89ec2c1c94"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-04-add-cursor-subagent-skill-evals/.openspec.yaml",
+      "bytes": 40,
+      "sha256": "964f972c30a1faaf490217c7c29ba15cd54bbaef08447707c3471c20bf44d5ff"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-04-add-cursor-subagent-skill-evals/design.md",
+      "bytes": 11729,
+      "sha256": "464fb6d36dafd5b5ce5816b982f32566d204765d0a54946f2636e02c0c0f4cfb"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-04-add-cursor-subagent-skill-evals/evidence/hosted-2026-09-04.json",
+      "bytes": 725,
+      "sha256": "d62123835dae11dc7ea84d97314d727f5dfa6fefcbb738c582657292e546f025"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-04-add-cursor-subagent-skill-evals/evidence/hosted-question-2026-09-04.json",
+      "bytes": 728,
+      "sha256": "9df09c7738c02540578f5e0b96333f1101fc7be9b69062203ce16ffcdf6cb5f1"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-04-add-cursor-subagent-skill-evals/proposal.md",
+      "bytes": 2321,
+      "sha256": "89e0f3b8c930053e52a6ee0b4a1044d81875c9074304beb91671889e9e14639d"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-04-add-cursor-subagent-skill-evals/specs/cursor-subagent-skill-evals/spec.md",
+      "bytes": 6845,
+      "sha256": "4a5b15e7a0b9774e6a5396120aeef686de98a557a8ba137f21a7c8ca3ff60635"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-04-add-cursor-subagent-skill-evals/specs/cursor-task-delegation/spec.md",
+      "bytes": 2804,
+      "sha256": "e74d6bbbef4274957e138309db4b6bd1e9587fee66202dba3bed2a319c030ef8"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-04-add-cursor-subagent-skill-evals/tasks.md",
+      "bytes": 3594,
+      "sha256": "0e049f3279c40364d4c27ead4c1e1edd69bf1b44b75821a886e2df1e8a185505"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-accelerate-node-unit-tests/.openspec.yaml",
+      "bytes": 57,
+      "sha256": "e6bda6d36b39e20ff5aacc32a46eeca39be2a1b5ac9186d37551b39936b24143"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-accelerate-node-unit-tests/design.md",
+      "bytes": 7953,
+      "sha256": "f2d9c206210fea7b4c8da11a7eee1f89a3389dca2773036497c50df07a983118"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-accelerate-node-unit-tests/proposal.md",
+      "bytes": 2285,
+      "sha256": "36f96d9938d49113a20c44ca44121e8bd42d460078f68f11639ee39158c9a273"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-accelerate-node-unit-tests/tasks.md",
+      "bytes": 6467,
+      "sha256": "dfde0bb9696fd37464e4d21fa5cd53d898fe6f82aa5d2c177aa70ee37272c97c"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-add-claude-code-marketplace-plugin/.openspec.yaml",
+      "bytes": 40,
+      "sha256": "7555aa06e53ea191a4fd7854f1fcf46ceb785a0f87b18154b84981bfe40bce5e"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-add-claude-code-marketplace-plugin/design.md",
+      "bytes": 6085,
+      "sha256": "69a08548bbebe7473010b913a6b2dffc933044a28f5460336113be23db75695c"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-add-claude-code-marketplace-plugin/proposal.md",
+      "bytes": 1973,
+      "sha256": "846b3a729bb929c36bf798387d540fe46fc2c2d30b959d976836d80db8458063"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-add-claude-code-marketplace-plugin/specs/claude-code-plugin-distribution/spec.md",
+      "bytes": 3494,
+      "sha256": "9bbe647f43f4871c0f706417b22604c4de537f7a15468943039f470ca34235e7"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-add-claude-code-marketplace-plugin/tasks.md",
+      "bytes": 3158,
+      "sha256": "b75e8bcfe4531723b76557de37cce936adec18caf53632ff00a94024cda211ba"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-add-durable-node-test-supervisor/.openspec.yaml",
+      "bytes": 40,
+      "sha256": "d612751ea74db7310fb72eea452668b4fe243c950df13937d76bc3c269b740ac"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-add-durable-node-test-supervisor/design.md",
+      "bytes": 9423,
+      "sha256": "366400e96a85ee43e2e5fb03c4b4ed0e737fed7dc60266f3d2508b1d301e9b5d"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-add-durable-node-test-supervisor/proposal.md",
+      "bytes": 2264,
+      "sha256": "7232dbc9b1596614c262ec008cc3bc116d7933b75b86e544a0efea2d0536d833"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-add-durable-node-test-supervisor/specs/node-test-supervision/spec.md",
+      "bytes": 7157,
+      "sha256": "d05fb5fb9bb8ba09d2a1df8d9a2b3ce1217466f9ac0c7e33fd799a75eb89ab23"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-add-durable-node-test-supervisor/tasks.md",
+      "bytes": 5045,
+      "sha256": "6ef98653f6e8c3782be6aebe700d188aa3cee60994a5ed0c556ef435d1d3e701"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-expand-cursor-subagent-skill-evals/.openspec.yaml",
+      "bytes": 40,
+      "sha256": "7555aa06e53ea191a4fd7854f1fcf46ceb785a0f87b18154b84981bfe40bce5e"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-expand-cursor-subagent-skill-evals/design.md",
+      "bytes": 16609,
+      "sha256": "eeffa5df93a89047d6bf3f5aafb4967e347c18dee149e4def521b128b1a21644"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-expand-cursor-subagent-skill-evals/proposal.md",
+      "bytes": 3418,
+      "sha256": "c07b1597914f891480b2096dd1fcb067b850dfcb5a75ccbbd82f9aecd12388d0"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-expand-cursor-subagent-skill-evals/specs/cursor-subagent-skill-evals/spec.md",
+      "bytes": 24942,
+      "sha256": "7af616743462361bed058fdbfbeeba952d162c3111f1bb3bc2313621a537defa"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-expand-cursor-subagent-skill-evals/tasks.md",
+      "bytes": 7783,
+      "sha256": "07a491d497e189590cb03dd4635b24d7a610a1d27b7904ea2884c0625d876b97"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-harden-test-contracts/.openspec.yaml",
+      "bytes": 40,
+      "sha256": "7555aa06e53ea191a4fd7854f1fcf46ceb785a0f87b18154b84981bfe40bce5e"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-harden-test-contracts/coverage-review.md",
+      "bytes": 3221,
+      "sha256": "1061ae6df1628eff4e9af06a6d46c91b1c3b8617b443613a4a2a3b1d2452f545"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-harden-test-contracts/design.md",
+      "bytes": 4864,
+      "sha256": "902cd399102cde7557950ebb2bb76a2e074efef98de827012019a2cd48ffaa25"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-harden-test-contracts/proposal.md",
+      "bytes": 2888,
+      "sha256": "b3badf89bb99a40fde5d00ae60714a21f33a1be8d557db70e2a434a689a158d6"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-harden-test-contracts/specs/cursor-subagent-skill-evals/spec.md",
+      "bytes": 3381,
+      "sha256": "b9425e8db44ff8cf4f91690cbf60f2e163251534fe5edb5c3248b4fa3b88d7a8"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-harden-test-contracts/specs/node-test-supervision/spec.md",
+      "bytes": 5807,
+      "sha256": "e64942554a1e88c7b7178e52b60f73b0d5c86a1653616903b483ad9b20e09f74"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-harden-test-contracts/tasks.md",
+      "bytes": 3431,
+      "sha256": "10e16d43d8c7e233af6428aa8bb84916952b253155132ede681b370b17910813"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-parallelize-node-test-lanes/.openspec.yaml",
+      "bytes": 57,
+      "sha256": "e6bda6d36b39e20ff5aacc32a46eeca39be2a1b5ac9186d37551b39936b24143"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-parallelize-node-test-lanes/design.md",
+      "bytes": 9745,
+      "sha256": "ba73f6038f32cd71882f1fb30e08a5421d658be3e4ceb8186306cd19eb9e6278"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-parallelize-node-test-lanes/proposal.md",
+      "bytes": 2712,
+      "sha256": "c30ac964d876a0b5396ac6356fe89f883339afe66c30766e966711d56881b24b"
+    },
+    {
+      "path": "openspec/changes/archive/2026-09-05-parallelize-node-test-lanes/tasks.md",
+      "bytes": 12479,
+      "sha256": "2ad74a83e55852ae4b6839522ba664b9c7b7eb3b4a7ad55582f6777113d0dbbf"
+    },
+    {
+      "path": "openspec/changes/improve-interactive-acp-ux/.openspec.yaml",
+      "bytes": 40,
+      "sha256": "7555aa06e53ea191a4fd7854f1fcf46ceb785a0f87b18154b84981bfe40bce5e"
+    },
+    {
+      "path": "openspec/changes/improve-interactive-acp-ux/coverage-review.md",
+      "bytes": 13310,
+      "sha256": "8ef385f5c9ffccc12da84b2e86a5758a7632ec353c359cc36e945f2b923cd198"
+    },
+    {
+      "path": "openspec/changes/improve-interactive-acp-ux/design.md",
+      "bytes": 72438,
+      "sha256": "db2282575ca2134061d2ae0bf82974daf7c1aa10f16b8c7aa785fdcd103c7799"
+    },
+    {
+      "path": "openspec/changes/improve-interactive-acp-ux/proposal.md",
+      "bytes": 15887,
+      "sha256": "53d1b8da291b492b411e83c453c323edac98a08b5df3f51cd4e710e4ee897dd0"
+    },
+    {
+      "path": "openspec/changes/improve-interactive-acp-ux/specs/cursor-acp-session-runtime/spec.md",
+      "bytes": 39330,
+      "sha256": "5820ea32e1a1f584e17c2c30b0619db48a6db7e377b29f54251aeb3359f1d461"
+    },
+    {
+      "path": "openspec/changes/improve-interactive-acp-ux/specs/cursor-plugin-distribution/spec.md",
+      "bytes": 12017,
+      "sha256": "49ee53a4a9e6b0a6571572bda5343d11f80645af1f4cbd67bced10b5bd817435"
+    },
+    {
+      "path": "openspec/changes/improve-interactive-acp-ux/specs/cursor-subagent-skill-evals/spec.md",
+      "bytes": 88241,
+      "sha256": "820b3036a58a7a0b98cdcde679ff95c728d64e337bb0721fd37d4f2645d5e96c"
+    },
+    {
+      "path": "openspec/changes/improve-interactive-acp-ux/specs/cursor-task-delegation/spec.md",
+      "bytes": 29762,
+      "sha256": "71913bd7e6251540b4ff23f98028009765ff8a800e5201116e66eda6a0010e64"
+    },
+    {
+      "path": "openspec/changes/improve-interactive-acp-ux/specs/node-test-supervision/spec.md",
+      "bytes": 8854,
+      "sha256": "54a080af1e132cc575c144564f07df71cb51eacfbbef2e15acf7e97141ff3517"
+    },
+    {
+      "path": "openspec/changes/improve-interactive-acp-ux/tasks.md",
+      "bytes": 33459,
+      "sha256": "e1ff38c4d3a4fc397449ff358bb9173613d46759a1d9d91e2a152120fe1d88d3"
+    },
+    {
+      "path": "openspec/config.yaml",
+      "bytes": 473,
+      "sha256": "8f13ddf542b8634abf1dcd34028bd74ab4998426770b5e86c25e4e2c77d5b274"
+    },
+    {
+      "path": "openspec/specs/claude-code-plugin-distribution/spec.md",
+      "bytes": 3538,
+      "sha256": "34cd416d58c52d8cab912bc07a80fe29b880941688852cb7c28a65328f0b8eba"
+    },
+    {
+      "path": "openspec/specs/cursor-acp-session-runtime/spec.md",
+      "bytes": 28423,
+      "sha256": "0c0d5931fa8a02b9ec83f730eac94c2f7397f5f70428c91c90f97151c2d12da5"
+    },
+    {
+      "path": "openspec/specs/cursor-plugin-distribution/spec.md",
+      "bytes": 23232,
+      "sha256": "96d9aa2470abd3192140a42379ca71cf88ca1b0937598fa26805e87712474882"
+    },
+    {
+      "path": "openspec/specs/cursor-subagent-skill-evals/spec.md",
+      "bytes": 31297,
+      "sha256": "87085775cde1162a15262019a479cabdede6d6b8240c67a00441512904aff83d"
+    },
+    {
+      "path": "openspec/specs/cursor-task-delegation/spec.md",
+      "bytes": 4862,
+      "sha256": "265405fddccad7c2edafb4b01a0f85995c605a8f64e40e7119dedfa24e2859d9"
+    },
+    {
+      "path": "openspec/specs/node-test-supervision/spec.md",
+      "bytes": 9142,
+      "sha256": "cdd85d52ec93ccaca901901afe2282509e5ef319b0874ff79161f023fea3c9a1"
+    },
+    {
+      "path": "scripts/check-openspec-semantics.mjs",
+      "bytes": 29503,
+      "sha256": "910e75ee9dd24caf4e7cfc68a9ff4fd600d98ea257cbdd955672c872cda03265"
+    },
+    {
+      "path": "scripts/openspec-semantic-registry.mjs",
+      "bytes": 18193,
+      "sha256": "69e197760accd0fb34ae298b664b5f1fd030410c57f3916a118f04dca897b1ad"
+    }
+  ]
+}

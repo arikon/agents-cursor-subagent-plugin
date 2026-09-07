@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "reviewer": "independent carry_forward_tests verifier",
+  "verdict": "PASS",
+  "hash_references_checked": 9,
+  "diagnostic": {
+    "total": 26,
+    "pass": 26
+  },
+  "acceptance": {
+    "total": 78,
+    "pass": 78,
+    "serial": 3
+  },
+  "concurrency": 12,
+  "checks": [
+    "summary versus raw matrices",
+    "all four exact scenario sets",
+    "counts and durations",
+    "candidate digest",
+    "eight unique matrix configurations with exactly one gpt-6-astra/low",
+    "Markdown/JSON consistency and explicit not_checked boundaries"
+  ],
+  "findings": []
+}

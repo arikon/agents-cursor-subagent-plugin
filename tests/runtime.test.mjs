@@ -1349,13 +1349,23 @@ test('oversized normalized pending context is rejected without publication', asy
 });
 
 test('public pending and waiter capacity limits reject only excess work', async (t) => {
-  const pendingRuntime = withFake(t, { pending: 'pending-capacity' });
+  const root = mkdtempSync(join(tmpdir(), 'cursor-runtime-pending-capacity-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const log = join(root, 'wire.jsonl');
+  const pendingRuntime = withFake(t, { pending: 'pending-capacity', env: { FAKE_ACP_LOG: log } });
   const pendingSession = await pendingRuntime.call('cursor_start_session', { cwd, mode: 'ask' });
   const pendingTurn = await pendingRuntime.call('cursor_send_prompt', { session_id: pendingSession.session_id, prompt: 'fill pending capacity' });
   let pendingEnvelope = await pendingRuntime.call('cursor_wait', { session_id: pendingSession.session_id, turn_id: pendingTurn.turn_id, after_event_id: pendingTurn.last_event_id, timeout_ms: 1_000 });
   while (pendingEnvelope.pending.length < LIMITS.pending) {
     pendingEnvelope = await pendingRuntime.call('cursor_wait', { session_id: pendingSession.session_id, turn_id: pendingTurn.turn_id, after_event_id: pendingEnvelope.last_event_id, timeout_ms: 1_000 });
   }
+  let excessResponse;
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    excessResponse = readJsonLines(log).find(({ id, error }) => id === `q${LIMITS.pending}` && error);
+    if (excessResponse) break;
+    await new Promise((resolveWait) => setTimeout(resolveWait, 5));
+  }
+  assert.equal(excessResponse?.error.data.error_code, 'resource_limit');
   assert.equal(pendingEnvelope.pending.length, LIMITS.pending);
   assert.deepEqual(pendingEnvelope.pending.map(({ request_id }) => request_id), Array.from({ length: LIMITS.pending }, (_, index) => `q${index}`));
   await pendingRuntime.call('cursor_close_session', { session_id: pendingSession.session_id });

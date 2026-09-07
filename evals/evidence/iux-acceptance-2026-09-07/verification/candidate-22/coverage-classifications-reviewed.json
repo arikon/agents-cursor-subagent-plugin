@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "path": "scripts/cursor-eval-scenario.mjs",
+      "source_sha256": "6804e403c718ee7a7aa9556ee99c163c27333ae6dc7fed412d25027b6bab8347",
+      "metric": "branches",
+      "line": 769,
+      "occurrence": 2,
+      "classification": "unreachable_defensive",
+      "disposition": "validRecoveryContext at 709-720 requires contiguous ranges covering zero through calls.length; every iterated call index belongs to exactly one range; same-source V8 occurrence permutation from previously reviewed occurrence 3."
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 221,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "Malformed or empty question lists are rejected before pending publication; runtime.test.mjs 890-924 owns this observable boundary; exact same-source counter was reviewed for candidate 20."
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 233,
+      "occurrence": 6,
+      "classification": "observable_contract_already_owned",
+      "disposition": "Optional plan title and body fallback are observed as title:null and fallback body by runtime.test.mjs 1087-1095; exact occurrence 6 same-source counter permutation was previously reviewed."
+    },
+    {
+      "path": "scripts/eval/finalize-cursor-skill-eval.mjs",
+      "source_sha256": "37d1ad9f912b499eb8d06a16acd0d183e9d62a03f2b5a34eab3a1ce9398e89bc",
+      "metric": "branches",
+      "line": 158,
+      "occurrence": 2,
+      "classification": "unreachable_defensive",
+      "disposition": "result.artifact_root is already equal to the required normalized nonempty process.artifact_root by guards at 144-156; the empty driver-stdout fallback arm cannot execute."
+    },
+    {
+      "path": "scripts/eval/finalize-cursor-skill-eval.mjs",
+      "source_sha256": "37d1ad9f912b499eb8d06a16acd0d183e9d62a03f2b5a34eab3a1ce9398e89bc",
+      "metric": "branches",
+      "line": 159,
+      "occurrence": 2,
+      "classification": "unreachable_defensive",
+      "disposition": "result.artifact_root is already equal to the required normalized nonempty process.artifact_root by guards at 144-156; the empty driver-stderr fallback arm cannot execute."
+    }
+  ]
+}

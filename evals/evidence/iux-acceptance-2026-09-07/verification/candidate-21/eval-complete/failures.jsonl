@@ -1,0 +1,2 @@
+{"type":"test:summary","data":{"success":true,"counts":{"tests":26,"failed":0,"passed":24,"cancelled":0,"skipped":2,"todo":0,"topLevel":26,"suites":0},"duration_ms":5559.50325,"file":"/Users/arikon/projects/codex-cursor-subagent-plugin/tests/codex-client-integration.test.mjs"}}
+{"type":"test:summary","data":{"success":true,"counts":{"tests":26,"failed":0,"passed":24,"cancelled":0,"skipped":2,"todo":0,"topLevel":26,"suites":0},"duration_ms":5627.896709}}

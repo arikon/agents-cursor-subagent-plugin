@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "verdict": "PASS",
+  "version": "0.1.0+codex.20260907174354",
+  "node": "22.23.1",
+  "coverage_tests": {
+    "passed": 643,
+    "skipped": 1,
+    "failed": 0
+  },
+  "coverage_metrics": {
+    "lines": 99.90223236108848,
+    "branches": 98.29112620959441,
+    "functions": 99.88023952095809
+  },
+  "zero_counters": {
+    "classified": 92,
+    "unclassified": 0
+  },
+  "release_canary": {
+    "passed": 12,
+    "failed": 0
+  },
+  "archive": {
+    "change": "improve-interactive-acp-ux",
+    "tasks": 61,
+    "synced_capabilities": 5,
+    "synced_blocks": 25,
+    "archive_files_hash_matched": 10
+  },
+  "release_scope": "Git index snapshot with separate simplify-task-state-wait draft and its registry entry excluded; working draft retained",
+  "hosted_evaluations": "Existing immutable evidence retained; no new hosted baseline claimed by release verification",
+  "refs": {
+    "coverage": {
+      "path": "coverage-complete/2026-09-07T18-21-26-238Z-coverage-77c11dbf-4a55-4791-abfd-679621a518bd/result.json",
+      "sha256": "d70bb3c4cf1842306e2f7346ea312e9d6967c62319cbcd6c4dea906e54cef2e7"
+    },
+    "audit": {
+      "path": "coverage-accepted-final/zero-counter-audit.json",
+      "sha256": "ea6c4bd0e5bf876d45dde5bee0281a97b42cef859902a21c39ab30424518088b"
+    },
+    "release": {
+      "path": "release-node22/2026-09-07T18-13-34-112Z-release-56747ae6-cbeb-4f3e-9dbb-1ed51132c30a/result.json",
+      "sha256": "3053caf034016148e391f138d385874683751438817b547d5ecd0b6963126719"
+    },
+    "focused": {
+      "path": "semantic-focused-complete/result.json",
+      "sha256": "ad3e56d79ae4c5b7f0d8fc83a61064055a7b70d834e4c9278e37b99de273bb17"
+    },
+    "inputs": {
+      "path": "verified-index-inputs.json",
+      "sha256": "34df4cb0122afdb66c23cce2dda736a437e12088eb9924fc18912047e413d3ee"
+    },
+    "architecture": {
+      "path": "architect-review.json",
+      "sha256": "a1bb8df552b51fbfe2554ded779cfbb567ee568f19eaea7be78dc946ed6390f9"
+    },
+    "validation": {
+      "path": "validation.json",
+      "sha256": "39c049d3e528c4bb8a94cb0a84a9c534c3b3edf42e88e89317099963d0452d6f"
+    }
+  }
+}

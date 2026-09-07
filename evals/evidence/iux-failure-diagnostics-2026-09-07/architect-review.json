@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "reviewer": "independent baseline_scope architect",
+  "verdict": "CLEAR",
+  "classification": "new_scope explicitly authorized by user 2026-09-07",
+  "scope": "task 5.12 diagnostic-only retention inside existing IUX-19",
+  "findings": [],
+  "verified": [
+    "single requirement owner",
+    "unique failure-only sidecar and measurable bounds",
+    "reference prefix survives bounded error output",
+    "explicit missing/read_error/truncation states",
+    "installed-schema metadata allowlist with deterministic fixture",
+    "no new acceptance claim or hosted rerun",
+    "historical frozen inputs/closeout remain unchanged"
+  ],
+  "accepted_exclusion": "simplify-task-state-wait remains a separate user-excluded draft; scoped semantic gate covers 11 changes",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 18477,
+      "sha256": "0efc9c36b0064cf1735a66e2dc6f42db7bebd6ab91e33ae0e98c7cc81dbc2cea"
+    },
+    {
+      "path": "openspec/changes/improve-interactive-acp-ux/design.md",
+      "bytes": 74615,
+      "sha256": "adf76b4fbdee8f3cb30942b9d89763831dc6405a0a61b04da211531dbe16fca5"
+    },
+    {
+      "path": "openspec/changes/improve-interactive-acp-ux/proposal.md",
+      "bytes": 16521,
+      "sha256": "b35bee6f9efbf61e4023ee02170b1eba157426bc4bdc15c86a99f8c72f0f7da2"
+    },
+    {
+      "path": "openspec/changes/improve-interactive-acp-ux/specs/cursor-subagent-skill-evals/spec.md",
+      "bytes": 91255,
+      "sha256": "9f9bd98a23d15618544d3e5f6f0e9e8c12dbf53f1d67d352bbcdb8caee8f0dab"
+    },
+    {
+      "path": "scripts/openspec-semantic-registry.mjs",
+      "bytes": 18193,
+      "sha256": "3a6b7a464205b8ae5912127191ca8d84b74bb13b55b35b83716e83f2749be053"
+    }
+  ]
+}

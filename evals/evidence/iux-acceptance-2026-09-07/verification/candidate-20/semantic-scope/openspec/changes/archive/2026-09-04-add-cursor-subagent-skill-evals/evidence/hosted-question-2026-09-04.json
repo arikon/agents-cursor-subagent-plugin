@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "scenario_id": "model-question",
+  "lane": "model-behavior",
+  "eval_status": "agent_behavior_mismatch",
+  "actual_task_outcome": "not_observed",
+  "reported_task_outcome": "not_reported",
+  "fixture_assertion_outcome": "fail",
+  "evidence_publication_status": "published",
+  "cleanup_status": "succeeded",
+  "failure_stage": "scenario",
+  "error_code": "required_wait_missing",
+  "observed_tool_prefix": ["cursor_delegate", "cursor_delegate"],
+  "required_tool_prefix": ["cursor_delegate", "cursor_wait"],
+  "notes": "Authenticated hosted run with an explicit phase-one prompt. The isolated thread was archived after the run; raw model, provider, ACP and authorization payloads were not retained."
+}

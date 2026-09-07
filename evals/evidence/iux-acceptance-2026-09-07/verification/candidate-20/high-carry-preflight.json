@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "status": "passed",
+  "diagnostic_counts": {
+    "total": 26,
+    "pass": 26,
+    "agent_behavior_mismatch": 0,
+    "integration_failure": 0,
+    "skipped": 0
+  },
+  "source_high_counts": {
+    "total": 78,
+    "pass": 78,
+    "agent_behavior_mismatch": 0,
+    "integration_failure": 0,
+    "skipped": 0
+  },
+  "source_high_concurrency": 4,
+  "current_concurrency": 12,
+  "source_and_target_package_hashes": {
+    "schema_version": 1,
+    "source": "91cdf2b50f07cbad38d12e90c206c3257439015112577df4262199fd8c74e9b2",
+    "target": "9d6bfdc3a10d2172b529ce5ff2c141b0b612226befb36cf3cc93f69761876182",
+    "source_matches_historical_high": true,
+    "package_file_count": 7
+  },
+  "full_diagnostic_and_high_validation_reached_next_medium_gate": true,
+  "expected_rejection": "matrix input drift: /Users/arikon/projects/codex-cursor-subagent-plugin/evals/evidence/iux-acceptance-2026-09-07/acceptance-05/medium.json",
+  "target_documents_unchanged": true
+}

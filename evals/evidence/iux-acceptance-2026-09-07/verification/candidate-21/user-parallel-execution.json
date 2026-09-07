@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "user_instruction": "Запускай medium параллельно",
+  "authorization_time": "2026-09-07T14:32:54Z",
+  "preserved_high_reference": "acceptance-05/high.json",
+  "preserved_high_counts": {
+    "total": 78,
+    "pass": 78
+  },
+  "additional_high": "acceptance-07/high.json",
+  "medium": "acceptance-07/medium.json",
+  "frozen_inputs": "candidate/frozen-inputs-21.json",
+  "execution": "overlapping configuration runs; three serial runs inside each configuration",
+  "concurrency_per_configuration": 12,
+  "combined_concurrency_ceiling": 24,
+  "policy": "Do not wait for additional high before starting medium. Preserve already accepted high as historical evidence; do not launch further high series automatically."
+}

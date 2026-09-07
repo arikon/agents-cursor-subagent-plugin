@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "live_tree": {
+    "ok": true,
+    "errors": [],
+    "checkedChanges": 12
+  },
+  "registered_change_snapshot": {
+    "ok": false,
+    "errors": [
+      "cannot resolve exactly one active or archived change root for simplify-task-state-wait"
+    ],
+    "checkedChanges": 12
+  },
+  "scope_ref": "scope.json",
+  "claim": "Registered change lineage only; separate unregistered follow-up draft excluded from immutable snapshot."
+}

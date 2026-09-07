@@ -1,0 +1,11 @@
+{
+  "argv": [
+    "openspec",
+    "validate",
+    "improve-interactive-acp-ux",
+    "--strict"
+  ],
+  "exit_code": 0,
+  "stdout": "Change 'improve-interactive-acp-ux' is valid\n",
+  "stderr": ""
+}

@@ -1,0 +1,21 @@
+{
+  "version": "codex-cli 0.153.4",
+  "executable": "/Applications/ChatGPT.app/Contents/Resources/codex",
+  "argv": [
+    "app-server",
+    "generate-json-schema",
+    "--experimental",
+    "--out",
+    "/tmp/iux-candidate21-app-server-schema"
+  ],
+  "exit_code": 0,
+  "reviewed_fields": [
+    "mcpServerStatus/list",
+    "threadId",
+    "detail:full",
+    "data[].name",
+    "data[].pluginId",
+    "data[].runtimeStatus:connected",
+    "nextCursor"
+  ]
+}

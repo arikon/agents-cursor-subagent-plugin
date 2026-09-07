@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "matches": [
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 48,
+      "occurrence": 3,
+      "review": "candidate-20/coverage-accepted/zero-counter-audit.json"
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 96,
+      "occurrence": 5,
+      "review": "candidate-20/coverage-accepted/zero-counter-audit.json"
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 152,
+      "occurrence": 2,
+      "review": "candidate-20/coverage-accepted/zero-counter-audit.json"
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 426,
+      "occurrence": 2,
+      "review": "candidate-20/coverage-accepted/zero-counter-audit.json"
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 429,
+      "occurrence": 3,
+      "review": "candidate-20/coverage-accepted/zero-counter-audit.json"
+    },
+    {
+      "path": "scripts/eval/finalize-cursor-skill-eval.mjs",
+      "source_sha256": "37d1ad9f912b499eb8d06a16acd0d183e9d62a03f2b5a34eab3a1ce9398e89bc",
+      "metric": "branches",
+      "line": 158,
+      "occurrence": 2,
+      "review": "candidate-22/coverage-classifications-reviewed.json"
+    },
+    {
+      "path": "scripts/eval/finalize-cursor-skill-eval.mjs",
+      "source_sha256": "37d1ad9f912b499eb8d06a16acd0d183e9d62a03f2b5a34eab3a1ce9398e89bc",
+      "metric": "branches",
+      "line": 159,
+      "occurrence": 2,
+      "review": "candidate-22/coverage-classifications-reviewed.json"
+    }
+  ],
+  "repaired_points": [
+    "finalizer369 cross-matrix guard",
+    "runtime496 excess pending rejection"
+  ]
+}

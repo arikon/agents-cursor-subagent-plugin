@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "reviewer": "independent baseline_scope architect",
+  "verdict": "CLEAR",
+  "classification": {
+    "historical_high_reference": "accepted new_scope",
+    "removed_compatibility_engine": "overengineering",
+    "fresh_overlap_wording": "baseline_violation repaired"
+  },
+  "reviewed_files": [
+    {
+      "path": "scripts/eval/finalize-cursor-skill-eval.mjs",
+      "bytes": 32551,
+      "sha256": "37d1ad9f912b499eb8d06a16acd0d183e9d62a03f2b5a34eab3a1ce9398e89bc"
+    },
+    {
+      "path": "tests/eval-closeout.test.mjs",
+      "bytes": 52470,
+      "sha256": "f14b45f528049f00b439b7573142f7422bff175d0036544206dad750d514863e"
+    },
+    {
+      "path": "openspec/changes/improve-interactive-acp-ux/proposal.md",
+      "bytes": 15887,
+      "sha256": "53d1b8da291b492b411e83c453c323edac98a08b5df3f51cd4e710e4ee897dd0"
+    },
+    {
+      "path": "openspec/changes/improve-interactive-acp-ux/design.md",
+      "bytes": 72438,
+      "sha256": "db2282575ca2134061d2ae0bf82974daf7c1aa10f16b8c7aa785fdcd103c7799"
+    },
+    {
+      "path": "openspec/changes/improve-interactive-acp-ux/specs/cursor-subagent-skill-evals/spec.md",
+      "bytes": 88241,
+      "sha256": "820b3036a58a7a0b98cdcde679ff95c728d64e337bb0721fd37d4f2645d5e96c"
+    },
+    {
+      "path": "scripts/openspec-semantic-registry.mjs",
+      "bytes": 18193,
+      "sha256": "69e197760accd0fb34ae298b664b5f1fd030410c57f3916a118f04dca897b1ad"
+    }
+  ],
+  "findings": [],
+  "test_note": "Existing bundle path validator owns traversal/symlink rejection; reference tests own new shape/hash/provenance. Raw coverage queue remains required.",
+  "current_candidate_high_claim": "not reproducibly green; additional high07 76/78 is retained; high05 reference applies only to its own source inputs"
+}

@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "snapshot": "/private/tmp/iux-release-20260907174354",
+  "semantic": {
+    "passed": 11,
+    "failed": 0
+  },
+  "main_specs_strict": {
+    "passed": 6,
+    "failed": 0
+  },
+  "archived_strict": {
+    "passed": 11,
+    "failed": 0
+  },
+  "plugin_manifest_validation": "PASS via installed plugin-creator validate_plugin.py",
+  "version": "0.1.0+codex.20260907174354",
+  "excluded_active_draft": "simplify-task-state-wait",
+  "diff_check": "PASS for source/docs/config; raw TAP evidence retains exact trailing whitespace"
+}

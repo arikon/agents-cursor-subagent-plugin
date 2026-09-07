@@ -1,0 +1,116 @@
+{
+  "schema_version": 1,
+  "kind": "AdditionalHighObservation",
+  "high": {
+    "path": "acceptance-07/high.json",
+    "bytes": 237914,
+    "sha256": "a4744a7f13930831b218f8bb80e6d0b3e266b4f6f74b2944b5076e60bd12b3ae"
+  },
+  "high_counts": {
+    "total": 78,
+    "pass": 76,
+    "agent_behavior_mismatch": 0,
+    "integration_failure": 2,
+    "skipped": 0
+  },
+  "high_per_run": [
+    {
+      "total": 26,
+      "pass": 26,
+      "agent_behavior_mismatch": 0,
+      "integration_failure": 0,
+      "skipped": 0
+    },
+    {
+      "total": 26,
+      "pass": 25,
+      "agent_behavior_mismatch": 0,
+      "integration_failure": 1,
+      "skipped": 0
+    },
+    {
+      "total": 26,
+      "pass": 25,
+      "agent_behavior_mismatch": 0,
+      "integration_failure": 1,
+      "skipped": 0
+    }
+  ],
+  "medium": {
+    "path": "acceptance-07/medium.json",
+    "bytes": 240063,
+    "sha256": "9769e5266d5c022c37106bd41cea36fd8b968612be9f54211cc6da1e599697eb"
+  },
+  "medium_counts": {
+    "total": 78,
+    "pass": 78,
+    "agent_behavior_mismatch": 0,
+    "integration_failure": 0,
+    "skipped": 0
+  },
+  "medium_per_run": [
+    {
+      "total": 26,
+      "pass": 26,
+      "agent_behavior_mismatch": 0,
+      "integration_failure": 0,
+      "skipped": 0
+    },
+    {
+      "total": 26,
+      "pass": 26,
+      "agent_behavior_mismatch": 0,
+      "integration_failure": 0,
+      "skipped": 0
+    },
+    {
+      "total": 26,
+      "pass": 26,
+      "agent_behavior_mismatch": 0,
+      "integration_failure": 0,
+      "skipped": 0
+    }
+  ],
+  "failures": [
+    {
+      "scenario_id": "model-semantic-failure",
+      "serial_index": 2,
+      "eval_status": "integration_failure",
+      "error_code": "child_result_invalid",
+      "duration_ms": 304013,
+      "evidence": {
+        "path": "acceptance-07/high.json.artifacts/serial-2/model-semantic-failure-attempt-1/2026-09-07T14-35-11-009Z-eval-8d93e2ef-f4f0-46ad-9937-e1ecf63a6448/tap.txt",
+        "bytes": 5859,
+        "sha256": "5cbd48f06967fbd7ee7f254944cd519e596e162542bb50ec30eabb5750bce043"
+      },
+      "observed": "evaluated turn remained inProgress at the 300 second terminal deadline",
+      "root_cause": "not established"
+    },
+    {
+      "scenario_id": "model-long-result",
+      "serial_index": 3,
+      "eval_status": "integration_failure",
+      "error_code": "child_result_invalid",
+      "duration_ms": 305715,
+      "evidence": {
+        "path": "acceptance-07/high.json.artifacts/serial-3/model-long-result-attempt-1/2026-09-07T14-40-15-094Z-eval-a9ad24f0-391b-49fd-9e75-f7f0bdb3fd15/tap.txt",
+        "bytes": 7300,
+        "sha256": "02ad8434d1c64ed21796a9f95a1180ade447d024a12c59789e6201ae7a38b7d5"
+      },
+      "observed": "evaluated turn remained inProgress at the 300 second terminal deadline",
+      "root_cause": "not established"
+    }
+  ],
+  "accepted_high": {
+    "path": "acceptance-05/high.json",
+    "bytes": 238341,
+    "sha256": "bca278d07f9cae4791dbb479762fc1e1310ab4e0303b272517a80aa5691a4f0a"
+  },
+  "accepted_high_basis": "preserved historical reference; not applicable to current candidate",
+  "retry_policy": "no further automatic hosted runs",
+  "authorization": {
+    "path": "verification/candidate-21/user-parallel-execution.json",
+    "bytes": 758,
+    "sha256": "a3388aa02361de124c439f4711a42a89ad53168cabf55f99ff6dc2b1129d819f"
+  }
+}

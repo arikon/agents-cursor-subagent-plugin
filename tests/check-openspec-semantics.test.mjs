@@ -582,6 +582,7 @@ test('semantic gate treats a main-spec directory without spec.md as having no ow
 test('semantic gate admits a corpus owner requirement declared by the same active change delta', async (t) => {
   const root = await fixture(t);
   const requirement = 'Current delta-owned requirement';
+  await mkdir(join(root, `openspec/changes/${evalChange}/specs/unused`));
   await write(root, `openspec/changes/${evalChange}/specs/${contracts[runtimeChange].capability}/spec.md`,
     `## ADDED Requirements\n### Requirement: ${requirement}\nCurrent change contract.\n`);
   const corpusRegistry = await withCorpusOwnerRequirements(root, [{
@@ -830,6 +831,101 @@ async function archiveFixtureChange(root, change) {
   await mkdir(dirname(join(root, destination)), { recursive: true });
   await rename(join(root, `openspec/changes/${change}`), join(root, destination));
   return destination;
+}
+
+async function archivedAdditiveSupersessionFixture(t, predecessorState = 'archived') {
+  const fixtureState = await stackedFixture(t);
+  await replace(fixtureState.root, fixtureState.sourcePath,
+    'Main capability contract.', 'The fixture exercises this\nsemantic contract. Additional same-paragraph contract.');
+  const additiveBlock = requirementBlock(await readFile(join(fixtureState.root, fixtureState.sourcePath), 'utf8'),
+    fixtureState.modification.requirement);
+  fixtureState.modification.sourceDigest = createHash('sha256').update(additiveBlock).digest('hex');
+  let predecessorArchive = null;
+  if (['archived', 'ambiguous', 'missing-block'].includes(predecessorState)) {
+    predecessorArchive = await archiveFixtureChange(fixtureState.root, facadeChange);
+    if (predecessorState === 'ambiguous') {
+      await write(fixtureState.root, `openspec/changes/archive/2026-09-08-${facadeChange}/placeholder`, 'ambiguous fixture');
+    } else if (predecessorState === 'missing-block') {
+      await replace(fixtureState.root, `${predecessorArchive}/specs/${fixtureState.modification.capability}/spec.md`,
+        `### Requirement: ${fixtureState.modification.requirement}`,
+        `### Requirement: ${fixtureState.modification.requirement} suffix`);
+    }
+  } else if (predecessorState === 'missing') {
+    await rm(join(fixtureState.root, `openspec/changes/${facadeChange}`), { recursive: true });
+  }
+  const additiveArchive = await archiveFixtureChange(fixtureState.root, evalChange);
+  const replacementArchive = await archiveFixtureChange(fixtureState.root, supervisorChange);
+  await write(fixtureState.root, fixtureState.mainPath, `${fixtureState.replacementBlock}\n`);
+  return { ...fixtureState, predecessorArchive, additiveArchive, replacementArchive };
+}
+
+test('archived additive delta preserves a rewrapped predecessor with a same-paragraph addition after exact supersession', async (t) => {
+  const fixtureState = await archivedAdditiveSupersessionFixture(t);
+  assert.deepEqual(checkOpenSpecSemantics(fixtureState.root, fixtureState.stackedRegistry).errors, []);
+});
+
+test('archived additive history rejects a delta that drops its predecessor contract', async (t) => {
+  const fixtureState = await archivedAdditiveSupersessionFixture(t);
+  const additivePath = `${fixtureState.additiveArchive}/specs/${fixtureState.modification.capability}/spec.md`;
+  await replace(fixtureState.root, additivePath,
+    'The fixture exercises this\nsemantic contract. Additional same-paragraph contract.\nModified contract.',
+    'Additional same-paragraph contract.\nModified contract.');
+  const additiveBlock = requirementBlock(await readFile(join(fixtureState.root, additivePath), 'utf8'), fixtureState.modification.requirement);
+  fixtureState.modification.sourceDigest = createHash('sha256').update(additiveBlock).digest('hex');
+  assertRejected(checkOpenSpecSemantics(fixtureState.root, fixtureState.stackedRegistry), 'invalid modified capability');
+});
+
+test('archived additive history preserves the nearest earlier modifier rather than only the original owner', async (t) => {
+  const fixtureState = await stackedFixture(t);
+  const { capability, requirement } = fixtureState.modification;
+  const packageDeltaPath = `openspec/changes/${packageChange}/specs/${capability}/spec.md`;
+  const packageBlock = `### Requirement: ${requirement}\nThe fixture exercises this semantic contract.\nPackage predecessor addition.`;
+  await write(fixtureState.root, packageDeltaPath, `## MODIFIED Requirements\n${packageBlock}\n`);
+  await append(fixtureState.root, `openspec/changes/${packageChange}/proposal.md`, `- \`${capability}\`\n`);
+  await replace(fixtureState.root, `openspec/changes/${packageChange}/design.md`,
+    '«Внешний контракт bootstrap»', `«Внешний контракт bootstrap», «${requirement}»`);
+  await append(fixtureState.root, `openspec/changes/${packageChange}/tasks.md`, `\n- [ ] Verify «${requirement}»`);
+  fixtureState.stackedRegistry.changes.find(({ id }) => id === packageChange).modified.push({ capability, requirement });
+
+  await replace(fixtureState.root, fixtureState.sourcePath,
+    'Main capability contract.\nModified contract.',
+    'The fixture exercises this semantic contract.\nPackage predecessor addition.\n\nEval additive contract.');
+  const evalBlock = requirementBlock(await readFile(join(fixtureState.root, fixtureState.sourcePath), 'utf8'), requirement);
+  fixtureState.modification.sourceDigest = createHash('sha256').update(evalBlock).digest('hex');
+
+  const registryWithTooling = await addReferenceOnlyToolingChange(fixtureState.root);
+  const toolingContract = registryWithTooling.changes.find(({ id }) => id === 'fixture-tooling');
+  const replacementIndex = fixtureState.stackedRegistry.changes.findIndex(({ id }) => id === supervisorChange);
+  fixtureState.stackedRegistry.changes.splice(replacementIndex, 0, toolingContract);
+
+  await archiveFixtureChange(fixtureState.root, facadeChange);
+  await archiveFixtureChange(fixtureState.root, packageChange);
+  const evalArchive = await archiveFixtureChange(fixtureState.root, evalChange);
+  await archiveFixtureChange(fixtureState.root, 'fixture-tooling');
+  await archiveFixtureChange(fixtureState.root, supervisorChange);
+  await write(fixtureState.root, fixtureState.mainPath, `${fixtureState.replacementBlock}\n`);
+  assert.deepEqual(checkOpenSpecSemantics(fixtureState.root, fixtureState.stackedRegistry).errors, []);
+
+  const archivedEvalPath = `${evalArchive}/specs/${capability}/spec.md`;
+  await replace(fixtureState.root, archivedEvalPath, 'Package predecessor addition.\n\n', '');
+  const droppedNearestBlock = requirementBlock(await readFile(join(fixtureState.root, archivedEvalPath), 'utf8'), requirement);
+  fixtureState.modification.sourceDigest = createHash('sha256').update(droppedNearestBlock).digest('hex');
+  assert.match(droppedNearestBlock, /The fixture exercises this semantic contract\./);
+  assertRejected(checkOpenSpecSemantics(fixtureState.root, fixtureState.stackedRegistry), 'invalid modified capability');
+});
+
+test('archived additive history does not use a replacement that remains active', async (t) => {
+  const fixtureState = await archivedAdditiveSupersessionFixture(t);
+  await rename(join(fixtureState.root, fixtureState.replacementArchive),
+    join(fixtureState.root, `openspec/changes/${supervisorChange}`));
+  assertRejected(checkOpenSpecSemantics(fixtureState.root, fixtureState.stackedRegistry), 'invalid modified capability');
+});
+
+for (const predecessorState of ['active', 'ambiguous', 'missing', 'missing-block']) {
+  test(`archived additive history rejects a ${predecessorState} nearest predecessor`, async (t) => {
+    const fixtureState = await archivedAdditiveSupersessionFixture(t, predecessorState);
+    assertRejected(checkOpenSpecSemantics(fixtureState.root, fixtureState.stackedRegistry), 'invalid modified capability');
+  });
 }
 
 test('stacked replacement admits registered modified and owned ADDED sources before main sync', async (t) => {

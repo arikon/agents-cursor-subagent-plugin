@@ -1,0 +1,26 @@
+{
+  "status": "CLEAR",
+  "reviewer": "baseline_scope",
+  "classification": "baseline_violation",
+  "minimality": "Existing capture/range schema and hash-bound harness control flow; no registry or invented capture. Complete actual-turn prefix only for mismatch, full planned count retained for pass/finalizer.",
+  "validated": [
+    "single normative owner",
+    "capture before follow-up and transcript minimum",
+    "empty-only connected status proof after recorder read",
+    "failed/interrupted short prefixes rejected",
+    "actual capture count used for recovery",
+    "recorder real-process empty evidence and replacement test"
+  ],
+  "verification_refs": [
+    "early-terminal-final/result.json",
+    "eval-final/result.json",
+    "recorder-unit/result.json",
+    "parser-oracle-unit/result.json",
+    "semantic-scope/result.json"
+  ],
+  "remaining_gates": [
+    "exhaustive coverage audit",
+    "fresh freeze diagnostic and acceptance",
+    "finalizer"
+  ]
+}

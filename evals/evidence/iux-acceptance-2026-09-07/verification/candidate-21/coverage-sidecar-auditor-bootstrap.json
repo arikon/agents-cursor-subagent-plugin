@@ -1,0 +1,56 @@
+[
+  {
+    "path": "scripts/audit-node-coverage.mjs",
+    "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+    "metric": "branches",
+    "line": 48,
+    "occurrence": 2,
+    "classification": "observable_contract_already_owned",
+    "disposition": "Empty fallback in digest hash validation has the same invalid-digest outcome. coverage-audit.test.mjs 257-271 rejects invalid snapshot/artifact byte counts and hashes before publication."
+  },
+  {
+    "path": "scripts/audit-node-coverage.mjs",
+    "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+    "metric": "branches",
+    "line": 96,
+    "occurrence": 4,
+    "classification": "observable_contract_already_owned",
+    "disposition": "Empty fallback in source-file hash validation has the same closed source-metadata rejection outcome. coverage-audit.test.mjs 259-260 verifies invalid source bytes and hashes publish no audit."
+  },
+  {
+    "path": "scripts/audit-node-coverage.mjs",
+    "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+    "metric": "branches",
+    "line": 152,
+    "occurrence": 1,
+    "classification": "unreachable_defensive",
+    "disposition": "Exact raw/source file counts are required first; unknown, ambiguous and duplicate mappings are rejected. Every accepted raw file adds one unique known source, making the final mapped-size inequality unreachable. Missing and duplicate raw sources are tested."
+  },
+  {
+    "path": "scripts/audit-node-coverage.mjs",
+    "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+    "metric": "branches",
+    "line": 426,
+    "occurrence": 1,
+    "classification": "unreachable_defensive",
+    "disposition": "strictArtifactRef admits only nonempty relative basenames, so the resolved artifact cannot escape its root. coverage-audit.test.mjs 273-274 rejects traversal and nested references."
+  },
+  {
+    "path": "scripts/audit-node-coverage.mjs",
+    "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+    "metric": "branches",
+    "line": 429,
+    "occurrence": 2,
+    "classification": "unreachable_defensive",
+    "disposition": "Basename references and readRegular rejection of symlinks/non-files ensure immutable regular artifact children resolve within the canonical artifact root; this repeats the containment guard."
+  },
+  {
+    "path": "scripts/cursor-subagent-bootstrap.mjs",
+    "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+    "metric": "branches",
+    "line": 417,
+    "occurrence": 2,
+    "classification": "unreachable_defensive",
+    "disposition": "Codeless adapter_failure fallback is unreachable: executable admission, adapterCommand, invokeAdapter and assertAdmission failures carry codes; runPackageCommand child failures are classified by invokeAdapter. bootstrap.test.mjs 1055-1064 verifies version admission failure and independent preflight checks."
+  }
+]

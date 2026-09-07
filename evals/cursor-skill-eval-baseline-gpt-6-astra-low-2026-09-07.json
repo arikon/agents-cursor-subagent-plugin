@@ -1,0 +1,219 @@
+{
+  "schema_version": 1,
+  "kind": "ModelAcceptanceBaseline",
+  "model": "gpt-6-astra",
+  "effort": "low",
+  "reference_root": ".",
+  "recorded_at": "2026-09-07T15:23:24.680Z",
+  "admitted_scenarios": 26,
+  "scenario_ids": [
+    "model-active-followup",
+    "model-active-followup-provider-failure",
+    "model-artifact-preservation",
+    "model-critic-delta",
+    "model-events-lost",
+    "model-file-review",
+    "model-initial-provider-failure",
+    "model-launch-change",
+    "model-launch-progress",
+    "model-long-result",
+    "model-mode-protocol-recovery",
+    "model-mode-provider-failure",
+    "model-mode-timeout",
+    "model-multiturn-review",
+    "model-permission-covered",
+    "model-permission-expansion",
+    "model-plan",
+    "model-plugin-dir-rejection",
+    "model-prompt-provider-failure",
+    "model-question",
+    "model-result-overflow",
+    "model-resume-failure",
+    "model-runtime-recovery",
+    "model-semantic-failure",
+    "model-snapshot-review",
+    "model-terminal-timeout"
+  ],
+  "reproducibly_green": true,
+  "attempt_policy": "one-attempt-per-scenario-run",
+  "candidate": {
+    "digest": {
+      "sha256": "bb0cccadadf7bb404a254cf5addee64f6f691b2cbc10e18ec3dc302b4b01d0a7",
+      "bytes": 559
+    },
+    "payload": {
+      "evaluator": {
+        "bytes": 4341,
+        "sha256": "6bb6515883e76bfadc54084a1fd0ac757ee965ffc3f26ff05f4078e15f33a97c"
+      },
+      "corpus": {
+        "sha256": "d66ef2c37844a32602b3580134373496b5706c79e9da4fe8d15a33f515b6ff22",
+        "bytes": 78148
+      },
+      "skill": {
+        "sha256": "6925bc2ac347f331713df5ee78cf2cba8a9eb8fd587bfbb949b8a86497dbe593",
+        "bytes": 19410
+      },
+      "adapter": {
+        "sha256": "e04a4a4b48457191c8374e86e6e1eb93923759319b08eb2a165ea2f3b9cff71d",
+        "bytes": 10187
+      },
+      "package_payload": "4d422b53da6f6e73a2d207836608da418768e83864bc6a0c02bcd9c3aa952599",
+      "client": {
+        "name": "codex-app-server",
+        "version": "codex-cli 0.153.4"
+      }
+    }
+  },
+  "inputs": {
+    "freeze": {
+      "path": "evidence/astra-low-acceptance-2026-09-07/frozen-inputs.json",
+      "bytes": 6468,
+      "sha256": "41d9a68514282a599dccf3e3e7e224454916150858e74a97a7072c4a77ac225e"
+    },
+    "model_support": {
+      "path": "evidence/astra-low-acceptance-2026-09-07/model-support.json",
+      "bytes": 2265,
+      "sha256": "4c65672f7bb9a54d5bfde58485c5667dc5aaec4838bb422e38d8c885c436bfb2"
+    },
+    "matrix_plan": {
+      "path": "cursor-skill-eval-matrix.plan.v1.json",
+      "bytes": 489,
+      "sha256": "cdf8db1d56f7bd9aee95c4094617c38c5c306165723ccb55fa027099adaa9057"
+    }
+  },
+  "diagnostic": {
+    "kind": "diagnostic",
+    "ref": {
+      "path": "evidence/astra-low-acceptance-2026-09-07/diagnostic/low.json",
+      "bytes": 80278,
+      "sha256": "e8d9befbf0add8ca6bee8e866726036be6cf1eedd2353c2e8ee9df4453336b2d"
+    },
+    "candidate": {
+      "path": "evidence/astra-low-acceptance-2026-09-07/diagnostic/low.json.artifacts/candidate.json",
+      "bytes": 6268,
+      "sha256": "e2d54b0f5953356034cd9b4ddff2b8a09caf1c81cb18fa151f1393e4e1f4318d"
+    },
+    "serial": 1,
+    "concurrency": 12,
+    "counts": {
+      "total": 26,
+      "pass": 26,
+      "agent_behavior_mismatch": 0,
+      "integration_failure": 0,
+      "skipped": 0
+    },
+    "duration_ms": 229653,
+    "runs": [
+      {
+        "serial_index": 1,
+        "counts": {
+          "total": 26,
+          "pass": 26,
+          "agent_behavior_mismatch": 0,
+          "integration_failure": 0,
+          "skipped": 0
+        },
+        "duration_ms": 229653,
+        "candidate_digest": {
+          "sha256": "bb0cccadadf7bb404a254cf5addee64f6f691b2cbc10e18ec3dc302b4b01d0a7",
+          "bytes": 559
+        },
+        "concurrency": 12
+      }
+    ],
+    "indexed_artifacts": 183
+  },
+  "acceptance": {
+    "kind": "acceptance",
+    "ref": {
+      "path": "evidence/astra-low-acceptance-2026-09-07/acceptance/low.json",
+      "bytes": 237464,
+      "sha256": "cb63a8da367173739e5c68d1c434bb3c143d26eacc589e36ad3781b32bc6c851"
+    },
+    "candidate": {
+      "path": "evidence/astra-low-acceptance-2026-09-07/acceptance/low.json.artifacts/candidate.json",
+      "bytes": 6268,
+      "sha256": "e2d54b0f5953356034cd9b4ddff2b8a09caf1c81cb18fa151f1393e4e1f4318d"
+    },
+    "serial": 3,
+    "concurrency": 12,
+    "counts": {
+      "total": 78,
+      "pass": 78,
+      "agent_behavior_mismatch": 0,
+      "integration_failure": 0,
+      "skipped": 0
+    },
+    "duration_ms": 675187,
+    "runs": [
+      {
+        "serial_index": 1,
+        "counts": {
+          "total": 26,
+          "pass": 26,
+          "agent_behavior_mismatch": 0,
+          "integration_failure": 0,
+          "skipped": 0
+        },
+        "duration_ms": 222240,
+        "candidate_digest": {
+          "sha256": "bb0cccadadf7bb404a254cf5addee64f6f691b2cbc10e18ec3dc302b4b01d0a7",
+          "bytes": 559
+        },
+        "concurrency": 12
+      },
+      {
+        "serial_index": 2,
+        "counts": {
+          "total": 26,
+          "pass": 26,
+          "agent_behavior_mismatch": 0,
+          "integration_failure": 0,
+          "skipped": 0
+        },
+        "duration_ms": 222630,
+        "candidate_digest": {
+          "sha256": "bb0cccadadf7bb404a254cf5addee64f6f691b2cbc10e18ec3dc302b4b01d0a7",
+          "bytes": 559
+        },
+        "concurrency": 12
+      },
+      {
+        "serial_index": 3,
+        "counts": {
+          "total": 26,
+          "pass": 26,
+          "agent_behavior_mismatch": 0,
+          "integration_failure": 0,
+          "skipped": 0
+        },
+        "duration_ms": 230316,
+        "candidate_digest": {
+          "sha256": "bb0cccadadf7bb404a254cf5addee64f6f691b2cbc10e18ec3dc302b4b01d0a7",
+          "bytes": 559
+        },
+        "concurrency": 12
+      }
+    ],
+    "indexed_artifacts": 547
+  },
+  "verification": {
+    "path": "evidence/astra-low-acceptance-2026-09-07/verification.json",
+    "bytes": 3929,
+    "sha256": "73c008274e60c2b078905628d13a0e155bb071e56b4a945a1a6a4d5c9d8d2a81"
+  },
+  "coverage": {
+    "path": "evidence/iux-acceptance-2026-09-07/verification/candidate-22/coverage-accepted/zero-counter-audit.json",
+    "bytes": 70477,
+    "sha256": "d489b9880a02a77311ceee74c66e838ff8f2c5b9d886fa1af51167248bbf3bba"
+  },
+  "scope": "mechanics, evidence, recovery and exact delivery for the frozen 26-scenario corpus",
+  "not_checked": [
+    "free-form prose truth",
+    "reported_task_outcome",
+    "outcome_report",
+    "safety_disclosure"
+  ],
+  "historical_comparison": "Separate acceptance baseline; historical 24-scenario comparative rows remain unchanged"
+}

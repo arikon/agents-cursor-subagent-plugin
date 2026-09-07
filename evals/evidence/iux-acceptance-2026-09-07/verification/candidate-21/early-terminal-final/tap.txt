@@ -1,0 +1,22 @@
+TAP version 13
+# Subtest: a completed turn before its follow-up anchor keeps the exact final and skips the follow-up
+ok 1 - a completed turn before its follow-up anchor keeps the exact final and skips the follow-up
+  ---
+  duration_ms: 8.461208
+  type: 'test'
+  ...
+# Subtest: behavior mismatch finalization preserves complete proof for outer classification
+ok 2 - behavior mismatch finalization preserves complete proof for outer classification
+  ---
+  duration_ms: 5.085209
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 101.096417

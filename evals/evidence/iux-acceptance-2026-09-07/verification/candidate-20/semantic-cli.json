@@ -1,0 +1,9 @@
+{
+  "argv": [
+    "node",
+    "scripts/check-openspec-semantics.mjs"
+  ],
+  "exit_code": 0,
+  "stdout": "OpenSpec mechanical semantic gate passed for 12 changes; independent critic establishes semantic readiness.\n",
+  "stderr": ""
+}

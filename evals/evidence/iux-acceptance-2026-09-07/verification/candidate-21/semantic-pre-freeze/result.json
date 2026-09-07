@@ -1,0 +1,14 @@
+{
+  "global": {
+    "ok": false,
+    "errors": [
+      "openspec/changes/simplify-task-state-wait: invalid modified capability cursor-subagent-skill-evals/Сценарный контракт поведения и authority-aware interaction"
+    ],
+    "checkedChanges": 12
+  },
+  "scoped": {
+    "ok": true,
+    "errors": [],
+    "checkedChanges": 11
+  }
+}

@@ -1,0 +1,28 @@
+TAP version 13
+# Subtest: hosted failure sidecar preserves bounded raw evidence before fixture cleanup
+ok 1 - hosted failure sidecar preserves bounded raw evidence before fixture cleanup
+  ---
+  duration_ms: 25.662125
+  type: 'test'
+  ...
+# Subtest: hosted failure source snapshot distinguishes missing and read errors
+ok 2 - hosted failure source snapshot distinguishes missing and read errors
+  ---
+  duration_ms: 1.188083
+  type: 'test'
+  ...
+# Subtest: hosted diagnostic publication failure retains original cause and cleanup
+ok 3 - hosted diagnostic publication failure retains original cause and cleanup
+  ---
+  duration_ms: 5.561292
+  type: 'test'
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 3
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 108.152291

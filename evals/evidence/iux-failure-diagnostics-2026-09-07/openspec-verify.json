@@ -1,0 +1,193 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-09-07T16:37:26.672Z",
+  "change": "improve-interactive-acp-ux",
+  "reviewer": "independent archive_readiness verifier",
+  "verdict": "PASS",
+  "archive_ready": true,
+  "archived": false,
+  "task_counts": {
+    "complete": 61,
+    "total": 61
+  },
+  "dimensions": {
+    "completeness": "61/61 tasks complete; prior 60-task verification retained for unchanged contracts plus current task 5.12",
+    "correctness": "IUX-19 managed hosted failure sidecar is persisted before cleanup; bounded diagnostic references survive both fixture cleanups; source and publication errors retain primary cause and cleanup",
+    "coherence": "Existing eval owner and matrix artifact index; no EvalResult/EvidenceManifest, runtime, supervisor or acceptance contract expansion"
+  },
+  "critical": [],
+  "warnings": [],
+  "verification": {
+    "focused_failure_regressions": {
+      "pass": 3,
+      "fail": 0
+    },
+    "credential_free_eval": {
+      "tests": 29,
+      "pass": 27,
+      "skip": 2,
+      "fail": 0
+    },
+    "unit": {
+      "tests": 636,
+      "pass": 635,
+      "skip": 1,
+      "fail": 0
+    },
+    "release": {
+      "tests": 12,
+      "pass": 12,
+      "fail": 0
+    },
+    "coverage": {
+      "lines": 99.90170380078636,
+      "branches": 98.27586206896551,
+      "functions": 99.87937273823884,
+      "sources": 16,
+      "source_stable": true,
+      "zero_counters": 92,
+      "classified": 92,
+      "unclassified": 0
+    },
+    "strict": "passed",
+    "semantic_scoped": {
+      "passed": true,
+      "changes": 11
+    },
+    "independent_hashrefs": {
+      "checked": 23,
+      "mismatches": 0
+    },
+    "current_evaluator_files": {
+      "checked": 31,
+      "mismatches": 0
+    }
+  },
+  "limits": [
+    "No hosted rerun or new hosted-green candidate claimed; historical hosted proofs retain their original source inputs.",
+    "Previously deleted failure traces cannot be reconstructed; this repair preserves diagnostics for subsequent managed hosted failures.",
+    "Abrupt process loss or sidecar publication failure can prevent file retention; publication failures remain explicit and cleanup proceeds.",
+    "Global semantic failure is confined to the separate simplify-task-state-wait draft explicitly excluded by user.",
+    "The provisional unclassified coverage audit is preserved; coverage-accepted is authoritative."
+  ],
+  "evidence": {
+    "eval_focused": {
+      "path": "evals/evidence/iux-failure-diagnostics-2026-09-07/eval-focused/result.json",
+      "bytes": 424,
+      "sha256": "716eb47b99dbaf3b6bc3a22517ac061fe7581c21a8dadb1f76bac72842298f2a"
+    },
+    "eval": {
+      "path": "evals/evidence/iux-failure-diagnostics-2026-09-07/eval/result.json",
+      "bytes": 429,
+      "sha256": "7af28b2b60d1c24e0a85cfe0e50b07ecc2e61d48302a53f2e9b51412d042459f"
+    },
+    "coverage_audit": {
+      "path": "evals/evidence/iux-failure-diagnostics-2026-09-07/coverage-accepted/zero-counter-audit.json",
+      "bytes": 67085,
+      "sha256": "5298c71e820ccd97b39b0228e36523c29974e75e4552d8c07c41d58cfeb57bfb"
+    },
+    "architect": {
+      "path": "evals/evidence/iux-failure-diagnostics-2026-09-07/architect-review.json",
+      "bytes": 1726,
+      "sha256": "8034198c46322be3830b556c15b30fa706b42570901afc81d362fc5dc3b110df"
+    },
+    "strict": {
+      "path": "evals/evidence/iux-failure-diagnostics-2026-09-07/strict.json",
+      "bytes": 153,
+      "sha256": "e71a01ab9cc1517b3e68bbe8e168a2d62ef4ba7427a6610a4ce2a673c0bd816b"
+    },
+    "semantic": {
+      "path": "evals/evidence/iux-failure-diagnostics-2026-09-07/semantic/result.json",
+      "bytes": 358,
+      "sha256": "cdce5f40ffc2e7b7f0a73100ffe3ebd474d67112f9e6c142cd62852fc2ac9bd1"
+    },
+    "context": {
+      "path": "evals/evidence/iux-failure-diagnostics-2026-09-07/openspec-context.json",
+      "bytes": 38196,
+      "sha256": "723a5654bfd5ddd90a094ffbca7fdba48254b6379b98f2f844f0b248b8499d7f"
+    },
+    "evaluator": {
+      "path": "evals/evidence/iux-failure-diagnostics-2026-09-07/evaluator-inputs.json",
+      "bytes": 5604,
+      "sha256": "1e2d8713cb4d8b481908d6012345c104f139e51db4206612c44aafd7a232a9e3"
+    },
+    "installed_interface": {
+      "path": "evals/evidence/iux-failure-diagnostics-2026-09-07/installed-interface/review.json",
+      "bytes": 1476,
+      "sha256": "5f3bcc2963fd45cbb832ea8a2aad5c5df6722f50d6669cb691453a8215b6d186"
+    },
+    "unit": {
+      "path": "evals/evidence/iux-failure-diagnostics-2026-09-07/unit/2026-09-07T16-25-18-853Z-unit-bd4af309-555e-4bb7-97d1-3913170e75c8/result.json",
+      "bytes": 434,
+      "sha256": "2c48d30005c8177b2c2af6d11cac518d5ee8cff15917b553d2f4868818a807d4"
+    },
+    "coverage": {
+      "path": "evals/evidence/iux-failure-diagnostics-2026-09-07/coverage/2026-09-07T16-27-17-915Z-coverage-df118ec5-725e-476a-9254-5c65c3a4966e/result.json",
+      "bytes": 4642,
+      "sha256": "c13ce0aa4d745bb2cfc8386d3ae455e5ba474e87fdd260323d2bd6d1934a6283"
+    },
+    "release": {
+      "path": "evals/evidence/iux-failure-diagnostics-2026-09-07/release/2026-09-07T16-29-32-233Z-release-0b7d084a-f941-44a9-9331-1bf17c6440fd/result.json",
+      "bytes": 432,
+      "sha256": "c77b1ec1af375005296dea307f34c95dea77a214eac09af1f35f21471de07c49"
+    },
+    "prior_verification": {
+      "path": "evals/evidence/iux-acceptance-2026-09-07/verification/candidate-22/openspec-implementation-verify.json",
+      "bytes": 2645,
+      "sha256": "d4e091f3977b691a77aae24e41a23b12cabf49c105e58ea8f3fc2859692b71dc"
+    },
+    "prior_closeout": {
+      "path": "evals/evidence/iux-acceptance-2026-09-07/closeout-proof.json",
+      "bytes": 17727,
+      "sha256": "7bbf41dcfa177478ea5546d526f7ffc85cd0b2ceb1e3434e67f9be33b0bc2eab"
+    }
+  },
+  "sources": [
+    {
+      "path": "README.md",
+      "bytes": 18477,
+      "sha256": "0efc9c36b0064cf1735a66e2dc6f42db7bebd6ab91e33ae0e98c7cc81dbc2cea"
+    },
+    {
+      "path": "scripts/run-cursor-skill-eval.mjs",
+      "bytes": 24395,
+      "sha256": "dae13e3a0b60fdf5e5e50ce841f6047d62fa76f65d9e969811b60bf65b9bf36a"
+    },
+    {
+      "path": "scripts/openspec-semantic-registry.mjs",
+      "bytes": 18193,
+      "sha256": "3a6b7a464205b8ae5912127191ca8d84b74bb13b55b35b83716e83f2749be053"
+    },
+    {
+      "path": "tests/run-cursor-skill-eval.test.mjs",
+      "bytes": 115885,
+      "sha256": "972219067ae31b3a1ba86e991bb20e8e78e8436c9ebf4a152582219417f5e826"
+    },
+    {
+      "path": "tests/codex-client-integration.test.mjs",
+      "bytes": 134278,
+      "sha256": "50fddb254387763ef1daa682de1f9446e2aa2dd516a1e010c602353302bbcff1"
+    },
+    {
+      "path": "openspec/changes/improve-interactive-acp-ux/tasks.md",
+      "bytes": 34445,
+      "sha256": "b73bc071071aa1e59f96d5dce71387e3c4fc716e554f6dc74b1cc014455e0896"
+    },
+    {
+      "path": "openspec/changes/improve-interactive-acp-ux/design.md",
+      "bytes": 74615,
+      "sha256": "adf76b4fbdee8f3cb30942b9d89763831dc6405a0a61b04da211531dbe16fca5"
+    },
+    {
+      "path": "openspec/changes/improve-interactive-acp-ux/proposal.md",
+      "bytes": 16521,
+      "sha256": "b35bee6f9efbf61e4023ee02170b1eba157426bc4bdc15c86a99f8c72f0f7da2"
+    },
+    {
+      "path": "openspec/changes/improve-interactive-acp-ux/specs/cursor-subagent-skill-evals/spec.md",
+      "bytes": 91255,
+      "sha256": "9f9bd98a23d15618544d3e5f6f0e9e8c12dbf53f1d67d352bbcdb8caee8f0dab"
+    }
+  ],
+  "path_base": "repository-root"
+}

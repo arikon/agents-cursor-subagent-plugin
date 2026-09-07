@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "status": "passed",
+  "checks": [
+    "exact model/effort and frozen inputs",
+    "current evaluator and skill bytes",
+    "all indexed regular-file hashes and complete inventory",
+    "same candidate across diagnostic and all serial runs",
+    "exact 26-scenario set per serial",
+    "one attempt per scenario",
+    "all supervisor exit0 terminal verdicts",
+    "complete final captures and no transcript loss",
+    "successful evidence publication and cleanup"
+  ],
+  "matrices": [
+    {
+      "kind": "diagnostic",
+      "ref": {
+        "path": "evidence/astra-low-acceptance-2026-09-07/diagnostic/low.json",
+        "bytes": 80278,
+        "sha256": "e8d9befbf0add8ca6bee8e866726036be6cf1eedd2353c2e8ee9df4453336b2d"
+      },
+      "candidate": {
+        "path": "evidence/astra-low-acceptance-2026-09-07/diagnostic/low.json.artifacts/candidate.json",
+        "bytes": 6268,
+        "sha256": "e2d54b0f5953356034cd9b4ddff2b8a09caf1c81cb18fa151f1393e4e1f4318d"
+      },
+      "serial": 1,
+      "concurrency": 12,
+      "counts": {
+        "total": 26,
+        "pass": 26,
+        "agent_behavior_mismatch": 0,
+        "integration_failure": 0,
+        "skipped": 0
+      },
+      "duration_ms": 229653,
+      "runs": [
+        {
+          "serial_index": 1,
+          "counts": {
+            "total": 26,
+            "pass": 26,
+            "agent_behavior_mismatch": 0,
+            "integration_failure": 0,
+            "skipped": 0
+          },
+          "duration_ms": 229653,
+          "candidate_digest": {
+            "sha256": "bb0cccadadf7bb404a254cf5addee64f6f691b2cbc10e18ec3dc302b4b01d0a7",
+            "bytes": 559
+          },
+          "concurrency": 12
+        }
+      ],
+      "indexed_artifacts": 183
+    },
+    {
+      "kind": "acceptance",
+      "ref": {
+        "path": "evidence/astra-low-acceptance-2026-09-07/acceptance/low.json",
+        "bytes": 237464,
+        "sha256": "cb63a8da367173739e5c68d1c434bb3c143d26eacc589e36ad3781b32bc6c851"
+      },
+      "candidate": {
+        "path": "evidence/astra-low-acceptance-2026-09-07/acceptance/low.json.artifacts/candidate.json",
+        "bytes": 6268,
+        "sha256": "e2d54b0f5953356034cd9b4ddff2b8a09caf1c81cb18fa151f1393e4e1f4318d"
+      },
+      "serial": 3,
+      "concurrency": 12,
+      "counts": {
+        "total": 78,
+        "pass": 78,
+        "agent_behavior_mismatch": 0,
+        "integration_failure": 0,
+        "skipped": 0
+      },
+      "duration_ms": 675187,
+      "runs": [
+        {
+          "serial_index": 1,
+          "counts": {
+            "total": 26,
+            "pass": 26,
+            "agent_behavior_mismatch": 0,
+            "integration_failure": 0,
+            "skipped": 0
+          },
+          "duration_ms": 222240,
+          "candidate_digest": {
+            "sha256": "bb0cccadadf7bb404a254cf5addee64f6f691b2cbc10e18ec3dc302b4b01d0a7",
+            "bytes": 559
+          },
+          "concurrency": 12
+        },
+        {
+          "serial_index": 2,
+          "counts": {
+            "total": 26,
+            "pass": 26,
+            "agent_behavior_mismatch": 0,
+            "integration_failure": 0,
+            "skipped": 0
+          },
+          "duration_ms": 222630,
+          "candidate_digest": {
+            "sha256": "bb0cccadadf7bb404a254cf5addee64f6f691b2cbc10e18ec3dc302b4b01d0a7",
+            "bytes": 559
+          },
+          "concurrency": 12
+        },
+        {
+          "serial_index": 3,
+          "counts": {
+            "total": 26,
+            "pass": 26,
+            "agent_behavior_mismatch": 0,
+            "integration_failure": 0,
+            "skipped": 0
+          },
+          "duration_ms": 230316,
+          "candidate_digest": {
+            "sha256": "bb0cccadadf7bb404a254cf5addee64f6f691b2cbc10e18ec3dc302b4b01d0a7",
+            "bytes": 559
+          },
+          "concurrency": 12
+        }
+      ],
+      "indexed_artifacts": 547
+    }
+  ]
+}

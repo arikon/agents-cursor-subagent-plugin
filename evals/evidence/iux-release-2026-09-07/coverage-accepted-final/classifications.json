@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "path": "scripts/check-openspec-semantics.mjs",
+      "source_sha256": "9328c5562f7575d6ca3df9668056c941851bc13cdce95c9baffdf2aa710810a1",
+      "metric": "branches",
+      "line": 627,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "Coverage imports this module, so its direct CLI entrypoint is not entered. Foreground Node22 scripts/check-openspec-semantics.mjs from the frozen release snapshot passed for 11 changes; the CLI entrypoint has its local import-only exclusion rationale."
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 175,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "Repeated killAndWait after killReason is set is an idempotence guard. The first timeout or output-limit event owns process termination, and existing package command timeout/output-limit tests verify bounded shutdown; a subsequent stop request adds no new admitted behavior."
+    }
+  ]
+}

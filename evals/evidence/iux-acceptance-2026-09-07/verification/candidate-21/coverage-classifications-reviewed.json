@@ -1,0 +1,176 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 48,
+      "occurrence": 2,
+      "classification": "observable_contract_already_owned",
+      "disposition": "Empty fallback in digest hash validation has the same invalid-digest outcome. coverage-audit.test.mjs 257-271 rejects invalid snapshot/artifact byte counts and hashes before publication."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 96,
+      "occurrence": 4,
+      "classification": "observable_contract_already_owned",
+      "disposition": "Empty fallback in source-file hash validation has the same closed source-metadata rejection outcome. coverage-audit.test.mjs 259-260 verifies invalid source bytes and hashes publish no audit."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 152,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "Exact raw/source file counts are required first; unknown, ambiguous and duplicate mappings are rejected. Every accepted raw file adds one unique known source, making the final mapped-size inequality unreachable. Missing and duplicate raw sources are tested."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 426,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "strictArtifactRef admits only nonempty relative basenames, so the resolved artifact cannot escape its root. coverage-audit.test.mjs 273-274 rejects traversal and nested references."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 429,
+      "occurrence": 2,
+      "classification": "unreachable_defensive",
+      "disposition": "Basename references and readRegular rejection of symlinks/non-files ensure immutable regular artifact children resolve within the canonical artifact root; this repeats the containment guard."
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 417,
+      "occurrence": 2,
+      "classification": "unreachable_defensive",
+      "disposition": "Codeless adapter_failure fallback is unreachable: executable admission, adapterCommand, invokeAdapter and assertAdmission failures carry codes; runPackageCommand child failures are classified by invokeAdapter. bootstrap.test.mjs 1055-1064 verifies version admission failure and independent preflight checks."
+    },
+    {
+      "path": "scripts/cursor-eval-scenario.mjs",
+      "source_sha256": "6804e403c718ee7a7aa9556ee99c163c27333ae6dc7fed412d25027b6bab8347",
+      "metric": "branches",
+      "line": 451,
+      "occurrence": 3,
+      "classification": "unreachable_defensive",
+      "disposition": "Admission at 424-432 requires mutually exclusive fixture_predicate shapes for inject-mode-protocol-error-once and reject-mode; their conjunction is rejected before this guard."
+    },
+    {
+      "path": "scripts/cursor-eval-scenario.mjs",
+      "source_sha256": "6804e403c718ee7a7aa9556ee99c163c27333ae6dc7fed412d25027b6bab8347",
+      "metric": "branches",
+      "line": 737,
+      "occurrence": 2,
+      "classification": "observable_contract_already_owned",
+      "disposition": "Recovery variations at tests/cursor-skill-eval.test.mjs:47-78 and 126-180 own missing/malformed argument proof and changed projections; an absent request has the same no-recovery outcome."
+    },
+    {
+      "path": "scripts/cursor-eval-scenario.mjs",
+      "source_sha256": "6804e403c718ee7a7aa9556ee99c163c27333ae6dc7fed412d25027b6bab8347",
+      "metric": "branches",
+      "line": 769,
+      "occurrence": 3,
+      "classification": "unreachable_defensive",
+      "disposition": "validRecoveryContext at 709-720 requires contiguous ranges covering zero through calls.length; every iterated call index belongs to exactly one range."
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "767158d64395dda4d5fff2a563ee72458cbdd778715d9997d0b4bfc312558a63",
+      "metric": "branches",
+      "line": 42,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "All admitted request/response objects come from JSON.parse through parseFrame; JSON objects cannot have a null prototype."
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "767158d64395dda4d5fff2a563ee72458cbdd778715d9997d0b4bfc312558a63",
+      "metric": "branches",
+      "line": 51,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "The only compactPending caller checks Array.isArray(payload.pending) first, so the non-array fallback cannot execute."
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "767158d64395dda4d5fff2a563ee72458cbdd778715d9997d0b4bfc312558a63",
+      "metric": "branches",
+      "line": 203,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "Partial-handshake test tests/cursor-skill-eval.test.mjs:764-796 proves invalid program path disables fixture injection and preserves the original request; an omitted final operand has the same outcome."
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "767158d64395dda4d5fff2a563ee72458cbdd778715d9997d0b4bfc312558a63",
+      "metric": "branches",
+      "line": 216,
+      "occurrence": 2,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Backpressure tests at tests/cursor-skill-eval.test.mjs:655-683 and 994-1004 prove accepted output drains before exit; queued waiters at final callback depend on scheduling."
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "767158d64395dda4d5fff2a563ee72458cbdd778715d9997d0b4bfc312558a63",
+      "metric": "branches",
+      "line": 227,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Existing backpressure tests own wait-for-output; entering the promise arm depends on child-close versus stdout-callback scheduling."
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "767158d64395dda4d5fff2a563ee72458cbdd778715d9997d0b4bfc312558a63",
+      "metric": "branches",
+      "line": 230,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Publication-failure test tests/cursor-skill-eval.test.mjs:867-891 owns controlled teardown without unhandled error; later queued failures are idempotent re-entry at the same boundary."
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "767158d64395dda4d5fff2a563ee72458cbdd778715d9997d0b4bfc312558a63",
+      "metric": "branches",
+      "line": 250,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "SIGTERM, SIGKILL fallback and owner-loss tests at tests/cursor-skill-eval.test.mjs:1084-1114 own child termination; repeated stop is an idempotent teardown race."
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "767158d64395dda4d5fff2a563ee72458cbdd778715d9997d0b4bfc312558a63",
+      "metric": "branches",
+      "line": 297,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Oversized-input tests at tests/cursor-skill-eval.test.mjs:961-979 own fail-closed input teardown; later buffered stdin discard is the same boundary."
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "767158d64395dda4d5fff2a563ee72458cbdd778715d9997d0b4bfc312558a63",
+      "metric": "branches",
+      "line": 309,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Oversized-provider-frame and publication-failure tests at tests/cursor-skill-eval.test.mjs:867-891 and 981-992 own absence of partial output/evidence; late buffered stdout belongs to that teardown boundary."
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "767158d64395dda4d5fff2a563ee72458cbdd778715d9997d0b4bfc312558a63",
+      "metric": "functions",
+      "line": 227,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Backpressure tests at tests/cursor-skill-eval.test.mjs:655-683 and 994-1004 own output-drain promise; resolver callback execution is scheduler-dependent."
+    }
+  ]
+}

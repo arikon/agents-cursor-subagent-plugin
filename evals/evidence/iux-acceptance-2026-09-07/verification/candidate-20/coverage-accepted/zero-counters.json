@@ -1,0 +1,674 @@
+{
+  "schema_version": 1,
+  "source_digest": {
+    "bytes": 2181,
+    "sha256": "9710cb2e062739bb60e8ba0412627c28ea243891bf4ae87b467814878aee561d"
+  },
+  "counters": [
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 48,
+      "occurrence": 3
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 58,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 96,
+      "occurrence": 5
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 152,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 238,
+      "occurrence": 4
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 370,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 426,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 429,
+      "occurrence": 3
+    },
+    {
+      "path": "scripts/check-openspec-semantics.mjs",
+      "source_sha256": "910e75ee9dd24caf4e7cfc68a9ff4fd600d98ea257cbdd955672c872cda03265",
+      "metric": "branches",
+      "line": 147,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/check-openspec-semantics.mjs",
+      "source_sha256": "910e75ee9dd24caf4e7cfc68a9ff4fd600d98ea257cbdd955672c872cda03265",
+      "metric": "branches",
+      "line": 574,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/codex-app-server-client.mjs",
+      "source_sha256": "f5fa4850c7228aa9ed4b4a0661f2d1dbabae2ffe95ec86b98e3e0ffc36cf4200",
+      "metric": "branches",
+      "line": 152,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/codex-app-server-client.mjs",
+      "source_sha256": "f5fa4850c7228aa9ed4b4a0661f2d1dbabae2ffe95ec86b98e3e0ffc36cf4200",
+      "metric": "branches",
+      "line": 162,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/codex-app-server-client.mjs",
+      "source_sha256": "f5fa4850c7228aa9ed4b4a0661f2d1dbabae2ffe95ec86b98e3e0ffc36cf4200",
+      "metric": "branches",
+      "line": 191,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-eval-scenario.mjs",
+      "source_sha256": "f45f2d9db65de4f19051f7ccd8458fd7b166d4784ebb030c8dd10cd21ea5372b",
+      "metric": "branches",
+      "line": 451,
+      "occurrence": 3
+    },
+    {
+      "path": "scripts/cursor-eval-scenario.mjs",
+      "source_sha256": "f45f2d9db65de4f19051f7ccd8458fd7b166d4784ebb030c8dd10cd21ea5372b",
+      "metric": "branches",
+      "line": 730,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-eval-scenario.mjs",
+      "source_sha256": "f45f2d9db65de4f19051f7ccd8458fd7b166d4784ebb030c8dd10cd21ea5372b",
+      "metric": "branches",
+      "line": 762,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 24,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 175,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 387,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 401,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 429,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 430,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 437,
+      "occurrence": 6
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 446,
+      "occurrence": 7
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 497,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 673,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 673,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 26,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 83,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 85,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 98,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 130,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 133,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 141,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 143,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 145,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 146,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 152,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 162,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 165,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 166,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 168,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 171,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 177,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 183,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 185,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 186,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 189,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 225,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 228,
+      "occurrence": 3
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 242,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 243,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 271,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 294,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 321,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 443,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 447,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 450,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 457,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 461,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 530,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 534,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 541,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 567,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 569,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 607,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 612,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 620,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 624,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 625,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 645,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 681,
+      "occurrence": 8
+    },
+    {
+      "path": "scripts/eval/finalize-cursor-skill-eval.mjs",
+      "source_sha256": "bc7a4008973d30c9588691a46e2645183edb8579d34ee084bb3d7c2179fcd1e0",
+      "metric": "branches",
+      "line": 159,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/eval/finalize-cursor-skill-eval.mjs",
+      "source_sha256": "bc7a4008973d30c9588691a46e2645183edb8579d34ee084bb3d7c2179fcd1e0",
+      "metric": "branches",
+      "line": 160,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "df614f7e8c2770a8e796716a1f02c753da9ee918d24f47c9e8c9bb9b6f70cd3a",
+      "metric": "lines",
+      "line": 142,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "df614f7e8c2770a8e796716a1f02c753da9ee918d24f47c9e8c9bb9b6f70cd3a",
+      "metric": "lines",
+      "line": 143,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "df614f7e8c2770a8e796716a1f02c753da9ee918d24f47c9e8c9bb9b6f70cd3a",
+      "metric": "lines",
+      "line": 144,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "df614f7e8c2770a8e796716a1f02c753da9ee918d24f47c9e8c9bb9b6f70cd3a",
+      "metric": "lines",
+      "line": 145,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "df614f7e8c2770a8e796716a1f02c753da9ee918d24f47c9e8c9bb9b6f70cd3a",
+      "metric": "lines",
+      "line": 146,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "df614f7e8c2770a8e796716a1f02c753da9ee918d24f47c9e8c9bb9b6f70cd3a",
+      "metric": "lines",
+      "line": 235,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "df614f7e8c2770a8e796716a1f02c753da9ee918d24f47c9e8c9bb9b6f70cd3a",
+      "metric": "branches",
+      "line": 24,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "df614f7e8c2770a8e796716a1f02c753da9ee918d24f47c9e8c9bb9b6f70cd3a",
+      "metric": "branches",
+      "line": 141,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "df614f7e8c2770a8e796716a1f02c753da9ee918d24f47c9e8c9bb9b6f70cd3a",
+      "metric": "branches",
+      "line": 158,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "df614f7e8c2770a8e796716a1f02c753da9ee918d24f47c9e8c9bb9b6f70cd3a",
+      "metric": "branches",
+      "line": 192,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "df614f7e8c2770a8e796716a1f02c753da9ee918d24f47c9e8c9bb9b6f70cd3a",
+      "metric": "branches",
+      "line": 234,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "2df45550eeae34b051a5ad99b213f48f9e212c3be4a0d1a41bdfdd8c16b48e7e",
+      "metric": "branches",
+      "line": 42,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "2df45550eeae34b051a5ad99b213f48f9e212c3be4a0d1a41bdfdd8c16b48e7e",
+      "metric": "branches",
+      "line": 51,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "2df45550eeae34b051a5ad99b213f48f9e212c3be4a0d1a41bdfdd8c16b48e7e",
+      "metric": "branches",
+      "line": 200,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "2df45550eeae34b051a5ad99b213f48f9e212c3be4a0d1a41bdfdd8c16b48e7e",
+      "metric": "branches",
+      "line": 213,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "2df45550eeae34b051a5ad99b213f48f9e212c3be4a0d1a41bdfdd8c16b48e7e",
+      "metric": "branches",
+      "line": 224,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "2df45550eeae34b051a5ad99b213f48f9e212c3be4a0d1a41bdfdd8c16b48e7e",
+      "metric": "branches",
+      "line": 227,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "2df45550eeae34b051a5ad99b213f48f9e212c3be4a0d1a41bdfdd8c16b48e7e",
+      "metric": "branches",
+      "line": 247,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "2df45550eeae34b051a5ad99b213f48f9e212c3be4a0d1a41bdfdd8c16b48e7e",
+      "metric": "branches",
+      "line": 291,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "2df45550eeae34b051a5ad99b213f48f9e212c3be4a0d1a41bdfdd8c16b48e7e",
+      "metric": "branches",
+      "line": 303,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "2df45550eeae34b051a5ad99b213f48f9e212c3be4a0d1a41bdfdd8c16b48e7e",
+      "metric": "functions",
+      "line": 224,
+      "occurrence": 1
+    }
+  ]
+}

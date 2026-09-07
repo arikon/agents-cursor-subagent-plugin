@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "status": "not_accepted",
+  "source": "acceptance-06/medium.json",
+  "source_sha256": "c56d1409182b2d78721c5eb612616e6c024da5871408e1b92c83a63090366bd5",
+  "counts": {
+    "total": 78,
+    "pass": 76,
+    "agent_behavior_mismatch": 0,
+    "integration_failure": 2,
+    "skipped": 0
+  },
+  "runs": [
+    {
+      "counts": {
+        "total": 26,
+        "pass": 26,
+        "agent_behavior_mismatch": 0,
+        "integration_failure": 0,
+        "skipped": 0
+      },
+      "duration_ms": 410449
+    },
+    {
+      "counts": {
+        "total": 26,
+        "pass": 24,
+        "agent_behavior_mismatch": 0,
+        "integration_failure": 2,
+        "skipped": 0
+      },
+      "duration_ms": 344499
+    },
+    {
+      "counts": {
+        "total": 26,
+        "pass": 26,
+        "agent_behavior_mismatch": 0,
+        "integration_failure": 0,
+        "skipped": 0
+      },
+      "duration_ms": 330083
+    }
+  ],
+  "classifications": [
+    {
+      "scenario_id": "model-critic-delta",
+      "serial_index": 2,
+      "finding": "baseline_violation",
+      "owner": "IUX-19",
+      "cause": "Confirmed early completed turn before follow-up anchor bypassed final capture; available final reported missing workspace file. Corpus stimulus also ambiguously named a file despite providing inline body.",
+      "repair": "Capture complete terminal evidence and evaluate missing behavior through pure oracle; clarify full inline snapshot stimulus without changing expected trace."
+    },
+    {
+      "scenario_id": "model-file-review",
+      "serial_index": 2,
+      "finding": "implementation_concern",
+      "cause": "Hosted turn observation timed out while turn remained inProgress; diagnostics recorded websocket idle timeout.",
+      "repair": "Preserve failed run as infrastructure evidence; no semantic oracle change."
+    }
+  ],
+  "carry_forward": "Candidate changes invalidate the exact prior high carry-forward exception; fresh diagnostic and high/medium serial-3 required."
+}
