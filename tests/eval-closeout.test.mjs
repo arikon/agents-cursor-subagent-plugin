@@ -34,7 +34,7 @@ function publicResult(scenarioId, evidenceRef) {
     fixture_assertion_outcome: 'pass', evidence_publication_status: 'published', cleanup_status: 'succeeded', failure_stage: null };
 }
 
-async function matrixFixture(root, name, effort, serial, freeze, candidate) {
+async function matrixFixture(root, name, effort, serial, freeze, candidate, concurrency = 4) {
   const path = join(root, 'hosted', name, 'matrix.json'); const base = dirname(path);
   const artifactRoot = `${path}.artifacts`; const artifacts = [];
   const candidatePath = join(artifactRoot, 'candidate.json');
@@ -81,10 +81,10 @@ async function matrixFixture(root, name, effort, serial, freeze, candidate) {
   const frozen = { corpus: freeze.corpus, skill: freeze.skill, evaluator: freeze.evaluator.digest };
   const counts = { total: results.length, pass: results.length, agent_behavior_mismatch: 0, integration_failure: 0, skipped: 0 };
   const runs = Array.from({ length: serial }, (_value, index) => ({ schema_version: 1, model: 'gpt-5.6-terra', effort,
-    concurrency: 4, serial_index: index + 1, initial: frozen, final: frozen, digest_stable: true,
+    concurrency, serial_index: index + 1, initial: frozen, final: frozen, digest_stable: true,
     counts: { ...counts, total: scenarios.length, pass: scenarios.length }, pass_rate: 1, attempted_runs: scenarios.length,
     candidate_digest: candidate.digest }));
-  const matrix = { schema_version: 1, model: 'gpt-5.6-terra', effort, concurrency: 4, serial, initial: frozen, final: frozen,
+  const matrix = { schema_version: 1, model: 'gpt-5.6-terra', effort, concurrency, serial, initial: frozen, final: frozen,
     digest_stable: true, counts, pass_rate: 1, attempted_runs: results.length, results, runs,
     candidate_digest: candidate.digest, candidate_ref: relative(base, candidatePath), attempt_policy: 'one-attempt-per-scenario-run',
     artifacts: artifacts.sort((left, right) => left.path < right.path ? -1 : left.path > right.path ? 1 : 0) };
@@ -158,6 +158,34 @@ async function fixture(t) {
   return { root, bundle, targets, paths: { freeze: freezePath, diagnostic, high, medium, 'coverage-audit': coverageAudit, baseline, report, tasks, output } };
 }
 
+async function historicalReferenceFixture(t) {
+  const value = await fixture(t); const { bundle, paths } = value;
+  const freeze = JSON.parse(await readFile(paths.freeze)); const source = structuredClone(freeze);
+  const sourceCorpus = JSON.parse(corpusBytes);
+  sourceCorpus.scenarios[0].initial_input += ' Historical instruction';
+  const corpusRef = await write(join(bundle, 'reference', 'source-corpus.json'), json(sourceCorpus));
+  source.corpus = { bytes: corpusRef.bytes, sha256: corpusRef.sha256 };
+  source.evaluator.files[0].sha256 = 'a'.repeat(64);
+  source.evaluator.digest = digest(Buffer.from(JSON.stringify({ files: source.evaluator.files, selected_runner: source.evaluator.selected_runner })));
+  const candidateFor = (item) => {
+    const payload = { evaluator: item.evaluator.digest, corpus: item.corpus, skill: item.skill,
+      adapter: fixed('4'), package_payload: (item === source ? 'a' : '5').repeat(64),
+      client: { name: 'codex-app-server', version: 'codex-cli 0.153.4' } };
+    return { schema_version: 1, digest: digest(Buffer.from(canonicalJson(payload))), payload,
+      inputs: item.evaluator.files, selected_runner: item.evaluator.selected_runner };
+  };
+  paths.diagnostic = await matrixFixture(bundle, 'diagnostic', 'high', 1, freeze, candidateFor(freeze), 12);
+  paths.medium = await matrixFixture(bundle, 'medium', 'medium', 3, freeze, candidateFor(freeze), 12);
+  paths.high = await matrixFixture(bundle, 'high', 'high', 3, source, candidateFor(source), 4);
+  const sourceRef = await write(join(bundle, 'reference', 'source-freeze.json'), json(source));
+  freeze.high_reference = { source_freeze: { ...sourceRef, path: relative(bundle, sourceRef.path) },
+    source_corpus: { ...corpusRef, path: relative(bundle, corpusRef.path) } };
+  const authorization = await write(join(bundle, 'reference', 'authorization.json'), json({ authorization: 'preserve historical high reference' }));
+  freeze.verification.high_reference_authorization = relative(bundle, authorization.path);
+  await writeFile(paths.freeze, json(freeze));
+  return { ...value, sourceFreezePath: sourceRef.path, sourceCorpusPath: corpusRef.path, authorizationPath: authorization.path };
+}
+
 async function snapshot(paths) {
   return Promise.all([paths.baseline, paths.report, paths.tasks, paths.output].map((path) => readFile(path, 'utf8').catch((error) => error.code === 'ENOENT' ? null : Promise.reject(error))));
 }
@@ -220,6 +248,8 @@ test('closeout validates all gates, preserves history, and checks only tasks 5.8
   const baseline = JSON.parse(await readFile(paths.baseline));
   assert.deepEqual(baseline.historical, Array.from({ length: 7 }, (_value, index) => ({ id: `kept-${index + 1}` })));
   assert.equal(baseline.current_acceptance.high.counts.pass, scenarios.length * 3);
+  assert.equal(baseline.current_acceptance.high.execution, 'fresh');
+  assert.equal(baseline.current_acceptance.high.applies_to_current_candidate, true);
   const report = await readFile(paths.report, 'utf8'); assert.match(report, /Keep this paragraph/); assert.match(report, /Current acceptance/);
   assert.match(report, /100% for mechanics, evidence, and exact delivery/); assert.match(report, /completeness disclosure: `not_checked`/);
   assert.equal(JSON.stringify(proof).includes(root), false);
@@ -539,4 +569,77 @@ test('per-file publisher leaves a recoverable prefix and an idempotent rerun rep
     rm: async () => { cleanupCalls += 1; throw new Error('cleanup failed'); },
   }), /publication failed/);
   assert.ok(cleanupCalls > 0);
+});
+
+test('closeout preserves historical high without claiming acceptance of the current candidate', async (t) => {
+  const { paths } = await historicalReferenceFixture(t);
+  const historical = await readFile(paths.high); const matrix = JSON.parse(historical);
+  const artifactBytes = await Promise.all(matrix.artifacts.map(({ path }) => readFile(join(dirname(paths.high), path))));
+  const proof = await finalizeCloseout(paths);
+  assert.equal(proof.current_acceptance.high.execution, 'preserved-reference');
+  assert.equal(proof.current_acceptance.high.applies_to_current_candidate, false);
+  assert.deepEqual(proof.current_acceptance.high.reference, JSON.parse(await readFile(paths.freeze)).high_reference);
+  assert.notDeepEqual(matrix.candidate_digest, JSON.parse(await readFile(paths.medium)).candidate_digest);
+  assert.equal(proof.current_acceptance.high.counts.pass, scenarios.length * 3);
+  assert.equal(proof.current_acceptance.high.concurrency, 4);
+  assert.equal(proof.current_acceptance.medium.concurrency, 12);
+  const report = await readFile(paths.report, 'utf8');
+  assert.match(report, /preserved-reference/); assert.match(report, /different candidate|not.*current candidate/i);
+  assert.deepEqual(await readFile(paths.high), historical);
+  assert.deepEqual(await Promise.all(matrix.artifacts.map(({ path }) => readFile(join(dirname(paths.high), path)))), artifactBytes);
+  const published = await snapshot(paths); await finalizeCloseout(paths); assert.deepEqual(await snapshot(paths), published);
+});
+
+test('historical high rejects missing authorization and broken or ambiguous references before publishing', async (t) => {
+  const { paths, sourceFreezePath, sourceCorpusPath, authorizationPath } = await historicalReferenceFixture(t);
+  for (const kind of ['missing-source', 'hash-mismatch', 'invalid-source-json', 'invalid-source-freeze', 'invalid-corpus',
+    'source-corpus-binding', 'unknown-reference-key', 'malformed-reference', 'nested-reference', 'nested-carry',
+    'legacy-carry', 'both-fields', 'missing-authorization', 'missing-authorization-file']) {
+    await mutationCase(paths, [paths.freeze, sourceFreezePath, sourceCorpusPath, authorizationPath], async () => {
+      const freeze = JSON.parse(await readFile(paths.freeze)); const source = JSON.parse(await readFile(sourceFreezePath));
+      if (kind === 'missing-source') await rm(sourceFreezePath);
+      else if (kind === 'hash-mismatch') freeze.high_reference.source_freeze.sha256 = 'b'.repeat(64);
+      else if (kind === 'unknown-reference-key') freeze.high_reference.unexpected = true;
+      else if (kind === 'malformed-reference') freeze.high_reference.source_freeze.sha256 = 'bad';
+      else if (kind === 'missing-authorization') delete freeze.verification.high_reference_authorization;
+      else if (kind === 'missing-authorization-file') await rm(authorizationPath);
+      else if (kind === 'legacy-carry' || kind === 'both-fields') {
+        freeze.high_carry_forward = freeze.high_reference;
+        if (kind === 'legacy-carry') delete freeze.high_reference;
+      } else {
+        if (kind === 'nested-reference') source.high_reference = freeze.high_reference;
+        else if (kind === 'nested-carry') source.high_carry_forward = freeze.high_reference;
+        else if (kind === 'invalid-source-freeze') source.evaluator.digest = fixed('b');
+        else if (kind === 'source-corpus-binding') source.corpus = fixed('b');
+        else if (kind === 'invalid-corpus') {
+          const bytes = Buffer.from('{}'); await writeFile(sourceCorpusPath, bytes);
+          Object.assign(freeze.high_reference.source_corpus, digest(bytes)); source.corpus = digest(bytes);
+        }
+        const bytes = Buffer.from(kind === 'invalid-source-json' ? '{' : json(source)); await writeFile(sourceFreezePath, bytes);
+        Object.assign(freeze.high_reference.source_freeze, digest(bytes));
+      }
+      await writeFile(paths.freeze, json(freeze));
+    }, /reference|source|corpus|digest|freeze|carry|authorization|regular|JSON/i);
+  }
+});
+
+test('historical high retains full evidence validation and current diagnostic and medium remain strict', async (t) => {
+  const { paths } = await historicalReferenceFixture(t);
+  for (const [lane, kind] of [['high', 'nonpass'], ['diagnostic', 'candidate'], ['medium', 'candidate'], ['medium', 'concurrency']]) {
+    await mutationCase(paths, [paths[lane]], async () => {
+      const matrix = JSON.parse(await readFile(paths[lane]));
+      if (kind === 'nonpass') matrix.results[0].process.code = 1;
+      else if (kind === 'candidate') matrix.candidate_digest = fixed('a');
+      else { matrix.concurrency = 4; for (const run of matrix.runs) run.concurrency = 4; }
+      await writeFile(paths[lane], json(matrix));
+    }, kind === 'concurrency' ? /acceptance matrices do not share one candidate and concurrency/ : /matrix|candidate|concurrency|run/i);
+  }
+  const matrix = JSON.parse(await readFile(paths.high));
+  const evidencePath = join(dirname(paths.high), matrix.results[0].evidence_ref);
+  for (const kind of ['capture', 'cleanup']) {
+    await mutationCase(paths, [paths.high, evidencePath], () => mutateIndexedEvidence(paths.high, (evidence) => {
+      if (kind === 'capture') evidence.captured_finals[0].completeness = 'incomplete';
+      else evidence.final_result.cleanup_status = 'failed';
+    }), /evidence|final|capture/i);
+  }
 });

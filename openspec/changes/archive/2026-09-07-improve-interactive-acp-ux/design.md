@@ -23,6 +23,8 @@ terra/high и terra/medium, устраняя смешение пользоват
 Одобренная после terra/high diagnostic автоматизация связывает coverage с
 проверенными product sources и делает acceptance closeout воспроизводимым через
 существующих owners IUX-18/IUX-19.
+После завершённой приёмки пользователь одобрил сохранение ограниченной
+диагностики hosted failures до cleanup внутри eval owner IUX-19 (task 5.12).
 
 **Non-goals.** Не вводить persistent registry,
 Cursor archive reader, auto-approval, auto-retry/restart, prompt policy engine,
@@ -64,7 +66,7 @@ specs согласованы с tasks раздела 5, независимый c
 Успешная hosted-приёмка является выходом реализации по tasks 5.8–5.11, а не
 доказательством готовности planning artifacts.
 
-**Future-change candidates.** Durable cross-process audit export и интеграция
+**Future-change candidates.** Product/runtime durable cross-process audit export и интеграция
 с документированным Cursor session-storage API требуют отдельного change после
 подтверждения публичного external contract.
 
@@ -228,6 +230,11 @@ state и не получает loose matching.
 | Coverage result не связан с exact product sources, а zero-counter review переносится вручную | `new_scope` | Одобрено пользователем после terra/high diagnostic: IUX-18 owner добавляет coverage-only source proof и deterministic audit CLI; task 5.7e |
 | Ручной closeout может смешать candidates, потерять history или отметить tasks до проверки evidence | `new_scope` | Одобрено пользователем после terra/high diagnostic: IUX-19 owner добавляет один deterministic finalizer с atomic per-file publication и tasks-last; task 5.7f |
 | Event high-water ошибочно трактуется как read acknowledgement и требует latest event cursor equality | `new_scope` | Одобрено пользователем: удалить `cursor_matched` без replacement tracker; latest resume cursor остаётся рекомендацией, а runtime-valid earlier/repeated/omitted cursor не является mismatch; task 5.7g |
+| Harness теряет complete early terminal и требует capture для ещё не начатых planned turns | `baseline_violation` | IUX-19: capture всех фактически начатых turns, missing planned suffix как scenario mismatch; pass/acceptance сохраняют полный count; task 5.7h |
+| Последовательный high→medium задерживает явно разрешённую независимую проверку medium | `new_scope` | Пользователь разрешил параллельные high/medium после diagnostic на одном candidate; прежний high 78/78 сохраняется, дополнительных автоматических high reruns нет |
+| Пользователь подтвердил ранее зафиксированный high после изменения harness/corpus | `new_scope` | IUX-19 сохраняет high как historical reference с исходными inputs и явным отсутствием применимости к текущему candidate; current diagnostic/medium остаются строгими |
+| Hosted pre-proof failure теряет bounded diagnostics при fixture cleanup | `new_scope` | Явно одобрено пользователем 2026-09-07: IUX-19 «Immutable evidence manifest» сохраняет eval-only failure sidecar через существующий evidence root; task 5.12, без нового acceptance claim |
+| Неиспользованный carry-forward engine доказывает эквивалентность, которая больше не требуется | `overengineering` | Заменить на проверку historical reference против его собственных freeze/corpus; удалить README/package compatibility machinery |
 
 | Runtime preview truncation необратимо теряет часть review | `new_scope` | Явно одобрено пользователем: IUX-20 retained full result и bounded read; tasks 5.0a/5.0b |
 | Legacy delivery/progress wording не различает preview и retained full result | `baseline_violation` | Согласовать owner references и краткое baseline описание с IUX-20 |
@@ -479,15 +486,41 @@ authority/effects, capture, exact delivery и IUX-20. Он не сертифиц
 disclosure о неполноте остаются `not_checked`.
 
 Порядок завершения находится в tasks раздела 5: детерминированный repair,
-диагностика high, затем baseline high и medium на одном candidate. Финальные
+диагностика high, затем high и medium; по прямому указанию пользователя
+дополнительный high07 и medium07 выполнялись параллельно на текущем candidate.
+Зафиксированный `acceptance-05/high.json`
+78/78 сохраняется без изменения или переименования. Пользователь подтвердил
+`new_scope`: принять этот high как historical reference с исходным candidate,
+без утверждения его применимости к текущим harness/corpus. Единственный owner
+проверки и маркировки reference — IUX-19 «Immutable evidence manifest»;
+current diagnostic/medium используют один candidate. Неиспользованный узкий
+carry-forward engine удаляется как избыточный для этого решения. Финальные
 повторы наследуют project-wide `AGENTS.md`; неизвестный behavior mismatch
-останавливает переход к следующему gate и требует локализации. Новые результаты
+требует локализации и не разрешает дополнительный автоматический high run. Новые результаты
 не сравниваются с историческими counts как с неизменной системой, а digest
 manifest и durable bundle связывают их с конкретным кандидатом.
 После pre-freeze проверок один IUX-19 finalizer проверяет diagnostic, high и
 medium series и immutable references, затем обновляет closeout proof, additive
 baseline, Markdown summary и последними tasks 5.8–5.11. Это узкий consumer
 существующих artifacts, без нового workflow engine, registry или approval.
+
+### Диагностика failure после приёмки
+
+Task 5.12 использует существующий внешний per-attempt evidence root и его
+matrix artifact index. Это сохраняет сведения о зависшем hosted turn после
+удаления временных fixtures без нового supervisor API или result schema.
+Один локальный helper снимает bounded копии уже нормализованных recorder/fixture
+файлов, добавляет узкую проекцию app-server metadata и публикует JSON через
+unique temporary file и rename. Нормативная граница находится только в IUX-19
+«Immutable evidence manifest»; deterministic failure/cleanup tests проверяют
+его доступность и отсутствие raw fields. Локальная diagnostic projection
+использует allowlist подтверждённых установленной app-server schema полей и
+проверяется deterministic fixture; capture adapter contract не расширяется.
+
+Этот post-closeout repair получает отдельную local verification. Завершённые
+tasks 5.8–5.11, frozen inputs, baseline и closeout proof остаются историческими
+snapshots. Новый harness digest не получает прежний hosted verdict; для
+диагностического изменения без нового acceptance claim hosted rerun не нужен.
 
 ### Live session живёт дольше одного turn
 

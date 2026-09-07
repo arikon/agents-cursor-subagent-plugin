@@ -116,8 +116,12 @@ export function parseChildResult(encoded, scenarioId, expected = {}) {
   const validSkillProof = digest(provenance?.managed_installed_skill)
     && (programmed ? digest(provenance.cache_loaded_skill) && sameDigest(provenance.cache_loaded_skill, provenance.managed_installed_skill) : provenance?.cache_loaded_skill === null);
   const captures = result?.captured_finals;
+  const expectedCaptureCount = (expected.scenario?.followups?.length ?? 0) + 1;
+  const validProgrammedCaptureCount = captures?.length === expectedCaptureCount
+    || (childStatus === 'agent_behavior_mismatch' && captures?.length > 0 && captures.length < expectedCaptureCount
+      && captures.at(-1)?.turn_status === 'completed');
   const validCaptures = Array.isArray(captures) && captures.length <= 3
-    && (!programmed || captures.length === (expected.scenario?.followups.length ?? captures.length - 1) + 1)
+    && (!programmed || (expected.scenario ? validProgrammedCaptureCount : true))
     && new Set(captures.map((capture) => capture?.turn_index)).size === captures.length
     && captures.every((capture) => exactObject(capture, ['turn_index', 'turn_id', 'turn_status', 'text', 'phase', 'source', 'completeness', 'error_code'])
       && Number.isSafeInteger(capture.turn_index) && capture.turn_index >= 1 && capture.turn_index <= captures.length
@@ -256,6 +260,7 @@ export async function runEval({ scenarioId = null, env = process.env } = {}, dep
       ...env,
       ...lane.env,
       CURSOR_EVAL_CHILD_RESULT: childResultPath,
+      CURSOR_EVAL_EVIDENCE_ROOT: evidenceRoot,
       CURSOR_EVAL_SCENARIO_ID: scenarioId,
       CURSOR_EVAL_WORKSPACE: workspace,
       CURSOR_EVAL_SCENARIO_PAYLOAD: materialized.canonicalPayload,

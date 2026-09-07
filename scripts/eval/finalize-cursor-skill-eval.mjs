@@ -265,6 +265,33 @@ async function validateCoverage(path, freeze, bundleRoot, fs) {
     totals: audit.totals, classification_counts: audit.classification_counts };
 }
 
+async function loadHighReferenceFile(ref, bundleRoot, fs) {
+  if (!exact(ref, ['path', 'bytes', 'sha256']) || !validRelative(ref.path)
+    || !validDigest({ bytes: ref.bytes, sha256: ref.sha256 })) fail('invalid high reference');
+  const path = resolve(bundleRoot, ref.path);
+  await assertBundlePath(bundleRoot, path, fs);
+  const file = await loadRegular(path, fs);
+  if (!same(file.digest, { bytes: ref.bytes, sha256: ref.sha256 })) fail('high reference digest mismatch');
+  return file;
+}
+
+async function validateHighReference(freeze, bundleRoot, fs) {
+  const reference = freeze.high_reference;
+  if (!exact(reference, ['source_freeze', 'source_corpus'])) fail('invalid high reference');
+  if (!Object.hasOwn(freeze.verification, 'high_reference_authorization')) fail('high reference authorization is missing');
+  const sourceFile = await loadHighReferenceFile(reference.source_freeze, bundleRoot, fs);
+  let source;
+  try { source = JSON.parse(sourceFile.bytes); } catch { fail('invalid high reference source freeze'); }
+  validateFrozenInputs(source);
+  if (Object.hasOwn(source, 'high_reference') || Object.hasOwn(source, 'high_carry_forward')) {
+    fail('nested high reference is unsupported');
+  }
+  const sourceCorpusFile = await loadHighReferenceFile(reference.source_corpus, bundleRoot, fs);
+  if (!same(sourceCorpusFile.digest, source.corpus)) fail('high reference source corpus mismatch');
+  const sourceCorpus = parseScenarioCorpus(sourceCorpusFile.bytes);
+  return { source, corpus: sourceCorpus, reference };
+}
+
 function reportSeed(original) {
   if (!original.includes(START) && !original.includes(END)) return `${original.replace(/\s*$/, '')}\n`;
   const start = original.indexOf(START); const end = original.indexOf(END, start);
@@ -273,7 +300,10 @@ function reportSeed(original) {
 }
 
 function renderReport(seed, acceptance) {
-  const block = `${START}\n## Current acceptance\n\n- Candidate: \`${acceptance.candidate.digest.sha256}\`\n- Diagnostic: ${acceptance.diagnostic.counts.pass}/${acceptance.diagnostic.counts.total}\n- High: ${acceptance.high.counts.pass}/${acceptance.high.counts.total}\n- Medium: ${acceptance.medium.counts.pass}/${acceptance.medium.counts.total}\n- Coverage audit: passed, ${acceptance.coverage.totals.classified} classified, 0 unclassified\n- Functional acceptance: 100% for mechanics, evidence, and exact delivery.\n- Free-form prose truth and completeness disclosure: \`not_checked\`.\n- Reported task outcome, outcome report, and safety disclosure: \`not_checked\`.\n${END}`;
+  const highApplicability = acceptance.high.applies_to_current_candidate
+    ? '- Current-candidate high functional acceptance: 100%.'
+    : '- Historical high functional acceptance: 100% for the referenced candidate; not applicable to the current candidate.';
+  const block = `${START}\n## Current acceptance\n\n- Current candidate: \`${acceptance.candidate.digest.sha256}\`\n- High candidate: \`${acceptance.high.candidate.digest.sha256}\`\n- Diagnostic: ${acceptance.diagnostic.counts.pass}/${acceptance.diagnostic.counts.total}\n- High: ${acceptance.high.counts.pass}/${acceptance.high.counts.total} (${acceptance.high.execution}, concurrency ${acceptance.high.concurrency})\n- Current diagnostic/medium concurrency: ${acceptance.concurrency}\n- Medium: ${acceptance.medium.counts.pass}/${acceptance.medium.counts.total}\n- Current-candidate medium functional acceptance: 100% for mechanics, evidence, and exact delivery.\n${highApplicability}\n- Coverage audit: passed, ${acceptance.coverage.totals.classified} classified, 0 unclassified\n- Free-form prose truth and completeness disclosure: \`not_checked\`.\n- Reported task outcome, outcome report, and safety disclosure: \`not_checked\`.\n${END}`;
   return `${seed.replace(/\s*$/, '')}\n\n${block}\n`;
 }
 
@@ -297,14 +327,7 @@ function completeTasks(seed) {
   return output;
 }
 
-export async function buildCloseout(paths, fs = {}) {
-  const bundleRoot = dirname(paths.output);
-  const outputInfo = await (fs.lstat || lstat)(paths.output).catch(() => null);
-  if (outputInfo && !outputInfo.isFile()) fail('--output must be a regular proof file');
-  for (const name of ['freeze', 'diagnostic', 'high', 'medium', 'coverage-audit']) {
-    await assertBundlePath(bundleRoot, paths[name], fs);
-  }
-  const freezeLoaded = await loadJson(paths.freeze, fs); const freeze = { ...freezeLoaded.value, __path: paths.freeze };
+function validateFrozenInputs(freeze) {
   if (freeze.schema_version !== 1 || !Array.isArray(freeze.evaluator?.files) || !validDigest(freeze.evaluator?.digest)
     || !freeze.verification || Array.isArray(freeze.verification) || typeof freeze.verification !== 'object'
     || !validDigest(freeze.corpus) || !validDigest(freeze.skill) || !validDigest(freeze.coverage_sources_digest)) fail('invalid frozen inputs');
@@ -319,18 +342,41 @@ export async function buildCloseout(paths, fs = {}) {
     || !same([...inventoryOrder].sort(), inventoryOrder)) fail('invalid frozen evaluator inventory');
   const inventoryBytes = Buffer.from(JSON.stringify({ files: freeze.evaluator.files, selected_runner: freeze.evaluator.selected_runner }));
   if (!same(freeze.evaluator.digest, { bytes: inventoryBytes.length, sha256: sha256(inventoryBytes) })) fail('frozen evaluator digest mismatch');
+}
+
+export async function buildCloseout(paths, fs = {}) {
+  const bundleRoot = dirname(paths.output);
+  const outputInfo = await (fs.lstat || lstat)(paths.output).catch(() => null);
+  if (outputInfo && !outputInfo.isFile()) fail('--output must be a regular proof file');
+  for (const name of ['freeze', 'diagnostic', 'high', 'medium', 'coverage-audit']) {
+    await assertBundlePath(bundleRoot, paths[name], fs);
+  }
+  const freezeLoaded = await loadJson(paths.freeze, fs); const freeze = { ...freezeLoaded.value, __path: paths.freeze };
+  validateFrozenInputs(freeze);
+  if (Object.hasOwn(freeze, 'high_carry_forward')) fail('high carry-forward is unsupported');
   const corpusPath = resolve(repository, 'evals/cursor-subagent-scenarios.v1.json');
   const corpusLoaded = await loadRegular(corpusPath, fs);
   if (!same(corpusLoaded.digest, freeze.corpus)) fail('current corpus differs from freeze');
   const corpus = parseScenarioCorpus(corpusLoaded.bytes);
   const coverage = await validateCoverage(paths['coverage-audit'], freeze, bundleRoot, fs);
   const diagnostic = await validateMatrix(paths.diagnostic, { effort: 'high', serial: 1 }, corpus, freeze, bundleRoot, fs);
-  const high = await validateMatrix(paths.high, { effort: 'high', serial: 3 }, corpus, freeze, bundleRoot, fs);
+  const reference = Object.hasOwn(freeze, 'high_reference')
+    ? await validateHighReference(freeze, bundleRoot, fs) : null;
+  const high = await validateMatrix(paths.high, { effort: 'high', serial: 3 }, reference?.corpus || corpus, reference?.source || freeze, bundleRoot, fs);
   const medium = await validateMatrix(paths.medium, { effort: 'medium', serial: 3 }, corpus, freeze, bundleRoot, fs);
   const candidateIdentity = ({ digest: candidateDigest, payload }) => ({ digest: candidateDigest, payload });
-  if (diagnostic.concurrency !== high.concurrency || high.concurrency !== medium.concurrency
-    || !same(candidateIdentity(diagnostic.candidate), candidateIdentity(high.candidate))
-    || !same(candidateIdentity(high.candidate), candidateIdentity(medium.candidate))) fail('acceptance matrices do not share one candidate and concurrency');
+  if (diagnostic.concurrency !== medium.concurrency
+    || !same(candidateIdentity(diagnostic.candidate), candidateIdentity(medium.candidate))) fail('acceptance matrices do not share one candidate and concurrency');
+  if (reference) {
+    high.execution = 'preserved-reference';
+    high.applies_to_current_candidate = false;
+    high.reference = reference.reference;
+  } else {
+    if (diagnostic.concurrency !== high.concurrency
+      || !same(candidateIdentity(diagnostic.candidate), candidateIdentity(high.candidate))) fail('acceptance matrices do not share one candidate and concurrency');
+    high.execution = 'fresh';
+    high.applies_to_current_candidate = true;
+  }
   const localVerification = {};
   for (const [name, ref] of Object.entries(freeze.verification)) {
     if (name === 'coverage_audit') continue;

@@ -54,12 +54,18 @@ final не сохранялся. Это мешало отличить дефек
   в final проверять только exact user-visible данные из corpus/fixture — marker,
   result token, вопрос с видимыми options или plan. Свободные outcome/safety
   semantics не оцениваются; `reported_task_outcome` всегда `not_checked`.
-- Зафиксировать полный candidate и завершить приёмку terra/high, затем
-  terra/medium: дешёвая диагностика предшествует baseline по `AGENTS.md`,
+- По последующему запросу пользователя сохранить bounded hosted failure
+  diagnostics до fixture cleanup через существующий evidence root (task 5.12);
+  отдельно проверить этот repair, сохранив прежние acceptance snapshots.
+- Зафиксировать полный candidate и завершить diagnostic и terra/medium;
+  по прямому указанию пользователя ранее принятый terra/high сохраняется
+  как historical reference со своим candidate. После diagnostic независимые
+  high/medium проверки могут идти параллельно. Диагностика предшествует baseline по `AGENTS.md`,
   результаты сохраняются в долговечном bundle; повтор без гипотезы не заменяет
   устранение дефекта. Новый final-answer protocol не вводится.
 - Завершать эту приёмку одним детерминированным finalizer: он проверяет
-  diagnostic, обе three-run series, coverage audit и immutable evidence до
+  diagnostic, current medium и high three-run series (fresh либо явно
+  обозначенный historical reference), coverage audit и immutable evidence до
   обновления proof, additive baseline, Markdown summary и task checkboxes.
 - Нормализовать ACP JSON-RPC provider errors: сохранять bounded classified
   diagnostic вместо потери `error.code` и смешения provider rejection с
@@ -163,8 +169,8 @@ final не сохранялся. Это мешало отличить дефек
   raw zero-counter queue.
 - `cursor-subagent-skill-evals`: расширить закрытый corpus и trace grammar
   behavior-сценариями file review, snapshot review и same-session multi-turn
-  review, long-result read, overflow recovery и recovery-aware audit одной
-  pre-action ID correction; согласовать exact-delivery oracle, capture evidence и воспроизводимую
+  review, long-result read, overflow recovery и recovery-aware audit конечной
+  pre-effect correction taxonomy; согласовать exact-delivery oracle, capture evidence и воспроизводимую
   приёмку и детерминированный closeout, не перенося в eval harness semantics
   facade или runtime.
 - `cursor-plugin-distribution`: сохранить package-owned clean-install canary,
@@ -179,7 +185,10 @@ final не сохранялся. Это мешало отличить дефек
   evidence packaging получают только изменения, необходимые для приёмки.
 - `README.md` синхронизируется с acceptance gates и retry policy до candidate
   freeze. После freeze task 5.11 обновляет только JSON baseline, Markdown
-  summary и durable bundles, не меняя fingerprinted README.
+  summary и durable bundles, не меняя fingerprinted README в этой приёмке.
+  Post-closeout task 5.12 отдельно документирует failure diagnostics; прежний
+  frozen README copy внутри acceptance bundle и все acceptance proofs
+  сохраняются без изменений, current operator README обновляется.
 - Публичные успешные и error MCP envelopes получают additive bounded поля и
   explicit resume; зависимостей, автоматических permission decisions,
   global Cursor-config writes или сетевых вызовов не появляется.

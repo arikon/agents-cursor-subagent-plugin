@@ -136,7 +136,7 @@ test('eval matrix emits per-scenario progress and writes atomic aggregate statis
   assert.equal(summary.counts.total, modelCount);
   assert.equal(summary.counts.pass, modelCount);
   assert.equal(summary.pass_rate, 1);
-  assert.equal(summary.concurrency, 8);
+  assert.equal(summary.concurrency, 12);
   assert.equal(summary.digest_stable, true);
   assert.equal(summary.serial, 1);
   assert.equal(summary.runs.length, 1);
@@ -155,7 +155,7 @@ test('eval matrix emits per-scenario progress and writes atomic aggregate statis
   assert.equal(events.at(0).event, 'matrix_started');
   assert.equal(events.at(-1).event, 'matrix_completed');
   const firstCompletion = events.findIndex(({ event }) => event === 'scenario_completed');
-  assert.equal(events.slice(0, firstCompletion).filter(({ event }) => event === 'scenario_started').length, 8);
+  assert.equal(events.slice(0, firstCompletion).filter(({ event }) => event === 'scenario_started').length, summary.concurrency);
   assert.deepEqual(events.filter(({ event }) => event === 'scenario_started').map(({ index }) => index).sort((a, b) => a - b),
     Array.from({ length: modelCount }, (_, index) => index + 1));
 });

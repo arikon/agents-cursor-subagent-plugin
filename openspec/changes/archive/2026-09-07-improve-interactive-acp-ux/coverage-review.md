@@ -1,6 +1,73 @@
 # Coverage review
 
-## Candidate 19 exhaustive audit
+## Closeout 22 exhaustive audit
+
+`verification/candidate-22/coverage-accepted/zero-counter-audit.json` passed:
+all 92 raw zero counters are classified, none is unclassified. The foreground
+coverage run completed with exit 0 in 88,742 ms: 636 tests, 635 pass and one
+intentional skip, across all 16 manifest sources. Coverage is 99.9017% lines,
+98.2755% branches and 99.8794% functions; current source hashes match.
+
+The review found two meaningful test gaps and repaired their existing owners.
+The closeout test now changes both matrix and run concurrency before asserting
+the cross-matrix refusal. The runtime capacity test waits for the provider's
+excess-request rejection before closing the session. Both raw guard bodies now
+have count 1. No production or evaluator input changed in these test repairs.
+Eighty-five exact decisions came from the previous audit; the other seven match
+independently reviewed exact source/counter identities recorded in the sidecar
+and its provenance file. Earlier raw reports and the failed focused test remain
+historical evidence.
+
+The finalizer now verifies historical high against its own source freeze and
+corpus, marks it `preserved-reference` with current applicability false, and
+keeps current diagnostic/medium identity checks. Focused finalizer tests passed
+13/13; the repaired runtime capacity test passed 1/1. Architect review is CLEAR.
+Current diagnostic is 26/26 and medium is 78/78. Historical high is 78/78;
+additional current high is 76/78 and remains unaccepted with both failures
+retained. The hosted evaluator/corpus/skill remain the candidate-21 inputs.
+
+## Historical candidate 21 exhaustive audit
+
+`verification/candidate-21/coverage/result.json` passed in 87,422 ms with 636
+tests (635 pass, 1 intentional skip) across all 16 manifest sources: 99.9024%
+lines, 98.2132% branches and 99.8814% functions. All current source hashes match.
+`verification/candidate-21/coverage-accepted/zero-counter-audit.json` classifies
+all 96 raw zero counters, with none unclassified. Exact unchanged identities
+retain 77 decisions; independent review supplies the other 19 decisions,
+including reachable teardown races whose observable outcomes already have tests.
+
+The early-terminal repair adds a real recorder handshake/empty-transcript test
+and exercises actual-turn capture prefixes, failed/incomplete evidence and
+unchanged full-pass admission. Focused recorder/parser suites passed 42/42 and
+58/58; final integration passed 24 tests with 2 expected skips; release passed
+12/12. Architect and independent critic found no remaining baseline blocker.
+The scoped semantic gate passes; the separate `simplify-task-state-wait` change
+still references the previous IUX owner block. Hosted acceptance was pending at
+this snapshot; closeout 22 above records the subsequent results.
+
+## Candidate 20 exhaustive audit
+
+`evals/evidence/iux-acceptance-2026-09-07/verification/candidate-20/coverage-complete/2026-09-07T13-14-09-522Z-coverage-15647e79-434e-42b5-beea-8c9671851a2b/result.json`
+passed in 88,083 ms with 635 tests (634 pass, 1 intentional skip) and all 16
+manifest sources. The current source hashes were checked before candidate 20
+was frozen. `verification/candidate-20/coverage-accepted/zero-counter-audit.json`
+classifies all 95 raw zero counters; none remains unclassified.
+
+The high carry-forward repair adds observable rejection tests for malformed
+proof references and JSON, source corpus binding, source input shape, an absent
+critic predicate, an unapproved README change and package drift. The successful
+fixture includes the normalized package manifest and proves both package hashes
+with the package owner's existing functions. Earlier candidate-20 raw reports
+remain historical; their newly found meaningful paths were covered before this
+final run. The nine final sidecar decisions cover existing defensive guards and
+already owned runtime/package failure paths, with exact source/counter identities.
+
+The focused closeout suite passed 13/13; release passed 12/12 in 2,427 ms.
+The foreground semantic CLI passed for 12 registered changes. Architect and
+independent critic accepted the narrow user-approved high carry-forward rule.
+This coverage audit does not claim completion of the remaining hosted gates.
+
+## Historical candidate 19 exhaustive audit
 
 `evals/evidence/iux-acceptance-2026-09-07/verification/candidate-19/coverage-final/result.json`
 passed in 73,162 ms with 617 tests (616 pass, 1 intentional skip), all 16
@@ -16,8 +83,8 @@ pending request after the ACP request pipe has closed. The existing runtime
 close-pending test now covers both open and closed pipes; public close reaches
 tombstone and the turn is cancelled. The fresh raw report records count 1 for
 the previously uncovered cancellation-send catch at runtime line 649.
-No product code changed for this repair. Current source bytes match this
-coverage snapshot; the earlier candidate-19 coverage runs remain historical.
+No product code changed for this repair. Source bytes matched this coverage
+snapshot at candidate 19 freeze; its earlier coverage runs remain historical.
 
 ## Candidate 18 exhaustive audit
 

@@ -226,7 +226,7 @@ To migrate to version `X.Y.Z`:
      gpt-5.6-terra high "$PWD/evals/evidence/diagnostic-high/result.json"
    ```
 
-   The matrix runs eight isolated scenarios concurrently by default and emits
+   The matrix runs twelve isolated scenarios concurrently by default and emits
    `scenario_started`, a `scenario_progress` heartbeat every 30 seconds for
    each active scenario, and `scenario_completed` for each corpus row. Set
    `CURSOR_EVAL_MATRIX_CONCURRENCY=1..16` to tune the pool size. Its atomic JSON
@@ -281,6 +281,21 @@ To migrate to version `X.Y.Z`:
    Preserve a single `EvalResultV1` and bounded evidence. An
    `agent_behavior_mismatch` result measures the model's instruction following;
    it is not grounds for weakening adapter admission.
+
+   On a managed hosted failure, inspect `hosted-failure-*.json` under the
+   attempt's `evidence/` directory before diagnosing a timeout. The harness
+   saves bounded compact MCP and fake-ACP safe traces plus app-server metadata
+   before fixture cleanup, with explicit `captured`, `truncated`, `missing` and
+   `read_error` statuses. Partial JSON is preserved as captured content; the
+   `truncated` status denotes the byte cap. The failure diagnostic starts with
+   the file path, size and SHA-256;
+   the matrix artifact index retains the file. Direct runs use
+   `CURSOR_EVAL_EVIDENCE_ROOT` or the system temporary directory's
+   `cursor-eval-evidence/` directory. Copy direct-run diagnostics to durable
+   storage before OS temporary-file cleanup. A publication failure is reported
+   alongside the original error; abrupt process loss can leave no sidecar.
+   This file is diagnostic only and does not establish a passed eval or a new
+   accepted candidate. Existing frozen baselines retain their original inputs.
 
    Before freezing the candidate, audit the last successful coverage result.
    The audit remains failing while any raw zero counter lacks a current explicit

@@ -127,6 +127,20 @@ export function checkOpenSpecSemantics(rootPath = process.cwd(), registry = PROJ
     return cursor === sourceLines.length;
   }
 
+  function preservesHistoricalRequirement(source, modified) {
+    const paragraphs = (block) => block.split(/\n{2,}/u)
+      .map((paragraph) => paragraph.trim().replace(/\s+/gu, " ")).filter(Boolean);
+    const sourceParagraphs = paragraphs(source);
+    const modifiedParagraphs = paragraphs(modified);
+    let cursor = 0;
+    for (const candidate of modifiedParagraphs) {
+      if (cursor === sourceParagraphs.length) break;
+      const expected = sourceParagraphs[cursor];
+      if (candidate === expected || ` ${candidate} `.includes(` ${expected} `)) cursor += 1;
+    }
+    return cursor === sourceParagraphs.length;
+  }
+
   function authoritativeRequirements(contract) {
     const specsRoot = resolve(root, "openspec/specs");
     const requirementsByCapability = new Map(readdirSync(specsRoot, { withFileTypes: true })
@@ -411,6 +425,45 @@ for (const change of changes) {
     const deltaBlock = requirementBlock(deltaSpec, requirement);
     const archived = rootPath.startsWith("openspec/changes/archive/");
     const currentMainDigest = createHash("sha256").update(sourceBlock).digest("hex");
+    let historicalPredecessorPreserves = false;
+    let laterArchivedReplacementReachesCurrentMain = false;
+    if (archived && !replacement) {
+      const changeIndex = changes.indexOf(change);
+      laterArchivedReplacementReachesCurrentMain = registry.changes.slice(changeIndex + 1).some((candidate) => {
+        const candidateReplacement = candidate.modified?.find((entry) =>
+          entry.capability === capability && entry.requirement === requirement
+          && typeof entry.replacementReason === "string" && entry.replacementReason.trim().length >= 20
+          && typeof entry.sourceDigest === "string" && /^[a-f0-9]{64}$/.test(entry.sourceDigest)
+          && typeof entry.replacementDigest === "string" && /^[a-f0-9]{64}$/.test(entry.replacementDigest));
+        if (!candidateReplacement) return false;
+        const candidateRoot = changeRoot(candidate.id);
+        return candidateRoot?.startsWith("openspec/changes/archive/")
+          && replacementLineageReaches(registry, capability, requirement,
+            candidateReplacement.replacementDigest, currentMainDigest);
+      });
+      if (laterArchivedReplacementReachesCurrentMain) {
+        let predecessor = null;
+        for (let index = changeIndex - 1; index >= 0 && !predecessor; index -= 1) {
+          const candidate = registry.changes[index];
+          if (candidate.modified?.some((entry) => entry.capability === capability && entry.requirement === requirement)) {
+            predecessor = candidate;
+          } else if (candidate.capability === capability) {
+            const candidateRoot = changeRoot(candidate.id);
+            const candidatePath = candidateRoot && `${candidateRoot}/specs/${capability}/spec.md`;
+            if (!candidateRoot || candidatePath && existsSync(resolve(root, candidatePath))
+              && requirementBlock(read(candidatePath), requirement)) predecessor = candidate;
+          }
+        }
+        const predecessorRoot = predecessor ? changeRoot(predecessor.id) : null;
+        const predecessorPath = predecessorRoot && `${predecessorRoot}/specs/${capability}/spec.md`;
+        const predecessorBlock = predecessorPath && existsSync(resolve(root, predecessorPath))
+          ? requirementBlock(read(predecessorPath), requirement) : "";
+        historicalPredecessorPreserves = predecessorRoot?.startsWith("openspec/changes/archive/")
+          && Boolean(predecessorBlock) && preservesHistoricalRequirement(predecessorBlock, deltaBlock);
+      }
+    }
+    const nonReplacementPreserves = laterArchivedReplacementReachesCurrentMain
+      ? historicalPredecessorPreserves : preservesRequirement(sourceBlock, deltaBlock);
     let sourceDigestMatches = !replacement || (archived
       ? replacementLineageReaches(registry, capability, requirement, replacementDigest, currentMainDigest)
       : currentMainDigest === sourceDigest);
@@ -447,7 +500,7 @@ for (const change of changes) {
         fixedEvalCorpusCount ||
         !proposal.includes(`- \`${capability}\``) || !deltaSpec.includes("## MODIFIED Requirements") ||
         !deltaBlock || (!stacked && !sourceBlock) ||
-        (!replacement && !preservesRequirement(sourceBlock, deltaBlock))) {
+        (!replacement && !nonReplacementPreserves)) {
       errors.push(`${rootPath}: invalid modified capability ${capability}/${requirement}`);
     }
     if (!design.includes(`«${requirement}»`) || !tasks.includes(`«${requirement}»`)) {

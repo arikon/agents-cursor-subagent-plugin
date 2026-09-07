@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
+import { createReadStream } from 'node:fs';
 import { access, chmod, cp, mkdir, mkdtemp, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import { createInterface } from 'node:readline';
 import { isAbsolute, join } from 'node:path';
@@ -22,6 +23,10 @@ const turnTimeoutPreload = fileURLToPath(new URL('./fixtures/accelerate-turn-tim
 const skill = 'codex-cursor-subagent-plugin:cursor-subagent';
 const HOSTED_APP_SERVER_OUTPUT_LIMIT = 16 * 1_048_576;
 const HOSTED_OBSERVATION_TIMEOUT_MS = 300_000;
+const HOSTED_FAILURE_SOURCE_LIMIT = 1_048_576;
+const HOSTED_FAILURE_EVENT_LIMIT = 20;
+const THREAD_STATUS_TYPES = new Set(['notLoaded', 'idle', 'systemError', 'active']);
+const THREAD_ACTIVE_FLAGS = new Set(['waitingOnApproval', 'waitingOnUserInput']);
 
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
@@ -1140,6 +1145,65 @@ async function cleanupHostedRunner(runner, hostedThreadId, initialFailure = null
   return { failure, cleanupFailed };
 }
 
+function boundedDiagnosticText(value, limit = 4_000) {
+  return typeof value === 'string' ? Buffer.from(value, 'utf8').subarray(0, limit).toString('utf8') : null;
+}
+
+function normalizedTurnError(value) {
+  if (typeof value === 'string') return { message: boundedDiagnosticText(value), codex_error_info: null };
+  if (!value || Array.isArray(value) || typeof value !== 'object') return null;
+  const message = boundedDiagnosticText(value.message);
+  const codexErrorInfo = boundedDiagnosticText(value.codexErrorInfo, 256);
+  return message === null && codexErrorInfo === null ? null : { message, codex_error_info: codexErrorInfo };
+}
+
+function normalizedId(value) {
+  return typeof value === 'string' || typeof value === 'number'
+    ? boundedDiagnosticText(String(value), 256) : null;
+}
+
+function normalizedThreadStatus(value) {
+  if (!value || Array.isArray(value) || typeof value !== 'object' || !THREAD_STATUS_TYPES.has(value.type)) return null;
+  return {
+    type: value.type,
+    active_flags: Array.isArray(value.activeFlags)
+      ? value.activeFlags.filter((flag) => THREAD_ACTIVE_FLAGS.has(flag)).slice(0, HOSTED_FAILURE_EVENT_LIMIT) : [],
+  };
+}
+
+async function snapshotHostedFailureSource(path, dependencies = {}) {
+  const stream = dependencies.createReadStream || createReadStream;
+  const hash = createHash('sha256');
+  let sourceBytes = 0;
+  let retained = Buffer.alloc(0);
+  try {
+    for await (const value of stream(path)) {
+      const chunk = Buffer.isBuffer(value) ? value : Buffer.from(value);
+      hash.update(chunk); sourceBytes += chunk.length;
+      if (chunk.length >= HOSTED_FAILURE_SOURCE_LIMIT) retained = chunk.subarray(chunk.length - HOSTED_FAILURE_SOURCE_LIMIT);
+      else {
+        const combined = Buffer.concat([retained, chunk]);
+        retained = combined.length <= HOSTED_FAILURE_SOURCE_LIMIT
+          ? combined : combined.subarray(combined.length - HOSTED_FAILURE_SOURCE_LIMIT);
+      }
+    }
+    return {
+      status: sourceBytes > retained.length ? 'truncated' : 'captured',
+      source_bytes: sourceBytes,
+      source_sha256: hash.digest('hex'),
+      retained_bytes: retained.length,
+      retained_range: sourceBytes > retained.length ? 'tail' : 'full',
+      utf8: retained.toString('utf8'),
+    };
+  } catch (error) {
+    return {
+      status: error?.code === 'ENOENT' ? 'missing' : 'read_error',
+      source_bytes: null, source_sha256: null, retained_bytes: 0, retained_range: null, utf8: null,
+      error: boundedDiagnosticText(String(error?.message || error), 1_000),
+    };
+  }
+}
+
 async function hostedFailureDiagnostics(runner, threadId, turnId) {
   let turn = null;
   let threadReadError = null;
@@ -1148,31 +1212,80 @@ async function hostedFailureDiagnostics(runner, threadId, turnId) {
       const current = await runner.request('thread/read', { threadId, includeTurns: true });
       turn = current.thread?.turns?.find(({ id }) => id === turnId) ?? null;
     } catch (error) {
-      threadReadError = String(error?.message || error).slice(0, 1_000);
+      threadReadError = boundedDiagnosticText(String(error?.message || error), 1_000);
     }
   }
   return {
-    turn: turn ? { id: turn.id, status: turn.status, error: turn.error ?? null } : null,
+    turn: turn ? { id: normalizedId(turn.id), status: typeof turn.status === 'string' ? boundedDiagnosticText(turn.status, 256) : null,
+      error: normalizedTurnError(turn.error) } : null,
     thread_read_error: threadReadError,
-    notification_methods: runner.notifications.slice(-20).map(({ method }) => method),
-    lifecycle_notifications: runner.notifications
+    notification_methods: (runner.notifications || []).slice(-HOSTED_FAILURE_EVENT_LIMIT)
+      .map(({ method }) => typeof method === 'string' ? boundedDiagnosticText(method, 256) : null),
+    lifecycle_notifications: (runner.notifications || [])
       .filter(({ method }) => ['turn/started', 'turn/completed', 'thread/status/changed', 'account/rateLimits/updated'].includes(method))
-      .slice(-20)
+      .slice(-HOSTED_FAILURE_EVENT_LIMIT)
       .map(({ method, params, at_ms: atMs }) => ({
         method, at_ms: atMs,
-        thread_id: params?.threadId ?? params?.thread?.id ?? null,
-        turn_id: params?.turnId ?? params?.turn?.id ?? null,
-        turn_status: params?.turn?.status ?? params?.status ?? null,
+        thread_id: normalizedId(params?.threadId ?? params?.thread?.id),
+        turn_id: normalizedId(params?.turnId ?? params?.turn?.id),
+        turn_status: typeof params?.turn?.status === 'string' ? boundedDiagnosticText(params.turn.status, 256) : null,
+        thread_status: normalizedThreadStatus(params?.status),
       })),
-    client_requests: runner.clientRequests
+    client_requests: (runner.clientRequests || [])
       .filter(({ method }) => ['thread/start', 'thread/read', 'turn/start', 'thread/archive'].includes(method))
-      .slice(-20)
+      .slice(-HOSTED_FAILURE_EVENT_LIMIT)
       .map(({ id, method, thread_id: threadId, at_ms: atMs }) => ({
-        id, method, at_ms: atMs,
-        thread_id: threadId,
+        id: normalizedId(id), method: boundedDiagnosticText(method, 256), at_ms: atMs,
+        thread_id: normalizedId(threadId),
       })),
-    stderr_tail: Buffer.concat(runner.stderr).toString('utf8').slice(-4_000),
+    server_requests: (runner.serverRequests || []).slice(-HOSTED_FAILURE_EVENT_LIMIT).map(({ id, method, params }) => ({
+      id: normalizedId(id),
+      method: boundedDiagnosticText(method, 256),
+      server_name: boundedDiagnosticText(params?.serverName, 256),
+      approval_kind: boundedDiagnosticText(params?._meta?.codex_approval_kind, 256),
+    })),
+    stderr_tail: Buffer.concat(runner.stderr || []).toString('utf8').slice(-4_000),
   };
+}
+
+async function persistHostedFailureDiagnostics({ diagnostics, evidenceRoot, mcpPath, originalError, safeEvidencePath, scenarioId }, dependencies = {}) {
+  const makeDirectory = dependencies.mkdir || mkdir;
+  const publish = dependencies.writeFile || writeFile;
+  const move = dependencies.rename || rename;
+  const snapshot = dependencies.snapshot || snapshotHostedFailureSource;
+  const identifier = (dependencies.randomUUID || randomUUID)();
+  const finalPath = join(evidenceRoot, `hosted-failure-${identifier}.json`);
+  const temporaryPath = `${finalPath}.${process.pid}.tmp`;
+  const [mcp, acpSafe] = await Promise.all([snapshot(mcpPath), snapshot(safeEvidencePath)]);
+  const sidecar = {
+    schema_version: 1,
+    kind: 'hosted_failure_diagnostics',
+    scenario_id: boundedDiagnosticText(scenarioId, 256),
+    original_error: { message: boundedDiagnosticText(String(originalError?.message || originalError), 8_000) },
+    hosted: diagnostics,
+    sources: { mcp, acp_safe: acpSafe },
+  };
+  const encoded = Buffer.from(JSON.stringify(sidecar));
+  try {
+    await makeDirectory(evidenceRoot, { recursive: true });
+    await publish(temporaryPath, encoded, { flag: 'wx' });
+    await move(temporaryPath, finalPath);
+  } catch (error) {
+    await rm(temporaryPath, { force: true }).catch(() => {});
+    throw error;
+  }
+  return { path: finalPath, bytes: encoded.length, sha256: sha256(encoded) };
+}
+
+async function captureHostedFailure(error, options, dependencies = {}) {
+  const diagnostics = await hostedFailureDiagnostics(options.runner, options.threadId, options.turnId);
+  try {
+    const ref = await persistHostedFailureDiagnostics({ ...options, diagnostics, originalError: error }, dependencies);
+    return new Error(`hosted_diagnostics_ref=${JSON.stringify(ref)}; original_error=${boundedDiagnosticText(String(error?.message || error), 8_000)}`, { cause: error });
+  } catch (persistenceError) {
+    const persistence = { status: 'failed', message: boundedDiagnosticText(String(persistenceError?.message || persistenceError), 1_000) };
+    return new Error(`hosted_diagnostics_persistence=${JSON.stringify(persistence)}; original_error=${boundedDiagnosticText(String(error?.message || error), 8_000)}; hosted_diagnostics=${JSON.stringify(diagnostics)}`, { cause: error });
+  }
 }
 
 async function cleanupCredentialFreeRunner(runner, providerChild, initialFailure = null, stop = stopProcess) {
@@ -1272,12 +1385,12 @@ async function waitForMcpEvidence(path, minimumTranscriptLength = 3, timeoutMs =
   throw new Error(`recording MCP proxy did not publish tool transcript: ${JSON.stringify(latest)}`);
 }
 
-async function stableMcpTranscriptLength(path, timeoutMs = 5_000) {
+async function stableMcpTranscriptLength(path, timeoutMs = 5_000, minimumTranscriptLength = 1) {
   const deadline = Date.now() + timeoutMs;
   let previous = -1;
   let stableReads = 0;
   while (Date.now() < deadline) {
-    const evidence = await waitForMcpEvidence(path, 1, Math.min(500, Math.max(25, deadline - Date.now())));
+    const evidence = await waitForMcpEvidence(path, minimumTranscriptLength, Math.min(500, Math.max(25, deadline - Date.now())));
     const length = evidence.transcript.length;
     if (length === previous) stableReads += 1;
     else { previous = length; stableReads = 0; }
@@ -1287,6 +1400,14 @@ async function stableMcpTranscriptLength(path, timeoutMs = 5_000) {
   throw new Error(`recording MCP proxy transcript did not stabilize: ${previous}`);
 }
 
+async function assertHostedMcpConnected(runner, threadId, pluginId) {
+  const status = await runner.request('mcpServerStatus/list', { threadId, detail: 'full' });
+  assert.equal(status.nextCursor ?? null, null, 'isolated hosted fixture unexpectedly paginated MCP status');
+  const selected = status.data?.find(({ name }) => name === 'cursor-subagent');
+  assert.equal(selected?.pluginId, pluginId, 'hosted turn did not select the installed Cursor MCP server');
+  assert.equal(selected?.runtimeStatus, 'connected', 'selected Cursor MCP server is not connected');
+}
+
 async function waitForFollowupAnchor(followup, mcpPath, safeEvidencePath, timeoutMs = 90_000, terminalProbe = null) {
   const deadline = Date.now() + timeoutMs;
   let latest = null; let lastProbeAt = 0;
@@ -1294,17 +1415,17 @@ async function waitForFollowupAnchor(followup, mcpPath, safeEvidencePath, timeou
     if (followup.after_kind === 'wait-timeout') {
       try {
         latest = JSON.parse(await readFile(mcpPath, 'utf8'));
-        if (latest.transcript?.some(({ tool, response }) => tool === 'cursor_wait' && response?.wait_timeout === true)) return;
+        if (latest.transcript?.some(({ tool, response }) => tool === 'cursor_wait' && response?.wait_timeout === true)) return { kind: 'anchor' };
       } catch (error) { if (error.code !== 'ENOENT') throw error; }
     } else {
       latest = await readSafeEvidence(safeEvidencePath);
       const event = followup.after_kind === 'pending' ? 'pending_emitted' : 'prompt_result';
-      if (latest.some((entry) => entry.event === event && entry.step_id === followup.after_step)) return;
+      if (latest.some((entry) => entry.event === event && entry.step_id === followup.after_step)) return { kind: 'anchor' };
     }
     if (terminalProbe && Date.now() - lastProbeAt >= 2_000) {
       lastProbeAt = Date.now();
       const terminal = await terminalProbe();
-      if (terminal) throw new Error(`Codex turn became terminal before follow-up anchor: ${JSON.stringify(terminal)}`);
+      if (terminal) return { kind: 'terminal', turn: terminal };
     }
     await new Promise((resolveWait) => setTimeout(resolveWait, 25));
   }
@@ -1386,6 +1507,52 @@ test('terminal polling accepts interruption confirmed by its completion notifica
     { id: 'turn-1', status: 'interrupted' });
 });
 
+test('a completed turn before its follow-up anchor keeps the exact final and skips the follow-up', async (t) => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'cursor-early-terminal-')));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const mcpPath = join(root, 'mcp.json');
+  await writeFile(mcpPath, JSON.stringify({ schema_version: 1, transcript: [], dropped_calls: 0 }), 'utf8');
+  let followupStarts = 0;
+  const runner = {
+    request: async (method) => {
+      assert.equal(method, 'mcpServerStatus/list');
+      return { data: [{ name: 'cursor-subagent', pluginId: 'plugin-1', runtimeStatus: 'connected' }], nextCursor: null };
+    },
+    captureTurnFinal: async () => ({ turn_id: 'turn-1', turn_status: 'completed', text: 'Stopped early.',
+      phase: 'final_answer', source: 'thread/items/list', completeness: 'complete', error_code: null }),
+    startTurn: async () => { followupStarts += 1; },
+  };
+  const anchor = await waitForFollowupAnchor({ after_kind: 'pending', after_step: 'question-1' }, mcpPath,
+    join(root, 'safe.jsonl'), 1_000, async () => ({ id: 'turn-1', status: 'completed' }));
+  const capturedFinals = [{ turn_index: 1, ...await runner.captureTurnFinal() }];
+  if (anchor.kind === 'anchor') await runner.startTurn();
+  await assertHostedMcpConnected(runner, 'thread-1', 'plugin-1');
+  const mcp = await waitForMcpEvidence(mcpPath, 0, 1_000);
+  const scenario = {
+    scenario_kind: 'programmed', followups: [{ input: 'Continue.' }],
+    program: { steps: [{ type: 'pending', step_id: 'question-1' }] },
+    expected_trace: [{ kind: 'session.allocated', mode: 'ask' }], expected_actual_task_outcome: 'succeeded',
+    report_checks: [
+      { turn_index: 1, category: 'interaction', required_fragments: ['Stopped early.'], forbidden_fragments: [] },
+      { turn_index: 2, category: 'interaction', required_fragments: ['continued'], forbidden_fragments: [] },
+    ],
+  };
+  const oracle = evaluateScenario(scenario, { trace: [], callbacks: [], effects: [], actual_task_outcome: 'failed',
+    captured_finals: capturedFinals, transcript: { calls: mcp.transcript, dropped_calls: mcp.dropped_calls,
+      turn_call_ranges: [{ start: 0, end: 0 }], unexpected_input_requests: 0 } });
+  assert.equal(anchor.kind, 'terminal');
+  assert.equal(followupStarts, 0);
+  assert.equal(capturedFinals[0].completeness, 'complete');
+  assert.equal(capturedFinals[0].text, 'Stopped early.');
+  assert.equal(oracle.eval_status, 'agent_behavior_mismatch');
+  assert.ok(oracle.mismatches.includes('interaction-report-mismatch'));
+  await assert.rejects(assertHostedMcpConnected({ request: async () => ({ data: [{ name: 'cursor-subagent',
+    pluginId: 'plugin-1', runtimeStatus: 'failed' }] }) }, 'thread-1', 'plugin-1'), /not connected/);
+  await assert.rejects(waitForFollowupAnchor({ after_kind: 'pending', after_step: 'question-1' }, mcpPath,
+    join(root, 'safe.jsonl'), 1_000, async () => { throw new Error('terminal probe transport failed'); }),
+  /terminal probe transport failed/);
+});
+
 async function writeChildResult(result, destination = process.env.CURSOR_EVAL_CHILD_RESULT) {
   if (!destination) return;
   const value = { schema_version: 1, ...result };
@@ -1405,6 +1572,7 @@ test('behavior mismatch finalization preserves complete proof for outer classifi
   await mkdir(fixtureRoot);
   const digest = (character) => ({ sha256: character.repeat(64), bytes: 1 });
   const skillDigest = digest('a');
+  const scenario = { scenario_kind: 'programmed', followups: [{ input: 'Continue.' }] };
   const result = {
     scenario_id: 'forced-behavior-mismatch',
     provenance: {
@@ -1418,15 +1586,15 @@ test('behavior mismatch finalization preserves complete proof for outer classifi
       assertion_outcome: 'fail', eval_status: 'agent_behavior_mismatch' },
     captured_finals: [{ turn_index: 1, text: 'CURSOR_EVAL_OK', turn_id: 'turn-1', turn_status: 'completed',
       phase: 'final_answer', source: 'thread/items/list', completeness: 'complete', error_code: null }],
-    transcript: { calls: [], dropped_calls: 0 },
+    transcript: { calls: [], dropped_calls: 0, turn_call_ranges: [{ start: 0, end: 0 }], unexpected_input_requests: 0 },
     provider_oracle: { terminal_result_matched: false },
   };
   await finalizeChildResult({ root: fixtureRoot }, result, new Error('forced oracle mismatch'), false, destination);
-  const parsed = parseChildResult(await readFile(destination, 'utf8'), result.scenario_id);
+  const parsed = parseChildResult(await readFile(destination, 'utf8'), result.scenario_id, { scenario });
   assert.equal(parsed.observations.eval_status, 'agent_behavior_mismatch');
   assert.equal(parsed.provenance.cleanup_status, 'succeeded');
   assert.deepEqual(parsed.transcript, result.transcript);
-  const harness = await runHarness({ pattern: 'forced mismatch', test: '/tmp/forced-mismatch.test.mjs' }, {
+  const harness = await runHarness({ pattern: 'forced mismatch', test: '/tmp/forced-mismatch.test.mjs', scenario }, {
     CURSOR_EVAL_CHILD_RESULT: destination, CURSOR_EVAL_SCENARIO_ID: result.scenario_id,
   }, {
     runSupervisor: async () => ({ verdict: 'failed', terminal_cause: 'exit_nonzero', infrastructure: false,
@@ -1434,6 +1602,88 @@ test('behavior mismatch finalization preserves complete proof for outer classifi
   });
   assert.equal(harness.failure, 'scenario_contract_mismatch');
   assert.equal(harness.childResult.observations.eval_status, 'agent_behavior_mismatch');
+});
+
+test('hosted failure sidecar preserves bounded raw evidence before fixture cleanup', async (t) => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'cursor-hosted-failure-proof-')));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const outerFixture = join(root, 'outer-fixture'); const fixtureRoot = join(outerFixture, 'inner-fixture');
+  const evidenceRoot = join(root, 'durable'); const fixtureEvidence = join(fixtureRoot, 'evidence');
+  const destination = join(outerFixture, 'child-result.json');
+  const mcpPath = join(fixtureEvidence, 'mcp.json'); const safeEvidencePath = join(fixtureEvidence, 'acp-safe.jsonl');
+  await mkdir(fixtureEvidence, { recursive: true });
+  const mcpRaw = Buffer.from('{"partial_transcript":');
+  const safeTail = 'SAFE_LOG_TAIL';
+  const safeRaw = Buffer.from(`${'x'.repeat(HOSTED_FAILURE_SOURCE_LIMIT + 32)}${safeTail}`);
+  await writeFile(mcpPath, mcpRaw); await writeFile(safeEvidencePath, safeRaw);
+  const forbidden = ['FORBIDDEN_REQUEST_PARAMS', 'FORBIDDEN_PROVIDER_DETAILS', 'FORBIDDEN_LIFECYCLE_OBJECT', 'FORBIDDEN_TURN_TEXT'];
+  const runner = {
+    request: async () => ({ thread: { turns: [{ id: 'turn-1', status: 'inProgress',
+      error: { message: 'bounded provider message', codexErrorInfo: 'rateLimitExceeded', details: forbidden[1] },
+      items: [{ id: 'item-1', type: 'agentMessage', status: 'inProgress', text: forbidden[3] }] }] } }),
+    notifications: [{ method: 'thread/status/changed', params: { threadId: 'thread-1',
+      status: { type: 'active', activeFlags: ['waitingOnApproval'], extra: forbidden[2] } }, at_ms: 123 }],
+    clientRequests: [{ id: 7, method: 'thread/read', thread_id: 'thread-1', at_ms: 124 }],
+    serverRequests: [{ id: 8, method: 'mcpServer/elicitation/request', params: { serverName: 'cursor-subagent',
+      _meta: { codex_approval_kind: 'mcp_tool_call' }, prompt: forbidden[0] } }],
+    stderr: [Buffer.from('bounded stderr')],
+  };
+  const original = new Error(`original hosted failure ${'z'.repeat(9_000)}`);
+  const captured = await captureHostedFailure(original, { runner, threadId: 'thread-1', turnId: 'turn-1',
+    evidenceRoot, mcpPath, safeEvidencePath, scenarioId: 'model-test' }, { randomUUID: () => 'fixed-id' });
+  assert.equal(captured.cause, original);
+  const ref = JSON.parse(captured.message.match(/^hosted_diagnostics_ref=({[^;]+})/)[1]);
+  await finalizeChildResult({ root: fixtureRoot }, null, captured, false, destination);
+  assert.equal(JSON.parse(await readFile(destination)).message.startsWith('hosted_diagnostics_ref='), true);
+  await rm(outerFixture, { recursive: true, force: true });
+  const encoded = await readFile(ref.path); const sidecar = JSON.parse(encoded);
+  assert.equal(ref.sha256, sha256(encoded)); assert.equal(ref.bytes, encoded.length);
+  assert.deepEqual(sidecar.sources.mcp, { status: 'captured', source_bytes: mcpRaw.length,
+    source_sha256: sha256(mcpRaw), retained_bytes: mcpRaw.length, retained_range: 'full', utf8: mcpRaw.toString() });
+  assert.equal(sidecar.sources.acp_safe.status, 'truncated');
+  assert.equal(sidecar.sources.acp_safe.source_sha256, sha256(safeRaw));
+  assert.equal(sidecar.sources.acp_safe.retained_bytes, HOSTED_FAILURE_SOURCE_LIMIT);
+  assert.ok(sidecar.sources.acp_safe.utf8.endsWith(safeTail));
+  assert.deepEqual(sidecar.hosted.server_requests, [{ id: '8', method: 'mcpServer/elicitation/request',
+    server_name: 'cursor-subagent', approval_kind: 'mcp_tool_call' }]);
+  assert.deepEqual(sidecar.hosted.turn.error, { message: 'bounded provider message', codex_error_info: 'rateLimitExceeded' });
+  assert.equal(sidecar.hosted.lifecycle_notifications[0].turn_status, null);
+  assert.deepEqual(sidecar.hosted.lifecycle_notifications[0].thread_status,
+    { type: 'active', active_flags: ['waitingOnApproval'] });
+  for (const sentinel of forbidden) assert.ok(!encoded.includes(Buffer.from(sentinel)), sentinel);
+});
+
+test('hosted failure source snapshot distinguishes missing and read errors', async () => {
+  const missing = await snapshotHostedFailureSource('/definitely/missing/hosted-eval-source');
+  assert.equal(missing.status, 'missing'); assert.equal(missing.utf8, null);
+  const readError = await snapshotHostedFailureSource('/unused', { createReadStream: () => ({
+    async *[Symbol.asyncIterator]() { throw Object.assign(new Error('forced source read failure'), { code: 'EIO' }); },
+  }) });
+  assert.equal(readError.status, 'read_error'); assert.equal(readError.error, 'forced source read failure');
+});
+
+test('hosted diagnostic publication failure retains original cause and cleanup', async (t) => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'cursor-hosted-failure-publish-')));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const fixtureRoot = join(root, 'fixture'); const blockedRoot = join(root, 'not-a-directory');
+  const destination = join(root, 'child-result.json'); await mkdir(fixtureRoot); await writeFile(blockedRoot, 'blocked');
+  const original = new Error(`original failure ${'z'.repeat(9_000)}`);
+  let archives = 0; let closes = 0;
+  const runner = { request: async () => ({ thread: { turns: [] } }), notifications: [], clientRequests: [], serverRequests: [], stderr: [],
+    archiveThread: async () => { archives += 1; }, close: async () => { closes += 1; } };
+  const captured = await captureHostedFailure(original, { runner, threadId: 'thread-1', turnId: 'turn-1', evidenceRoot: blockedRoot,
+    mcpPath: join(fixtureRoot, 'missing-mcp.json'), safeEvidencePath: join(fixtureRoot, 'missing-safe.jsonl'), scenarioId: 'model-test' });
+  assert.equal(captured.cause, original);
+  assert.match(captured.message, /^hosted_diagnostics_persistence=.*original_error=original failure/);
+  const cleanup = await cleanupHostedRunner(runner, 'thread-1', captured);
+  assert.equal(cleanup.failure, captured); assert.equal(cleanup.cleanupFailed, false);
+  assert.equal(archives, 1); assert.equal(closes, 1);
+  await finalizeChildResult({ root: fixtureRoot }, null, cleanup.failure, cleanup.cleanupFailed, destination);
+  await assert.rejects(access(fixtureRoot));
+  const result = JSON.parse(await readFile(destination));
+  assert.match(result.message, /^hosted_diagnostics_persistence=/);
+  assert.match(result.message, /original_error=original failure/);
+  assert.equal(result.cleanup_status, 'succeeded');
 });
 
 test('credential-free Codex client observes only the package-bootstrap-installed skill', async (t) => {
@@ -1544,8 +1794,9 @@ test('hosted Codex actually calls the installed Cursor MCP tools', { skip: proce
     const capturedFinals = [];
     const reportTranscriptEnds = [];
     const turnSafeEvidenceStarts = [0];
+    let completedBeforeFollowupAnchor = false;
     for (const followup of outer.scenario.followups) {
-      await waitForFollowupAnchor(followup, join(evidenceRoot, 'mcp.json'), safeEvidencePath, HOSTED_OBSERVATION_TIMEOUT_MS, async () => {
+      const anchor = await waitForFollowupAnchor(followup, join(evidenceRoot, 'mcp.json'), safeEvidencePath, HOSTED_OBSERVATION_TIMEOUT_MS, async () => {
         try {
           const current = await runner.request('thread/read', { threadId: thread.thread.id, includeTurns: true });
           const turn = current.thread?.turns?.find(({ id }) => id === evaluatedTurn.turn?.id) ?? null;
@@ -1560,6 +1811,10 @@ test('hosted Codex actually calls the installed Cursor MCP tools', { skip: proce
       assert.equal(boundaryTurn.status, 'completed', JSON.stringify(boundaryTurn));
       capturedFinals.push({ turn_index: capturedFinals.length + 1,
         ...await runner.captureTurnFinal(thread.thread.id, evaluatedTurn.turn.id) });
+      if (anchor.kind === 'terminal') {
+        completedBeforeFollowupAnchor = true;
+        break;
+      }
       reportTranscriptEnds.push(await stableMcpTranscriptLength(join(evidenceRoot, 'mcp.json')));
       if (harnessFaults.has('hold-terminal-until-followup')) {
         const firstTerminal = outer.scenario.program.steps.find(({ type }) => type === 'terminal');
@@ -1574,19 +1829,17 @@ test('hosted Codex actually calls the installed Cursor MCP tools', { skip: proce
       hostedTurnId = evaluatedTurn.turn?.id ?? null;
       if (harnessFaults.has('hold-terminal-until-followup')) await writeFile(followupReleasePath, 'follow-up turn started', 'utf8');
     }
-    // One MCP call may produce several oracle trace events (for example a
-    // timeout plus the still-pending request). Wait only for transcript
-    // creation here; terminal observation and the pure oracle establish
-    // completeness below.
-    let mcp = await waitForMcpEvidence(join(evidenceRoot, 'mcp.json'), 1, HOSTED_OBSERVATION_TIMEOUT_MS);
-    assert.equal(typeof evaluatedTurn.turn?.id, 'string');
-    const terminalTurn = await waitForExactTurnTerminal(runner, thread.thread.id, evaluatedTurn.turn.id, HOSTED_OBSERVATION_TIMEOUT_MS);
-    assert.equal(terminalTurn.status, 'completed', JSON.stringify(terminalTurn));
+    if (!completedBeforeFollowupAnchor) {
+      assert.equal(typeof evaluatedTurn.turn?.id, 'string');
+      const terminalTurn = await waitForExactTurnTerminal(runner, thread.thread.id, evaluatedTurn.turn.id, HOSTED_OBSERVATION_TIMEOUT_MS);
+      assert.equal(terminalTurn.status, 'completed', JSON.stringify(terminalTurn));
+      capturedFinals.push({ turn_index: capturedFinals.length + 1,
+        ...await runner.captureTurnFinal(thread.thread.id, evaluatedTurn.turn.id) });
+    }
     phase('terminal-observed');
-    capturedFinals.push({ turn_index: capturedFinals.length + 1,
-      ...await runner.captureTurnFinal(thread.thread.id, evaluatedTurn.turn.id) });
-    const finalTranscriptEnd = await stableMcpTranscriptLength(join(evidenceRoot, 'mcp.json'));
-    mcp = await waitForMcpEvidence(join(evidenceRoot, 'mcp.json'), finalTranscriptEnd, 5_000);
+    const finalTranscriptEnd = await stableMcpTranscriptLength(join(evidenceRoot, 'mcp.json'), HOSTED_OBSERVATION_TIMEOUT_MS, 0);
+    const mcp = await waitForMcpEvidence(join(evidenceRoot, 'mcp.json'), finalTranscriptEnd, 5_000);
+    if (mcp.transcript.length === 0) await assertHostedMcpConnected(runner, thread.thread.id, skillEvidence.plugin_id);
     const safeEvidence = await readSafeEvidence(safeEvidencePath);
     reportTranscriptEnds.push(finalTranscriptEnd);
     const transcriptEvidence = { calls: mcp.transcript, dropped_calls: mcp.dropped_calls,
@@ -1625,8 +1878,12 @@ test('hosted Codex actually calls the installed Cursor MCP tools', { skip: proce
     assert.ok(Object.values(oracle.components).every((status) => ['pass', 'not_applicable', 'not_checked'].includes(status)),
       JSON.stringify(mismatchDiagnostics));
   } catch (error) {
-    const diagnostics = await hostedFailureDiagnostics(runner, hostedThreadId, hostedTurnId);
-    failure = new Error(`${String(error?.message || error).slice(0, 8_000)}; hosted_diagnostics=${JSON.stringify(diagnostics)}`, { cause: error });
+    failure = await captureHostedFailure(error, {
+      runner, threadId: hostedThreadId, turnId: hostedTurnId,
+      evidenceRoot: process.env.CURSOR_EVAL_EVIDENCE_ROOT || join(tmpdir(), 'cursor-eval-evidence'),
+      mcpPath: join(evidenceRoot, 'mcp.json'), safeEvidencePath,
+      scenarioId: outer.scenario.scenario_id,
+    });
   } finally {
     phase('cleanup-started');
     try { await assertEvaluatorUnchanged(evaluator); }

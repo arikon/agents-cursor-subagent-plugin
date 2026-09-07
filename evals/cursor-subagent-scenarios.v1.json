@@ -552,12 +552,12 @@
       "owner_requirements": [
         { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" }
       ],
-      "initial_input": "Проведи с Cursor первый длительный critic review материала changed.md: baseline digest BASELINE_SHA_001, snapshot UNCHANGED_BASELINE_BODY. Потребуй, чтобы Cursor включил точный маркер FIRST_CRITIC_OK в свой результат. Позже я пришлю изменение для повторной проверки.",
+      "initial_input": "Проведи через Cursor первый длительный critic review только переданного ниже полного inline snapshot материала, логически относящегося к changed.md. Это все данные для review: не ищи файлы в workspace и не используй tools для чтения workspace; передай Cursor то же ограничение. Передай Cursor snapshot дословно вместе с baseline digest BASELINE_SHA_001:\nSNAPSHOT_BEGIN\nUNCHANGED_BASELINE_BODY\nSNAPSHOT_END\nПотребуй, чтобы Cursor включил точный маркер FIRST_CRITIC_OK в свой результат. Позже я пришлю изменение для повторной проверки.",
       "prior_authority": { "kind": "none" },
       "program": {
         "kind": "fake-acp",
         "steps": [
-          { "type": "prompt-check", "step_id": "prompt-1", "required_fragments": ["BASELINE_SHA_001", "changed.md", "UNCHANGED_BASELINE_BODY", "FIRST_CRITIC_OK"], "forbidden_fragments": [] },
+          { "type": "prompt-check", "step_id": "prompt-1", "required_fragments": ["BASELINE_SHA_001", "UNCHANGED_BASELINE_BODY", "FIRST_CRITIC_OK"], "forbidden_fragments": [] },
           { "type": "terminal", "step_id": "terminal-1", "turn_status": "completed", "result_text": "Critic review of the frozen baseline completed: no findings. FIRST_CRITIC_OK", "delay_ms": 5000 },
           { "type": "prompt-check", "step_id": "prompt-2", "required_fragments": ["BASELINE_DIGEST=BASELINE_SHA_001", "CHANGED_PATHS=changed.md", "DELTA", "- old", "+ new", "SECOND_CRITIC_OK"], "forbidden_fragments": ["UNCHANGED_BASELINE_BODY"] },
           { "type": "terminal", "step_id": "terminal-2", "turn_status": "completed", "result_text": "Critic review of the bounded delta completed: no findings. SECOND_CRITIC_OK" }

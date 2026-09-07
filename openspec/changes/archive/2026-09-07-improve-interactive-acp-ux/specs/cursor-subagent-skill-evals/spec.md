@@ -250,8 +250,9 @@ ID provenance имеет здесь одного normative eval owner. Transcrip
 `{calls,dropped_calls}` либо recovery-capable
 `{calls,dropped_calls,turn_call_ranges,unexpected_input_requests}`. Legacy proof
 остаётся допустимым для обычной проверки, но не может доказать recovered call.
-В full proof `turn_call_ranges` MUST содержать ровно `followups.length + 1`
-closed `{start,end}` safe-integer ranges, которые без gaps или overlap образуют
+В full proof `turn_call_ranges` MUST содержать по одному closed `{start,end}`
+safe-integer range на admitted capture по owner «Eval transcript plumbing и
+process verdict». Ranges без gaps или overlap MUST образовывать
 полную последовательную partition `[0,calls.length)`; persisted
 `unexpected_input_requests` MUST быть nonnegative safe integer. Любая другая
 shape или неполная partition MUST быть отклонена как malformed transcript proof,
@@ -418,7 +419,8 @@ is an exact interaction-delivery marker and never evidence of reported outcome.
 
 Захват final и completeness proof определены в «Eval transcript plumbing и
 process verdict»; report assertions используют только этот admitted capture.
-Каждый model-behavior final MUST существовать и быть непустым даже при пустом
+Final каждого фактически начатого model-behavior Codex turn MUST существовать
+и быть непустым даже при пустом
 `report_checks`: `confirmed_missing` и complete empty
 final являются `agent_behavior_mismatch` компонента interaction delivery, а
 incomplete capture является `integration_failure`.
@@ -496,9 +498,11 @@ A pending or terminal anchor is exactly
 `{after_kind:"pending | terminal",after_step,input,granted_actions?}`
 and MUST reference a compatible program step. A timeout anchor is exactly
 `{after_kind:"wait-timeout",input}` and requires a preceding expected
-`turn.wait-timeout`. Harness MUST wait for the anchor, then for the exact current
-Codex turn to become terminal, capture that turn's final report, and only then
-start the follow-up as a distinct Codex user turn.
+`turn.wait-timeout`. Harness MUST wait until either the anchor or the exact
+current Codex turn becomes terminal. After an anchor it waits for and captures
+that exact turn before starting the follow-up as a distinct Codex user turn.
+If a completed terminal appears first, it MUST capture that turn and MUST NOT
+start the planned follow-up or any later turn.
 
 Harness still requires a close attempt for every allocated live session unless
 the fixture proves that its ACP child independently exited after a terminal
@@ -777,6 +781,23 @@ cover final extraction, including late/paginated items and a truly absent final.
 Only the isolated eval report is retained; credentials, request parameters,
 private history and raw provider prompts MUST NOT be added to diagnostics.
 
+Admitted captures MUST form a nonempty contiguous prefix `turn_index:1..N`
+containing every actually started Codex turn. A smaller count than
+`followups.length + 1` is admitted only after a fully observed early completed
+terminal and only for `agent_behavior_mismatch`; pass requires the full count.
+No capture may be invented for an unstarted turn. Missing recorder proof, an
+uncaptured started turn, malformed/gapped prefix or incomplete extraction
+remains `integration_failure` under the outcome classifier.
+
+#### Scenario: Early terminal before the required anchor
+- **WHEN** the exact current Codex turn completes before its required anchor
+- **THEN** harness captures its final, starts no follow-up, and publishes only
+the actual-turn prefix; a zero-call range requires a published recorder artifact
+and proof of the selected MCP server's live connection. With complete evidence
+and successful cleanup the missing planned continuation is
+`agent_behavior_mismatch`, while missing recorder/connection proof or an
+uncaptured started turn is `integration_failure`.
+
 #### Scenario: Transcript передаётся без реконструкции
 - **WHEN** harness передаёт trace в pure oracle
 - **THEN** trace сохраняет фактически observed порядок, IDs, outcomes и
@@ -905,9 +926,33 @@ validated proof MUST сохранить transcript/oracle/result fields и repor
 `materialized_scenario`, `adapter`, `evaluator`, closed `installed_payload`, `client` и
 `model`, без additional properties. Closure относится только к manifest
 subobject и MUST NOT переопределять существующий evidence envelope. При
-pre-proof failure durable evidence MUST NOT публиковаться: используется
+pre-proof failure validated durable evidence MUST NOT публиковаться: используется
 существующий `EvalResultV1` с `evidence_publication_status:"not_attempted"` и
 `evidence_ref:null`, без nullable variant manifest.
+
+На управляемом hosted failure harness MUST до cleanup попытаться атомарно
+сохранить один diagnostic-only sidecar с уникальным именем
+`hosted-failure-<UUID>.json` во внешний evidence root, переданный outer runner.
+Success не создаёт этот sidecar. Он сохраняет bounded снимки уже
+compact MCP trace и fake-ACP safe evidence, включая malformed/partial content,
+и bounded projections lifecycle, client/server request metadata. Каждый source
+сохраняет не больше 1,048,576 исходных bytes (при превышении — tail); полные
+размер/hash вычисляются потоково. Каждая metadata collection сохраняет не больше
+20 entries, IDs/methods/statuses — не больше 256 исходных UTF-8 bytes на string,
+error message — 8000, turn error — 4000, read/publication error — 1000;
+stderr tail — не больше 4000 characters. JSON escaping и UTF-8 replacement
+могут увеличить serialized размер; общий лимит файла 1 MiB не обещается. Raw request
+params, prompt/model text, provider payload и private history MUST NOT
+добавляться в эти projections. Для каждого source фиксируются status
+(`captured`, `truncated`, `missing` или `read_error`), доступные исходные
+bytes/hash и retained bytes/content; truncation обозначается явно.
+Ссылка path/bytes/hash MUST быть префиксом bounded failure diagnostics
+после child и outer fixture cleanup. Publication failure MUST быть явно
+отмечен, сохраняя исходную причину и все cleanup attempts. Abrupt process loss
+не гарантирует сохранения sidecar.
+Этот sidecar не является `EvidenceManifestV1`, не заполняет `evidence_ref`,
+не подтверждает acceptance и не меняет verdict, proof admission или cleanup
+precedence. Existing matrix artifact index владеет его переносимым хранением.
 
 Digest object MUST иметь ровно `{ "sha256": string, "bytes": integer }`;
 digest — 64 lowercase hexadecimal characters, `bytes` — positive safe integer
@@ -948,7 +993,7 @@ proof; outer MUST NOT повторять admission, выводить adapter sou
 затем сформировать окончательный `EvalResultV1` и только после обеих cleanup
 attempts опубликовать immutable evidence с final result только при полном
 validated proof. Cleanup failure MUST быть отражён в published failure evidence
-по существующему classifier precedence; pre-proof failure не публикует durable
+по существующему classifier precedence; pre-proof failure не публикует validated durable
 evidence. Publication failure после cleanup сохраняет существующую
 classification. Public bootstrap envelope MUST не изменяться. Missing или
 mismatched owned digest либо malformed proof MUST давать `integration_failure`
@@ -1003,7 +1048,8 @@ bindings не вводят all-lane source snapshot или registry.
 consumer. Он принимает один frozen input manifest, ровно один successful high
 diagnostic run, одну high series из трёх serial runs, одну medium series из трёх
 serial runs и один current successful coverage audit. До любой target mutation
-он MUST проверить один candidate во всех eval inputs; exact corpus-owned
+он MUST проверить один candidate во всех current eval inputs; явно одобренный
+historical high reference ниже проверяется против собственных inputs. Exact corpus-owned
 scenario-ID set без duplicates или omissions и admitted-corpus counts в каждом
 run; process code `0`, null signal, `eval_status:pass`, одну retained attempt,
 published evidence, successful cleanup и complete nonempty final capture
@@ -1021,6 +1067,27 @@ baseline/report/tasks и их опубликованные версии сохр
 Новый freeze использует только references от этого общего bundle root;
 предыдущие freeze artifacts остаются immutable historical evidence.
 
+По прямому указанию пользователя finalizer MAY сохранить ранее reproducibly
+green high three-run series как `preserved-reference`. Frozen manifest тогда
+содержит closed `high_reference` object с `source_freeze` и `source_corpus`:
+каждый является relative hashed regular-file reference `{path, bytes, sha256}`
+внутри общего bundle. `verification.high_reference_authorization` MUST ссылаться
+на сохранённое указание пользователя; finalizer проверяет наличие evidence,
+но не интерпретирует natural language как permission policy. Source freeze
+MUST быть валиден и не содержать nested `high_reference` или legacy
+`high_carry_forward`; legacy field в current freeze также отклоняется.
+Finalizer MUST проверить полные исходные high artifacts против исходного
+freeze и hash-bound corpus тем же matrix validator. Текущие diagnostic и medium
+MUST использовать один frozen candidate и одну concurrency. Исходный high
+сохраняет candidate, concurrency, counts и verdicts. JSON proof MUST обозначать
+`execution: preserved-reference`, `applies_to_current_candidate: false` и
+reference; Markdown MUST показывать оба candidate и обе concurrency и не
+утверждать current-high reproducibility. Fresh high проверяется на том же
+candidate/concurrency и имеет `applies_to_current_candidate: true`.
+Reference не доказывает совместимость разных evaluator/corpus/package inputs;
+compatibility engine не вводится. Дополнительные failed high runs остаются
+неизменными evidence и не становятся accepted runs.
+
 При полном proof finalizer MUST сначала вычислить и подготовить все outputs,
 затем детерминированно записать один closeout proof, additive JSON baseline и
 Markdown summary с сохранением всей истории, а также изменить только task
@@ -1031,6 +1098,14 @@ inputs идемпотентен, tasks записываются последни
 оставить корректный prefix, который идемпотентный повтор восстанавливает до
 полного набора. Finalizer не архивирует OpenSpec change, не создаёт generic
 workflow engine/registry и не выдаёт critic или architect approval.
+
+#### Scenario: Failure diagnostics переживают fixture cleanup
+- **WHEN** hosted execution завершается управляемой ошибкой до полного proof
+- **THEN** diagnostic-only sidecar остаётся доступен после обеих cleanup attempts,
+  partial/missing/unreadable sources имеют явный status, а bounded failure
+  diagnostics сохраняют его reference; forbidden raw fields не добавляются
+- **AND** ошибка публикации сохраняет исходную причину и не пропускает cleanup;
+  ни один из путей не превращает sidecar в accepted evidence
 
 #### Scenario: Evidence связано с точным payload
 - **WHEN** outer запускает выбранный scenario и получает child-result
@@ -1110,19 +1185,33 @@ Matrix MUST NOT автоматически повторять scenario посл�
 diagnostic gate; предыдущий failed run остаётся историческим evidence.
 Повторная оценка сохранённого trace допускается только как diagnostic analysis
 и MUST NOT изменять его исходный verdict или выдавать его за новый run. Новый
-baseline требует свежих high и medium three-run series frozen candidate.
+baseline требует свежих high и medium three-run series frozen candidate,
+кроме явно одобренного historical high reference из «Immutable evidence manifest».
 
 Candidate provenance и долговечное хранение определены в «Immutable evidence
 manifest»; этот execution policy использует тот же manifest без второй схемы.
-После diagnostic pass выполняются ровно high three-run series и затем medium
-three-run series одного candidate. Только после них deterministic finalizer из
+После diagnostic pass high three-run series (свежая либо указанный
+historical reference) и свежая medium three-run series являются независимыми
+gates. По явному указанию пользователя fresh high и current medium MAY
+выполняться параллельно на одном frozen candidate; внутри каждой конфигурации
+три runs остаются serial. Historical reference проверяется против собственных
+inputs и не является текущим запуском; его validation MAY перекрываться с medium.
+Только после них deterministic finalizer из
 того же owner requirement может выполнить closeout; он не повторяет runs и не
 создаёт отдельный approval gate.
 
 #### Scenario: Изменение oracle обесценивает прежний acceptance
 - **WHEN** skill и corpus неизменны, но oracle или adapter отличаются от candidate
 - **THEN** прежние counts остаются историческим evidence; новый candidate
-  проходит diagnostic и отдельный acceptance, без переноса зелёных runs
+  при публикации нового acceptance baseline проходит diagnostic и отдельный
+  acceptance, без переноса зелёных runs
+
+#### Scenario: Пользователь сохраняет ранее принятый high как reference
+- **WHEN** пользователь явно сохраняет historical high по
+  «Immutable evidence manifest» после изменения candidate
+- **THEN** исходные high artifacts проверяются против собственных inputs,
+  verdicts остаются неизменными и обозначаются `preserved-reference` без
+  применимости к текущему candidate; diagnostic и medium проходят свежие runs
 
 #### Scenario: Неудачная диагностика не запускает цикл baseline
 - **WHEN** полный diagnostic run содержит mismatch

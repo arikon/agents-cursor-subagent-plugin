@@ -30,3 +30,19 @@ CURSOR_EVAL_HOSTED_CODEX=1 \
 The runner emits `scenario_started`, periodic `scenario_progress`,
 `scenario_completed`, and `matrix_completed` JSONL events. The JSON output
 contains each scenario result and the frozen skill/corpus digests.
+
+<!-- cursor-skill-eval-closeout:start -->
+## Current acceptance
+
+- Current candidate: `bb0cccadadf7bb404a254cf5addee64f6f691b2cbc10e18ec3dc302b4b01d0a7`
+- High candidate: `7a1c57b26aab33ace9ee504e989b6f4e7c03aeaff3e236b97dec6c3cbf93274a`
+- Diagnostic: 26/26
+- High: 78/78 (preserved-reference, concurrency 4)
+- Current diagnostic/medium concurrency: 12
+- Medium: 78/78
+- Current-candidate medium functional acceptance: 100% for mechanics, evidence, and exact delivery.
+- Historical high functional acceptance: 100% for the referenced candidate; not applicable to the current candidate.
+- Coverage audit: passed, 92 classified, 0 unclassified
+- Free-form prose truth and completeness disclosure: `not_checked`.
+- Reported task outcome, outcome report, and safety disclosure: `not_checked`.
+<!-- cursor-skill-eval-closeout:end -->

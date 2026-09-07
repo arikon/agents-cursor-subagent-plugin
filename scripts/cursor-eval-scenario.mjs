@@ -662,6 +662,7 @@ function reportChecksFor(scenario) {
 function reportEvaluation(scenario, capturedFinals) {
   if (!Array.isArray(capturedFinals)) return { invalid: true, diagnostics: [], reportedTaskOutcome: 'not_checked' };
   const finals = new Map();
+  const expectedFinals = scenario.followups.length + 1;
   let bytes = 0;
   for (const final of capturedFinals) {
     if (!final || typeof final !== 'object' || Array.isArray(final)
@@ -675,10 +676,16 @@ function reportEvaluation(scenario, capturedFinals) {
     } else return { invalid: true, diagnostics: [], reportedTaskOutcome: 'not_checked' };
     finals.set(final.turn_index, final);
   }
-  if (finals.size !== scenario.followups.length + 1) return { invalid: true, diagnostics: [], reportedTaskOutcome: 'not_checked' };
+  if (finals.size === 0 || [...finals.keys()].some((turnIndex, index) => turnIndex !== index + 1)) {
+    return { invalid: true, diagnostics: [], reportedTaskOutcome: 'not_checked' };
+  }
+  if (finals.size < expectedFinals && finals.get(finals.size)?.turn_status !== 'completed') {
+    return { invalid: true, diagnostics: [], reportedTaskOutcome: 'not_checked' };
+  }
   if (bytes > 1_048_576) return { invalid: true, diagnostics: [], reportedTaskOutcome: 'not_checked' };
   const checks = reportChecksFor(scenario);
-  const deliveryMissing = [...finals.values()].some((final) => final.completeness === 'confirmed_missing'
+  const deliveryMissing = finals.size !== expectedFinals
+    || [...finals.values()].some((final) => final.completeness === 'confirmed_missing'
     || final.text.trim().length === 0);
   const diagnostics = checks.map((check) => {
     const final = finals.get(check.turn_index);
@@ -816,12 +823,6 @@ export function evaluateScenario(scenario, { trace = [], callbacks = [], effects
   const add = (code) => { if (!mismatches.includes(code)) mismatches.push(code); };
   if (!Array.isArray(trace) || !Array.isArray(callbacks) || !Array.isArray(effects)) throw new TypeError('oracle observations must be arrays');
   const reports = reportEvaluation(scenario, capturedFinals);
-  const recoveredCalls = findRecoveredCalls(transcript, scenario.followups.length + 1);
-  const recoveredIndices = new Set(recoveredCalls.map(({ failed_call_index: index }) => index));
-  if (transcript?.calls?.some((call, index) => call?.response?.ok === false
-    && (['unknown_session', 'unknown_turn'].includes(call.response.error_code)
-      || (SESSION_LOOKUP_TOOLS.has(call.tool) && LOCAL_RECOVERY_ERRORS.has(call.response.error_code)))
-    && !recoveredIndices.has(index + 1))) add('unrecovered-call');
   if (reports.invalid) {
     return {
       assertion_outcome: 'not_observed',
@@ -831,7 +832,7 @@ export function evaluateScenario(scenario, { trace = [], callbacks = [], effects
       failure_stage: 'inspection',
       error_code: 'capture_invalid',
       mismatches: ['invalid-report-evidence'],
-      recovered_calls: recoveredCalls,
+      recovered_calls: [],
       components: {
         evidence_admission: 'fail', execution_trace: 'not_applicable', continuation_handoff: 'not_applicable',
         outcome_report: 'not_checked', interaction_report: 'not_applicable', safety_disclosure: 'not_checked',
@@ -839,6 +840,12 @@ export function evaluateScenario(scenario, { trace = [], callbacks = [], effects
       report_checks: reports.diagnostics,
     };
   }
+  const recoveredCalls = findRecoveredCalls(transcript, capturedFinals.length);
+  const recoveredIndices = new Set(recoveredCalls.map(({ failed_call_index: index }) => index));
+  if (transcript?.calls?.some((call, index) => call?.response?.ok === false
+    && (['unknown_session', 'unknown_turn'].includes(call.response.error_code)
+      || (SESSION_LOOKUP_TOOLS.has(call.tool) && LOCAL_RECOVERY_ERRORS.has(call.response.error_code)))
+    && !recoveredIndices.has(index + 1))) add('unrecovered-call');
   const planned = new Map(scenario.program.steps.map((step) => [step.step_id, step]));
   const pendingSeen = new Set();
   const pendingRequestIds = new Map();
