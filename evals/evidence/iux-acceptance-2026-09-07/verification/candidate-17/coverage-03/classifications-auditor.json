@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 152,
+      "occurrence": 2,
+      "classification": "unreachable_defensive",
+      "disposition": "After the raw report has the exact source count and every entry has passed unique known-source mapping, mapped.size must equal sources.files.length; this defensive completeness failure cannot execute."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 370,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "Every evidence destination is a nonempty basename or fixed nonempty bundle filename inside outputDir, so relative(outputDir, path) cannot be empty and the basename fallback cannot execute."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 426,
+      "occurrence": 2,
+      "classification": "unreachable_defensive",
+      "disposition": "strictArtifactRef admits basename-only refs, therefore resolve(artifactRoot, ref) is lexically inside artifactRoot and this defensive escape rejection cannot execute."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 429,
+      "occurrence": 3,
+      "classification": "unreachable_defensive",
+      "disposition": "readRegular rejects symlinks and non-files before canonical containment; a basename child regular file resolves inside canonicalArtifactRoot, so this defensive canonical escape rejection cannot execute."
+    }
+  ]
+}

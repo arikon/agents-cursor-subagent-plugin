@@ -1,0 +1,135 @@
+{
+  "group": "unit",
+  "command": [
+    "unit"
+  ],
+  "controlled_load": null,
+  "runs": [
+    {
+      "index": 1,
+      "exit_code": 0,
+      "source_digest": "980abcf4220870e784232ccbf9a68ecef5efb56fbe09c89ca0f173138a9fa079",
+      "source_unchanged": true,
+      "output": "PASS unit: 64271ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-32-25-349Z-unit-3d2c0aee-0e6b-45fd-8e8f-1788cecd78fb\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-32-25-349Z-unit-3d2c0aee-0e6b-45fd-8e8f-1788cecd78fb",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 64271,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 556,
+            "failed": 0,
+            "passed": 555,
+            "cancelled": 0,
+            "skipped": 1,
+            "todo": 0,
+            "topLevel": 481,
+            "suites": 0
+          },
+          "duration_ms": 64138.000083
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "durable_artifact_dir": "unit/run-01"
+    },
+    {
+      "index": 2,
+      "exit_code": 0,
+      "source_digest": "980abcf4220870e784232ccbf9a68ecef5efb56fbe09c89ca0f173138a9fa079",
+      "source_unchanged": true,
+      "output": "PASS unit: 55599ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-33-29-698Z-unit-07784cd4-5e79-44af-a940-2f38ce3f8e00\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-33-29-698Z-unit-07784cd4-5e79-44af-a940-2f38ce3f8e00",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 55599,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 556,
+            "failed": 0,
+            "passed": 555,
+            "cancelled": 0,
+            "skipped": 1,
+            "todo": 0,
+            "topLevel": 481,
+            "suites": 0
+          },
+          "duration_ms": 55519.56975
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "durable_artifact_dir": "unit/run-02"
+    },
+    {
+      "index": 3,
+      "exit_code": 0,
+      "source_digest": "980abcf4220870e784232ccbf9a68ecef5efb56fbe09c89ca0f173138a9fa079",
+      "source_unchanged": true,
+      "output": "PASS unit: 53637ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-34-25-360Z-unit-5570bde9-402c-45c4-b74f-89e9bd0ccb82\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-34-25-360Z-unit-5570bde9-402c-45c4-b74f-89e9bd0ccb82",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 53637,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 556,
+            "failed": 0,
+            "passed": 555,
+            "cancelled": 0,
+            "skipped": 1,
+            "todo": 0,
+            "topLevel": 481,
+            "suites": 0
+          },
+          "duration_ms": 53567.532417
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "durable_artifact_dir": "unit/run-03"
+    }
+  ]
+}

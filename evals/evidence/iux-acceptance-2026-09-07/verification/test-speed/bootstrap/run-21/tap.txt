@@ -1,0 +1,58 @@
+TAP version 13
+# Subtest: fake adapter CLI and in-process runner have normalized outcome parity
+ok 1 - fake adapter CLI and in-process runner have normalized outcome parity
+  ---
+  duration_ms: 324.745667
+  type: 'test'
+  ...
+# Subtest: each backup cleanup deletion boundary is fail-closed as cleanup_required
+ok 2 - each backup cleanup deletion boundary is fail-closed as cleanup_required
+  ---
+  duration_ms: 245.919125
+  type: 'test'
+  ...
+# Subtest: rejected and timed-out compensation commands classify install, update and uninstall by observed state
+ok 3 - rejected and timed-out compensation commands classify install, update and uninstall by observed state
+  ---
+  duration_ms: 244.000625
+  type: 'test'
+  ...
+# Subtest: reread failures preserve every recoverable artifact and expose the observed lifecycle state
+ok 4 - reread failures preserve every recoverable artifact and expose the observed lifecycle state
+  ---
+  duration_ms: 894.39825
+  type: 'test'
+  ...
+# Subtest: uncertain remove outcomes compensate their observed delta and never advance lifecycle
+ok 5 - uncertain remove outcomes compensate their observed delta and never advance lifecycle
+  ---
+  duration_ms: 99.908291
+  type: 'test'
+  ...
+# Subtest: reported successful no-op mutations do not advance their lifecycle
+ok 6 - reported successful no-op mutations do not advance their lifecycle
+  ---
+  duration_ms: 87.876584
+  type: 'test'
+  ...
+# Subtest: update and uninstall never add compensation over foreign, duplicate or coupled observed tuples
+ok 7 - update and uninstall never add compensation over foreign, duplicate or coupled observed tuples
+  ---
+  duration_ms: 107.435291
+  type: 'test'
+  ...
+# Subtest: pre-commit publication rename faults compensate install and update while uninstall commit fault is cleanup_required
+ok 8 - pre-commit publication rename faults compensate install and update while uninstall commit fault is cleanup_required
+  ---
+  duration_ms: 208.751125
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2286.975625

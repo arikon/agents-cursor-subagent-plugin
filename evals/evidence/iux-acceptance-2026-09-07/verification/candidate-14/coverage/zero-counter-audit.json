@@ -1,0 +1,893 @@
+{
+  "schema_version": 1,
+  "coverage_result": "result.json",
+  "coverage_event": "last test:coverage event in failures.jsonl",
+  "outcome": {
+    "verdict": "passed",
+    "tests": {
+      "total": 549,
+      "passed": 548,
+      "skipped": 1
+    },
+    "duration_ms": 88798,
+    "metrics": {
+      "totalLineCount": 4915,
+      "totalBranchCount": 3815,
+      "totalFunctionCount": 676,
+      "coveredLineCount": 4909,
+      "coveredBranchCount": 3731,
+      "coveredFunctionCount": 675,
+      "coveredLinePercent": 99.87792472024415,
+      "coveredBranchPercent": 97.79816513761467,
+      "coveredFunctionPercent": 99.85207100591717
+    }
+  },
+  "manifest": {
+    "expected": 14,
+    "reported": 14,
+    "diagnostics": [],
+    "source_digests": [
+      {
+        "path": "scripts/check-openspec-semantics.mjs",
+        "bytes": 27928,
+        "sha256": "0c7c04d0fa8adda37086e316dcae685e87a235352b9bdd80a2257e9f94e80a53"
+      },
+      {
+        "path": "scripts/codex-app-server-client.mjs",
+        "bytes": 14060,
+        "sha256": "f5fa4850c7228aa9ed4b4a0661f2d1dbabae2ffe95ec86b98e3e0ffc36cf4200"
+      },
+      {
+        "path": "scripts/cursor-eval-scenario.mjs",
+        "bytes": 61423,
+        "sha256": "1669d7329b355bcd64ad7170267ca67ace3c2f695d221c24a6d047b75ef88df2"
+      },
+      {
+        "path": "scripts/cursor-skill-eval.mjs",
+        "bytes": 9672,
+        "sha256": "ac4e06e7cfc0fd4f9fed27f019ccdcffb1c1c959975ba69385ccb0222eed2562"
+      },
+      {
+        "path": "scripts/cursor-subagent-bootstrap.mjs",
+        "bytes": 52347,
+        "sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1"
+      },
+      {
+        "path": "scripts/cursor-subagent-mcp.mjs",
+        "bytes": 65736,
+        "sha256": "39b74389bea16041853ef6207544c7ddb8581902bd7226b24ec5b8a4c9affb21"
+      },
+      {
+        "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+        "bytes": 14828,
+        "sha256": "90d7b21b5bc7fddbb1450b4ee8b6237181cf15fc9c44f7a9116900b1c81a76f7"
+      },
+      {
+        "path": "scripts/eval/run-cursor-skill-eval-suite.mjs",
+        "bytes": 5041,
+        "sha256": "9c7369d89ad636e59d554e3e684d1923b045cc33ea2d2d2ff572049deff3fbcf"
+      },
+      {
+        "path": "scripts/node-test-reporter-v22.mjs",
+        "bytes": 834,
+        "sha256": "51ac5c6e8a019c83e4deb101b209146c3e953069e42a593d862a45b1ade4834f"
+      },
+      {
+        "path": "scripts/openspec-semantic-registry.mjs",
+        "bytes": 13369,
+        "sha256": "59d932f6eee2ba5ee9bf277a06f4893c06774fb02fc9390d91902c027bfccb7b"
+      },
+      {
+        "path": "scripts/recording-mcp-proxy.mjs",
+        "bytes": 16155,
+        "sha256": "96adcd918892da9295ee1c5cf860460dbbf168b5413f4a0a2c99a4370c12c28a"
+      },
+      {
+        "path": "scripts/run-cursor-skill-eval.mjs",
+        "bytes": 23739,
+        "sha256": "e2df3b1778ebbae0e24578f23d6128aa8f4662e0fbd5c96c039addc818cf4c25"
+      },
+      {
+        "path": "scripts/run-node-tests.mjs",
+        "bytes": 18871,
+        "sha256": "bd2a536556ce0c224da10824184e540170f992faab84bdb71a4d6ab20540716d"
+      },
+      {
+        "path": "scripts/run-unit-coverage.mjs",
+        "bytes": 712,
+        "sha256": "24c50d0b2f517da01e8fb1288d38d267577b48bf2f4e8a3530153e3e1cbad30b"
+      }
+    ]
+  },
+  "zero_counter_totals": {
+    "lines": 6,
+    "branches_raw": 86,
+    "functions": 1,
+    "uncovered_branch_denominator": 84,
+    "note": "Two raw zero branch counters are outside the aggregate branch denominator because adjacent Node coverage exclusions remove their executable lines while Node still emits raw branch entries."
+  },
+  "classifications_by_count": {
+    "external_hosted_gate": 1,
+    "observable_contract_already_owned": 39,
+    "realistic_failure_already_owned": 16,
+    "unreachable_defensive": 37
+  },
+  "meaningful_uncovered": [],
+  "dead_code": [],
+  "external_gate": [
+    "scripts/eval/run-cursor-skill-eval-matrix.mjs:24 default hosted driver"
+  ],
+  "evidence_files": [
+    {
+      "path": "failures.jsonl",
+      "bytes": 245107,
+      "sha256": "608cb85d513c7f59bd5cb591add074abb5fed2b2e1b83309661039a2871d65cd"
+    },
+    {
+      "path": "result.json",
+      "bytes": 1824,
+      "sha256": "7a78e18d9bedf3508671f64412a50160efc2d21c1658365327c64f4ba5e4c153"
+    },
+    {
+      "path": "stderr.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tap.txt",
+      "bytes": 116443,
+      "sha256": "e4dddc2c6f204afbcb7b84a826fa190888475cb385a0db37b2f8ca7151d214b4"
+    },
+    {
+      "path": "zero-counters.json",
+      "bytes": 7491,
+      "sha256": "f4668c27661cc63af6bf0b5e5c230d613c46c7d098fde62b35aaabc5a99db6a6"
+    }
+  ],
+  "classifications": [
+    {
+      "path": "scripts/check-openspec-semantics.mjs",
+      "metric": "branches",
+      "line": 551,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "import-only coverage cannot take the CLI entry guard; the foreground semantic command owns this entrypoint"
+    },
+    {
+      "path": "scripts/check-openspec-semantics.mjs",
+      "metric": "branches",
+      "line": 146,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "delta spec.md disappears after its capability directory was enumerated; structural validation and immutable fixtures own the admitted flow"
+    },
+    {
+      "path": "scripts/codex-app-server-client.mjs",
+      "metric": "branches",
+      "line": 152,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "deadline polling returns the latest bounded capture; absent, nonterminal and late-final scenarios own the outcome"
+    },
+    {
+      "path": "scripts/codex-app-server-client.mjs",
+      "metric": "branches",
+      "line": 162,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "turn-page deadline exhaustion maps to capture_timeout and is covered by the positioned slow-page test"
+    },
+    {
+      "path": "scripts/codex-app-server-client.mjs",
+      "metric": "branches",
+      "line": 191,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "item-page deadline exhaustion maps to capture_timeout and is covered by the positioned slow-page test"
+    },
+    {
+      "path": "scripts/cursor-eval-scenario.mjs",
+      "metric": "branches",
+      "line": 451,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "inject-mode-protocol-error-once and reject-mode require mutually exclusive single fixture predicates and an earlier per-fault admission check rejects their conjunction"
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "metric": "branches",
+      "line": 24,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "bounded callers provide normalized strings"
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "metric": "branches",
+      "line": 175,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "second kill is an idempotence race; first-reason and simultaneous stdout/stderr overflow tests own the single terminal outcome"
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "metric": "branches",
+      "line": 387,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "canonical parent and managed-root topology checks reject the noncanonical directory before this operand can decide"
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "metric": "branches",
+      "line": 401,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "preflight topology failures have BootstrapError code and message"
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "metric": "branches",
+      "line": 437,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "versioned MCP adapter always supplies its status message"
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "metric": "branches",
+      "line": 446,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "versioned agent adapter always supplies its status message"
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "metric": "branches",
+      "line": 497,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "published recovery envelopes after adapter mutation always have a journal record"
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "metric": "branches",
+      "line": 673,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "parseArgs throws BootstrapError with exitCode and code; both fallback operands are closed"
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "metric": "branches",
+      "line": 673,
+      "occurrence": 2,
+      "classification": "unreachable_defensive",
+      "disposition": "parseArgs throws BootstrapError with exitCode and code; both fallback operands are closed"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 26,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "closed provenance or guarded private race cannot be selected in the admitted flow; neighboring public failure behavior remains tested"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 83,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 85,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 98,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 130,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 133,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 141,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 143,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 145,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 146,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 152,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 162,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 165,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 166,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 168,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 171,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "closed provenance or guarded private race cannot be selected in the admitted flow; neighboring public failure behavior remains tested"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 177,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 183,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 185,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 186,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 189,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 221,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 233,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 242,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 243,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 271,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "closed provenance or guarded private race cannot be selected in the admitted flow; neighboring public failure behavior remains tested"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 294,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 299,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 300,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 300,
+      "occurrence": 2,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 309,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 310,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 325,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 447,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "transport, callback or ordering outcome is covered by injected EPIPE/closed-transport/late-callback/exactly-once behavior tests"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 461,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "closed provenance or guarded private race cannot be selected in the admitted flow; neighboring public failure behavior remains tested"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 465,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "closed provenance or guarded private race cannot be selected in the admitted flow; neighboring public failure behavior remains tested"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 534,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "transport, callback or ordering outcome is covered by injected EPIPE/closed-transport/late-callback/exactly-once behavior tests"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 538,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "transport, callback or ordering outcome is covered by injected EPIPE/closed-transport/late-callback/exactly-once behavior tests"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 545,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "transport, callback or ordering outcome is covered by injected EPIPE/closed-transport/late-callback/exactly-once behavior tests"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 571,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "ACP frameBytes equals fsBytes, so JSON framing rejects an above-cap write first; adjacent narrow coverage exclusion documents this"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 573,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "transport, callback or ordering outcome is covered by injected EPIPE/closed-transport/late-callback/exactly-once behavior tests"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 611,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "closed provenance or guarded private race cannot be selected in the admitted flow; neighboring public failure behavior remains tested"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 616,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "synchronous response settlement preserves wire order; late result cannot re-enter complete after terminal ownership changed, and same-batch/late-result tests prove immutability"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 624,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "public answer dispatch validates and claims the pending request before SessionRecord.answer"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 628,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "transport, callback or ordering outcome is covered by injected EPIPE/closed-transport/late-callback/exactly-once behavior tests"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 629,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "transport, callback or ordering outcome is covered by injected EPIPE/closed-transport/late-callback/exactly-once behavior tests"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 649,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "public terminal owners guard active state; repeated terminalization is an idempotence defense tested through same-batch and cancellation races"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 653,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "transport, callback or ordering outcome is covered by injected EPIPE/closed-transport/late-callback/exactly-once behavior tests"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 684,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 684,
+      "occurrence": 2,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 685,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 698,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 701,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 786,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 225,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 228,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "public admission, projection, lifecycle, capacity or wait contract is covered by runtime, transport and golden-fixture behavior tests; this is a short-circuit or construction operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 454,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "closed provenance or guarded private race cannot be selected in the admitted flow; neighboring public failure behavior remains tested"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "metric": "branches",
+      "line": 451,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "transport, callback or ordering outcome is covered by injected EPIPE/closed-transport/late-callback/exactly-once behavior tests"
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "metric": "lines",
+      "line": 142,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "bounded fallback after validating a locally synthesized failure result"
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "metric": "lines",
+      "line": 143,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "bounded fallback after validating a locally synthesized failure result"
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "metric": "lines",
+      "line": 144,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "bounded fallback after validating a locally synthesized failure result"
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "metric": "lines",
+      "line": 145,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "bounded fallback after validating a locally synthesized failure result"
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "metric": "lines",
+      "line": 146,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "bounded fallback after validating a locally synthesized failure result"
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "metric": "lines",
+      "line": 235,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "owned artifact publishers create regular files and directories only"
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "metric": "branches",
+      "line": 24,
+      "occurrence": 1,
+      "classification": "external_hosted_gate",
+      "disposition": "default production evaluator driver is exercised by the authenticated hosted matrix, separate from credential-free unit coverage"
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "metric": "branches",
+      "line": 141,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "bounded fallback after validating a locally synthesized failure result"
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "metric": "branches",
+      "line": 158,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "empty active-child set at interrupt delivery is a scheduler arm of the tested single exit-130 interruption contract"
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "metric": "branches",
+      "line": 192,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "admitted model corpus is nonempty; empty-corpus aggregate remains fail closed"
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "metric": "branches",
+      "line": 234,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "owned artifact publishers create regular files and directories only"
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "metric": "branches",
+      "line": 45,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "compactPending is called only after Array.isArray"
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "metric": "branches",
+      "line": 187,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "missing handshake variables short-circuit earlier; relative program rejection owns the observable boundary"
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "metric": "branches",
+      "line": 200,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "queued output waiters resolve at the tested output-flush boundary"
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "metric": "branches",
+      "line": 211,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "child-close waiting for pending output is covered by real backpressure tests; exact callback order is scheduler-dependent"
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "metric": "branches",
+      "line": 214,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "repeat failProxy is an idempotence guard after input destruction and child stop"
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "metric": "branches",
+      "line": 234,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "repeat stopChild is an idempotence guard"
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "metric": "branches",
+      "line": 278,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "late stdin data after failure is discarded; frame-failure tests own absence of partial evidence"
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "metric": "branches",
+      "line": 290,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "late stdout data after failure is discarded; frame-failure tests own absence of partial evidence"
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "metric": "functions",
+      "line": 211,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "promise resolver belongs to the tested output-flush boundary; Node scheduling completed the write callback first in this snapshot"
+    }
+  ]
+}

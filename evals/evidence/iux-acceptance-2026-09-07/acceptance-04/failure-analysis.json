@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "source": "acceptance-04/high.json",
+  "source_sha256": "1fee45e5bbb08d5aed30927d93f2e51f2f9f3477cffdea3c7cfb81d14b8b3bec",
+  "counts": {
+    "total": 78,
+    "pass": 76,
+    "agent_behavior_mismatch": 2,
+    "integration_failure": 0,
+    "skipped": 0
+  },
+  "runs": [
+    {
+      "total": 26,
+      "pass": 26,
+      "agent_behavior_mismatch": 0,
+      "integration_failure": 0,
+      "skipped": 0
+    },
+    {
+      "total": 26,
+      "pass": 25,
+      "agent_behavior_mismatch": 1,
+      "integration_failure": 0,
+      "skipped": 0
+    },
+    {
+      "total": 26,
+      "pass": 25,
+      "agent_behavior_mismatch": 1,
+      "integration_failure": 0,
+      "skipped": 0
+    }
+  ],
+  "immutable_original_verdict": true,
+  "acceptance_evidence": false,
+  "failures": [
+    {
+      "serial_index": 2,
+      "scenario_id": "model-file-review",
+      "evidence_ref": "high.json.artifacts/serial-2/model-file-review-attempt-1/evidence/27b3b586-c539-470b-be82-694bc438ecd9.json",
+      "classification": "real_agent_behavior_mismatch",
+      "diagnosis": "truncated runtime session ID was followed by resume and a new prompt instead of same-call correction",
+      "repair": "existing skill workflow clarified; oracle and corpus unchanged"
+    },
+    {
+      "serial_index": 3,
+      "scenario_id": "model-question",
+      "evidence_ref": "high.json.artifacts/serial-3/model-question-attempt-1/evidence/d501708e-f175-4ba3-8438-b15de7212979.json",
+      "classification": "real_agent_behavior_mismatch",
+      "diagnosis": "successful answer last_event_id=6 was followed by wait after_event_id=4",
+      "repair": "existing skill workflow clarified; oracle and corpus unchanged"
+    }
+  ]
+}

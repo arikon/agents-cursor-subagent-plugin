@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { spawn } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { createWriteStream } from 'node:fs';
 import { mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -15,12 +15,14 @@ const unitTests = Object.freeze([
   'tests/bootstrap.test.mjs', 'tests/check-openspec-semantics.test.mjs', 'tests/claude-marketplace-canary.test.mjs', 'tests/codex-app-server-client.test.mjs',
   'tests/cursor-skill-eval.test.mjs', 'tests/eval-matrix.test.mjs', 'tests/facade.test.mjs', 'tests/mcp-smoke.test.mjs', 'tests/mcp-transport.test.mjs',
   'tests/node-test-reporter-v22.test.mjs', 'tests/run-cursor-skill-eval.test.mjs', 'tests/runtime.test.mjs', 'tests/node-test-supervisor.test.mjs',
+  'tests/coverage-audit.test.mjs', 'tests/eval-closeout.test.mjs',
 ]);
 const productSources = Object.freeze([
   'scripts/check-openspec-semantics.mjs', 'scripts/codex-app-server-client.mjs', 'scripts/cursor-eval-scenario.mjs', 'scripts/cursor-skill-eval.mjs', 'scripts/openspec-semantic-registry.mjs',
   'scripts/cursor-subagent-bootstrap.mjs', 'scripts/cursor-subagent-mcp.mjs', 'scripts/node-test-reporter-v22.mjs',
   'scripts/recording-mcp-proxy.mjs', 'scripts/run-cursor-skill-eval.mjs', 'scripts/run-node-tests.mjs', 'scripts/run-unit-coverage.mjs',
   'scripts/eval/run-cursor-skill-eval-matrix.mjs', 'scripts/eval/run-cursor-skill-eval-suite.mjs',
+  'scripts/audit-node-coverage.mjs', 'scripts/eval/finalize-cursor-skill-eval.mjs',
 ]);
 const coverageThresholds = Object.freeze({ lines: 90, branches: 90, functions: 90 });
 const focusedTestPath = /^tests\/[A-Za-z0-9_.-]+\.test\.mjs$/;
@@ -73,6 +75,15 @@ async function discoverProductSources() {
     .filter((entry) => entry.isFile() && entry.name.endsWith('.mjs'))
     .map((entry) => `scripts/eval/${entry.name}`);
   return [...topLevel, ...evalSources].sort();
+}
+async function snapshotCoverageSources(load) {
+  const files = await Promise.all([...productSources].sort().map(async (path) => {
+    const data = await load(join(root, path));
+    return { path, bytes: data.length, sha256: createHash('sha256').update(data).digest('hex') };
+  }));
+  const data = Buffer.from(JSON.stringify(files));
+  return { algorithm: 'sha256', files,
+    digest: { bytes: data.length, sha256: createHash('sha256').update(data).digest('hex') } };
 }
 function coverageGate(summary, discoveredSources) {
   const diagnostics = [];
@@ -188,6 +199,14 @@ export async function runSupervisor({ laneName, tests = null, testNamePattern = 
   }
   if (testNamePattern !== null) args.push(`--test-name-pattern=${testNamePattern}`);
   args.push(...(tests || lane.tests).map((test) => join(root, test)));
+  const loadSource = dependencies.readFile || readFile;
+  let sources = null;
+  if (lane.coverage) {
+    try { sources = { ...await snapshotCoverageSources(loadSource), stable: false }; }
+    catch (error) {
+      return earlyFailure('coverage_gate', { stage: 'coverage', cause: 'source_snapshot_error', error: errorRecord(error) });
+    }
+  }
   let child;
   try { child = spawnProcess(process.execPath, args, { cwd: root, env: childEnv, stdio: ['ignore', 'ignore', 'pipe'], detached: true }); }
   catch (error) {
@@ -209,6 +228,16 @@ export async function runSupervisor({ laneName, tests = null, testNamePattern = 
   process.once('SIGINT', onInterrupt); process.once('SIGTERM', onInterrupt);
   const closed = await new Promise((resolveClose) => child.once('close', (code, signal) => resolveClose({ code, signal })));
   clearTimeout(deadline); if (killTimer) clearTimeout(killTimer); process.removeListener('SIGINT', onInterrupt); process.removeListener('SIGTERM', onInterrupt);
+  let sourceDiagnostic = null;
+  if (lane.coverage) {
+    try {
+      const after = await snapshotCoverageSources(loadSource);
+      sources.stable = JSON.stringify(sources.files) === JSON.stringify(after.files);
+      if (!sources.stable) sourceDiagnostic = { code: 'coverage_source_drift' };
+    } catch (error) {
+      sourceDiagnostic = { code: 'coverage_source_snapshot_error', error: errorRecord(error) };
+    }
+  }
   try { await streamDone(stderr); } catch (error) { latch(state, 'stream_error', 'stream', error); }
   let report = { summary: null, executedTests: null, failures: [], coverage: null, complete: false };
   try { report = await readReporter(paths.failures); }
@@ -217,15 +246,26 @@ export async function runSupervisor({ laneName, tests = null, testNamePattern = 
   const gate = lane.coverage
     ? coverageGate(report.coverage, await (dependencies.discoverProductSources || discoverProductSources)())
     : null;
+  if (sourceDiagnostic) { gate.diagnostics.push(sourceDiagnostic); gate.passed = false; }
   if (!state.terminalCause && lane.coverage && !gate.passed) latch(state, 'coverage_gate');
   if (!state.terminalCause && closed.signal) latch(state, 'child_signal');
   if (!state.terminalCause && closed.code !== 0) latch(state, 'exit_nonzero');
+  let artifactDigests = null;
+  if (lane.coverage && !state.terminalCause) {
+    try {
+      artifactDigests = Object.fromEntries(await Promise.all(['failures', 'tap', 'stderr'].map(async (name) => {
+        const bytes = await readFile(paths[name]);
+        return [name, { bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') }];
+      })));
+    } catch (error) { latch(state, 'artifact_error', 'artifact', error); }
+  }
   const terminalCause = state.terminalCause || 'close_0';
   let verdict = state.infrastructure ? 'runner_error' : state.timedOut ? 'timed_out' : state.interrupted ? 'interrupted' : closed.code === 0 && !closed.signal ? 'passed' : 'failed';
   if (terminalCause === 'coverage_gate' || terminalCause === 'no_tests') verdict = 'failed';
   const result = { schema_version: 1, lane: laneName, verdict, terminal_cause: terminalCause, child: closed, duration_ms: now() - startedAt,
     tests: report.summary, coverage: lane.coverage ? { enabled: true, manifest: productSources, reported: gate.reported, metrics: gate.metrics,
-      thresholds: coverageThresholds, diagnostics: gate.diagnostics, denominator_classifications: gate.denominatorClassifications } : null,
+      thresholds: coverageThresholds, diagnostics: gate.diagnostics, denominator_classifications: gate.denominatorClassifications,
+      sources, artifact_digests: artifactDigests } : null,
     artifacts: relativePaths(dir, paths), infrastructure: state.infrastructure };
   const published = await publish(result);
   return { ...published, failureDetails: report.failures.map(formatFailure) };

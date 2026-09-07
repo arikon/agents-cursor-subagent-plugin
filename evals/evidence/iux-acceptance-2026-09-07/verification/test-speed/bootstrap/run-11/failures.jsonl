@@ -1,0 +1,2 @@
+{"type":"test:summary","data":{"success":true,"counts":{"tests":8,"failed":0,"passed":8,"cancelled":0,"skipped":0,"todo":0,"topLevel":8,"suites":0},"duration_ms":2186.9435,"file":"/Users/arikon/projects/codex-cursor-subagent-plugin/tests/bootstrap.test.mjs"}}
+{"type":"test:summary","data":{"success":true,"counts":{"tests":8,"failed":0,"passed":8,"cancelled":0,"skipped":0,"todo":0,"topLevel":8,"suites":0},"duration_ms":2248.686375}}

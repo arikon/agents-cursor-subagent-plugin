@@ -1,0 +1,27 @@
+TAP version 13
+# [hosted-eval] scenario-loaded
+# [hosted-eval] auth-resolved
+# [hosted-eval] package-installed
+# [hosted-eval] app-server-initialize
+# [hosted-eval] app-server-initialized
+# [hosted-eval] skill-loaded
+# [hosted-eval] thread-started
+# [hosted-eval] turn-started
+# [hosted-eval] terminal-observed
+# [hosted-eval] child-result-built
+# [hosted-eval] cleanup-started
+# Subtest: hosted Codex actually calls the installed Cursor MCP tools
+ok 1 - hosted Codex actually calls the installed Cursor MCP tools
+  ---
+  duration_ms: 69056.271583
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 69141.008459

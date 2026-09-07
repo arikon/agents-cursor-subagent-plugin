@@ -1,0 +1,1063 @@
+{
+  "group": "bootstrap",
+  "command": [
+    "unit",
+    "--test",
+    "tests/bootstrap.test.mjs",
+    "--test-name-pattern",
+    "normalized outcome parity|each backup cleanup deletion boundary|rejected and timed-out compensation|reread failures preserve every|uncertain remove outcomes|reported successful no-op|never add compensation over|pre-commit publication rename faults"
+  ],
+  "controlled_load": null,
+  "runs": [
+    {
+      "index": 1,
+      "exit_code": 0,
+      "source_digest": "93e62e042eb8f63e473ed1e6e966276d5be721da00387a907a35292b024b8616",
+      "source_unchanged": true,
+      "output": "PASS unit: 2398ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-29-48-281Z-unit-186eedd3-2640-4dbf-ad3f-08e51de23812\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-29-48-281Z-unit-186eedd3-2640-4dbf-ad3f-08e51de23812",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2398,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 8,
+            "failed": 0,
+            "passed": 8,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 8,
+            "suites": 0
+          },
+          "duration_ms": 2333.796917
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "durable_artifact_dir": "bootstrap/run-01"
+    },
+    {
+      "index": 2,
+      "exit_code": 0,
+      "source_digest": "93e62e042eb8f63e473ed1e6e966276d5be721da00387a907a35292b024b8616",
+      "source_unchanged": true,
+      "output": "PASS unit: 2242ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-29-50-726Z-unit-3dcd9f29-5637-43f3-a3e4-8ff7e5efb82a\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-29-50-726Z-unit-3dcd9f29-5637-43f3-a3e4-8ff7e5efb82a",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2242,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 8,
+            "failed": 0,
+            "passed": 8,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 8,
+            "suites": 0
+          },
+          "duration_ms": 2165.144416
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "durable_artifact_dir": "bootstrap/run-02"
+    },
+    {
+      "index": 3,
+      "exit_code": 0,
+      "source_digest": "93e62e042eb8f63e473ed1e6e966276d5be721da00387a907a35292b024b8616",
+      "source_unchanged": true,
+      "output": "PASS unit: 2572ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-29-53-016Z-unit-5322d3cf-1073-42b7-883b-c198029d4bb6\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-29-53-016Z-unit-5322d3cf-1073-42b7-883b-c198029d4bb6",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2572,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 8,
+            "failed": 0,
+            "passed": 8,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 8,
+            "suites": 0
+          },
+          "duration_ms": 2507.747875
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "durable_artifact_dir": "bootstrap/run-03"
+    },
+    {
+      "index": 4,
+      "exit_code": 0,
+      "source_digest": "93e62e042eb8f63e473ed1e6e966276d5be721da00387a907a35292b024b8616",
+      "source_unchanged": true,
+      "output": "PASS unit: 2413ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-29-55-635Z-unit-abaa8106-cb64-4942-b8da-4c4171ae9fec\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-29-55-635Z-unit-abaa8106-cb64-4942-b8da-4c4171ae9fec",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2413,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 8,
+            "failed": 0,
+            "passed": 8,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 8,
+            "suites": 0
+          },
+          "duration_ms": 2346.432666
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "durable_artifact_dir": "bootstrap/run-04"
+    },
+    {
+      "index": 5,
+      "exit_code": 0,
+      "source_digest": "93e62e042eb8f63e473ed1e6e966276d5be721da00387a907a35292b024b8616",
+      "source_unchanged": true,
+      "output": "PASS unit: 2245ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-29-58-095Z-unit-6340d4ad-a7c0-4490-86a0-cdfd6f0da846\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-29-58-095Z-unit-6340d4ad-a7c0-4490-86a0-cdfd6f0da846",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2245,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 8,
+            "failed": 0,
+            "passed": 8,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 8,
+            "suites": 0
+          },
+          "duration_ms": 2174.434667
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "durable_artifact_dir": "bootstrap/run-05"
+    },
+    {
+      "index": 6,
+      "exit_code": 0,
+      "source_digest": "93e62e042eb8f63e473ed1e6e966276d5be721da00387a907a35292b024b8616",
+      "source_unchanged": true,
+      "output": "PASS unit: 2283ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-00-385Z-unit-bb32c5f8-bd83-45c8-a2b9-7742871d612c\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-00-385Z-unit-bb32c5f8-bd83-45c8-a2b9-7742871d612c",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2283,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 8,
+            "failed": 0,
+            "passed": 8,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 8,
+            "suites": 0
+          },
+          "duration_ms": 2216.5075
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "durable_artifact_dir": "bootstrap/run-06"
+    },
+    {
+      "index": 7,
+      "exit_code": 0,
+      "source_digest": "93e62e042eb8f63e473ed1e6e966276d5be721da00387a907a35292b024b8616",
+      "source_unchanged": true,
+      "output": "PASS unit: 2400ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-02-713Z-unit-afab8234-e731-47e1-9a44-bf76a3a76336\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-02-713Z-unit-afab8234-e731-47e1-9a44-bf76a3a76336",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2400,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 8,
+            "failed": 0,
+            "passed": 8,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 8,
+            "suites": 0
+          },
+          "duration_ms": 2327.095875
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "durable_artifact_dir": "bootstrap/run-07"
+    },
+    {
+      "index": 8,
+      "exit_code": 0,
+      "source_digest": "93e62e042eb8f63e473ed1e6e966276d5be721da00387a907a35292b024b8616",
+      "source_unchanged": true,
+      "output": "PASS unit: 2424ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-05-162Z-unit-e682fbdd-c5a8-4b8f-8ca6-2f2b5c9770ac\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-05-162Z-unit-e682fbdd-c5a8-4b8f-8ca6-2f2b5c9770ac",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2424,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 8,
+            "failed": 0,
+            "passed": 8,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 8,
+            "suites": 0
+          },
+          "duration_ms": 2339.988
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "durable_artifact_dir": "bootstrap/run-08"
+    },
+    {
+      "index": 9,
+      "exit_code": 0,
+      "source_digest": "93e62e042eb8f63e473ed1e6e966276d5be721da00387a907a35292b024b8616",
+      "source_unchanged": true,
+      "output": "PASS unit: 2617ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-07-632Z-unit-906ecd61-f913-4831-9452-b81e09c04a42\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-07-632Z-unit-906ecd61-f913-4831-9452-b81e09c04a42",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2617,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 8,
+            "failed": 0,
+            "passed": 8,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 8,
+            "suites": 0
+          },
+          "duration_ms": 2555.774709
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "durable_artifact_dir": "bootstrap/run-09"
+    },
+    {
+      "index": 10,
+      "exit_code": 0,
+      "source_digest": "93e62e042eb8f63e473ed1e6e966276d5be721da00387a907a35292b024b8616",
+      "source_unchanged": true,
+      "output": "PASS unit: 2307ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-10-293Z-unit-be9b1972-065f-4c75-9a17-504a8cee00dc\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-10-293Z-unit-be9b1972-065f-4c75-9a17-504a8cee00dc",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2307,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 8,
+            "failed": 0,
+            "passed": 8,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 8,
+            "suites": 0
+          },
+          "duration_ms": 2234.468375
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "durable_artifact_dir": "bootstrap/run-10"
+    },
+    {
+      "index": 11,
+      "exit_code": 0,
+      "source_digest": "93e62e042eb8f63e473ed1e6e966276d5be721da00387a907a35292b024b8616",
+      "source_unchanged": true,
+      "output": "PASS unit: 2326ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-12-649Z-unit-d78a014b-da84-49d1-8967-f9aa401c9e83\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-12-649Z-unit-d78a014b-da84-49d1-8967-f9aa401c9e83",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2326,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 8,
+            "failed": 0,
+            "passed": 8,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 8,
+            "suites": 0
+          },
+          "duration_ms": 2248.686375
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "durable_artifact_dir": "bootstrap/run-11"
+    },
+    {
+      "index": 12,
+      "exit_code": 0,
+      "source_digest": "93e62e042eb8f63e473ed1e6e966276d5be721da00387a907a35292b024b8616",
+      "source_unchanged": true,
+      "output": "PASS unit: 2348ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-15-025Z-unit-6dca6002-7333-43e4-8848-5dd1c374bc76\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-15-025Z-unit-6dca6002-7333-43e4-8848-5dd1c374bc76",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2348,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 8,
+            "failed": 0,
+            "passed": 8,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 8,
+            "suites": 0
+          },
+          "duration_ms": 2273.265375
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "durable_artifact_dir": "bootstrap/run-12"
+    },
+    {
+      "index": 13,
+      "exit_code": 0,
+      "source_digest": "93e62e042eb8f63e473ed1e6e966276d5be721da00387a907a35292b024b8616",
+      "source_unchanged": true,
+      "output": "PASS unit: 2603ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-17-421Z-unit-37b6f5a9-8b88-4712-a2be-6b63be4667e8\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-17-421Z-unit-37b6f5a9-8b88-4712-a2be-6b63be4667e8",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2603,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 8,
+            "failed": 0,
+            "passed": 8,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 8,
+            "suites": 0
+          },
+          "duration_ms": 2531.067666
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "durable_artifact_dir": "bootstrap/run-13"
+    },
+    {
+      "index": 14,
+      "exit_code": 0,
+      "source_digest": "93e62e042eb8f63e473ed1e6e966276d5be721da00387a907a35292b024b8616",
+      "source_unchanged": true,
+      "output": "PASS unit: 2344ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-20-070Z-unit-08079f33-3db9-46ee-88c0-567849e53a4c\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-20-070Z-unit-08079f33-3db9-46ee-88c0-567849e53a4c",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2344,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 8,
+            "failed": 0,
+            "passed": 8,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 8,
+            "suites": 0
+          },
+          "duration_ms": 2282.220875
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "durable_artifact_dir": "bootstrap/run-14"
+    },
+    {
+      "index": 15,
+      "exit_code": 0,
+      "source_digest": "93e62e042eb8f63e473ed1e6e966276d5be721da00387a907a35292b024b8616",
+      "source_unchanged": true,
+      "output": "PASS unit: 2233ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-22-460Z-unit-a891dd92-74b1-4924-a8c9-723d3ae6fa39\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-22-460Z-unit-a891dd92-74b1-4924-a8c9-723d3ae6fa39",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2233,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 8,
+            "failed": 0,
+            "passed": 8,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 8,
+            "suites": 0
+          },
+          "duration_ms": 2162.831334
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "durable_artifact_dir": "bootstrap/run-15"
+    },
+    {
+      "index": 16,
+      "exit_code": 0,
+      "source_digest": "93e62e042eb8f63e473ed1e6e966276d5be721da00387a907a35292b024b8616",
+      "source_unchanged": true,
+      "output": "PASS unit: 2311ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-24-739Z-unit-42879f75-b138-482f-a242-b11247a2b2d6\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-24-739Z-unit-42879f75-b138-482f-a242-b11247a2b2d6",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2311,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 8,
+            "failed": 0,
+            "passed": 8,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 8,
+            "suites": 0
+          },
+          "duration_ms": 2241.503667
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "durable_artifact_dir": "bootstrap/run-16"
+    },
+    {
+      "index": 17,
+      "exit_code": 0,
+      "source_digest": "93e62e042eb8f63e473ed1e6e966276d5be721da00387a907a35292b024b8616",
+      "source_unchanged": true,
+      "output": "PASS unit: 2504ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-27-099Z-unit-ac108a71-995b-4bbe-88b5-f46b20c39907\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-27-099Z-unit-ac108a71-995b-4bbe-88b5-f46b20c39907",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2504,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 8,
+            "failed": 0,
+            "passed": 8,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 8,
+            "suites": 0
+          },
+          "duration_ms": 2420.522791
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "durable_artifact_dir": "bootstrap/run-17"
+    },
+    {
+      "index": 18,
+      "exit_code": 0,
+      "source_digest": "93e62e042eb8f63e473ed1e6e966276d5be721da00387a907a35292b024b8616",
+      "source_unchanged": true,
+      "output": "PASS unit: 2526ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-29-652Z-unit-e8d44298-21b1-4388-8811-958c157d38cb\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-29-652Z-unit-e8d44298-21b1-4388-8811-958c157d38cb",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2526,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 8,
+            "failed": 0,
+            "passed": 8,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 8,
+            "suites": 0
+          },
+          "duration_ms": 2469.755666
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "durable_artifact_dir": "bootstrap/run-18"
+    },
+    {
+      "index": 19,
+      "exit_code": 0,
+      "source_digest": "93e62e042eb8f63e473ed1e6e966276d5be721da00387a907a35292b024b8616",
+      "source_unchanged": true,
+      "output": "PASS unit: 2288ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-32-219Z-unit-d1c01208-3f40-4adb-9a7a-579ae8b71f28\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-32-219Z-unit-d1c01208-3f40-4adb-9a7a-579ae8b71f28",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2288,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 8,
+            "failed": 0,
+            "passed": 8,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 8,
+            "suites": 0
+          },
+          "duration_ms": 2222.405
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "durable_artifact_dir": "bootstrap/run-19"
+    },
+    {
+      "index": 20,
+      "exit_code": 0,
+      "source_digest": "93e62e042eb8f63e473ed1e6e966276d5be721da00387a907a35292b024b8616",
+      "source_unchanged": true,
+      "output": "PASS unit: 2442ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-34-554Z-unit-498a4d46-c9a3-4227-8f57-17059a18c3eb\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-34-554Z-unit-498a4d46-c9a3-4227-8f57-17059a18c3eb",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2442,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 8,
+            "failed": 0,
+            "passed": 8,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 8,
+            "suites": 0
+          },
+          "duration_ms": 2382.645416
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "durable_artifact_dir": "bootstrap/run-20"
+    },
+    {
+      "index": 21,
+      "exit_code": 0,
+      "source_digest": "93e62e042eb8f63e473ed1e6e966276d5be721da00387a907a35292b024b8616",
+      "source_unchanged": true,
+      "output": "PASS unit: 2361ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-37-051Z-unit-9a979055-1a18-416a-8fe5-4dfb6edd9717\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-37-051Z-unit-9a979055-1a18-416a-8fe5-4dfb6edd9717",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2361,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 8,
+            "failed": 0,
+            "passed": 8,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 8,
+            "suites": 0
+          },
+          "duration_ms": 2286.975625
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "durable_artifact_dir": "bootstrap/run-21"
+    },
+    {
+      "index": 22,
+      "exit_code": 0,
+      "source_digest": "93e62e042eb8f63e473ed1e6e966276d5be721da00387a907a35292b024b8616",
+      "source_unchanged": true,
+      "output": "PASS unit: 2315ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-39-457Z-unit-7a15e409-2f3d-49fa-9fe2-f5eec161c3ef\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-39-457Z-unit-7a15e409-2f3d-49fa-9fe2-f5eec161c3ef",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2315,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 8,
+            "failed": 0,
+            "passed": 8,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 8,
+            "suites": 0
+          },
+          "duration_ms": 2226.16675
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "durable_artifact_dir": "bootstrap/run-22"
+    },
+    {
+      "index": 23,
+      "exit_code": 0,
+      "source_digest": "93e62e042eb8f63e473ed1e6e966276d5be721da00387a907a35292b024b8616",
+      "source_unchanged": true,
+      "output": "PASS unit: 2236ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-41-819Z-unit-170abd69-50bb-4fdc-b95b-61aba4f3d3fa\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-41-819Z-unit-170abd69-50bb-4fdc-b95b-61aba4f3d3fa",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2236,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 8,
+            "failed": 0,
+            "passed": 8,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 8,
+            "suites": 0
+          },
+          "duration_ms": 2150.690708
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "durable_artifact_dir": "bootstrap/run-23"
+    },
+    {
+      "index": 24,
+      "exit_code": 0,
+      "source_digest": "93e62e042eb8f63e473ed1e6e966276d5be721da00387a907a35292b024b8616",
+      "source_unchanged": true,
+      "output": "PASS unit: 2281ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-44-100Z-unit-35cd0a18-7a3d-4928-a6b7-e3788ca776cc\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-44-100Z-unit-35cd0a18-7a3d-4928-a6b7-e3788ca776cc",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2281,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 8,
+            "failed": 0,
+            "passed": 8,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 8,
+            "suites": 0
+          },
+          "duration_ms": 2202.545542
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "durable_artifact_dir": "bootstrap/run-24"
+    },
+    {
+      "index": 25,
+      "exit_code": 0,
+      "source_digest": "93e62e042eb8f63e473ed1e6e966276d5be721da00387a907a35292b024b8616",
+      "source_unchanged": true,
+      "output": "PASS unit: 2548ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-46-425Z-unit-0f92126d-fa55-41b0-9f1c-4294157979d9\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-30-46-425Z-unit-0f92126d-fa55-41b0-9f1c-4294157979d9",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2548,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 8,
+            "failed": 0,
+            "passed": 8,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 8,
+            "suites": 0
+          },
+          "duration_ms": 2493.02875
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "durable_artifact_dir": "bootstrap/run-25"
+    }
+  ]
+}

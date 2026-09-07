@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-09-07T11:52:18.575057+00:00",
+  "reviewer": "Independent archive_readiness verifier",
+  "verdict": "CLEAR outside hosted acceptance and closeout",
+  "task_counts": {
+    "complete": 55,
+    "total": 59
+  },
+  "pending_tasks": [
+    "5.8",
+    "5.9",
+    "5.10",
+    "5.11"
+  ],
+  "requirements": {
+    "IUX-3": "Single skill workflow, exclusive file/snapshot templates, authority/recovery/continuation/close/full-result delivery verified",
+    "IUX-19": "Corpus admission, capture, exact-delivery and finite recovery oracle, one-attempt matrix, candidate binding and deterministic finalizer verified",
+    "IUX-20": "Retained 1 MiB result, 8 KiB UTF-8 paging, stable digest, explicit overflow failure, runtime/MCP and hosted corpus owners verified"
+  },
+  "evidence": {
+    "freeze": "../../candidate/frozen-inputs-19.json",
+    "unit": "unit/result.json",
+    "eval": "eval-final/result.json",
+    "release": "release/result.json",
+    "coverage": "coverage-final/result.json",
+    "coverage_audit": "coverage-final/zero-counter-audit.json",
+    "critic": "cursor-baseline-review.json",
+    "architect": "architect-final-review.json"
+  },
+  "additional_blockers": [],
+  "limits": [
+    "Refresh scoped semantic evidence after final task publication",
+    "Whole-tree draft registration is outside current change",
+    "Hosted outcome remains pending and must be proven by fresh complete serial matrices"
+  ]
+}

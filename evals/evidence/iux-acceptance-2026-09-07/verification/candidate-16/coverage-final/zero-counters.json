@@ -1,0 +1,436 @@
+[
+  {
+    "path": "/Users/arikon/projects/codex-cursor-subagent-plugin/scripts/check-openspec-semantics.mjs",
+    "zeros": {
+      "lines": [],
+      "branches": [
+        {
+          "line": 551,
+          "count": 0
+        },
+        {
+          "line": 146,
+          "count": 0
+        }
+      ],
+      "functions": []
+    }
+  },
+  {
+    "path": "/Users/arikon/projects/codex-cursor-subagent-plugin/scripts/codex-app-server-client.mjs",
+    "zeros": {
+      "lines": [],
+      "branches": [
+        {
+          "line": 152,
+          "count": 0
+        },
+        {
+          "line": 162,
+          "count": 0
+        },
+        {
+          "line": 191,
+          "count": 0
+        }
+      ],
+      "functions": []
+    }
+  },
+  {
+    "path": "/Users/arikon/projects/codex-cursor-subagent-plugin/scripts/cursor-eval-scenario.mjs",
+    "zeros": {
+      "lines": [],
+      "branches": [
+        {
+          "line": 451,
+          "count": 0
+        }
+      ],
+      "functions": []
+    }
+  },
+  {
+    "path": "/Users/arikon/projects/codex-cursor-subagent-plugin/scripts/cursor-subagent-bootstrap.mjs",
+    "zeros": {
+      "lines": [],
+      "branches": [
+        {
+          "line": 24,
+          "count": 0
+        },
+        {
+          "line": 175,
+          "count": 0
+        },
+        {
+          "line": 387,
+          "count": 0
+        },
+        {
+          "line": 401,
+          "count": 0
+        },
+        {
+          "line": 437,
+          "count": 0
+        },
+        {
+          "line": 446,
+          "count": 0
+        },
+        {
+          "line": 497,
+          "count": 0
+        },
+        {
+          "line": 673,
+          "count": 0
+        },
+        {
+          "line": 673,
+          "count": 0
+        }
+      ],
+      "functions": []
+    }
+  },
+  {
+    "path": "/Users/arikon/projects/codex-cursor-subagent-plugin/scripts/cursor-subagent-mcp.mjs",
+    "zeros": {
+      "lines": [],
+      "branches": [
+        {
+          "line": 26,
+          "count": 0
+        },
+        {
+          "line": 83,
+          "count": 0
+        },
+        {
+          "line": 85,
+          "count": 0
+        },
+        {
+          "line": 98,
+          "count": 0
+        },
+        {
+          "line": 130,
+          "count": 0
+        },
+        {
+          "line": 133,
+          "count": 0
+        },
+        {
+          "line": 141,
+          "count": 0
+        },
+        {
+          "line": 143,
+          "count": 0
+        },
+        {
+          "line": 145,
+          "count": 0
+        },
+        {
+          "line": 146,
+          "count": 0
+        },
+        {
+          "line": 152,
+          "count": 0
+        },
+        {
+          "line": 162,
+          "count": 0
+        },
+        {
+          "line": 165,
+          "count": 0
+        },
+        {
+          "line": 166,
+          "count": 0
+        },
+        {
+          "line": 168,
+          "count": 0
+        },
+        {
+          "line": 171,
+          "count": 0
+        },
+        {
+          "line": 177,
+          "count": 0
+        },
+        {
+          "line": 183,
+          "count": 0
+        },
+        {
+          "line": 185,
+          "count": 0
+        },
+        {
+          "line": 186,
+          "count": 0
+        },
+        {
+          "line": 189,
+          "count": 0
+        },
+        {
+          "line": 242,
+          "count": 0
+        },
+        {
+          "line": 243,
+          "count": 0
+        },
+        {
+          "line": 271,
+          "count": 0
+        },
+        {
+          "line": 294,
+          "count": 0
+        },
+        {
+          "line": 299,
+          "count": 0
+        },
+        {
+          "line": 300,
+          "count": 0
+        },
+        {
+          "line": 300,
+          "count": 0
+        },
+        {
+          "line": 309,
+          "count": 0
+        },
+        {
+          "line": 310,
+          "count": 0
+        },
+        {
+          "line": 325,
+          "count": 0
+        },
+        {
+          "line": 447,
+          "count": 0
+        },
+        {
+          "line": 461,
+          "count": 0
+        },
+        {
+          "line": 465,
+          "count": 0
+        },
+        {
+          "line": 534,
+          "count": 0
+        },
+        {
+          "line": 538,
+          "count": 0
+        },
+        {
+          "line": 545,
+          "count": 0
+        },
+        {
+          "line": 571,
+          "count": 0
+        },
+        {
+          "line": 573,
+          "count": 0
+        },
+        {
+          "line": 611,
+          "count": 0
+        },
+        {
+          "line": 616,
+          "count": 0
+        },
+        {
+          "line": 624,
+          "count": 0
+        },
+        {
+          "line": 628,
+          "count": 0
+        },
+        {
+          "line": 629,
+          "count": 0
+        },
+        {
+          "line": 649,
+          "count": 0
+        },
+        {
+          "line": 653,
+          "count": 0
+        },
+        {
+          "line": 684,
+          "count": 0
+        },
+        {
+          "line": 684,
+          "count": 0
+        },
+        {
+          "line": 698,
+          "count": 0
+        },
+        {
+          "line": 701,
+          "count": 0
+        },
+        {
+          "line": 786,
+          "count": 0
+        },
+        {
+          "line": 685,
+          "count": 0
+        },
+        {
+          "line": 225,
+          "count": 0
+        },
+        {
+          "line": 454,
+          "count": 0
+        },
+        {
+          "line": 451,
+          "count": 0
+        },
+        {
+          "line": 228,
+          "count": 0
+        }
+      ],
+      "functions": []
+    }
+  },
+  {
+    "path": "/Users/arikon/projects/codex-cursor-subagent-plugin/scripts/eval/run-cursor-skill-eval-matrix.mjs",
+    "zeros": {
+      "lines": [
+        {
+          "line": 142,
+          "count": 0
+        },
+        {
+          "line": 143,
+          "count": 0
+        },
+        {
+          "line": 144,
+          "count": 0
+        },
+        {
+          "line": 145,
+          "count": 0
+        },
+        {
+          "line": 146,
+          "count": 0
+        },
+        {
+          "line": 235,
+          "count": 0
+        }
+      ],
+      "branches": [
+        {
+          "line": 24,
+          "count": 0
+        },
+        {
+          "line": 141,
+          "count": 0
+        },
+        {
+          "line": 158,
+          "count": 0
+        },
+        {
+          "line": 192,
+          "count": 0
+        },
+        {
+          "line": 234,
+          "count": 0
+        }
+      ],
+      "functions": []
+    }
+  },
+  {
+    "path": "/Users/arikon/projects/codex-cursor-subagent-plugin/scripts/recording-mcp-proxy.mjs",
+    "zeros": {
+      "lines": [],
+      "branches": [
+        {
+          "line": 42,
+          "count": 0
+        },
+        {
+          "line": 51,
+          "count": 0
+        },
+        {
+          "line": 200,
+          "count": 0
+        },
+        {
+          "line": 213,
+          "count": 0
+        },
+        {
+          "line": 224,
+          "count": 0
+        },
+        {
+          "line": 227,
+          "count": 0
+        },
+        {
+          "line": 247,
+          "count": 0
+        },
+        {
+          "line": 291,
+          "count": 0
+        },
+        {
+          "line": 303,
+          "count": 0
+        }
+      ],
+      "functions": [
+        {
+          "name": "",
+          "count": 0,
+          "line": 224
+        }
+      ]
+    }
+  }
+]

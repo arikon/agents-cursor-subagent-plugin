@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "unit_median_ms": 55227,
+  "unit_maximum_ms": 60988,
+  "coverage_median_ms": 65714,
+  "coverage_maximum_ms": 74676,
+  "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+  "gates": {
+    "focused_bootstrap_25_passed": true,
+    "loaded_capture_25_passed": true,
+    "full_unit_3_passed": true,
+    "full_coverage_3_passed": true,
+    "unit_median_at_most_60000": true,
+    "unit_maximum_at_most_70000": true,
+    "identical_full_inventory_all_56_runs": true,
+    "coverage_manifest_unchanged": true,
+    "all_224_artifact_hashes_verified": true,
+    "all_raw_zero_counters_classified": true
+  },
+  "series": {
+    "bootstrap": "bootstrap.json",
+    "capture": "capture.json",
+    "unit": "unit.json",
+    "coverage": "coverage.json"
+  },
+  "coverage_audit": [
+    "../../cursor-coverage-bootstrap-classification.md",
+    "../../cursor-coverage-capture-classification.md",
+    "../../cursor-coverage-eval-classification.md",
+    "../../cursor-coverage-matrix-classification.md",
+    "../../cursor-coverage-proxy-classification.md",
+    "../../cursor-coverage-runtime-classification.md",
+    "../../cursor-coverage-supervision-classification.md"
+  ]
+}

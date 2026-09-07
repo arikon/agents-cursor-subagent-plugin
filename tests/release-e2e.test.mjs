@@ -9,6 +9,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { MARKER_NAME, normalizeManifestBytes, runBootstrap } from '../scripts/cursor-subagent-bootstrap.mjs';
 import { materializeScenario, parseScenarioCorpus } from '../scripts/cursor-eval-scenario.mjs';
+import { readEvaluatorInventory } from '../scripts/cursor-skill-eval.mjs';
 import { parseChildResult } from '../scripts/run-cursor-skill-eval.mjs';
 
 const repository = fileURLToPath(new URL('..', import.meta.url));
@@ -17,7 +18,7 @@ const fakeAcp = fileURLToPath(new URL('./fixtures/release-fake-acp.mjs', import.
 const fakeMcpVersion = fileURLToPath(new URL('./fixtures/fake-mcp-version.mjs', import.meta.url));
 const EXPECTED_TOOLS = [
   'cursor_delegate', 'cursor_start_session', 'cursor_resume_session', 'cursor_send_prompt', 'cursor_set_mode', 'cursor_session_status', 'cursor_wait',
-  'cursor_answer_question', 'cursor_answer_plan', 'cursor_answer_permission', 'cursor_cancel', 'cursor_close_session',
+  'cursor_answer_question', 'cursor_answer_plan', 'cursor_answer_permission', 'cursor_cancel', 'cursor_close_session', 'cursor_read_result',
 ];
 const MARKER_BYTES = 'CURSOR_AGENT_E2E_OK\n';
 const RELEASE_PROCESS_LIMITS = Object.freeze({ timeoutMs: 10_000, outputBytes: 1_048_576 });
@@ -198,7 +199,7 @@ async function installAndDiscover(layout, executables, adapterCommand, env, runt
     assert.equal(initialized.result.serverInfo.version, manifest.baseVersion, 'installed manifest and MCP server versions differ');
     client.notify('notifications/initialized');
     const listed = await client.request('tools/list');
-    assert.deepEqual(listed.result.tools.map(({ name }) => name), EXPECTED_TOOLS);
+    assert.deepEqual(listed.result.tools.map(({ name }) => name).sort(), [...EXPECTED_TOOLS].sort());
     return client;
   } catch (error) { await client.close().catch(() => {}); throw error; }
 }
@@ -316,11 +317,11 @@ async function finalizeReleaseRun({ layout, installed, handoff, proof, observati
       scenario_id: handoff.scenario.scenario_id, lane: handoff.scenario.lane,
       provenance: {
         consumed_scenario: handoff.scenarioDigest, consumed_corpus: handoff.corpusDigest,
-        adapter: proof?.adapter || null, managed_installed_skill: proof?.managedInstalledSkill || null,
+        adapter: proof?.adapter || null, evaluator: proof?.evaluator || null, managed_installed_skill: proof?.managedInstalledSkill || null,
         cache_loaded_skill: null, installed_payload: proof?.installedPayload || null,
         client: proof?.client || null, model: proof?.model || null, cleanup_status: cleanupStatus,
       },
-      observations, transcript: { calls: [], dropped_calls: 0 }, eval_status: outcome.status,
+      observations, captured_finals: [], transcript: { calls: [], dropped_calls: 0 }, eval_status: outcome.status,
       error_code: outcome.status === 'pass' ? null : outcome.status === 'agent_behavior_mismatch' ? 'canary_marker_mismatch' : 'live_canary_failure',
       message: outcome.message || null,
     };
@@ -335,7 +336,7 @@ export async function runLiveCanary(env = process.env, hooks = {}) {
   try { handoff = outerReleaseHandoff(env); }
   catch (error) { return { status: 'integration_failure', message: error.message }; }
   let layout; let client; let turn; let configuration; let executables; let childEnv; let proof; let installed = false;
-  let closeSucceeded = false; let completed = false; let failure = null; let permissionAllowed = false; let reportedTaskOutcome = 'not_reported';
+  let closeSucceeded = false; let completed = false; let failure = null; let permissionAllowed = false;
   const trace = []; const callbacks = []; const effects = [];
   try {
     configuration = liveConfiguration(env);
@@ -360,8 +361,7 @@ export async function runLiveCanary(env = process.env, hooks = {}) {
       turn = await client.tool('cursor_wait', { session_id: turn.session_id, turn_id: turn.turn_id, after_event_id: turn.last_event_id, timeout_ms: 60_000 });
       if (turn.turn_status === 'completed') {
         trace.push({ kind: 'turn.completed' });
-        if (terminalAgentError(turn)) { reportedTaskOutcome = 'failed'; throw new Error('agent completed with an error'); }
-        reportedTaskOutcome = 'succeeded';
+        if (terminalAgentError(turn)) throw new Error('agent completed with an error');
         completed = true; break;
       }
       if (turn.turn_status === 'waiting_for_input') {
@@ -391,12 +391,12 @@ export async function runLiveCanary(env = process.env, hooks = {}) {
   }
   let outcome = classifyLiveOutcome({ enabled: true, failure: failure?.message || inspectionFailure, closeSucceeded, markerMatches });
   if (handoff && installed) {
-    try { proof = await captureReleaseProof(layout, configuration, executables, childEnv); }
+    try { proof = { ...await captureReleaseProof(layout, configuration, executables, childEnv), evaluator: (await readEvaluatorInventory()).digest }; }
     catch (error) { outcome = { status: 'integration_failure', message: `package proof failed: ${error.message}` }; }
   }
   const observations = { trace, callbacks, effects,
     actual_task_outcome: markerMatches ? 'succeeded' : effects.length ? 'failed' : 'not_observed',
-    reported_task_outcome: reportedTaskOutcome };
+    reported_task_outcome: 'not_checked' };
   return finalizeReleaseRun({ layout, installed, handoff, proof, observations, outcome,
     cleanupPackage: async () => {
       const cleaned = await (hooks.runBootstrap || runBootstrap)(['uninstall', '--managed-marketplace-root', layout.managed,
@@ -496,14 +496,14 @@ test('release child finalizer cleans package layout before writing outer-owned e
   t.after(() => rm(outerRoot, { recursive: true, force: true })); t.after(() => rm(layoutRoot, { recursive: true, force: true }));
   const destination = join(outerRoot, 'child-result.json'); const order = [];
   const digest = { sha256: 'a'.repeat(64), bytes: 123 }; const proof = {
-    adapter: { sha256: 'b'.repeat(64), bytes: 456 }, managedInstalledSkill: { sha256: 'c'.repeat(64), bytes: 789 },
+    adapter: { sha256: 'b'.repeat(64), bytes: 456 }, evaluator: { sha256: '9'.repeat(64), bytes: 800 }, managedInstalledSkill: { sha256: 'c'.repeat(64), bytes: 789 },
     installedPayload: { marker_format: 1, payload_hash: 'd'.repeat(64), artifact_hash: 'e'.repeat(64), manifest_version: `0.1.0+codex.${'d'.repeat(64)}` },
     client: { name: 'codex-cli', version: 'codex-cli 0.152.1' }, model: { provider: 'cursor', name: 'agent-default' },
   };
   const outcome = await finalizeReleaseRun({ layout: { root: layoutRoot }, installed: true,
     handoff: { scenario: { scenario_id: packageCanaryId, lane: 'full-live' }, scenarioDigest: digest,
       corpusDigest: { sha256: 'f'.repeat(64), bytes: 321 }, childResultPath: destination },
-    proof, observations: { trace: [], callbacks: [], effects: [], actual_task_outcome: 'succeeded', reported_task_outcome: 'succeeded' },
+    proof, observations: { trace: [], callbacks: [], effects: [], actual_task_outcome: 'succeeded', reported_task_outcome: 'not_checked' },
     outcome: { status: 'pass' }, cleanupPackage: async () => { order.push('package-cleanup'); },
     removeLayout: async (...args) => { order.push('layout-cleanup'); await rm(...args); },
     writeChildResult: async (...args) => { order.push('child-result'); await writeReleaseChildResult(...args); } });

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn as spawnChildProcess } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -25,7 +26,7 @@ function reporterPath(args) {
   return args.filter((arg) => arg.startsWith(prefix)).at(-1).slice(prefix.length);
 }
 
-function fakeSpawn({ code = 0, signal = null, report = 'complete', coverage = null, failures = null, childError = null, stderr = '', stderrError = null, closeDelayMs = 0, stderrDelayMs = 0, preventResultPublication = false, testCount = 3 } = {}) {
+function fakeSpawn({ code = 0, signal = null, report = 'complete', coverage = null, failures = null, childError = null, stderr = '', stderrError = null, closeDelayMs = 0, stderrDelayMs = 0, preventResultPublication = false, missingTap = false, testCount = 3, fileTestCount = testCount } = {}) {
   return (command, args, options) => {
     const child = new EventEmitter();
     child.pid = 424242;
@@ -33,13 +34,14 @@ function fakeSpawn({ code = 0, signal = null, report = 'complete', coverage = nu
     queueMicrotask(async () => {
       try {
         const path = reporterPath(args);
+        if (!missingTap) await writeFile(join(dirname(path), 'tap.txt'), 'TAP version 13\n');
         if (report === 'complete') {
           const events = [];
           const reportedFailures = failures ?? (code !== 0 ? [{ name: 'broken test', details: { error: { message: 'boom' } } }] : []);
           events.push(...reportedFailures.map((data) => JSON.stringify({ type: 'test:fail', data })));
           events.push(JSON.stringify({ type: 'test:summary', data: {
             success: code === 0,
-            counts: { tests: testCount, passed: code === 0 ? testCount : Math.max(0, testCount - 1), failed: code === 0 ? 0 : 1 },
+            counts: { tests: fileTestCount, passed: code === 0 ? testCount : Math.max(0, testCount - 1), failed: code === 0 ? 0 : 1 },
             file: args.find((arg) => arg.endsWith('.test.mjs')) || 'tests/fixture.test.mjs',
           } }));
           events.push(JSON.stringify({ type: 'test:summary', data: { tests: testCount, passed: code === 0 ? testCount : Math.max(0, testCount - 1), failed: code === 0 ? 0 : 1 } }));
@@ -64,6 +66,15 @@ function fakeSpawn({ code = 0, signal = null, report = 'complete', coverage = nu
         child.emit('close', 1, null);
       }
     });
+    return child;
+  };
+}
+
+function fakeSpawnWithReadyAction(options, action) {
+  const spawn = fakeSpawn(options);
+  return (...args) => {
+    const child = spawn(...args);
+    queueMicrotask(action);
     return child;
   };
 }
@@ -167,12 +178,14 @@ test('lane matrix produces the exact child argv and keeps parent deadlines fixed
     'tests/run-cursor-skill-eval.test.mjs',
     'tests/runtime.test.mjs',
     'tests/node-test-supervisor.test.mjs',
+    'tests/coverage-audit.test.mjs', 'tests/eval-closeout.test.mjs',
   ];
   const productSources = [
     'scripts/check-openspec-semantics.mjs', 'scripts/codex-app-server-client.mjs', 'scripts/cursor-eval-scenario.mjs', 'scripts/cursor-skill-eval.mjs', 'scripts/openspec-semantic-registry.mjs',
     'scripts/cursor-subagent-bootstrap.mjs', 'scripts/cursor-subagent-mcp.mjs', 'scripts/node-test-reporter-v22.mjs',
     'scripts/recording-mcp-proxy.mjs', 'scripts/run-cursor-skill-eval.mjs', 'scripts/run-node-tests.mjs', 'scripts/run-unit-coverage.mjs',
     'scripts/eval/run-cursor-skill-eval-matrix.mjs', 'scripts/eval/run-cursor-skill-eval-suite.mjs',
+    'scripts/audit-node-coverage.mjs', 'scripts/eval/finalize-cursor-skill-eval.mjs',
   ];
   const cases = [
     { lane: 'unit', concurrency: 2, tests: unitTests, timeoutMs: 120_000, deadlineMs: 600_000, coverage: false },
@@ -253,6 +266,19 @@ test('zero executed tests fail even when Node exits successfully', async (t) => 
   });
   assert.equal(result.verdict, 'failed');
   assert.equal(result.terminal_cause, 'no_tests');
+});
+
+test('malformed file test counts fail closed as no tests despite a successful global summary', async (t) => {
+  const result = await runSupervisor({
+    laneName: 'unit',
+    artifactRoot: await artifactRoot(t),
+    dependencies: { platform: 'linux', spawn: fakeSpawn({ fileTestCount: '3' }) },
+  });
+  const published = await publishedResult(result);
+  assert.equal(result.verdict, 'failed');
+  assert.equal(result.terminal_cause, 'no_tests');
+  assert.equal(result.tests.tests, 3);
+  assert.equal(published.terminal_cause, 'no_tests');
 });
 
 test('foreground focused invocation fails when the real Node reporter executes zero tests', async (t) => {
@@ -441,6 +467,66 @@ test('coverage lane publishes a passing manifest-complete gate result above the 
   assert.deepEqual(published.coverage.thresholds, { lines: 90, branches: 90, functions: 90 });
   assert.deepEqual(published.coverage.reported, [...published.coverage.manifest].sort());
   assert.deepEqual(published.coverage.diagnostics, []);
+  const sources = published.coverage.sources;
+  assert.equal(sources.stable, true);
+  assert.equal(sources.algorithm, 'sha256');
+  assert.deepEqual(sources.files.map(({ path }) => path), [...published.coverage.manifest].sort());
+  for (const file of sources.files) {
+    const bytes = await readFile(join(projectRoot, file.path));
+    assert.equal(file.bytes, bytes.length);
+    assert.equal(file.sha256, createHash('sha256').update(bytes).digest('hex'));
+  }
+  const encoded = Buffer.from(JSON.stringify(sources.files));
+  assert.deepEqual(sources.digest, { bytes: encoded.length, sha256: createHash('sha256').update(encoded).digest('hex') });
+  for (const name of ['failures', 'tap', 'stderr']) {
+    const bytes = await readFile(join(result.artifactDir, published.artifacts[name]));
+    assert.deepEqual(published.coverage.artifact_digests[name],
+      { bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') });
+  }
+});
+
+test('coverage cannot publish a pass without its complete raw artifacts', async (t) => {
+  const result = await runSupervisor({ laneName: 'coverage', artifactRoot: await artifactRoot(t), dependencies: {
+    platform: 'darwin', spawn: fakeSpawn({ coverage: await coverageSummary(100), missingTap: true }),
+  } });
+  const published = await publishedResult(result);
+  assert.equal(published.verdict, 'runner_error');
+  assert.equal(published.terminal_cause, 'artifact_error');
+  assert.equal(published.coverage.artifact_digests, null);
+  assert.equal(published.infrastructure.error.code, 'ENOENT');
+});
+
+test('coverage cannot pass when measured sources change or disappear during the child run', async (t) => {
+  const coverage = await coverageSummary(100);
+  for (const mode of ['changed', 'missing-before', 'missing-after']) {
+    let spawned = false;
+    const spawn = fakeSpawn({ coverage });
+    const result = await runSupervisor({ laneName: 'coverage', artifactRoot: await artifactRoot(t), dependencies: {
+      platform: 'linux',
+      spawn(...args) { spawned = true; return spawn(...args); },
+      async readFile(path) {
+        if (path.endsWith('/scripts/node-test-reporter-v22.mjs')) {
+          if (mode === 'missing-before' || (spawned && mode === 'missing-after')) {
+            throw Object.assign(new Error('source disappeared'), { code: 'ENOENT' });
+          }
+          if (spawned) return Buffer.concat([await readFile(path), Buffer.from('\n// changed during run\n')]);
+        }
+        return readFile(path);
+      },
+    } });
+    const published = await publishedResult(result);
+    assert.notEqual(published.verdict, 'passed', mode);
+    assert.equal(published.terminal_cause, 'coverage_gate', mode);
+    if (mode === 'missing-before') {
+      assert.equal(spawned, false);
+      assert.equal(published.infrastructure.cause, 'source_snapshot_error');
+    } else {
+      assert.equal(spawned, true);
+      assert.equal(published.coverage.sources.stable, false);
+      assert.ok(published.coverage.diagnostics.some(({ code }) => code ===
+        (mode === 'changed' ? 'coverage_source_drift' : 'coverage_source_snapshot_error')));
+    }
+  }
 });
 
 test('coverage lane fails closed when the coverage event is missing', async (t) => {
@@ -600,10 +686,11 @@ test('asynchronous child spawn error has infrastructure precedence over a later 
 
 test('SIGINT interruption publishes an interrupted terminal result', async (t) => {
   const root = await artifactRoot(t);
-  const pending = runSupervisor({ laneName: 'unit', artifactRoot: root, dependencies: {
-    platform: 'linux', spawn: fakeSpawn({ signal: 'SIGTERM', closeDelayMs: 25 }),
-  } });
-  setTimeout(() => process.emit('SIGINT', 'SIGINT'), 5);
+  const spawn = fakeSpawnWithReadyAction(
+    { signal: 'SIGTERM', closeDelayMs: 25 },
+    () => process.emit('SIGINT', 'SIGINT'),
+  );
+  const pending = runSupervisor({ laneName: 'unit', artifactRoot: root, dependencies: { platform: 'linux', spawn } });
 
   const result = await pending;
   const published = await publishedResult(result);
@@ -615,11 +702,14 @@ test('SIGINT interruption publishes an interrupted terminal result', async (t) =
 });
 
 test('the first interruption remains authoritative when another signal follows', async (t) => {
-  const pending = runSupervisor({ laneName: 'unit', artifactRoot: await artifactRoot(t), dependencies: {
-    platform: 'linux', spawn: fakeSpawn({ signal: 'SIGTERM', closeDelayMs: 35 }),
-  } });
-  setTimeout(() => process.emit('SIGINT', 'SIGINT'), 5);
-  setTimeout(() => process.emit('SIGTERM', 'SIGTERM'), 10);
+  const spawn = fakeSpawnWithReadyAction(
+    { signal: 'SIGTERM', closeDelayMs: 35 },
+    () => {
+      process.emit('SIGINT', 'SIGINT');
+      process.emit('SIGTERM', 'SIGTERM');
+    },
+  );
+  const pending = runSupervisor({ laneName: 'unit', artifactRoot: await artifactRoot(t), dependencies: { platform: 'linux', spawn } });
 
   const result = await pending;
   assert.equal(result.verdict, 'interrupted');
@@ -630,10 +720,11 @@ test('a child that exits during interruption remains an interrupted run', async 
   const originalKill = process.kill;
   process.kill = () => { throw Object.assign(new Error('already exited'), { code: 'ESRCH' }); };
   t.after(() => { process.kill = originalKill; });
-  const pending = runSupervisor({ laneName: 'unit', artifactRoot: await artifactRoot(t), dependencies: {
-    platform: 'linux', spawn: fakeSpawn({ closeDelayMs: 25 }),
-  } });
-  setTimeout(() => process.emit('SIGINT', 'SIGINT'), 5);
+  const spawn = fakeSpawnWithReadyAction(
+    { closeDelayMs: 25 },
+    () => process.emit('SIGINT', 'SIGINT'),
+  );
+  const pending = runSupervisor({ laneName: 'unit', artifactRoot: await artifactRoot(t), dependencies: { platform: 'linux', spawn } });
 
   const result = await pending;
   assert.equal(result.verdict, 'interrupted');
@@ -645,10 +736,11 @@ test('failure to signal the child process group is reported as infrastructure fa
   const originalKill = process.kill;
   process.kill = () => { throw Object.assign(new Error('operation denied'), { code: 'EPERM' }); };
   t.after(() => { process.kill = originalKill; });
-  const pending = runSupervisor({ laneName: 'unit', artifactRoot: await artifactRoot(t), dependencies: {
-    platform: 'linux', spawn: fakeSpawn({ signal: 'SIGTERM', closeDelayMs: 25 }),
-  } });
-  setTimeout(() => process.emit('SIGTERM', 'SIGTERM'), 5);
+  const spawn = fakeSpawnWithReadyAction(
+    { signal: 'SIGTERM', closeDelayMs: 25 },
+    () => process.emit('SIGTERM', 'SIGTERM'),
+  );
+  const pending = runSupervisor({ laneName: 'unit', artifactRoot: await artifactRoot(t), dependencies: { platform: 'linux', spawn } });
 
   const result = await pending;
   assert.equal(result.verdict, 'runner_error');

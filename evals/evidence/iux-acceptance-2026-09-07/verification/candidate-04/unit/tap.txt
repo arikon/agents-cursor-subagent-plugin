@@ -1,0 +1,220 @@
+TAP version 13
+# Subtest: candidate inventory detects oracle drift independently of skill and excludes host roots
+ok 1 - candidate inventory detects oracle drift independently of skill and excludes host roots
+  ---
+  duration_ms: 5.950875
+  type: 'test'
+  ...
+# Subtest: recording MCP proxy rejects an omitted target before opening a child transport
+ok 2 - recording MCP proxy rejects an omitted target before opening a child transport
+  ---
+  duration_ms: 55.022541
+  type: 'test'
+  ...
+# Subtest: EvalResultV1 enforces its exact bounded public contract
+ok 3 - EvalResultV1 enforces its exact bounded public contract
+  ---
+  duration_ms: 1.158625
+  type: 'test'
+  ...
+# Subtest: EvidenceManifestV1 accepts one complete closed proof and rejects drifted shapes and digests
+ok 4 - EvidenceManifestV1 accepts one complete closed proof and rejects drifted shapes and digests
+  ---
+  duration_ms: 0.687291
+  type: 'test'
+  ...
+# Subtest: eval classifier preserves skipped, mismatch, and pass outcomes
+ok 5 - eval classifier preserves skipped, mismatch, and pass outcomes
+  ---
+  duration_ms: 0.26725
+  type: 'test'
+  ...
+# Subtest: cleanup, evidence publication, and runner collisions dominate behavior verdicts
+ok 6 - cleanup, evidence publication, and runner collisions dominate behavior verdicts
+  ---
+  duration_ms: 0.145916
+  type: 'test'
+  ...
+# Subtest: EvalResultV1 is the sole bounded stdout artifact
+ok 7 - EvalResultV1 is the sole bounded stdout artifact
+  ---
+  duration_ms: 0.707875
+  type: 'test'
+  ...
+# Subtest: expected semantic failure passes only when Codex reports that failure honestly
+ok 8 - expected semantic failure passes only when Codex reports that failure honestly
+  ---
+  duration_ms: 0.096958
+  type: 'test'
+  ...
+# Subtest: overflow report requires the failure reason, unavailable review, and regeneration disclosure independently
+ok 9 - overflow report requires the failure reason, unavailable review, and regeneration disclosure independently
+  ---
+  duration_ms: 53.515334
+  type: 'test'
+  ...
+# Subtest: events-lost disclosure independently requires the gap, no reconstruction, and current state
+ok 10 - events-lost disclosure independently requires the gap, no reconstruction, and current state
+  ---
+  duration_ms: 74.398417
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy atomically publishes bounded lifecycle evidence with exact opaque IDs
+ok 11 - stdio recording proxy atomically publishes bounded lifecycle evidence with exact opaque IDs
+  ---
+  duration_ms: 134.115083
+  type: 'test'
+  ...
+# Subtest: recording proxy proves only an exact sequential full-result read through EOF
+ok 12 - recording proxy proves only an exact sequential full-result read through EOF
+  ---
+  duration_ms: 105.611041
+  type: 'test'
+  ...
+# Subtest: recording MCP proxy preserves UTF-8 split across transport chunks in both directions
+ok 13 - recording MCP proxy preserves UTF-8 split across transport chunks in both directions
+  ---
+  duration_ms: 103.530917
+  type: 'test'
+  ...
+# Subtest: recording MCP proxy observes final request and response frames without trailing newlines
+ok 14 - recording MCP proxy observes final request and response frames without trailing newlines
+  ---
+  duration_ms: 89.85475
+  type: 'test'
+  ...
+# Subtest: recording MCP proxy drains accepted output before exiting under stdout backpressure
+ok 15 - recording MCP proxy drains accepted output before exiting under stdout backpressure
+  ---
+  duration_ms: 101.253166
+  type: 'test'
+  ...
+# Subtest: recording proxy preserves only bounded public provider error fields
+ok 16 - recording proxy preserves only bounded public provider error fields
+  ---
+  duration_ms: 97.763542
+  type: 'test'
+  ...
+# Subtest: recording MCP proxy proves the exact plugin roots by digest without retaining paths
+ok 17 - recording MCP proxy proves the exact plugin roots by digest without retaining paths
+  ---
+  duration_ms: 99.24325
+  type: 'test'
+  ...
+# Subtest: recording proxy injects one stale question ID as fixture behavior, not user instruction
+ok 18 - recording proxy injects one stale question ID as fixture behavior, not user instruction
+  ---
+  duration_ms: 181.40275
+  type: 'test'
+  ...
+# Subtest: recording proxy injects a handshaken mode protocol error while preserving live status
+ok 19 - recording proxy injects a handshaken mode protocol error while preserving live status
+  ---
+  duration_ms: 90.346166
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy caps call count and evidence bytes
+ok 20 - stdio recording proxy caps call count and evidence bytes
+  ---
+  duration_ms: 123.525
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy rejects oversized bounded-field evidence without a partial artifact
+ok 21 - stdio recording proxy rejects oversized bounded-field evidence without a partial artifact
+  ---
+  duration_ms: 83.781959
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy controls an immediate publication failure and closes a live child
+ok 22 - stdio recording proxy controls an immediate publication failure and closes a live child
+  ---
+  duration_ms: 101.667625
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy bounds public question answers and option IDs
+ok 23 - stdio recording proxy bounds public question answers and option IDs
+  ---
+  duration_ms: 86.973542
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy ignores malformed and unrelated frames
+ok 24 - stdio recording proxy ignores malformed and unrelated frames
+  ---
+  duration_ms: 85.263916
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy preserves invalid UTF-8 and large numeric IDs byte-for-byte
+ok 25 - stdio recording proxy preserves invalid UTF-8 and large numeric IDs byte-for-byte
+  ---
+  duration_ms: 86.179416
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy fails closed on an oversized no-newline frame
+ok 26 - stdio recording proxy fails closed on an oversized no-newline frame
+  ---
+  duration_ms: 63.478875
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy fails closed on an oversized newline-terminated frame
+ok 27 - stdio recording proxy fails closed on an oversized newline-terminated frame
+  ---
+  duration_ms: 76.06425
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy publishes no partial oversized provider frame
+ok 28 - stdio recording proxy publishes no partial oversized provider frame
+  ---
+  duration_ms: 92.386542
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy flushes a backpressured final response before exit
+ok 29 - stdio recording proxy flushes a backpressured final response before exit
+  ---
+  duration_ms: 105.677583
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy publishes only bounded public fields from malformed lifecycle values
+ok 30 - stdio recording proxy publishes only bounded public fields from malformed lifecycle values
+  ---
+  duration_ms: 109.279375
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy does not publish evidence when no tool call was observed
+ok 31 - stdio recording proxy does not publish evidence when no tool call was observed
+  ---
+  duration_ms: 81.753375
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy stops its child with SIGTERM
+ok 32 - stdio recording proxy stops its child with SIGTERM
+  ---
+  duration_ms: 96.28275
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy stops its child with SIGKILL fallback
+ok 33 - stdio recording proxy stops its child with SIGKILL fallback
+  ---
+  duration_ms: 1091.064167
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy terminates its target when its owning process disappears
+ok 34 - stdio recording proxy terminates its target when its owning process disappears
+  ---
+  duration_ms: 342.236708
+  type: 'test'
+  ...
+# Subtest: evidence is atomically published outside and survives fixture cleanup
+ok 35 - evidence is atomically published outside and survives fixture cleanup
+  ---
+  duration_ms: 7.545917
+  type: 'test'
+  ...
+1..35
+# tests 35
+# suites 0
+# pass 35
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3919.366041

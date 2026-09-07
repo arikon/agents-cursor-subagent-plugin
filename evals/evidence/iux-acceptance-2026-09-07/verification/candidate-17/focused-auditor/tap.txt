@@ -1,0 +1,257 @@
+TAP version 13
+# Subtest: coverage audit reuses exact reviewed identities and classifies every new ordered zero counter
+ok 1 - coverage audit reuses exact reviewed identities and classifies every new ordered zero counter
+  ---
+  duration_ms: 35.385958
+  type: 'test'
+  ...
+# Subtest: coverage audit invalidates previous classifications when the source hash changes
+ok 2 - coverage audit invalidates previous classifications when the source hash changes
+  ---
+  duration_ms: 0.310375
+  type: 'test'
+  ...
+# Subtest: coverage audit occurrences identify raw sibling counters before zero filtering
+ok 3 - coverage audit occurrences identify raw sibling counters before zero filtering
+  ---
+  duration_ms: 0.156416
+  type: 'test'
+  ...
+# Subtest: coverage audit rejects incomplete, drifting and ambiguously referenced artifacts
+    # Subtest: nonpass
+    ok 1 - nonpass
+      ---
+      duration_ms: 5.031333
+      type: 'test'
+      ...
+    # Subtest: unstable snapshot
+    ok 2 - unstable snapshot
+      ---
+      duration_ms: 2.324292
+      type: 'test'
+      ...
+    # Subtest: invalid snapshot digest
+    ok 3 - invalid snapshot digest
+      ---
+      duration_ms: 2.349875
+      type: 'test'
+      ...
+    # Subtest: open snapshot shape
+    ok 4 - open snapshot shape
+      ---
+      duration_ms: 2.38625
+      type: 'test'
+      ...
+    # Subtest: invalid source file metadata
+    ok 5 - invalid source file metadata
+      ---
+      duration_ms: 2.477166
+      type: 'test'
+      ...
+    # Subtest: manifest differs from source snapshot
+    ok 6 - manifest differs from source snapshot
+      ---
+      duration_ms: 1.883209
+      type: 'test'
+      ...
+    # Subtest: invalid artifact digest descriptors
+    ok 7 - invalid artifact digest descriptors
+      ---
+      duration_ms: 1.86575
+      type: 'test'
+      ...
+    # Subtest: missing artifact reference
+    ok 8 - missing artifact reference
+      ---
+      duration_ms: 1.816041
+      type: 'test'
+      ...
+    # Subtest: escaping artifact reference
+    ok 9 - escaping artifact reference
+      ---
+      duration_ms: 1.787916
+      type: 'test'
+      ...
+    # Subtest: nested artifact reference
+    ok 10 - nested artifact reference
+      ---
+      duration_ms: 2.478125
+      type: 'test'
+      ...
+    # Subtest: missing artifact
+    ok 11 - missing artifact
+      ---
+      duration_ms: 1.536833
+      type: 'test'
+      ...
+    # Subtest: missing last coverage
+    ok 12 - missing last coverage
+      ---
+      duration_ms: 2.13425
+      type: 'test'
+      ...
+    # Subtest: unknown raw source
+    ok 13 - unknown raw source
+      ---
+      duration_ms: 2.245417
+      type: 'test'
+      ...
+    # Subtest: raw report file count differs
+    ok 14 - raw report file count differs
+      ---
+      duration_ms: 2.774667
+      type: 'test'
+      ...
+    # Subtest: raw report path is relative
+    ok 15 - raw report path is relative
+      ---
+      duration_ms: 2.317875
+      type: 'test'
+      ...
+    # Subtest: raw report metric is missing
+    ok 16 - raw report metric is missing
+      ---
+      duration_ms: 2.19725
+      type: 'test'
+      ...
+    # Subtest: negative raw counter
+    ok 17 - negative raw counter
+      ---
+      duration_ms: 2.440875
+      type: 'test'
+      ...
+    # Subtest: duplicate raw source
+    ok 18 - duplicate raw source
+      ---
+      duration_ms: 3.132041
+      type: 'test'
+      ...
+    # Subtest: source snapshot files are not sorted
+    ok 19 - source snapshot files are not sorted
+      ---
+      duration_ms: 1.997791
+      type: 'test'
+      ...
+    # Subtest: artifact bytes differ from the supervisor digest
+    ok 20 - artifact bytes differ from the supervisor digest
+      ---
+      duration_ms: 2.310375
+      type: 'test'
+      ...
+    # Subtest: output directory symlink
+    ok 21 - output directory symlink
+      ---
+      duration_ms: 2.404125
+      type: 'test'
+      ...
+    # Subtest: output parent symlink
+    ok 22 - output parent symlink
+      ---
+      duration_ms: 2.766083
+      type: 'test'
+      ...
+    # Subtest: missing output parent
+    ok 23 - missing output parent
+      ---
+      duration_ms: 2.087542
+      type: 'test'
+      ...
+    # Subtest: open previous audit schema
+    ok 24 - open previous audit schema
+      ---
+      duration_ms: 2.425375
+      type: 'test'
+      ...
+    # Subtest: open normalized previous audit schema
+    ok 25 - open normalized previous audit schema
+      ---
+      duration_ms: 2.679875
+      type: 'test'
+      ...
+    # Subtest: symlinked previous audit input
+    ok 26 - symlinked previous audit input
+      ---
+      duration_ms: 3.268
+      type: 'test'
+      ...
+    # Subtest: previous audit input is a directory
+    ok 27 - previous audit input is a directory
+      ---
+      duration_ms: 2.31025
+      type: 'test'
+      ...
+    # Subtest: malformed review decisions
+    ok 28 - malformed review decisions
+      ---
+      duration_ms: 13.941
+      type: 'test'
+      ...
+    # Subtest: snapshot destination already contains different bytes
+    ok 29 - snapshot destination already contains different bytes
+      ---
+      duration_ms: 3.548417
+      type: 'test'
+      ...
+    # Subtest: snapshot destination is a symlink
+    ok 30 - snapshot destination is a symlink
+      ---
+      duration_ms: 2.65425
+      type: 'test'
+      ...
+    # Subtest: duplicate supervisor artifact destinations
+    ok 31 - duplicate supervisor artifact destinations
+      ---
+      duration_ms: 2.367834
+      type: 'test'
+      ...
+    # Subtest: result artifact reference names a different file
+    ok 32 - result artifact reference names a different file
+      ---
+      duration_ms: 1.945458
+      type: 'test'
+      ...
+    # Subtest: supervisor artifact collides with an audit output
+    ok 33 - supervisor artifact collides with an audit output
+      ---
+      duration_ms: 2.985542
+      type: 'test'
+      ...
+    # Subtest: source artifacts already in the output directory are retained
+    ok 34 - source artifacts already in the output directory are retained
+      ---
+      duration_ms: 3.732667
+      type: 'test'
+      ...
+    # Subtest: extra sidecar decision
+    ok 35 - extra sidecar decision
+      ---
+      duration_ms: 2.866375
+      type: 'test'
+      ...
+    # Subtest: duplicate sidecar decision
+    ok 36 - duplicate sidecar decision
+      ---
+      duration_ms: 5.393417
+      type: 'test'
+      ...
+    1..36
+ok 4 - coverage audit rejects incomplete, drifting and ambiguously referenced artifacts
+  ---
+  duration_ms: 108.157916
+  type: 'test'
+  ...
+# Subtest: coverage audit CLI exits one with a published review queue and zero only after exact classification
+ok 5 - coverage audit CLI exits one with a published review queue and zero only after exact classification
+  ---
+  duration_ms: 237.990084
+  type: 'test'
+  ...
+1..5
+# tests 41
+# suites 0
+# pass 41
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 445.238792

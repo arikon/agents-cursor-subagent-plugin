@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "live_tree": {
+    "ok": false,
+    "errors": [
+      "openspec/changes/simplify-task-state-wait: active change is absent from semantic-gate registry"
+    ],
+    "checkedChanges": 11
+  },
+  "registered_change_snapshot": {
+    "ok": true,
+    "errors": [],
+    "checkedChanges": 11
+  },
+  "scope_ref": "scope.json",
+  "claim": "Current registered change lineage passes; whole-tree gate remains blocked by the separate unregistered follow-up draft."
+}

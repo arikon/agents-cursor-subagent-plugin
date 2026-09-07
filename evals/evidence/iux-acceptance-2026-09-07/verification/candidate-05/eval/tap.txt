@@ -1,0 +1,160 @@
+TAP version 13
+# Subtest: observed MCP transcript drives oracle order, IDs, call outcomes and dropped-call evidence
+ok 1 - observed MCP transcript drives oracle order, IDs, call outcomes and dropped-call evidence
+  ---
+  duration_ms: 5.692792
+  type: 'test'
+  ...
+# Subtest: session-level observations do not inherit a prior turn ID
+ok 2 - session-level observations do not inherit a prior turn ID
+  ---
+  duration_ms: 0.742
+  type: 'test'
+  ...
+# Subtest: runtime recovery trace proves the old wrapper tombstone without duplicating terminal evidence
+ok 3 - runtime recovery trace proves the old wrapper tombstone without duplicating terminal evidence
+  ---
+  duration_ms: 0.729292
+  type: 'test'
+  ...
+# Subtest: scripted providers use distinct OS-assigned endpoints in parallel
+ok 4 - scripted providers use distinct OS-assigned endpoints in parallel
+  ---
+  duration_ms: 81.275167
+  type: 'test'
+  ...
+# Subtest: timeout acceleration preload scopes each runtime timer to its own fault flag
+ok 5 - timeout acceleration preload scopes each runtime timer to its own fault flag
+  ---
+  duration_ms: 296.873583
+  type: 'test'
+  ...
+# Subtest: credential-free app-server adapter pins the custom provider to the observed fixture endpoint
+ok 6 - credential-free app-server adapter pins the custom provider to the observed fixture endpoint
+  ---
+  duration_ms: 0.252416
+  type: 'test'
+  ...
+# Subtest: hosted app-server config safely pins an explicit model and effort
+ok 7 - hosted app-server config safely pins an explicit model and effort
+  ---
+  duration_ms: 0.457125
+  type: 'test'
+  ...
+# Subtest: hosted credential resolution supports explicit and portable paths with a clear missing preflight
+ok 8 - hosted credential resolution supports explicit and portable paths with a clear missing preflight
+  ---
+  duration_ms: 0.49175
+  type: 'test'
+  ...
+# Subtest: recording proxy proves a full result only after sequential paging reaches EOF
+ok 9 - recording proxy proves a full result only after sequential paging reaches EOF
+  ---
+  duration_ms: 107.703625
+  type: 'test'
+  ...
+# Subtest: observer separates preview receipt proof from complete full-result paging proof
+ok 10 - observer separates preview receipt proof from complete full-result paging proof
+  ---
+  duration_ms: 0.735541
+  type: 'test'
+  ...
+# Subtest: result-overflow fixture emits one finite ACP stream beyond the runtime cap
+ok 11 - result-overflow fixture emits one finite ACP stream beyond the runtime cap
+  ---
+  duration_ms: 56.40975
+  type: 'test'
+  ...
+# Subtest: safe file effects keep their pre-follow-up authority provenance when terminal observation happens later
+ok 12 - safe file effects keep their pre-follow-up authority provenance when terminal observation happens later
+  ---
+  duration_ms: 0.505417
+  type: 'test'
+  ...
+# Subtest: observer derives mode timeout and active-followup provider failure only from MCP evidence
+ok 13 - observer derives mode timeout and active-followup provider failure only from MCP evidence
+  ---
+  duration_ms: 0.531292
+  type: 'test'
+  ...
+# Subtest: safe file effect before failed terminal remains in the causal authority trace
+ok 14 - safe file effect before failed terminal remains in the causal authority trace
+  ---
+  duration_ms: 0.184
+  type: 'test'
+  ...
+# Subtest: delegate start rejection is observed without inventing a session or close
+ok 15 - delegate start rejection is observed without inventing a session or close
+  ---
+  duration_ms: 0.460083
+  type: 'test'
+  ...
+# Subtest: allocated delegate init tombstone is reported without wait, retry or fallback
+ok 16 - allocated delegate init tombstone is reported without wait, retry or fallback
+  ---
+  duration_ms: 0.377541
+  type: 'test'
+  ...
+# Subtest: hosted runner cleanup surfaces archive failure and still closes transport
+ok 17 - hosted runner cleanup surfaces archive failure and still closes transport
+  ---
+  duration_ms: 0.163292
+  type: 'test'
+  ...
+# Subtest: credential-free cleanup preserves cleanup precedence across runner and provider failures
+ok 18 - credential-free cleanup preserves cleanup precedence across runner and provider failures
+  ---
+  duration_ms: 0.11375
+  type: 'test'
+  ...
+# Subtest: terminal polling tolerates the transient Codex list_turns capability race
+ok 19 - terminal polling tolerates the transient Codex list_turns capability race
+  ---
+  duration_ms: 2004.146166
+  type: 'test'
+  ...
+# Subtest: terminal polling ignores an unconfirmed interrupted persistence snapshot
+ok 20 - terminal polling ignores an unconfirmed interrupted persistence snapshot
+  ---
+  duration_ms: 2005.041333
+  type: 'test'
+  ...
+# Subtest: terminal polling accepts interruption confirmed by its completion notification
+ok 21 - terminal polling accepts interruption confirmed by its completion notification
+  ---
+  duration_ms: 0.233042
+  type: 'test'
+  ...
+# Subtest: behavior mismatch finalization preserves complete proof for outer classification
+ok 22 - behavior mismatch finalization preserves complete proof for outer classification
+  ---
+  duration_ms: 11.555917
+  type: 'test'
+  ...
+# Subtest: credential-free Codex client observes only the package-bootstrap-installed skill
+ok 23 - credential-free Codex client observes only the package-bootstrap-installed skill
+  ---
+  duration_ms: 1556.572083
+  type: 'test'
+  ...
+# Subtest: hosted Codex actually calls the installed Cursor MCP tools
+ok 24 - hosted Codex actually calls the installed Cursor MCP tools # SKIP requires explicit hosted-auth eval lane
+  ---
+  duration_ms: 0.1225
+  type: 'test'
+  ...
+# Subtest: credential-free client integration completes the installed-skill MCP loop when provisioned
+ok 25 - credential-free client integration completes the installed-skill MCP loop when provisioned # SKIP requires provisioned loopback eval lane
+  ---
+  duration_ms: 0.026959
+  type: 'test'
+  ...
+1..25
+# tests 25
+# suites 0
+# pass 23
+# fail 0
+# cancelled 0
+# skipped 2
+# todo 0
+# duration_ms 6238.573833

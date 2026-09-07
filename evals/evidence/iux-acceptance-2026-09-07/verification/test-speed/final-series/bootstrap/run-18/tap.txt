@@ -1,0 +1,82 @@
+TAP version 13
+# Subtest: fake adapter CLI and in-process runner have normalized outcome parity
+ok 1 - fake adapter CLI and in-process runner have normalized outcome parity
+  ---
+  duration_ms: 334.728792
+  type: 'test'
+  ...
+# Subtest: each backup cleanup deletion boundary is fail-closed as cleanup_required
+ok 2 - each backup cleanup deletion boundary is fail-closed as cleanup_required
+  ---
+  duration_ms: 302.976584
+  type: 'test'
+  ...
+# Subtest: update and uninstall also return recovery_required when compensation cannot restore registrations
+ok 3 - update and uninstall also return recovery_required when compensation cannot restore registrations
+  ---
+  duration_ms: 110.173958
+  type: 'test'
+  ...
+# Subtest: strict marker validation rejects every malformed owned identity before mutation
+ok 4 - strict marker validation rejects every malformed owned identity before mutation
+  ---
+  duration_ms: 37.67375
+  type: 'test'
+  ...
+# Subtest: negative, nonzero, partial and output-overflow mutators compensate only their observed registration delta
+ok 5 - negative, nonzero, partial and output-overflow mutators compensate only their observed registration delta
+  ---
+  duration_ms: 109.67425
+  type: 'test'
+  ...
+# Subtest: registration reread failure during compensation requires recovery without advancing publication
+ok 6 - registration reread failure during compensation requires recovery without advancing publication
+  ---
+  duration_ms: 111.364291
+  type: 'test'
+  ...
+# Subtest: rejected and timed-out compensation commands classify install, update and uninstall by observed state
+ok 7 - rejected and timed-out compensation commands classify install, update and uninstall by observed state
+  ---
+  duration_ms: 551.542834
+  type: 'test'
+  ...
+# Subtest: reread failures preserve every recoverable artifact and expose the observed lifecycle state
+ok 8 - reread failures preserve every recoverable artifact and expose the observed lifecycle state
+  ---
+  duration_ms: 1115.775833
+  type: 'test'
+  ...
+# Subtest: uncertain remove outcomes compensate their observed delta and never advance lifecycle
+ok 9 - uncertain remove outcomes compensate their observed delta and never advance lifecycle
+  ---
+  duration_ms: 296.565458
+  type: 'test'
+  ...
+# Subtest: reported successful no-op mutations do not advance their lifecycle
+ok 10 - reported successful no-op mutations do not advance their lifecycle
+  ---
+  duration_ms: 158.252291
+  type: 'test'
+  ...
+# Subtest: update and uninstall never add compensation over foreign, duplicate or coupled observed tuples
+ok 11 - update and uninstall never add compensation over foreign, duplicate or coupled observed tuples
+  ---
+  duration_ms: 175.509292
+  type: 'test'
+  ...
+# Subtest: pre-commit publication rename faults compensate install and update while uninstall commit fault is cleanup_required
+ok 12 - pre-commit publication rename faults compensate install and update while uninstall commit fault is cleanup_required
+  ---
+  duration_ms: 489.1875
+  type: 'test'
+  ...
+1..12
+# tests 12
+# suites 0
+# pass 12
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3878.086875

@@ -1,0 +1,536 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "lines",
+      "line": 49,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed source or digest metadata is a realistic supervisor-evidence failure owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; adjacent invalid snapshot cases exercise this owner."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "lines",
+      "line": 50,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed source or digest metadata is a realistic supervisor-evidence failure owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; adjacent invalid snapshot cases exercise this owner."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "lines",
+      "line": 65,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed identity, decision, previous review, or classification sidecar data is a realistic review-input failure owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; the existing open, extra, and duplicate review cases are the extension point."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "lines",
+      "line": 66,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed identity, decision, previous review, or classification sidecar data is a realistic review-input failure owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; the existing open, extra, and duplicate review cases are the extension point."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "lines",
+      "line": 97,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed source or digest metadata is a realistic supervisor-evidence failure owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; adjacent invalid snapshot cases exercise this owner."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "lines",
+      "line": 98,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed source or digest metadata is a realistic supervisor-evidence failure owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; adjacent invalid snapshot cases exercise this owner."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "lines",
+      "line": 117,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed raw coverage structure is a realistic supervisor-evidence failure owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; unknown, duplicate, and invalid-counter cases exercise this owner."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "lines",
+      "line": 118,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed raw coverage structure is a realistic supervisor-evidence failure owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; unknown, duplicate, and invalid-counter cases exercise this owner."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "lines",
+      "line": 174,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed identity, decision, previous review, or classification sidecar data is a realistic review-input failure owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; the existing open, extra, and duplicate review cases are the extension point."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "lines",
+      "line": 175,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed identity, decision, previous review, or classification sidecar data is a realistic review-input failure owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; the existing open, extra, and duplicate review cases are the extension point."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "lines",
+      "line": 494,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed CLI arguments and CLI error exit 2 are realistic operator failures owned by coverage audit CLI exits one with a published review queue and zero only after exact classification; invalid-option and malformed-input subprocess variants remain a targeted extension gap."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "lines",
+      "line": 495,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed CLI arguments and CLI error exit 2 are realistic operator failures owned by coverage audit CLI exits one with a published review queue and zero only after exact classification; invalid-option and malformed-input subprocess variants remain a targeted extension gap."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "lines",
+      "line": 496,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed CLI arguments and CLI error exit 2 are realistic operator failures owned by coverage audit CLI exits one with a published review queue and zero only after exact classification; invalid-option and malformed-input subprocess variants remain a targeted extension gap."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 48,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed source or digest metadata is a realistic supervisor-evidence failure owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; adjacent invalid snapshot cases exercise this owner."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 48,
+      "occurrence": 2,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed source or digest metadata is a realistic supervisor-evidence failure owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; adjacent invalid snapshot cases exercise this owner."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 56,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed identity, decision, previous review, or classification sidecar data is a realistic review-input failure owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; the existing open, extra, and duplicate review cases are the extension point."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 58,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed identity, decision, previous review, or classification sidecar data is a realistic review-input failure owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; the existing open, extra, and duplicate review cases are the extension point."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 61,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed identity, decision, previous review, or classification sidecar data is a realistic review-input failure owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; the existing open, extra, and duplicate review cases are the extension point."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 64,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed identity, decision, previous review, or classification sidecar data is a realistic review-input failure owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; the existing open, extra, and duplicate review cases are the extension point."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 68,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed identity, decision, previous review, or classification sidecar data is a realistic review-input failure owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; the existing open, extra, and duplicate review cases are the extension point."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 85,
+      "occurrence": 2,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed source or digest metadata is a realistic supervisor-evidence failure owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; adjacent invalid snapshot cases exercise this owner."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 90,
+      "occurrence": 2,
+      "classification": "observable_contract_already_owned",
+      "disposition": "Deterministic codepoint ordering of source snapshot entries is an observable audit contract owned by coverage audit reuses exact reviewed identities and classifies every new ordered zero counter."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 90,
+      "occurrence": 3,
+      "classification": "observable_contract_already_owned",
+      "disposition": "Deterministic codepoint ordering of source snapshot entries is an observable audit contract owned by coverage audit reuses exact reviewed identities and classifies every new ordered zero counter."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 91,
+      "occurrence": 2,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed source or digest metadata is a realistic supervisor-evidence failure owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; adjacent invalid snapshot cases exercise this owner."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 96,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed source or digest metadata is a realistic supervisor-evidence failure owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; adjacent invalid snapshot cases exercise this owner."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 96,
+      "occurrence": 2,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed source or digest metadata is a realistic supervisor-evidence failure owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; adjacent invalid snapshot cases exercise this owner."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 101,
+      "occurrence": 2,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed source or digest metadata is a realistic supervisor-evidence failure owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; adjacent invalid snapshot cases exercise this owner."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 116,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed raw coverage structure is a realistic supervisor-evidence failure owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; unknown, duplicate, and invalid-counter cases exercise this owner."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 124,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed raw coverage structure is a realistic supervisor-evidence failure owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; unknown, duplicate, and invalid-counter cases exercise this owner."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 131,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed raw coverage structure is a realistic supervisor-evidence failure owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; unknown, duplicate, and invalid-counter cases exercise this owner."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 152,
+      "occurrence": 2,
+      "classification": "unreachable_defensive",
+      "disposition": "Defensive completeness check is unreachable after exact raw file count plus the preceding unique known-source mapping checks; surrounding malformed raw report behavior is owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 154,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "Deterministic codepoint ordering of normalized zero-counter paths is an observable audit contract owned by coverage audit reuses exact reviewed identities and classifies every new ordered zero counter."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 166,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed identity, decision, previous review, or classification sidecar data is a realistic review-input failure owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; the existing open, extra, and duplicate review cases are the extension point."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 173,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed identity, decision, previous review, or classification sidecar data is a realistic review-input failure owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; the existing open, extra, and duplicate review cases are the extension point."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 238,
+      "occurrence": 2,
+      "classification": "observable_contract_already_owned",
+      "disposition": "Deterministic codepoint ordering of normalized previous-review source digests is an observable portable-bundle contract owned by coverage audit reuses exact reviewed identities and classifies every new ordered zero counter."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 238,
+      "occurrence": 3,
+      "classification": "observable_contract_already_owned",
+      "disposition": "Deterministic codepoint ordering of normalized previous-review source digests is an observable portable-bundle contract owned by coverage audit reuses exact reviewed identities and classifies every new ordered zero counter."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 250,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed identity, decision, previous review, or classification sidecar data is a realistic review-input failure owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; the existing open, extra, and duplicate review cases are the extension point."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 321,
+      "occurrence": 2,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed or internally inconsistent published audit decisions and totals are realistic evidence failures owned by coverage audit reuses exact reviewed identities and classifies every new ordered zero counter; the existing tampered-delta verifier case is the extension point."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 333,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed or internally inconsistent published audit decisions and totals are realistic evidence failures owned by coverage audit reuses exact reviewed identities and classifies every new ordered zero counter; the existing tampered-delta verifier case is the extension point."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 337,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed or internally inconsistent published audit decisions and totals are realistic evidence failures owned by coverage audit reuses exact reviewed identities and classifies every new ordered zero counter; the existing tampered-delta verifier case is the extension point."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 346,
+      "occurrence": 2,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed or internally inconsistent published audit decisions and totals are realistic evidence failures owned by coverage audit reuses exact reviewed identities and classifies every new ordered zero counter; the existing tampered-delta verifier case is the extension point."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 352,
+      "occurrence": 3,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed or internally inconsistent published audit decisions and totals are realistic evidence failures owned by coverage audit reuses exact reviewed identities and classifies every new ordered zero counter; the existing tampered-delta verifier case is the extension point."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 360,
+      "occurrence": 2,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "A non-regular or symlinked explicit evidence input is a realistic local artifact failure owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; input-file type variants remain a targeted extension gap."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 370,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "Fallback for an empty relative evidence path is unreachable because every evidence destination is a distinct basename inside the output directory; portable evidence refs are owned by coverage audit reuses exact reviewed identities and classifies every new ordered zero counter."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 376,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Snapshot destination collision, stale content, symlink, or filesystem inspection failure is a realistic portable-bundle failure owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; the missing variants remain targeted extensions."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 378,
+      "occurrence": 2,
+      "classification": "observable_contract_already_owned",
+      "disposition": "Idempotent auditing when a validated source artifact is already at its bundle destination is an observable snapshot contract owned by coverage audit reuses exact reviewed identities and classifies every new ordered zero counter; this shortcut remains a targeted extension gap."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 381,
+      "occurrence": 2,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Snapshot destination collision, stale content, symlink, or filesystem inspection failure is a realistic portable-bundle failure owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; the missing variants remain targeted extensions."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 382,
+      "occurrence": 2,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Snapshot destination collision, stale content, symlink, or filesystem inspection failure is a realistic portable-bundle failure owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; the missing variants remain targeted extensions."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 385,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Snapshot destination collision, stale content, symlink, or filesystem inspection failure is a realistic portable-bundle failure owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; the missing variants remain targeted extensions."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 400,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "A missing output parent is a realistic operator path failure owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; the existing output-parent symlink case is the extension point."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 426,
+      "occurrence": 2,
+      "classification": "unreachable_defensive",
+      "disposition": "Lexical artifact-root escape is unreachable after strict basename-only supervisor artifact references; escaping and nested references are owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 428,
+      "occurrence": 3,
+      "classification": "unreachable_defensive",
+      "disposition": "Canonical artifact-root escape is unreachable for a basename child that readRegular has already required to be a non-symlink regular file; symlink rejection is owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 431,
+      "occurrence": 2,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "A conflicting supervisor result reference or audit-output filename is realistic malformed evidence owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; this collision variant remains a targeted extension gap."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 453,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "A conflicting supervisor result reference or audit-output filename is realistic malformed evidence owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; this collision variant remains a targeted extension gap."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 475,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed CLI arguments and CLI error exit 2 are realistic operator failures owned by coverage audit CLI exits one with a published review queue and zero only after exact classification; invalid-option and malformed-input subprocess variants remain a targeted extension gap."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 480,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed CLI arguments and CLI error exit 2 are realistic operator failures owned by coverage audit CLI exits one with a published review queue and zero only after exact classification; invalid-option and malformed-input subprocess variants remain a targeted extension gap."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 481,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed CLI arguments and CLI error exit 2 are realistic operator failures owned by coverage audit CLI exits one with a published review queue and zero only after exact classification; invalid-option and malformed-input subprocess variants remain a targeted extension gap."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 482,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed CLI arguments and CLI error exit 2 are realistic operator failures owned by coverage audit CLI exits one with a published review queue and zero only after exact classification; invalid-option and malformed-input subprocess variants remain a targeted extension gap."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "b4ff3f6ee50bcfeb12b0a7f028a8dd6008fde0bb837781aa46e5acd8ed9290b2",
+      "metric": "branches",
+      "line": 493,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Malformed CLI arguments and CLI error exit 2 are realistic operator failures owned by coverage audit CLI exits one with a published review queue and zero only after exact classification; invalid-option and malformed-input subprocess variants remain a targeted extension gap."
+    }
+  ]
+}

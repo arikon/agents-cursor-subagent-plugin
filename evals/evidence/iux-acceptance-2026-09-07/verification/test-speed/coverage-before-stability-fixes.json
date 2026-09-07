@@ -1,0 +1,103 @@
+{
+  "group": "coverage",
+  "command": [
+    "coverage"
+  ],
+  "controlled_load": null,
+  "runs": [
+    {
+      "index": 1,
+      "exit_code": 1,
+      "source_digest": "980abcf4220870e784232ccbf9a68ecef5efb56fbe09c89ca0f173138a9fa079",
+      "source_unchanged": true,
+      "output": "failed (exit_nonzero); artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-35-36-625Z-coverage-0b4b40d5-269a-4af5-8db8-5621e469a88f\napp-server client applies one deadline to slow pages and caps the page override: Expected values to be strictly deep-equal:\n+ actual - expected\n\n  {\n    completeness: 'incomplete',\n    error_code: 'capture_timeout',\n    phase: null,\n+   source: 'thread/turns/list',\n-   source: 'thread/items/list',\n    text: null,\n    turn_id: 'evaluated-turn',\n+   turn_status: null\n-   turn_status: 'completed'\n  }\n\nruntime reports spawn failure when ACP disappears after its admitted version probe: Expected values to be strictly equal:\n+ actual - expected\n\n+ 'init_timeout'\n- 'spawn'\n\nstderr: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-35-36-625Z-coverage-0b4b40d5-269a-4af5-8db8-5621e469a88f/stderr.txt\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-35-36-625Z-coverage-0b4b40d5-269a-4af5-8db8-5621e469a88f",
+      "result": {
+        "schema_version": 1,
+        "lane": "coverage",
+        "verdict": "failed",
+        "terminal_cause": "exit_nonzero",
+        "child": {
+          "code": 1,
+          "signal": null
+        },
+        "duration_ms": 105129,
+        "tests": {
+          "success": false,
+          "counts": {
+            "tests": 556,
+            "failed": 2,
+            "passed": 553,
+            "cancelled": 0,
+            "skipped": 1,
+            "todo": 0,
+            "topLevel": 481,
+            "suites": 0
+          },
+          "duration_ms": 101472.737333
+        },
+        "coverage": {
+          "enabled": true,
+          "manifest": [
+            "scripts/check-openspec-semantics.mjs",
+            "scripts/codex-app-server-client.mjs",
+            "scripts/cursor-eval-scenario.mjs",
+            "scripts/cursor-skill-eval.mjs",
+            "scripts/openspec-semantic-registry.mjs",
+            "scripts/cursor-subagent-bootstrap.mjs",
+            "scripts/cursor-subagent-mcp.mjs",
+            "scripts/node-test-reporter-v22.mjs",
+            "scripts/recording-mcp-proxy.mjs",
+            "scripts/run-cursor-skill-eval.mjs",
+            "scripts/run-node-tests.mjs",
+            "scripts/run-unit-coverage.mjs",
+            "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+            "scripts/eval/run-cursor-skill-eval-suite.mjs"
+          ],
+          "reported": [
+            "scripts/check-openspec-semantics.mjs",
+            "scripts/codex-app-server-client.mjs",
+            "scripts/cursor-eval-scenario.mjs",
+            "scripts/cursor-skill-eval.mjs",
+            "scripts/cursor-subagent-bootstrap.mjs",
+            "scripts/cursor-subagent-mcp.mjs",
+            "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+            "scripts/eval/run-cursor-skill-eval-suite.mjs",
+            "scripts/node-test-reporter-v22.mjs",
+            "scripts/openspec-semantic-registry.mjs",
+            "scripts/recording-mcp-proxy.mjs",
+            "scripts/run-cursor-skill-eval.mjs",
+            "scripts/run-node-tests.mjs",
+            "scripts/run-unit-coverage.mjs"
+          ],
+          "metrics": {
+            "lines": 99.88097599682602,
+            "branches": 97.62269938650306,
+            "functions": 99.70930232558139
+          },
+          "thresholds": {
+            "lines": 90,
+            "branches": 90,
+            "functions": 90
+          },
+          "diagnostics": [],
+          "denominator_classifications": [
+            {
+              "source": "scripts/openspec-semantic-registry.mjs",
+              "metric": "functions",
+              "classification": "zero_total"
+            }
+          ]
+        },
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "durable_artifact_dir": "coverage-before-stability-fixes/run-01"
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-09-07T10:33:22.464448+00:00",
+  "verdict": "OKAY",
+  "reviewer": "Sol independent critic",
+  "architect_verdict": "CLEAR",
+  "findings": [
+    {
+      "classification": "baseline_violation",
+      "repair": "local rejected wait repair is distinguished from observed wrapper loss; facade references sole eval recovery owner"
+    },
+    {
+      "classification": "implementation_concern",
+      "repair": "explicitly replace retained event cursor after successful answer"
+    }
+  ],
+  "source_files": [
+    {
+      "path": "skills/cursor-subagent/SKILL.md",
+      "bytes": 19145,
+      "sha256": "7ad6febdb29ebbc12f2c191f3496d319e6b31d79bb6ba03e26f2d465c9069ea7"
+    },
+    {
+      "path": "openspec/changes/improve-interactive-acp-ux/specs/cursor-task-delegation/spec.md",
+      "bytes": 29110,
+      "sha256": "483b44a930d8b1e864872b9d47fb79379d4b9dcd2c7ed2f321d5d01398059386"
+    },
+    {
+      "path": "scripts/openspec-semantic-registry.mjs",
+      "bytes": 13369,
+      "sha256": "bd282f2336f00ad55f644f0e39a971eb2c0b8d53d6bab1bd566c4105a04c686d"
+    }
+  ],
+  "verification": "release and deterministic eval passed; existing recovery table passed; source-bound full coverage passed; exhaustive audit classified all 93 counters with zero unclassified; hosted acceptance pending",
+  "mandatory_scope": [
+    "mechanics",
+    "evidence",
+    "exact_delivery"
+  ],
+  "not_checked": [
+    "reported_task_outcome",
+    "outcome_report",
+    "safety_disclosure"
+  ]
+}

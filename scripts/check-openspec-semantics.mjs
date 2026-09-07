@@ -109,7 +109,8 @@ export function checkOpenSpecSemantics(rootPath = process.cwd(), registry = PROJ
 
   function requirementBlock(contents, requirement) {
     const marker = `### Requirement: ${requirement}`;
-    const start = contents.indexOf(marker);
+    const start = [...contents.matchAll(/^### Requirement: (.+)$/gm)]
+      .find(([, name]) => name === requirement)?.index ?? -1;
     if (start === -1) return "";
     const remainder = contents.slice(start);
     const next = remainder.slice(marker.length).search(/\n(?:### Requirement:|## (?:ADDED|MODIFIED|REMOVED|RENAMED) Requirements)/);
@@ -228,6 +229,9 @@ export function checkOpenSpecSemantics(rootPath = process.cwd(), registry = PROJ
       if (trace.some(({ kind }) => kind === 'turn.events-lost')) {
         expectOwner(runtimeCapability, 'Sparse wait and bounded progress');
       }
+      if (trace.some(({ kind }) => kind === 'turn.result-read') || scenario?.harness_faults?.includes('result-overflow')) {
+        expectOwner(runtimeCapability, 'Полное чтение terminal result');
+      }
       if (scenario?.harness_faults?.some((fault) => ['reject-initialize', 'reject-mode', 'reject-prompt', 'reject-resume'].includes(fault))) {
         expectOwner(runtimeCapability, 'Provider errors are bounded and classified');
       }
@@ -241,6 +245,7 @@ export function checkOpenSpecSemantics(rootPath = process.cwd(), registry = PROJ
         ['Адресуемое ожидание состояния сессии', 'addressed wait trace'],
         ['Нормативные limits runtime', 'turn deadline trace'],
         ['Sparse wait and bounded progress', 'retention-gap trace'],
+        ['Полное чтение terminal result', 'full result read or overflow'],
         ['Provider errors are bounded and classified', 'provider rejection fault'],
       ]);
       for (const key of expectedOwners) {
@@ -393,21 +398,43 @@ for (const change of changes) {
     }
   }
   for (const modification of modified) {
-    const { capability, requirement, replacementReason, sourceDigest, replacementDigest } = modification;
+    const { capability, requirement, replacementReason, sourceDigest, replacementDigest, sourceChange } = modification;
+    const stacked = Object.hasOwn(modification, "sourceChange");
     const replacement = typeof replacementReason === "string" && replacementReason.trim().length >= 20
       && typeof sourceDigest === "string" && /^[a-f0-9]{64}$/.test(sourceDigest)
       && typeof replacementDigest === "string" && /^[a-f0-9]{64}$/.test(replacementDigest);
     const deltaPath = `${rootPath}/specs/${capability}/spec.md`;
     const mainPath = `openspec/specs/${capability}/spec.md`;
     const deltaSpec = read(deltaPath);
-    const mainSpec = read(mainPath);
+    const mainSpec = existsSync(resolve(root, mainPath)) ? read(mainPath) : "";
     const sourceBlock = requirementBlock(mainSpec, requirement);
     const deltaBlock = requirementBlock(deltaSpec, requirement);
     const archived = rootPath.startsWith("openspec/changes/archive/");
     const currentMainDigest = createHash("sha256").update(sourceBlock).digest("hex");
-    const sourceDigestMatches = !replacement || (archived
+    let sourceDigestMatches = !replacement || (archived
       ? replacementLineageReaches(registry, capability, requirement, replacementDigest, currentMainDigest)
       : currentMainDigest === sourceDigest);
+    if (stacked) {
+      const source = changeContracts[sourceChange];
+      const earlier = typeof sourceChange === "string" && changes.indexOf(sourceChange) >= 0
+        && changes.indexOf(sourceChange) < changes.indexOf(change);
+      const sourceRoot = earlier ? changeRoot(sourceChange) : null;
+      const sourcePath = sourceRoot && `${sourceRoot}/specs/${capability}/spec.md`;
+      const predecessorBlock = sourcePath && existsSync(resolve(root, sourcePath))
+        ? requirementBlock(read(sourcePath), requirement) : "";
+      const registered = earlier && (source.modified.some((entry) =>
+        entry.capability === capability && entry.requirement === requirement)
+        || (source.capability === capability && sourceRoot
+          && existsSync(resolve(root, `${sourceRoot}/specs/${source.specDirectory}/spec.md`))
+          && requirementNames(sourceChange).includes(requirement)));
+      const sourceArchived = sourceRoot?.startsWith("openspec/changes/archive/");
+      sourceDigestMatches = replacement && registered && Boolean(predecessorBlock)
+        && createHash("sha256").update(predecessorBlock).digest("hex") === sourceDigest
+        && (archived
+          ? sourceArchived && Boolean(sourceBlock)
+            && replacementLineageReaches(registry, capability, requirement, replacementDigest, currentMainDigest)
+          : !sourceArchived || Boolean(sourceBlock) && currentMainDigest === sourceDigest);
+    }
     const replacementDigestMatches = !replacement
       || createHash("sha256").update(deltaBlock).digest("hex") === replacementDigest;
     const fixedEvalCorpusCount = change === registry.roles.interactiveAcpUx
@@ -419,7 +446,7 @@ for (const change of changes) {
         !replacementDigestMatches ||
         fixedEvalCorpusCount ||
         !proposal.includes(`- \`${capability}\``) || !deltaSpec.includes("## MODIFIED Requirements") ||
-        !deltaSpec.includes(`### Requirement: ${requirement}`) || !mainSpec.includes(`### Requirement: ${requirement}`) ||
+        !deltaBlock || (!stacked && !sourceBlock) ||
         (!replacement && !preservesRequirement(sourceBlock, deltaBlock))) {
       errors.push(`${rootPath}: invalid modified capability ${capability}/${requirement}`);
     }

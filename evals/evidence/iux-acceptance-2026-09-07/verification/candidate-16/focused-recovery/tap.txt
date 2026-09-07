@@ -1,0 +1,22 @@
+TAP version 13
+# Subtest: recovery proof admits adjacent grounded lookup correction without losing its rejected call
+ok 1 - recovery proof admits adjacent grounded lookup correction without losing its rejected call
+  ---
+  duration_ms: 1.8735
+  type: 'test'
+  ...
+# Subtest: recovery proof fails closed for ambiguous rejection, changed intent, missing evidence or another user turn
+ok 2 - recovery proof fails closed for ambiguous rejection, changed intent, missing evidence or another user turn
+  ---
+  duration_ms: 0.528541
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 72.652958

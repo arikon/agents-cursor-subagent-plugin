@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "subject": "evals/evidence/iux-acceptance-2026-09-07/diagnostic-16/high.json",
+  "verdict": "passed",
+  "acceptance_verdict": "26/26 diagnostic pass; not a three-run acceptance baseline",
+  "candidate_digest": {
+    "sha256": "f198bdcd9da7cc069227360ae50a9f641d1149b0de70dd9726e50960504ea310",
+    "bytes": 559
+  },
+  "summary": {
+    "sha256": "4d89893eb7d62c6a7ee754b353aa244dc19195772d698856d7faa2cabc92eab5",
+    "bytes": 80566,
+    "model": "gpt-5.6-terra",
+    "effort": "high",
+    "concurrency": 4,
+    "serial": 1,
+    "duration_ms": 401340,
+    "counts": {
+      "total": 26,
+      "pass": 26,
+      "agent_behavior_mismatch": 0,
+      "integration_failure": 0,
+      "skipped": 0
+    },
+    "pass_rate": 1,
+    "digest_stable": true,
+    "attempted_runs": 26,
+    "attempt_policy": "one-attempt-per-scenario-run"
+  },
+  "checks": {
+    "authoritative_references_relative": true,
+    "artifact_index_complete": true,
+    "artifact_hashes_match": true,
+    "candidate_payload_digest_matches": true,
+    "candidate_manifest_consistent_across_all_results": true,
+    "unique_scenarios": 26,
+    "one_attempt_results": 26,
+    "pass_results": 26,
+    "reported_task_outcome_not_checked": 26,
+    "published_evidence_results": 26,
+    "succeeded_cleanup_results": 26,
+    "complete_captured_finals": 40,
+    "nonempty_captured_finals": 40,
+    "zero_capture_scenarios": 0,
+    "passing_supervisor_bundles": 26
+  },
+  "inventory": {
+    "candidate_input_digests": 31,
+    "indexed_artifacts": 183,
+    "indexed_artifact_bytes": 221581,
+    "filesystem_artifacts": 183
+  },
+  "diagnostic_payload_paths": {
+    "absolute_driver_stdout_evidence_refs": 26,
+    "absolute_tap_source_file_fields": 26,
+    "disposition": "raw immutable child/TAP diagnostics retain origin paths; authoritative aggregate, evidence, candidate, process and artifact index references are relative and survive relocation"
+  },
+  "errors": []
+}

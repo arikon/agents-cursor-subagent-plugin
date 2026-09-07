@@ -1,0 +1,466 @@
+TAP version 13
+# Subtest: fake adapter CLI and in-process runner have normalized outcome parity
+ok 1 - fake adapter CLI and in-process runner have normalized outcome parity
+  ---
+  duration_ms: 297.0185
+  type: 'test'
+  ...
+# Subtest: CLI returns one machine-readable invalid-invocation envelope
+ok 2 - CLI returns one machine-readable invalid-invocation envelope
+  ---
+  duration_ms: 73.094125
+  type: 'test'
+  ...
+# Subtest: CLI bounds diagnostics in its machine-readable failure envelope
+ok 3 - CLI bounds diagnostics in its machine-readable failure envelope
+  ---
+  duration_ms: 37.906334
+  type: 'test'
+  ...
+# Subtest: CLI rejects an option without its value
+ok 4 - CLI rejects an option without its value
+  ---
+  duration_ms: 37.903458
+  type: 'test'
+  ...
+# Subtest: CLI rejects a duplicate singleton option
+ok 5 - CLI rejects a duplicate singleton option
+  ---
+  duration_ms: 36.317291
+  type: 'test'
+  ...
+# Subtest: CLI rejects a relative filesystem boundary
+ok 6 - CLI rejects a relative filesystem boundary
+  ---
+  duration_ms: 37.76
+  type: 'test'
+  ...
+# Subtest: CLI install rejects a malformed package manifest without publishing artifacts
+ok 7 - CLI install rejects a malformed package manifest without publishing artifacts
+  ---
+  duration_ms: 195.716125
+  type: 'test'
+  ...
+# Subtest: CLI install rejects a non-object package manifest without publishing artifacts
+ok 8 - CLI install rejects a non-object package manifest without publishing artifacts
+  ---
+  duration_ms: 194.524916
+  type: 'test'
+  ...
+# Subtest: CLI install rejects an incomplete package payload without publishing artifacts
+ok 9 - CLI install rejects an incomplete package payload without publishing artifacts
+  ---
+  duration_ms: 210.921125
+  type: 'test'
+  ...
+# Subtest: CLI install requires the recording proxy as a managed payload owner entry
+ok 10 - CLI install requires the recording proxy as a managed payload owner entry
+  ---
+  duration_ms: 203.564833
+  type: 'test'
+  ...
+# Subtest: CLI install rejects a package without its required skill tree
+ok 11 - CLI install rejects a package without its required skill tree
+  ---
+  duration_ms: 192.132292
+  type: 'test'
+  ...
+# Subtest: CLI install rejects a symbolic link inside the published skill tree
+ok 12 - CLI install rejects a symbolic link inside the published skill tree
+  ---
+  duration_ms: 184.76925
+  type: 'test'
+  ...
+# Subtest: CLI update rejects an absent managed installation
+ok 13 - CLI update rejects an absent managed installation
+  ---
+  duration_ms: 200.266917
+  type: 'test'
+  ...
+# Subtest: CLI uninstall is idempotent when the managed installation is absent
+ok 14 - CLI uninstall is idempotent when the managed installation is absent
+  ---
+  duration_ms: 196.483833
+  type: 'test'
+  ...
+# Subtest: CLI install rejects an overlapping managed topology before publication
+ok 15 - CLI install rejects an overlapping managed topology before publication
+  ---
+  duration_ms: 47.713125
+  type: 'test'
+  ...
+# Subtest: CLI install rejects a missing source root without creating managed state
+ok 16 - CLI install rejects a missing source root without creating managed state
+  ---
+  duration_ms: 46.54025
+  type: 'test'
+  ...
+# Subtest: CLI install rejects a source root reached through a symbolic link
+ok 17 - CLI install rejects a source root reached through a symbolic link
+  ---
+  duration_ms: 47.905542
+  type: 'test'
+  ...
+# Subtest: CLI preflight rejects a managed root that is not a directory
+ok 18 - CLI preflight rejects a managed root that is not a directory
+  ---
+  duration_ms: 174.177375
+  type: 'test'
+  ...
+# Subtest: CLI preflight rejects a managed root reached through a symbolic link without mutating its target
+ok 19 - CLI preflight rejects a managed root reached through a symbolic link without mutating its target
+  ---
+  duration_ms: 184.380709
+  type: 'test'
+  ...
+# Subtest: CLI install exposes interrupted owned staging as recovery_required
+ok 20 - CLI install exposes interrupted owned staging as recovery_required
+  ---
+  duration_ms: 681.738583
+  type: 'test'
+  ...
+# Subtest: CLI preflight reports unavailable registrations while completing independent checks
+ok 21 - CLI preflight reports unavailable registrations while completing independent checks
+  ---
+  duration_ms: 247.62075
+  type: 'test'
+  ...
+# Subtest: CLI preflight reports an absent managed installation without creating it
+ok 22 - CLI preflight reports an absent managed installation without creating it
+  ---
+  duration_ms: 420.857125
+  type: 'test'
+  ...
+# Subtest: CLI reports an unavailable adapter executable without publishing artifacts
+ok 23 - CLI reports an unavailable adapter executable without publishing artifacts
+  ---
+  duration_ms: 48.483375
+  type: 'test'
+  ...
+# Subtest: CLI rejects malformed adapter envelopes without publishing artifacts
+ok 24 - CLI rejects malformed adapter envelopes without publishing artifacts
+  ---
+  duration_ms: 240.953959
+  type: 'test'
+  ...
+# Subtest: CLI install publishes a self-contained managed package
+ok 25 - CLI install publishes a self-contained managed package
+  ---
+  duration_ms: 436.129833
+  type: 'test'
+  ...
+# Subtest: CLI update replaces the published package with the requested payload
+ok 26 - CLI update replaces the published package with the requested payload
+  ---
+  duration_ms: 894.731959
+  type: 'test'
+  ...
+# Subtest: CLI preflight reports a completed installation ready for use
+ok 27 - CLI preflight reports a completed installation ready for use
+  ---
+  duration_ms: 725.832834
+  type: 'test'
+  ...
+# Subtest: CLI uninstall removes its managed publication and registrations
+ok 28 - CLI uninstall removes its managed publication and registrations
+  ---
+  duration_ms: 888.124583
+  type: 'test'
+  ...
+# Subtest: canonical manifest normalization sorts objects recursively and preserves arrays
+ok 29 - canonical manifest normalization sorts objects recursively and preserves arrays
+  ---
+  duration_ms: 0.837709
+  type: 'test'
+  ...
+# Subtest: versioned Codex adapter admission and help match its checked-in golden surface
+ok 30 - versioned Codex adapter admission and help match its checked-in golden surface
+  ---
+  duration_ms: 4795.619916
+  type: 'test'
+  ...
+# Subtest: versioned adapter bounds nested Cursor commands and waits for killed child close
+ok 31 - versioned adapter bounds nested Cursor commands and waits for killed child close
+  ---
+  duration_ms: 2127.237583
+  type: 'test'
+  ...
+# Subtest: package command waits for child close after timeout and output overflow kills
+ok 32 - package command waits for child close after timeout and output overflow kills
+  ---
+  duration_ms: 567.13825
+  type: 'test'
+  ...
+# Subtest: package command reports close timeout while a descendant retains the killed child output pipe
+ok 33 - package command reports close timeout while a descendant retains the killed child output pipe
+  ---
+  duration_ms: 205.309959
+  type: 'test'
+  ...
+# Subtest: package command keeps the first kill reason when overflow precedes its timeout
+ok 34 - package command keeps the first kill reason when overflow precedes its timeout
+  ---
+  duration_ms: 333.400042
+  type: 'test'
+  ...
+# Subtest: package command bounds simultaneous stdout and stderr overflow with one terminal outcome
+ok 35 - package command bounds simultaneous stdout and stderr overflow with one terminal outcome
+  ---
+  duration_ms: 29.936708
+  type: 'test'
+  ...
+# Subtest: treeHashV1 has a stable byte-framed golden vector
+ok 36 - treeHashV1 has a stable byte-framed golden vector
+  ---
+  duration_ms: 0.23625
+  type: 'test'
+  ...
+# Subtest: strict parser separates malformed invocation from semantic topology failure
+ok 37 - strict parser separates malformed invocation from semantic topology failure
+  ---
+  duration_ms: 981.264042
+  type: 'test'
+  ...
+# Subtest: bootstrap rejects malformed adapter command configuration before publication
+ok 38 - bootstrap rejects malformed adapter command configuration before publication
+  ---
+  duration_ms: 25.166584
+  type: 'test'
+  ...
+# Subtest: preflight is read-only, emits exactly eight checks and reports missing executable as not_ready
+ok 39 - preflight is read-only, emits exactly eight checks and reports missing executable as not_ready
+  ---
+  duration_ms: 184.105083
+  type: 'test'
+  ...
+# Subtest: preflight rejects an executable inside managed publication topology without executing it
+ok 40 - preflight rejects an executable inside managed publication topology without executing it
+  ---
+  duration_ms: 655.674083
+  type: 'test'
+  ...
+# Subtest: preflight classifies every unsuccessful Node version-command outcome as incompatible
+ok 41 - preflight classifies every unsuccessful Node version-command outcome as incompatible
+  ---
+  duration_ms: 901.250041
+  type: 'test'
+  ...
+# Subtest: fake adapter drives portable install, identical no-op, update, preflight and uninstall
+ok 42 - fake adapter drives portable install, identical no-op, update, preflight and uninstall
+  ---
+  duration_ms: 1806.275041
+  type: 'test'
+  ...
+# Subtest: README documents the verified Codex cache refresh and reinstall sequence
+ok 43 - README documents the verified Codex cache refresh and reinstall sequence
+  ---
+  duration_ms: 0.447416
+  type: 'test'
+  ...
+# Subtest: unknown adapter version is rejected before fake mutation
+ok 44 - unknown adapter version is rejected before fake mutation
+  ---
+  duration_ms: 45.871083
+  type: 'test'
+  ...
+# Subtest: each backup cleanup deletion boundary is fail-closed as cleanup_required
+ok 45 - each backup cleanup deletion boundary is fail-closed as cleanup_required
+  ---
+  duration_ms: 223.651625
+  type: 'test'
+  ...
+# Subtest: failed compensation preserves observed state and returns recovery_required
+ok 46 - failed compensation preserves observed state and returns recovery_required
+  ---
+  duration_ms: 636.487334
+  type: 'test'
+  ...
+# Subtest: update and uninstall also return recovery_required when compensation cannot restore registrations
+ok 47 - update and uninstall also return recovery_required when compensation cannot restore registrations
+  ---
+  duration_ms: 45.410542
+  type: 'test'
+  ...
+# Subtest: config-only update changes artifact hash without changing payload cachebuster
+ok 48 - config-only update changes artifact hash without changing payload cachebuster
+  ---
+  duration_ms: 910.962917
+  type: 'test'
+  ...
+# Subtest: install no-op compares the desired generated artifact hash as well as payload hash
+ok 49 - install no-op compares the desired generated artifact hash as well as payload hash
+  ---
+  duration_ms: 629.779917
+  type: 'test'
+  ...
+# Subtest: strict marker and registration tuples reject extra marker fields and duplicate owned IDs
+ok 50 - strict marker and registration tuples reject extra marker fields and duplicate owned IDs
+  ---
+  duration_ms: 1127.021792
+  type: 'test'
+  ...
+# Subtest: strict marker validation rejects every malformed owned identity before mutation
+ok 51 - strict marker validation rejects every malformed owned identity before mutation
+  ---
+  duration_ms: 24.063917
+  type: 'test'
+  ...
+# Subtest: owned marker rejects post-publication payload drift before mutation
+ok 52 - owned marker rejects post-publication payload drift before mutation
+  ---
+  duration_ms: 542.479125
+  type: 'test'
+  ...
+# Subtest: publication remnant classification rejects conflicting, foreign and invalid paths
+ok 53 - publication remnant classification rejects conflicting, foreign and invalid paths
+  ---
+  duration_ms: 579.49225
+  type: 'test'
+  ...
+# Subtest: preflight classifies foreign and duplicate owned registrations independently
+ok 54 - preflight classifies foreign and duplicate owned registrations independently
+  ---
+  duration_ms: 196.030875
+  type: 'test'
+  ...
+# Subtest: preflight requires authenticated status and a version-bound admitted adapter
+ok 55 - preflight requires authenticated status and a version-bound admitted adapter
+  ---
+  duration_ms: 1243.522125
+  type: 'test'
+  ...
+# Subtest: preflight reports marketplace and plugin registrations independently
+ok 56 - preflight reports marketplace and plugin registrations independently
+  ---
+  duration_ms: 207.443541
+  type: 'test'
+  ...
+# Subtest: preflight isolates adapter-backed check failures and remains read-only
+ok 57 - preflight isolates adapter-backed check failures and remains read-only
+  ---
+  duration_ms: 1384.379625
+  type: 'test'
+  ...
+# Subtest: backup and registration recovery classification distinguishes owned deltas from foreign drift
+ok 58 - backup and registration recovery classification distinguishes owned deltas from foreign drift
+  ---
+  duration_ms: 1231.565667
+  type: 'test'
+  ...
+# Subtest: interrupted uninstall cleanup is classified as cleanup_required on the next invocation
+ok 59 - interrupted uninstall cleanup is classified as cleanup_required on the next invocation
+  ---
+  duration_ms: 890.928958
+  type: 'test'
+  ...
+# Subtest: versioned adapter help drift fails before mutation without staging remnants
+ok 60 - versioned adapter help drift fails before mutation without staging remnants
+  ---
+  duration_ms: 80.797833
+  type: 'test'
+  ...
+# Subtest: incompatible adapter render payload fails before mutation without staging remnants
+ok 61 - incompatible adapter render payload fails before mutation without staging remnants
+  ---
+  duration_ms: 1352.498458
+  type: 'test'
+  ...
+# Subtest: incompatible adapter registration entries fail before publication
+ok 62 - incompatible adapter registration entries fail before publication
+  ---
+  duration_ms: 299.561792
+  type: 'test'
+  ...
+# Subtest: negative, nonzero, partial and output-overflow mutators compensate only their observed registration delta
+ok 63 - negative, nonzero, partial and output-overflow mutators compensate only their observed registration delta
+  ---
+  duration_ms: 61.380458
+  type: 'test'
+  ...
+# Subtest: mutator timeout compensates an observed partial add and list reread failure requires recovery
+ok 64 - mutator timeout compensates an observed partial add and list reread failure requires recovery
+  ---
+  duration_ms: 1614.102833
+  type: 'test'
+  ...
+# Subtest: registration reread failure during compensation requires recovery without advancing publication
+ok 65 - registration reread failure during compensation requires recovery without advancing publication
+  ---
+  duration_ms: 54.752833
+  type: 'test'
+  ...
+# Subtest: install preserves recovery evidence when marketplace compensation cannot reread registrations
+ok 66 - install preserves recovery evidence when marketplace compensation cannot reread registrations
+  ---
+  duration_ms: 462.467542
+  type: 'test'
+  ...
+# Subtest: uninstall preserves recovery evidence when publication plugin compensation cannot reread registrations
+ok 67 - uninstall preserves recovery evidence when publication plugin compensation cannot reread registrations
+  ---
+  duration_ms: 929.341041
+  type: 'test'
+  ...
+# Subtest: update reports recovery when publication rollback cannot rename the owned backup into place
+ok 68 - update reports recovery when publication rollback cannot rename the owned backup into place
+  ---
+  duration_ms: 859.557417
+  type: 'test'
+  ...
+# Subtest: rejected and timed-out compensation commands classify install, update and uninstall by observed state
+ok 69 - rejected and timed-out compensation commands classify install, update and uninstall by observed state
+  ---
+  duration_ms: 220.869791
+  type: 'test'
+  ...
+# Subtest: failed stage preparation reports recovery_required when its owned staging cannot be removed
+ok 70 - failed stage preparation reports recovery_required when its owned staging cannot be removed
+  ---
+  duration_ms: 182.769166
+  type: 'test'
+  ...
+# Subtest: reread failures preserve every recoverable artifact and expose the observed lifecycle state
+ok 71 - reread failures preserve every recoverable artifact and expose the observed lifecycle state
+  ---
+  duration_ms: 864.255291
+  type: 'test'
+  ...
+# Subtest: uncertain remove outcomes compensate their observed delta and never advance lifecycle
+ok 72 - uncertain remove outcomes compensate their observed delta and never advance lifecycle
+  ---
+  duration_ms: 92.046041
+  type: 'test'
+  ...
+# Subtest: reported successful no-op mutations do not advance their lifecycle
+ok 73 - reported successful no-op mutations do not advance their lifecycle
+  ---
+  duration_ms: 93.314709
+  type: 'test'
+  ...
+# Subtest: update and uninstall never add compensation over foreign, duplicate or coupled observed tuples
+ok 74 - update and uninstall never add compensation over foreign, duplicate or coupled observed tuples
+  ---
+  duration_ms: 99.116417
+  type: 'test'
+  ...
+# Subtest: pre-commit publication rename faults compensate install and update while uninstall commit fault is cleanup_required
+ok 75 - pre-commit publication rename faults compensate install and update while uninstall commit fault is cleanup_required
+  ---
+  duration_ms: 183.225708
+  type: 'test'
+  ...
+# Subtest: plugin registration version must equal the installed cachebuster
+ok 76 - plugin registration version must equal the installed cachebuster
+  ---
+  duration_ms: 821.762125
+  type: 'test'
+  ...
+1..76
+# tests 76
+# suites 0
+# pass 76
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 38049.92325

@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "path": "scripts/cursor-eval-scenario.mjs",
+      "source_sha256": "f56bcdbf352eee202fed4537defc8d48f1d23b96ef15c820e445fe3da6fc37ce",
+      "metric": "branches",
+      "line": 451,
+      "occurrence": 3,
+      "classification": "unreachable_defensive",
+      "disposition": "scenario admission pairs each mode failure with one fixture predicate and rejects the conjunction before this mutual-exclusion guard"
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 175,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "second kill is an idempotence race; first-reason and simultaneous stdout/stderr overflow tests own the single terminal outcome"
+    }
+  ]
+}

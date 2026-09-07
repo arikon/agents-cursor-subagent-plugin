@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-09-07T11:40:03.154809+00:00",
+  "verdict": "OKAY",
+  "reviewer": "Sol independent critic",
+  "architect_verdict": "Conditional CLEAR: demote the remaining post-answer cursor MUST; repair applied and independently verified by Sol",
+  "findings": [
+    {
+      "classification": "new_scope",
+      "repair": "Explicit user-approved removal of cursor_matched without replacement state or provenance policy"
+    },
+    {
+      "classification": "baseline_violation",
+      "repair": "The remaining facade post-answer MUST is now SHOULD for the event cursor; later-wait timeout remains MUST"
+    },
+    {
+      "classification": "implementation_concern",
+      "repair": "Existing pending-close owner now covers a closed real ACP request pipe; fresh coverage records runtime branch649 count1"
+    }
+  ],
+  "source_files": [
+    {
+      "path": "scripts/cursor-eval-scenario.mjs",
+      "bytes": 68824,
+      "sha256": "f45f2d9db65de4f19051f7ccd8458fd7b166d4784ebb030c8dd10cd21ea5372b"
+    },
+    {
+      "path": "tests/codex-client-integration.test.mjs",
+      "bytes": 117982,
+      "sha256": "d4cfd209f1e5310b5cadc00cc0964305ace5e5e85bb7c03dede8f8b41de3f10e"
+    },
+    {
+      "path": "tests/cursor-skill-eval.test.mjs",
+      "bytes": 76406,
+      "sha256": "2da69c6ca802a1274c95b8aeb8496f525ccf2f6ad1417cd129c4553b602ec3fa"
+    },
+    {
+      "path": "tests/run-cursor-skill-eval.test.mjs",
+      "bytes": 112456,
+      "sha256": "e81479e2a35375b4d1c98a695356763ba7748292980884d7c4135b02480136bb"
+    },
+    {
+      "path": "tests/runtime.test.mjs",
+      "bytes": 178581,
+      "sha256": "ef43137dff13ca64572b251ec5d339b65e5d5e8431c76e5e7f3dcbcb8438cbda"
+    },
+    {
+      "path": "skills/cursor-subagent/SKILL.md",
+      "bytes": 19410,
+      "sha256": "6925bc2ac347f331713df5ee78cf2cba8a9eb8fd587bfbb949b8a86497dbe593"
+    },
+    {
+      "path": "openspec/changes/improve-interactive-acp-ux/specs/cursor-task-delegation/spec.md",
+      "bytes": 29762,
+      "sha256": "71913bd7e6251540b4ff23f98028009765ff8a800e5201116e66eda6a0010e64"
+    },
+    {
+      "path": "openspec/changes/improve-interactive-acp-ux/specs/cursor-subagent-skill-evals/spec.md",
+      "bytes": 83603,
+      "sha256": "bf32e3841517fa329c2f35e8e1dfde35e9bdbf1f993d0161010447f0cde45939"
+    },
+    {
+      "path": "scripts/openspec-semantic-registry.mjs",
+      "bytes": 13369,
+      "sha256": "808c1d838f405bbe2e73b6db3210c01239c4bcbe3b3d0dacfaef2b98daee36fb"
+    }
+  ],
+  "verification": "Deterministic eval, release, full unit and final complete-manifest coverage passed; exhaustive audit 92/92 with zero unclassified.",
+  "semantic_gate": {
+    "current_registered_lineage": "PASS: 11 registered changes in exact hashed snapshot",
+    "whole_tree": "FAIL: unrelated unregistered simplify-task-state-wait draft",
+    "evidence": "semantic-scope/result.json"
+  },
+  "mandatory_scope": [
+    "mechanics",
+    "evidence",
+    "exact_delivery"
+  ],
+  "not_checked": [
+    "reported_task_outcome",
+    "outcome_report",
+    "safety_disclosure"
+  ]
+}

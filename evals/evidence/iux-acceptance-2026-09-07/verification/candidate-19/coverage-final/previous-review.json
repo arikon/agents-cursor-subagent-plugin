@@ -1,0 +1,1537 @@
+{
+  "schema_version": 1,
+  "source_digests": [
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7"
+    },
+    {
+      "path": "scripts/check-openspec-semantics.mjs",
+      "sha256": "0c7c04d0fa8adda37086e316dcae685e87a235352b9bdd80a2257e9f94e80a53"
+    },
+    {
+      "path": "scripts/codex-app-server-client.mjs",
+      "sha256": "f5fa4850c7228aa9ed4b4a0661f2d1dbabae2ffe95ec86b98e3e0ffc36cf4200"
+    },
+    {
+      "path": "scripts/cursor-eval-scenario.mjs",
+      "sha256": "f56bcdbf352eee202fed4537defc8d48f1d23b96ef15c820e445fe3da6fc37ce"
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331"
+    },
+    {
+      "path": "scripts/eval/finalize-cursor-skill-eval.mjs",
+      "sha256": "e42e970e316146261efe344d31e5101d5690245f04a242678aeedaf23b602890"
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "sha256": "90d7b21b5bc7fddbb1450b4ee8b6237181cf15fc9c44f7a9116900b1c81a76f7"
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "sha256": "2df45550eeae34b051a5ad99b213f48f9e212c3be4a0d1a41bdfdd8c16b48e7e"
+    }
+  ],
+  "zero_counters": [
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 48,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 58,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 96,
+      "occurrence": 4
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 152,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 238,
+      "occurrence": 4
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 370,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 426,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 429,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/check-openspec-semantics.mjs",
+      "source_sha256": "0c7c04d0fa8adda37086e316dcae685e87a235352b9bdd80a2257e9f94e80a53",
+      "metric": "branches",
+      "line": 146,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/check-openspec-semantics.mjs",
+      "source_sha256": "0c7c04d0fa8adda37086e316dcae685e87a235352b9bdd80a2257e9f94e80a53",
+      "metric": "branches",
+      "line": 551,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/codex-app-server-client.mjs",
+      "source_sha256": "f5fa4850c7228aa9ed4b4a0661f2d1dbabae2ffe95ec86b98e3e0ffc36cf4200",
+      "metric": "branches",
+      "line": 152,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/codex-app-server-client.mjs",
+      "source_sha256": "f5fa4850c7228aa9ed4b4a0661f2d1dbabae2ffe95ec86b98e3e0ffc36cf4200",
+      "metric": "branches",
+      "line": 162,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/codex-app-server-client.mjs",
+      "source_sha256": "f5fa4850c7228aa9ed4b4a0661f2d1dbabae2ffe95ec86b98e3e0ffc36cf4200",
+      "metric": "branches",
+      "line": 191,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-eval-scenario.mjs",
+      "source_sha256": "f56bcdbf352eee202fed4537defc8d48f1d23b96ef15c820e445fe3da6fc37ce",
+      "metric": "branches",
+      "line": 451,
+      "occurrence": 3
+    },
+    {
+      "path": "scripts/cursor-eval-scenario.mjs",
+      "source_sha256": "f56bcdbf352eee202fed4537defc8d48f1d23b96ef15c820e445fe3da6fc37ce",
+      "metric": "branches",
+      "line": 731,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-eval-scenario.mjs",
+      "source_sha256": "f56bcdbf352eee202fed4537defc8d48f1d23b96ef15c820e445fe3da6fc37ce",
+      "metric": "branches",
+      "line": 763,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 24,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 175,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 387,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 401,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 437,
+      "occurrence": 6
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 446,
+      "occurrence": 7
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 497,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 673,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 673,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 26,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 83,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 85,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 98,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 130,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 133,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 141,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 143,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 145,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 146,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 152,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 162,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 165,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 166,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 168,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 171,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 177,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 183,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 185,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 186,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 189,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 225,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 228,
+      "occurrence": 3
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 242,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 243,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 271,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 294,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 321,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 443,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 447,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 450,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 457,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 461,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 530,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 534,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 541,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 567,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 569,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 607,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 612,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 620,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 624,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 625,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 645,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 681,
+      "occurrence": 8
+    },
+    {
+      "path": "scripts/eval/finalize-cursor-skill-eval.mjs",
+      "source_sha256": "e42e970e316146261efe344d31e5101d5690245f04a242678aeedaf23b602890",
+      "metric": "branches",
+      "line": 158,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/eval/finalize-cursor-skill-eval.mjs",
+      "source_sha256": "e42e970e316146261efe344d31e5101d5690245f04a242678aeedaf23b602890",
+      "metric": "branches",
+      "line": 159,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "90d7b21b5bc7fddbb1450b4ee8b6237181cf15fc9c44f7a9116900b1c81a76f7",
+      "metric": "lines",
+      "line": 142,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "90d7b21b5bc7fddbb1450b4ee8b6237181cf15fc9c44f7a9116900b1c81a76f7",
+      "metric": "lines",
+      "line": 143,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "90d7b21b5bc7fddbb1450b4ee8b6237181cf15fc9c44f7a9116900b1c81a76f7",
+      "metric": "lines",
+      "line": 144,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "90d7b21b5bc7fddbb1450b4ee8b6237181cf15fc9c44f7a9116900b1c81a76f7",
+      "metric": "lines",
+      "line": 145,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "90d7b21b5bc7fddbb1450b4ee8b6237181cf15fc9c44f7a9116900b1c81a76f7",
+      "metric": "lines",
+      "line": 146,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "90d7b21b5bc7fddbb1450b4ee8b6237181cf15fc9c44f7a9116900b1c81a76f7",
+      "metric": "lines",
+      "line": 235,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "90d7b21b5bc7fddbb1450b4ee8b6237181cf15fc9c44f7a9116900b1c81a76f7",
+      "metric": "branches",
+      "line": 24,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "90d7b21b5bc7fddbb1450b4ee8b6237181cf15fc9c44f7a9116900b1c81a76f7",
+      "metric": "branches",
+      "line": 141,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "90d7b21b5bc7fddbb1450b4ee8b6237181cf15fc9c44f7a9116900b1c81a76f7",
+      "metric": "branches",
+      "line": 158,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "90d7b21b5bc7fddbb1450b4ee8b6237181cf15fc9c44f7a9116900b1c81a76f7",
+      "metric": "branches",
+      "line": 192,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "90d7b21b5bc7fddbb1450b4ee8b6237181cf15fc9c44f7a9116900b1c81a76f7",
+      "metric": "branches",
+      "line": 234,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "2df45550eeae34b051a5ad99b213f48f9e212c3be4a0d1a41bdfdd8c16b48e7e",
+      "metric": "branches",
+      "line": 42,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "2df45550eeae34b051a5ad99b213f48f9e212c3be4a0d1a41bdfdd8c16b48e7e",
+      "metric": "branches",
+      "line": 51,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "2df45550eeae34b051a5ad99b213f48f9e212c3be4a0d1a41bdfdd8c16b48e7e",
+      "metric": "branches",
+      "line": 200,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "2df45550eeae34b051a5ad99b213f48f9e212c3be4a0d1a41bdfdd8c16b48e7e",
+      "metric": "branches",
+      "line": 213,
+      "occurrence": 2
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "2df45550eeae34b051a5ad99b213f48f9e212c3be4a0d1a41bdfdd8c16b48e7e",
+      "metric": "branches",
+      "line": 224,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "2df45550eeae34b051a5ad99b213f48f9e212c3be4a0d1a41bdfdd8c16b48e7e",
+      "metric": "branches",
+      "line": 227,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "2df45550eeae34b051a5ad99b213f48f9e212c3be4a0d1a41bdfdd8c16b48e7e",
+      "metric": "branches",
+      "line": 247,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "2df45550eeae34b051a5ad99b213f48f9e212c3be4a0d1a41bdfdd8c16b48e7e",
+      "metric": "branches",
+      "line": 291,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "2df45550eeae34b051a5ad99b213f48f9e212c3be4a0d1a41bdfdd8c16b48e7e",
+      "metric": "branches",
+      "line": 303,
+      "occurrence": 1
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "2df45550eeae34b051a5ad99b213f48f9e212c3be4a0d1a41bdfdd8c16b48e7e",
+      "metric": "functions",
+      "line": 224,
+      "occurrence": 1
+    }
+  ],
+  "classifications": [
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 48,
+      "occurrence": 2,
+      "classification": "observable_contract_already_owned",
+      "disposition": "This zero operand belongs to the same closed digest-shape validation and pre-publication invalid-digest rejection exercised by malformed snapshot, source, and artifact digest inputs; it has no distinct effects or error stage."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 58,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "Every assertIdentity caller supplies identityOnly output, or published added/removed already proven byte-for-byte equal to owner-generated identities, so an identity with unexpected fields cannot reach this defensive exact-fields guard."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 96,
+      "occurrence": 4,
+      "classification": "observable_contract_already_owned",
+      "disposition": "This zero operand belongs to the same closed source-file metadata validation and pre-publication rejection exercised by invalid source bytes and digest inputs; it has no distinct effects or error stage."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 152,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "After exact raw file count and successful unique known-source mapping for every raw file, mapped.size must equal sources.files.length, so this defensive completeness failure cannot execute."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 238,
+      "occurrence": 4,
+      "classification": "observable_contract_already_owned",
+      "disposition": "Canonical normalized previous-review ordering for unique paths is exercised in both directions, while duplicate source paths are rejected by the existing malformed snapshot/review owner; comparator equality compatibility has no separate public outcome."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 370,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "Every evidence destination is a nonempty basename or fixed nonempty bundle filename inside outputDir, so relative(outputDir, path) cannot be empty and the basename fallback cannot execute."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 426,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "strictArtifactRef admits basename-only refs, therefore resolve(artifactRoot, ref) is lexically inside artifactRoot and this defensive escape rejection cannot execute."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 429,
+      "occurrence": 2,
+      "classification": "unreachable_defensive",
+      "disposition": "readRegular rejects symlinks and non-files before canonical containment; a basename child regular file resolves inside canonicalArtifactRoot, so this defensive canonical escape rejection cannot execute."
+    },
+    {
+      "path": "scripts/check-openspec-semantics.mjs",
+      "source_sha256": "0c7c04d0fa8adda37086e316dcae685e87a235352b9bdd80a2257e9f94e80a53",
+      "metric": "branches",
+      "line": 146,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "delta spec.md disappears after its capability directory was enumerated; structural validation and immutable fixtures own the admitted flow"
+    },
+    {
+      "path": "scripts/check-openspec-semantics.mjs",
+      "source_sha256": "0c7c04d0fa8adda37086e316dcae685e87a235352b9bdd80a2257e9f94e80a53",
+      "metric": "branches",
+      "line": 551,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "import-only coverage cannot take the CLI entry guard; the foreground semantic command owns this entrypoint"
+    },
+    {
+      "path": "scripts/codex-app-server-client.mjs",
+      "source_sha256": "f5fa4850c7228aa9ed4b4a0661f2d1dbabae2ffe95ec86b98e3e0ffc36cf4200",
+      "metric": "branches",
+      "line": 152,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "positioned timeout, confirmed-missing and late-final polling tests own returning the latest bounded capture at the deadline"
+    },
+    {
+      "path": "scripts/codex-app-server-client.mjs",
+      "source_sha256": "f5fa4850c7228aa9ed4b4a0661f2d1dbabae2ffe95ec86b98e3e0ffc36cf4200",
+      "metric": "branches",
+      "line": 162,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "turn-page deadline exhaustion maps to capture_timeout and is covered by the positioned slow-page test"
+    },
+    {
+      "path": "scripts/codex-app-server-client.mjs",
+      "source_sha256": "f5fa4850c7228aa9ed4b4a0661f2d1dbabae2ffe95ec86b98e3e0ffc36cf4200",
+      "metric": "branches",
+      "line": 191,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "item-page deadline exhaustion maps to capture_timeout and is covered by the positioned slow-page test"
+    },
+    {
+      "path": "scripts/cursor-eval-scenario.mjs",
+      "source_sha256": "f56bcdbf352eee202fed4537defc8d48f1d23b96ef15c820e445fe3da6fc37ce",
+      "metric": "branches",
+      "line": 451,
+      "occurrence": 3,
+      "classification": "unreachable_defensive",
+      "disposition": "scenario admission pairs each mode failure with one fixture predicate and rejects the conjunction before this mutual-exclusion guard"
+    },
+    {
+      "path": "scripts/cursor-eval-scenario.mjs",
+      "source_sha256": "f56bcdbf352eee202fed4537defc8d48f1d23b96ef15c820e445fe3da6fc37ce",
+      "metric": "branches",
+      "line": 731,
+      "occurrence": 2,
+      "classification": "observable_contract_already_owned",
+      "disposition": "recovery variation tests reject missing or malformed argument proof and changed non-ID projections; an absent request has the same fail-closed no-recovery outcome"
+    },
+    {
+      "path": "scripts/cursor-eval-scenario.mjs",
+      "source_sha256": "f56bcdbf352eee202fed4537defc8d48f1d23b96ef15c820e445fe3da6fc37ce",
+      "metric": "branches",
+      "line": 763,
+      "occurrence": 2,
+      "classification": "unreachable_defensive",
+      "disposition": "validRecoveryContext requires contiguous ranges to cover every transcript call, so an admitted call index cannot be outside every range"
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 24,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "bounded callers provide normalized strings"
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 175,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "second kill is an idempotence race; first-reason and simultaneous stdout/stderr overflow tests own the single terminal outcome"
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 387,
+      "occurrence": 2,
+      "classification": "unreachable_defensive",
+      "disposition": "pathKind and canonical parent validation reject a symlinked or foreign managed root before this canonical-directory operand can decide"
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 401,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "preflight topology failures have BootstrapError code and message"
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 437,
+      "occurrence": 6,
+      "classification": "unreachable_defensive",
+      "disposition": "the admitted versioned mcp-check adapter always returns a bounded status message; preflight success and adapter-failure outcomes are tested"
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 446,
+      "occurrence": 7,
+      "classification": "unreachable_defensive",
+      "disposition": "the admitted versioned agent-status adapter always returns a bounded status message; authenticated, required and unknown outcomes are tested"
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 497,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "published recovery envelopes after adapter mutation always have a journal record"
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 673,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "parseArgs throws BootstrapError with a fixed exitCode, so the generic parse exit-code fallback cannot decide"
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 673,
+      "occurrence": 2,
+      "classification": "unreachable_defensive",
+      "disposition": "parseArgs throws BootstrapError with a fixed error code, so the generic invalid-invocation fallback cannot decide"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 26,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "bounded callers normalize absent diagnostic text before this nullish fallback can affect a public envelope"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 83,
+      "occurrence": 2,
+      "classification": "observable_contract_already_owned",
+      "disposition": "runtime malformed-adapter and callback variation tables plus the installed golden fixture own exact rejection and bounded public projection for this admission operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 85,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "runtime malformed-adapter and callback variation tables plus the installed golden fixture own exact rejection and bounded public projection for this admission operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 98,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "runtime malformed-adapter and callback variation tables plus the installed golden fixture own exact rejection and bounded public projection for this admission operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 130,
+      "occurrence": 2,
+      "classification": "observable_contract_already_owned",
+      "disposition": "runtime malformed-adapter and callback variation tables plus the installed golden fixture own exact rejection and bounded public projection for this admission operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 133,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "runtime malformed-adapter and callback variation tables plus the installed golden fixture own exact rejection and bounded public projection for this admission operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 141,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "runtime malformed-adapter and callback variation tables plus the installed golden fixture own exact rejection and bounded public projection for this admission operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 143,
+      "occurrence": 2,
+      "classification": "observable_contract_already_owned",
+      "disposition": "runtime malformed-adapter and callback variation tables plus the installed golden fixture own exact rejection and bounded public projection for this admission operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 145,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "runtime malformed-adapter and callback variation tables plus the installed golden fixture own exact rejection and bounded public projection for this admission operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 146,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "runtime malformed-adapter and callback variation tables plus the installed golden fixture own exact rejection and bounded public projection for this admission operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 152,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "runtime malformed-adapter and callback variation tables plus the installed golden fixture own exact rejection and bounded public projection for this admission operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 162,
+      "occurrence": 2,
+      "classification": "observable_contract_already_owned",
+      "disposition": "runtime malformed-adapter and callback variation tables plus the installed golden fixture own exact rejection and bounded public projection for this admission operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 165,
+      "occurrence": 2,
+      "classification": "observable_contract_already_owned",
+      "disposition": "runtime malformed-adapter and callback variation tables plus the installed golden fixture own exact rejection and bounded public projection for this admission operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 166,
+      "occurrence": 2,
+      "classification": "observable_contract_already_owned",
+      "disposition": "runtime malformed-adapter and callback variation tables plus the installed golden fixture own exact rejection and bounded public projection for this admission operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 168,
+      "occurrence": 2,
+      "classification": "observable_contract_already_owned",
+      "disposition": "runtime malformed-adapter and callback variation tables plus the installed golden fixture own exact rejection and bounded public projection for this admission operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 171,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "admitTask rejects an undefined type before projection, so the conditional type spread cannot select its absent arm"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 177,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "runtime malformed-adapter and callback variation tables plus the installed golden fixture own exact rejection and bounded public projection for this admission operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 183,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "runtime malformed-adapter and callback variation tables plus the installed golden fixture own exact rejection and bounded public projection for this admission operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 185,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "runtime malformed-adapter and callback variation tables plus the installed golden fixture own exact rejection and bounded public projection for this admission operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 186,
+      "occurrence": 2,
+      "classification": "observable_contract_already_owned",
+      "disposition": "runtime malformed-adapter and callback variation tables plus the installed golden fixture own exact rejection and bounded public projection for this admission operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 189,
+      "occurrence": 2,
+      "classification": "observable_contract_already_owned",
+      "disposition": "runtime malformed-adapter and callback variation tables plus the installed golden fixture own exact rejection and bounded public projection for this admission operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 225,
+      "occurrence": 2,
+      "classification": "observable_contract_already_owned",
+      "disposition": "runtime malformed-adapter and callback variation tables plus the installed golden fixture own exact rejection and bounded public projection for this admission operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 228,
+      "occurrence": 3,
+      "classification": "observable_contract_already_owned",
+      "disposition": "runtime malformed-adapter and callback variation tables plus the installed golden fixture own exact rejection and bounded public projection for this admission operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 242,
+      "occurrence": 2,
+      "classification": "observable_contract_already_owned",
+      "disposition": "runtime malformed-adapter and callback variation tables plus the installed golden fixture own exact rejection and bounded public projection for this admission operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 243,
+      "occurrence": 2,
+      "classification": "observable_contract_already_owned",
+      "disposition": "runtime malformed-adapter and callback variation tables plus the installed golden fixture own exact rejection and bounded public projection for this admission operand"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 271,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "terminalReceipt callers pass a retained terminal turn; the optional-chain fallback is a private fail-closed guard"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 294,
+      "occurrence": 2,
+      "classification": "unreachable_defensive",
+      "disposition": "session lifecycle owners request distinct transitions; same-state repetition is guarded before a duplicate lifecycle event can be emitted"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 321,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "every admitted session emits lifecycle state before waitEnvelope is callable, so its event list cannot be empty"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 443,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "closed ACP request-channel tests own rejecting prompt dispatch and publishing one failed terminal when stdin is no longer writable"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 447,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "injected stdin EPIPE tests own asynchronous write rejection and the resulting single failed terminal"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 450,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "sendConfirmed checks writable stdin and callback EPIPE owns asynchronous failure; a synchronous write throw after that precheck is defensive"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 457,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "request callers run after admitted transport initialization; synchronous send failure is guarded while asynchronous transport failures are behavior-tested"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 461,
+      "occurrence": 2,
+      "classification": "unreachable_defensive",
+      "disposition": "error responses are emitted only while callback transport is admitted; the catch preserves shutdown if the transport closes between checks"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 530,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "callback admission requires a request id; malformed and late callback tests own no pending publication and stable terminal state"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 534,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "late or inactive collaboration callbacks are ignored and acknowledged best-effort; collaboration lifecycle tests own the observable state"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 541,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "the malformed collaboration callback table owns rejection without pending publication across todo, task and image projection failures"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 567,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "the ACP frame cap equals fsBytes, so JSON framing rejects an above-cap write before this local defense; the adjacent exclusion records the invariant"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 569,
+      "occurrence": 2,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "filesystem callback failure tests own DomainError preservation and normalization of native filesystem faults to protocol_error"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 607,
+      "occurrence": 2,
+      "classification": "unreachable_defensive",
+      "disposition": "prompt request settlement owns asynchronous provider failure; synchronous dispatch failure after live admission is a guarded fallback"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 612,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "synchronous response settlement changes terminal ownership before later same-batch or late results; immutability tests prove re-entry cannot change the terminal"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 620,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "public answer dispatch validates and atomically claims the pending request before SessionRecord.answer, so the private missing-pending guard cannot decide"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 624,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "answer-send failure and closed-transport tests own failed terminalization without retaining a claimed pending request"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 625,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "parallel answer, cancellation and late-result tests own the race where terminal ownership changes while a confirmed answer write settles"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 645,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "public terminal owners guard the active turn; repeated terminalization is an idempotence fallback proven by same-batch, cancellation and shutdown races"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "source_sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331",
+      "metric": "branches",
+      "line": 681,
+      "occurrence": 8,
+      "classification": "observable_contract_already_owned",
+      "disposition": "live-session and tombstone capacity tests own deterministic eviction and retention; this is a scheduler-dependent operand of the same bounded public state"
+    },
+    {
+      "path": "scripts/eval/finalize-cursor-skill-eval.mjs",
+      "source_sha256": "e42e970e316146261efe344d31e5101d5690245f04a242678aeedaf23b602890",
+      "metric": "branches",
+      "line": 158,
+      "occurrence": 2,
+      "classification": "unreachable_defensive",
+      "disposition": "Empty artifact_root fallback is unreachable after validRelative(result.process.artifact_root) and exact result.artifact_root equality require a nonempty string; missing indexed evidence and driver streams are directly tested in tests/eval-closeout.test.mjs."
+    },
+    {
+      "path": "scripts/eval/finalize-cursor-skill-eval.mjs",
+      "source_sha256": "e42e970e316146261efe344d31e5101d5690245f04a242678aeedaf23b602890",
+      "metric": "branches",
+      "line": 159,
+      "occurrence": 2,
+      "classification": "unreachable_defensive",
+      "disposition": "Empty artifact_root fallback is unreachable after validRelative(result.process.artifact_root) and exact result.artifact_root equality require a nonempty string; missing indexed evidence and driver streams are directly tested in tests/eval-closeout.test.mjs."
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "90d7b21b5bc7fddbb1450b4ee8b6237181cf15fc9c44f7a9116900b1c81a76f7",
+      "metric": "lines",
+      "line": 142,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "bounded fallback after validating a locally synthesized failure result"
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "90d7b21b5bc7fddbb1450b4ee8b6237181cf15fc9c44f7a9116900b1c81a76f7",
+      "metric": "lines",
+      "line": 143,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "bounded fallback after validating a locally synthesized failure result"
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "90d7b21b5bc7fddbb1450b4ee8b6237181cf15fc9c44f7a9116900b1c81a76f7",
+      "metric": "lines",
+      "line": 144,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "bounded fallback after validating a locally synthesized failure result"
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "90d7b21b5bc7fddbb1450b4ee8b6237181cf15fc9c44f7a9116900b1c81a76f7",
+      "metric": "lines",
+      "line": 145,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "bounded fallback after validating a locally synthesized failure result"
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "90d7b21b5bc7fddbb1450b4ee8b6237181cf15fc9c44f7a9116900b1c81a76f7",
+      "metric": "lines",
+      "line": 146,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "bounded fallback after validating a locally synthesized failure result"
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "90d7b21b5bc7fddbb1450b4ee8b6237181cf15fc9c44f7a9116900b1c81a76f7",
+      "metric": "lines",
+      "line": 235,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "owned artifact publishers create regular files and directories only"
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "90d7b21b5bc7fddbb1450b4ee8b6237181cf15fc9c44f7a9116900b1c81a76f7",
+      "metric": "branches",
+      "line": 24,
+      "occurrence": 1,
+      "classification": "external_hosted_gate",
+      "disposition": "default production evaluator driver is exercised by the authenticated hosted matrix, separate from credential-free unit coverage"
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "90d7b21b5bc7fddbb1450b4ee8b6237181cf15fc9c44f7a9116900b1c81a76f7",
+      "metric": "branches",
+      "line": 141,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "bounded fallback after validating a locally synthesized failure result"
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "90d7b21b5bc7fddbb1450b4ee8b6237181cf15fc9c44f7a9116900b1c81a76f7",
+      "metric": "branches",
+      "line": 158,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "foreground matrix interruption tests own one exit 130 and no partial aggregate; an empty active-child set is the scheduler arm of that contract"
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "90d7b21b5bc7fddbb1450b4ee8b6237181cf15fc9c44f7a9116900b1c81a76f7",
+      "metric": "branches",
+      "line": 192,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "admitted model corpus is nonempty; empty-corpus aggregate remains fail closed"
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "90d7b21b5bc7fddbb1450b4ee8b6237181cf15fc9c44f7a9116900b1c81a76f7",
+      "metric": "branches",
+      "line": 234,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "owned artifact publishers create regular files and directories only"
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "2df45550eeae34b051a5ad99b213f48f9e212c3be4a0d1a41bdfdd8c16b48e7e",
+      "metric": "branches",
+      "line": 42,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "JSON-decoded MCP arguments use Object.prototype; a null-prototype object cannot arrive through the admitted stdio JSON transport"
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "2df45550eeae34b051a5ad99b213f48f9e212c3be4a0d1a41bdfdd8c16b48e7e",
+      "metric": "branches",
+      "line": 51,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "compactPending is called only after Array.isArray"
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "2df45550eeae34b051a5ad99b213f48f9e212c3be4a0d1a41bdfdd8c16b48e7e",
+      "metric": "branches",
+      "line": 200,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "missing handshake variables short-circuit earlier; relative program rejection owns the observable boundary"
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "2df45550eeae34b051a5ad99b213f48f9e212c3be4a0d1a41bdfdd8c16b48e7e",
+      "metric": "branches",
+      "line": 213,
+      "occurrence": 2,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "stdout backpressure tests prove all accepted output and the final response drain before exit; waiter resolution timing is scheduler-dependent"
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "2df45550eeae34b051a5ad99b213f48f9e212c3be4a0d1a41bdfdd8c16b48e7e",
+      "metric": "branches",
+      "line": 224,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "child-close waiting for pending output is covered by real backpressure tests; exact callback order is scheduler-dependent"
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "2df45550eeae34b051a5ad99b213f48f9e212c3be4a0d1a41bdfdd8c16b48e7e",
+      "metric": "branches",
+      "line": 227,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "repeat failProxy is an idempotence guard after input destruction and child stop"
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "2df45550eeae34b051a5ad99b213f48f9e212c3be4a0d1a41bdfdd8c16b48e7e",
+      "metric": "branches",
+      "line": 247,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "repeat stopChild is an idempotence guard"
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "2df45550eeae34b051a5ad99b213f48f9e212c3be4a0d1a41bdfdd8c16b48e7e",
+      "metric": "branches",
+      "line": 291,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "late stdin data after failure is discarded; frame-failure tests own absence of partial evidence"
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "2df45550eeae34b051a5ad99b213f48f9e212c3be4a0d1a41bdfdd8c16b48e7e",
+      "metric": "branches",
+      "line": 303,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "late stdout data after failure is discarded; frame-failure tests own absence of partial evidence"
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "2df45550eeae34b051a5ad99b213f48f9e212c3be4a0d1a41bdfdd8c16b48e7e",
+      "metric": "functions",
+      "line": 224,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "promise resolver belongs to the tested output-flush boundary; Node scheduling completed the write callback first in this snapshot"
+    }
+  ],
+  "provenance": {
+    "bytes": 68492,
+    "sha256": "972f0a889872b1bcab40381fc64704a7fb2de3bfd8f834611578d129db81ab06"
+  }
+}

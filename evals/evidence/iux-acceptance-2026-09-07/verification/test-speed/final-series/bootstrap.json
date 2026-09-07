@@ -1,0 +1,1966 @@
+{
+  "group": "bootstrap",
+  "command": [
+    "node",
+    "scripts/run-node-tests.mjs",
+    "unit",
+    "--test",
+    "tests/bootstrap.test.mjs",
+    "--test-name-pattern",
+    "normalized outcome parity|each backup cleanup deletion boundary|rejected and timed-out compensation|reread failures preserve every|uncertain remove outcomes|reported successful no-op|never add compensation over|pre-commit publication rename faults|update and uninstall also return recovery_required|strict marker validation rejects every|negative, nonzero, partial and output-overflow mutators|registration reread failure during compensation"
+  ],
+  "source_inventory": [
+    {
+      "path": ".codex-plugin/plugin.json",
+      "mode": 33188,
+      "bytes": 715,
+      "sha256": "a46b9e12e4a1e0cd11040f0c60edd4f9da99c021c5ae2d8d2cf5bf48053cf994"
+    },
+    {
+      "path": "README.md",
+      "mode": 33188,
+      "bytes": 14142,
+      "sha256": "44fe5ba342a009fc984438f6ff974ebd61fd1d0121d06bf41009a5941b3d516b"
+    },
+    {
+      "path": "evals/cursor-subagent-scenarios.v1.json",
+      "mode": 33188,
+      "bytes": 80558,
+      "sha256": "4c177c44faccf7b38545aac49a425056f0531cce243b3d8cb502b5dad23da267"
+    },
+    {
+      "path": "scripts/check-openspec-semantics.mjs",
+      "mode": 33188,
+      "bytes": 27928,
+      "sha256": "0c7c04d0fa8adda37086e316dcae685e87a235352b9bdd80a2257e9f94e80a53"
+    },
+    {
+      "path": "scripts/codex-app-server-client.mjs",
+      "mode": 33188,
+      "bytes": 14060,
+      "sha256": "f5fa4850c7228aa9ed4b4a0661f2d1dbabae2ffe95ec86b98e3e0ffc36cf4200"
+    },
+    {
+      "path": "scripts/cursor-eval-scenario.mjs",
+      "mode": 33188,
+      "bytes": 64752,
+      "sha256": "592b7de640615e4e61d15985cc48396fc85556d3a8d95914c513f5a8aa11f0b6"
+    },
+    {
+      "path": "scripts/cursor-skill-eval.mjs",
+      "mode": 33188,
+      "bytes": 10926,
+      "sha256": "39a71bca27a8d9b6a2cfedb2a5772cdd673f2e6f04ea2a88564d2a2f81bda200"
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "mode": 33188,
+      "bytes": 52347,
+      "sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "mode": 33188,
+      "bytes": 65677,
+      "sha256": "90b1e0517012a1993d3b0b7a27e8015559abfcacca32c7a42dea641ecdf22181"
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "mode": 33188,
+      "bytes": 14829,
+      "sha256": "10c4c607579e9ba272da10f6b63f429e550ee9be991177e9912fc0ff109b259a"
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-suite.mjs",
+      "mode": 33188,
+      "bytes": 5041,
+      "sha256": "9c7369d89ad636e59d554e3e684d1923b045cc33ea2d2d2ff572049deff3fbcf"
+    },
+    {
+      "path": "scripts/node-test-reporter-v22.mjs",
+      "mode": 33188,
+      "bytes": 834,
+      "sha256": "51ac5c6e8a019c83e4deb101b209146c3e953069e42a593d862a45b1ade4834f"
+    },
+    {
+      "path": "scripts/openspec-semantic-registry.mjs",
+      "mode": 33188,
+      "bytes": 13369,
+      "sha256": "bb1039b4e2b53d8281609fbcaac05500132d8463c0e9109953e5beac4463ba3e"
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "mode": 33188,
+      "bytes": 16155,
+      "sha256": "96adcd918892da9295ee1c5cf860460dbbf168b5413f4a0a2c99a4370c12c28a"
+    },
+    {
+      "path": "scripts/run-cursor-skill-eval.mjs",
+      "mode": 33188,
+      "bytes": 28834,
+      "sha256": "5c1868db76a2f187371dfb945a3853fd93197c40157c14ae3d0f68bf893f47a5"
+    },
+    {
+      "path": "scripts/run-node-tests.mjs",
+      "mode": 33188,
+      "bytes": 18871,
+      "sha256": "bd2a536556ce0c224da10824184e540170f992faab84bdb71a4d6ab20540716d"
+    },
+    {
+      "path": "scripts/run-unit-coverage.mjs",
+      "mode": 33188,
+      "bytes": 712,
+      "sha256": "24c50d0b2f517da01e8fb1288d38d267577b48bf2f4e8a3530153e3e1cbad30b"
+    },
+    {
+      "path": "skills/cursor-subagent/SKILL.md",
+      "mode": 33188,
+      "bytes": 18194,
+      "sha256": "e44bea901628d99b9e5be52ea8f1405068697ba9d04560b1d3d022e1609b9277"
+    },
+    {
+      "path": "skills/cursor-subagent/agents/openai.yaml",
+      "mode": 33188,
+      "bytes": 251,
+      "sha256": "7e2b2b72bb12d9f72c780db5b31fc7b0d5d0a320f67da4a2701af079453e322e"
+    },
+    {
+      "path": "tests/bootstrap.test.mjs",
+      "mode": 33188,
+      "bytes": 105410,
+      "sha256": "2f81043adf1218152d62dd5ae9128d9e7b07a3db7a9e4e9aeb7010429e61ec84"
+    },
+    {
+      "path": "tests/check-openspec-semantics.test.mjs",
+      "mode": 33188,
+      "bytes": 47392,
+      "sha256": "ef60c23000d8e337a038d842d220a82bcd3e73d93eeea3ffb71008bf83b35a9e"
+    },
+    {
+      "path": "tests/claude-marketplace-canary.test.mjs",
+      "mode": 33188,
+      "bytes": 3573,
+      "sha256": "232030d969ee38c63bb91b78903594d78d47cb339a039167f2c82b55a08b4d6a"
+    },
+    {
+      "path": "tests/codex-app-server-client.test.mjs",
+      "mode": 33188,
+      "bytes": 28435,
+      "sha256": "3003b47af986b4f463ee9cef5b6fd3bdd5ef26dd0b70c0ba07bd0af4981e688a"
+    },
+    {
+      "path": "tests/codex-client-integration.test.mjs",
+      "mode": 33188,
+      "bytes": 108037,
+      "sha256": "549c6d35b38d8d98415690ba800e9b6aee3c28b2895746ab43fed1f057d872d0"
+    },
+    {
+      "path": "tests/cursor-skill-eval.test.mjs",
+      "mode": 33188,
+      "bytes": 51600,
+      "sha256": "dd0e5144e45eeed3b389de27175391d0d555aceac444b2fdcbccebd99570e427"
+    },
+    {
+      "path": "tests/eval-matrix.test.mjs",
+      "mode": 33188,
+      "bytes": 18116,
+      "sha256": "6907624c774c35aa551a0f2a8de452ad5ab5c8962eb87f51f187ed99dbe5966d"
+    },
+    {
+      "path": "tests/facade.test.mjs",
+      "mode": 33188,
+      "bytes": 4476,
+      "sha256": "e7d3e41b42b7b4c9f16c0cf20c946c3d5eb1218becd3f002a629153a71da6212"
+    },
+    {
+      "path": "tests/fixtures/accelerate-turn-timeout.mjs",
+      "mode": 33188,
+      "bytes": 406,
+      "sha256": "adee8e3aa892c545d209c1eefdf9bd6be02a875bec20a031c590fdd5391f06ee"
+    },
+    {
+      "path": "tests/fixtures/codex-app-server-v01521.golden.json",
+      "mode": 33188,
+      "bytes": 1574,
+      "sha256": "79a22cf5b9ae694ce0c5103251ae3e5ae9886717ef850d5318bf864998c3cb33"
+    },
+    {
+      "path": "tests/fixtures/codex-app-server-v01534.golden.json",
+      "mode": 33188,
+      "bytes": 1987,
+      "sha256": "860abe7af9a1823190ccbb6f0d738f34224a3c8395efc2a997396bf5f4cf5594"
+    },
+    {
+      "path": "tests/fixtures/codex-v01521-adapter.golden.json",
+      "mode": 33188,
+      "bytes": 1700,
+      "sha256": "889583631514e1755706a7916ad8e4d82b928118d4d6a10592b33fa010f81ac8"
+    },
+    {
+      "path": "tests/fixtures/codex-v01521-adapter.mjs",
+      "mode": 33188,
+      "bytes": 10182,
+      "sha256": "b73bde0dec555e4ce88ff9a95a9a46379c874e0300a73a74f37880f3232b19d9"
+    },
+    {
+      "path": "tests/fixtures/codex-v01534-adapter.golden.json",
+      "mode": 33188,
+      "bytes": 1594,
+      "sha256": "e881a7e0a7ec08ed3919bf22e54c225640effb533e5384e01a832ee9e6264f38"
+    },
+    {
+      "path": "tests/fixtures/codex-v01534-adapter.mjs",
+      "mode": 33188,
+      "bytes": 125,
+      "sha256": "5ad4cb1117c27ae112e4fe610d4fe155f121c05a77fb0458a6a27c36fc4c2e5e"
+    },
+    {
+      "path": "tests/fixtures/cursor-agent-v20260825.golden.json",
+      "mode": 33188,
+      "bytes": 4630,
+      "sha256": "476241fb75a582eba3c38b79f9111fe3fc3570d31bcfa9be71a84de769217eb9"
+    },
+    {
+      "path": "tests/fixtures/fake-acp.mjs",
+      "mode": 33261,
+      "bytes": 32574,
+      "sha256": "4e152fb5bad738d7fd6bdccd00747c6842742c2f9a726bf64134c3001d2840b3"
+    },
+    {
+      "path": "tests/fixtures/fake-app-server.mjs",
+      "mode": 33188,
+      "bytes": 9046,
+      "sha256": "e1297a3e9817e3ed453b22de4a39d7b1fd00286e877fb902305eb5e591cfdb65"
+    },
+    {
+      "path": "tests/fixtures/fake-codex-adapter-core.mjs",
+      "mode": 33188,
+      "bytes": 9879,
+      "sha256": "5d4275b817a199a0e137306bce68473a433b285deb59455cef7e5ede129c1a06"
+    },
+    {
+      "path": "tests/fixtures/fake-codex-adapter.mjs",
+      "mode": 33188,
+      "bytes": 616,
+      "sha256": "cbf0d2161be737265f4ff2928b3c4922fc57fdae3ba0d7cba6d813218d9f258e"
+    },
+    {
+      "path": "tests/fixtures/fake-codex-cli-v01521.mjs",
+      "mode": 33188,
+      "bytes": 2351,
+      "sha256": "305b7b2caeb3e9bdce7e45a5ebadca99bf8295d13ff15f1e64f4392e172835f1"
+    },
+    {
+      "path": "tests/fixtures/fake-cursor-agent-status.mjs",
+      "mode": 33261,
+      "bytes": 1623,
+      "sha256": "a70f48be3f083b7bc52b39f7a631ab055aa31ee8513cf1652635b6a538a8ae5d"
+    },
+    {
+      "path": "tests/fixtures/fake-eval-matrix-child.mjs",
+      "mode": 33188,
+      "bytes": 4401,
+      "sha256": "824f3cfa164f1526096719dbaac7ff1669fcb18577262e3d1b1c5ab9d28534a9"
+    },
+    {
+      "path": "tests/fixtures/fake-mcp-version.mjs",
+      "mode": 33188,
+      "bytes": 669,
+      "sha256": "44fa5a1b1acc368845b279844602cb2a078315d52ac65a34b1b91ea3b19b1310"
+    },
+    {
+      "path": "tests/fixtures/fake-ollama-responses.mjs",
+      "mode": 33188,
+      "bytes": 12859,
+      "sha256": "d7c6aaa17cae68ec93fbdbf522abd72c19f7b1889d2eddf6e165fd6641422433"
+    },
+    {
+      "path": "tests/fixtures/kill-wait-command.mjs",
+      "mode": 33188,
+      "bytes": 277,
+      "sha256": "abb55a9b35474073fba560853f0712cf946eaa7c055eefa2ea248a68778a9fe5"
+    },
+    {
+      "path": "tests/fixtures/node-test-reporter-v22.23.1.golden.json",
+      "mode": 33188,
+      "bytes": 3437,
+      "sha256": "6d2c0e0ba90c0f74a91f4cf7d9f0705f8d649f9ad874765ada6539ac1e12b02c"
+    },
+    {
+      "path": "tests/fixtures/release-fake-acp.mjs",
+      "mode": 33188,
+      "bytes": 264,
+      "sha256": "98cd6d4735d9a764e2eb74c307f0fc48a87c015b29637a83bc04e6dee2157644"
+    },
+    {
+      "path": "tests/fixtures/release-plan-fixture.txt",
+      "mode": 33188,
+      "bytes": 20,
+      "sha256": "bf9a0a0f53b7050fcc90fe3cfd415811b5358bace2ed11c652e913eb3a8ea4e5"
+    },
+    {
+      "path": "tests/fixtures/run-unit-coverage-loader.mjs",
+      "mode": 33188,
+      "bytes": 414,
+      "sha256": "8075aefc547c5810373b7400dbfb6e120a6c0b5f1c4fa33add37606a33fd516c"
+    },
+    {
+      "path": "tests/fixtures/supervisor-process-tree.mjs",
+      "mode": 33188,
+      "bytes": 1392,
+      "sha256": "b858c585a3a667676a73087fd514d43915c2baf2c2163c489e1c0ce6b907d6fe"
+    },
+    {
+      "path": "tests/mcp-smoke.test.mjs",
+      "mode": 33188,
+      "bytes": 2740,
+      "sha256": "6772303b77e7d3d104b8505f5542bbeaa0a805eb39b8739c858f900f27099935"
+    },
+    {
+      "path": "tests/mcp-transport.test.mjs",
+      "mode": 33188,
+      "bytes": 15948,
+      "sha256": "07aac46cc89020ddac70f11903ac9cf01b193653e32cb177ab3eee6c2e5fe215"
+    },
+    {
+      "path": "tests/node-test-reporter-v22.test.mjs",
+      "mode": 33188,
+      "bytes": 2202,
+      "sha256": "f2c395131cf6fa66de0324544d8991b1de943a8c19e6fc59def9cd56da7b4073"
+    },
+    {
+      "path": "tests/node-test-supervisor.test.mjs",
+      "mode": 33188,
+      "bytes": 49639,
+      "sha256": "5dbaf12566d39905cacd06259f711aff9a59dcf6ef2550b75c3f5640cd0cc5ba"
+    },
+    {
+      "path": "tests/release-e2e.test.mjs",
+      "mode": 33188,
+      "bytes": 36260,
+      "sha256": "294dc2053a2919acd199195574f4c5951c0f4911fae246a431f333d84097c544"
+    },
+    {
+      "path": "tests/run-cursor-skill-eval.test.mjs",
+      "mode": 33188,
+      "bytes": 128925,
+      "sha256": "89c660d2b6c96f06b6526d66afd9f5628359ff4e04b176b7e4634b3b0f46e945"
+    },
+    {
+      "path": "tests/runtime.test.mjs",
+      "mode": 33188,
+      "bytes": 174156,
+      "sha256": "8248fab7016ec26c419c4e87dbd071be6c04f842ea8ae09a8614fc38e6adf2c0"
+    }
+  ],
+  "controlled_load": null,
+  "median_ms": 3250,
+  "maximum_ms": 4572,
+  "gates": {
+    "series_complete": true,
+    "all_passed": true,
+    "source_unchanged": true
+  },
+  "runs": [
+    {
+      "index": 1,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 3177ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-39-45-095Z-unit-b357b769-10ba-4b96-8550-515f3024896a\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-39-45-095Z-unit-b357b769-10ba-4b96-8550-515f3024896a",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 3177,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 12,
+            "failed": 0,
+            "passed": 12,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 12,
+            "suites": 0
+          },
+          "duration_ms": 3110.296
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "bootstrap/run-01/result.json",
+          "bytes": 426,
+          "sha256": "b43c548edd4bd22f72dc7230083e483fa38d6ca18c7417202541fec6bf37d3f8"
+        },
+        {
+          "path": "bootstrap/run-01/tap.txt",
+          "bytes": 3130,
+          "sha256": "db51817e19dd6c19ebef55699946b94a95430f37bae3ffc428104fd8df82e312"
+        },
+        {
+          "path": "bootstrap/run-01/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "bootstrap/run-01/failures.jsonl",
+          "bytes": 440,
+          "sha256": "66b83c280efae31700178ddb6198326587ca215ef6376f438c19eb759bbbf727"
+        }
+      ],
+      "durable_artifact_dir": "bootstrap/run-01"
+    },
+    {
+      "index": 2,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 3034ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-39-48-316Z-unit-e5f3c70f-3442-441f-af9e-745a995996d0\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-39-48-316Z-unit-e5f3c70f-3442-441f-af9e-745a995996d0",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 3034,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 12,
+            "failed": 0,
+            "passed": 12,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 12,
+            "suites": 0
+          },
+          "duration_ms": 2966.30625
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "bootstrap/run-02/result.json",
+          "bytes": 428,
+          "sha256": "9f60db5c3d4c63c698f4e047a3992fd6ff9229995b03debca5ca80af80d3b6c2"
+        },
+        {
+          "path": "bootstrap/run-02/tap.txt",
+          "bytes": 3129,
+          "sha256": "0cb49f4b617a9d9b1828eaface0b8d7e23ea7e0f94160a8c327205ffc0135b47"
+        },
+        {
+          "path": "bootstrap/run-02/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "bootstrap/run-02/failures.jsonl",
+          "bytes": 443,
+          "sha256": "aae9946b7d5a13b854a9a8eb1f1b3e893fb24f348aae420217d56a6b31dbf8b6"
+        }
+      ],
+      "durable_artifact_dir": "bootstrap/run-02"
+    },
+    {
+      "index": 3,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 3910ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-39-51-402Z-unit-1f37363f-6717-4f10-bfc4-73cb688b68ee\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-39-51-402Z-unit-1f37363f-6717-4f10-bfc4-73cb688b68ee",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 3910,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 12,
+            "failed": 0,
+            "passed": 12,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 12,
+            "suites": 0
+          },
+          "duration_ms": 3832.024875
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "bootstrap/run-03/result.json",
+          "bytes": 429,
+          "sha256": "bbd908e77ae0b8f3ba52806b792ea6d92e92c95fe892274a5958d6e000a075fd"
+        },
+        {
+          "path": "bootstrap/run-03/tap.txt",
+          "bytes": 3132,
+          "sha256": "c14f99bc1a47f0d629b4e051d3a466253204a23ab34bd405695c870cbd80a7e5"
+        },
+        {
+          "path": "bootstrap/run-03/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "bootstrap/run-03/failures.jsonl",
+          "bytes": 444,
+          "sha256": "e15bd1d2a657360cf6dd6974e4ca733cd2f72353c9436263081d47f88234b55e"
+        }
+      ],
+      "durable_artifact_dir": "bootstrap/run-03"
+    },
+    {
+      "index": 4,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 3328ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-39-55-375Z-unit-5e68cd34-c36b-4c48-8811-759127c07563\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-39-55-375Z-unit-5e68cd34-c36b-4c48-8811-759127c07563",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 3328,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 12,
+            "failed": 0,
+            "passed": 12,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 12,
+            "suites": 0
+          },
+          "duration_ms": 3270.755
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "bootstrap/run-04/result.json",
+          "bytes": 426,
+          "sha256": "aeacaa2e1eb032974a4f4807d080f1a924f5ddd3c0379aff9c5b2b1051608032"
+        },
+        {
+          "path": "bootstrap/run-04/tap.txt",
+          "bytes": 3132,
+          "sha256": "8b8c84f66dce05934a486ef5c5530b6ff89e6042a219cfc70800affb79d11adf"
+        },
+        {
+          "path": "bootstrap/run-04/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "bootstrap/run-04/failures.jsonl",
+          "bytes": 441,
+          "sha256": "ce30f0eb37cba36d16434ddbd19e20c8df7b7db2e7923b8cb599f552e444efa9"
+        }
+      ],
+      "durable_artifact_dir": "bootstrap/run-04"
+    },
+    {
+      "index": 5,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 4042ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-39-58-754Z-unit-6745c86f-f0eb-4c0f-8bd2-1de4c207bad5\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-39-58-754Z-unit-6745c86f-f0eb-4c0f-8bd2-1de4c207bad5",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 4042,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 12,
+            "failed": 0,
+            "passed": 12,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 12,
+            "suites": 0
+          },
+          "duration_ms": 3968.555792
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "bootstrap/run-05/result.json",
+          "bytes": 429,
+          "sha256": "71aadb19b4a4594d11e095a0d3243f6521306240cc316bf79c63e1ab208ca0df"
+        },
+        {
+          "path": "bootstrap/run-05/tap.txt",
+          "bytes": 3136,
+          "sha256": "689af0772b5b55a76b8c40077e1488a7130ccdf0d9ccc8b49f94555859028787"
+        },
+        {
+          "path": "bootstrap/run-05/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "bootstrap/run-05/failures.jsonl",
+          "bytes": 444,
+          "sha256": "3a3b0b9a4d7524fdab3a6deef5908573ec822f37f93a0b092bb235f8a3df0043"
+        }
+      ],
+      "durable_artifact_dir": "bootstrap/run-05"
+    },
+    {
+      "index": 6,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 2632ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-02-846Z-unit-076e6b3f-ef19-4846-af44-674cb006725e\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-02-846Z-unit-076e6b3f-ef19-4846-af44-674cb006725e",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2632,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 12,
+            "failed": 0,
+            "passed": 12,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 12,
+            "suites": 0
+          },
+          "duration_ms": 2550.027
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "bootstrap/run-06/result.json",
+          "bytes": 426,
+          "sha256": "ee8c751f023bf3dd25dc3049710d6d2e6788a8f79cb11c77cb791af09aaf7b45"
+        },
+        {
+          "path": "bootstrap/run-06/tap.txt",
+          "bytes": 3130,
+          "sha256": "532ca376f297feff90bee296762ab40b52fa09cf47ccb2c77748bcecd7591dfc"
+        },
+        {
+          "path": "bootstrap/run-06/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "bootstrap/run-06/failures.jsonl",
+          "bytes": 441,
+          "sha256": "b8cfa8b1030aed99464143a8388706e36c89a0cda6fc4e4b54b5b556356b5ddc"
+        }
+      ],
+      "durable_artifact_dir": "bootstrap/run-06"
+    },
+    {
+      "index": 7,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 2789ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-05-531Z-unit-95347f6a-d23a-41ab-b1f7-d0092a08cc68\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-05-531Z-unit-95347f6a-d23a-41ab-b1f7-d0092a08cc68",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2789,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 12,
+            "failed": 0,
+            "passed": 12,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 12,
+            "suites": 0
+          },
+          "duration_ms": 2733.117792
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "bootstrap/run-07/result.json",
+          "bytes": 429,
+          "sha256": "3326b8bf2771e9b9b1726be1c3d7ab2ef855ce19c8bc67d1d643b8ec8d6ed89c"
+        },
+        {
+          "path": "bootstrap/run-07/tap.txt",
+          "bytes": 3134,
+          "sha256": "8d8570a79eae1e60fb44ce7c4baeee2ba5fb5ea26b22eb4ef2fd0a4f847e1d3a"
+        },
+        {
+          "path": "bootstrap/run-07/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "bootstrap/run-07/failures.jsonl",
+          "bytes": 444,
+          "sha256": "f1af9cb636712669b840e969830506a888eaf9bba99fe67d0e5174ce9151608d"
+        }
+      ],
+      "durable_artifact_dir": "bootstrap/run-07"
+    },
+    {
+      "index": 8,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 2873ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-08-379Z-unit-c9cf37d0-891f-4f06-b15d-180864750ae6\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-08-379Z-unit-c9cf37d0-891f-4f06-b15d-180864750ae6",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2873,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 12,
+            "failed": 0,
+            "passed": 12,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 12,
+            "suites": 0
+          },
+          "duration_ms": 2795.57825
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "bootstrap/run-08/result.json",
+          "bytes": 428,
+          "sha256": "3a450fb75d870da7587fcd0b61eb7c8d9a7eef7567006eed86952c3c9f49bd44"
+        },
+        {
+          "path": "bootstrap/run-08/tap.txt",
+          "bytes": 3129,
+          "sha256": "452065b3d0c57592f166b95287382ddf542276b95e56633d18d9fb6fbe8f3c9b"
+        },
+        {
+          "path": "bootstrap/run-08/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "bootstrap/run-08/failures.jsonl",
+          "bytes": 443,
+          "sha256": "5806ba022abb43fd8ace638c471ccecd752512ded3913a622d6cca977f05b110"
+        }
+      ],
+      "durable_artifact_dir": "bootstrap/run-08"
+    },
+    {
+      "index": 9,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 3151ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-11-299Z-unit-dccd0502-722e-445f-8018-b895e44a8c50\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-11-299Z-unit-dccd0502-722e-445f-8018-b895e44a8c50",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 3151,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 12,
+            "failed": 0,
+            "passed": 12,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 12,
+            "suites": 0
+          },
+          "duration_ms": 3093.333583
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "bootstrap/run-09/result.json",
+          "bytes": 429,
+          "sha256": "5c9f10fdb7c9540c36bca5551f6d11395f40a664e6452039e5b7a75526ee1240"
+        },
+        {
+          "path": "bootstrap/run-09/tap.txt",
+          "bytes": 3132,
+          "sha256": "552ac89b6d2bde459826a01cd2e9a8ae1b273097588b849b96da6d292a2ffaa3"
+        },
+        {
+          "path": "bootstrap/run-09/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "bootstrap/run-09/failures.jsonl",
+          "bytes": 444,
+          "sha256": "5b17e1d806ded26d67964049893d862f5b20f58e7f8330917237e8447755cf67"
+        }
+      ],
+      "durable_artifact_dir": "bootstrap/run-09"
+    },
+    {
+      "index": 10,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 3316ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-14-504Z-unit-43a9969b-5439-4695-bcda-b8f939d0ecc2\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-14-504Z-unit-43a9969b-5439-4695-bcda-b8f939d0ecc2",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 3316,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 12,
+            "failed": 0,
+            "passed": 12,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 12,
+            "suites": 0
+          },
+          "duration_ms": 3250.003375
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "bootstrap/run-10/result.json",
+          "bytes": 429,
+          "sha256": "780553cb7fda39bf0999f9b15cb4fbd03cb95eec50e58638cc4057717815cd9a"
+        },
+        {
+          "path": "bootstrap/run-10/tap.txt",
+          "bytes": 3138,
+          "sha256": "b2d66a128bd48c5fd88b1ed1b0719374dd572f43aef8b4af1b63740cdf6902ec"
+        },
+        {
+          "path": "bootstrap/run-10/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "bootstrap/run-10/failures.jsonl",
+          "bytes": 444,
+          "sha256": "4fb883747e1e6cadd394acb417535dc3d19bdaf180efcaac918e1b41929f7303"
+        }
+      ],
+      "durable_artifact_dir": "bootstrap/run-10"
+    },
+    {
+      "index": 11,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 3543ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-17-886Z-unit-c323c176-78b4-4f97-ab67-2879f1d503c7\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-17-886Z-unit-c323c176-78b4-4f97-ab67-2879f1d503c7",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 3543,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 12,
+            "failed": 0,
+            "passed": 12,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 12,
+            "suites": 0
+          },
+          "duration_ms": 3462.934333
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "bootstrap/run-11/result.json",
+          "bytes": 429,
+          "sha256": "9c0fbf6b1757ce380a81e52d817eca715448fffbdf25b21dac9de4675ee93913"
+        },
+        {
+          "path": "bootstrap/run-11/tap.txt",
+          "bytes": 3128,
+          "sha256": "fdaa79ffab046486f8f888e8b837c9e27b5831e0af5159640f249357ba56508e"
+        },
+        {
+          "path": "bootstrap/run-11/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "bootstrap/run-11/failures.jsonl",
+          "bytes": 444,
+          "sha256": "18ff18d125c363688ded8bf5ec5f062ce429371c39bfb1616bdb594b41cf67fe"
+        }
+      ],
+      "durable_artifact_dir": "bootstrap/run-11"
+    },
+    {
+      "index": 12,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 3479ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-21-483Z-unit-70811f8b-1119-42df-939c-e637a507d8ef\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-21-483Z-unit-70811f8b-1119-42df-939c-e637a507d8ef",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 3479,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 12,
+            "failed": 0,
+            "passed": 12,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 12,
+            "suites": 0
+          },
+          "duration_ms": 3407.037333
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "bootstrap/run-12/result.json",
+          "bytes": 429,
+          "sha256": "2139021ccaa9f7f87591452e1f3ac584d2cad682087748e1a530af72f6686416"
+        },
+        {
+          "path": "bootstrap/run-12/tap.txt",
+          "bytes": 3133,
+          "sha256": "f11852910c33c685a63e34deba529cb40ea3fda7b497b9da96ae13d8b24e510d"
+        },
+        {
+          "path": "bootstrap/run-12/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "bootstrap/run-12/failures.jsonl",
+          "bytes": 444,
+          "sha256": "ad212597d715a2a1fdf04b82a595d352888ebe5abcc0b299e933368817141e45"
+        }
+      ],
+      "durable_artifact_dir": "bootstrap/run-12"
+    },
+    {
+      "index": 13,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 3261ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-25-010Z-unit-209fde1f-462f-4448-81f0-8440df126f07\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-25-010Z-unit-209fde1f-462f-4448-81f0-8440df126f07",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 3261,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 12,
+            "failed": 0,
+            "passed": 12,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 12,
+            "suites": 0
+          },
+          "duration_ms": 3183.113708
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "bootstrap/run-13/result.json",
+          "bytes": 429,
+          "sha256": "d4dab8274eb62d180a2706936940257070a9a38d632a3ac1e4f44ea8133b9d54"
+        },
+        {
+          "path": "bootstrap/run-13/tap.txt",
+          "bytes": 3138,
+          "sha256": "a61877f3b007e65405c3d51acb18c5921dd0b7e358973cf341bc82b410a6578e"
+        },
+        {
+          "path": "bootstrap/run-13/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "bootstrap/run-13/failures.jsonl",
+          "bytes": 444,
+          "sha256": "0be68d9f68d63bb856a658b561b9182e01087c426f1e950ccfaf6064a47837b9"
+        }
+      ],
+      "durable_artifact_dir": "bootstrap/run-13"
+    },
+    {
+      "index": 14,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 2915ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-28-330Z-unit-d3a5629e-5588-4164-97c8-c1e7972f5351\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-28-330Z-unit-d3a5629e-5588-4164-97c8-c1e7972f5351",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2915,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 12,
+            "failed": 0,
+            "passed": 12,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 12,
+            "suites": 0
+          },
+          "duration_ms": 2828.139041
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "bootstrap/run-14/result.json",
+          "bytes": 429,
+          "sha256": "9376c992bb1d06ce0c43be0cc3f3bb6a4f98d7292d3c5565137f246c6212512a"
+        },
+        {
+          "path": "bootstrap/run-14/tap.txt",
+          "bytes": 3133,
+          "sha256": "ae8dec6c67404a999249113a5ca90340a5367ba9e079b78d84f1de6680ebe0c2"
+        },
+        {
+          "path": "bootstrap/run-14/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "bootstrap/run-14/failures.jsonl",
+          "bytes": 444,
+          "sha256": "78d628f3f8f454f011301ff73d3a4c8fc75d410ca152b02324e2f9ec51fa68a7"
+        }
+      ],
+      "durable_artifact_dir": "bootstrap/run-14"
+    },
+    {
+      "index": 15,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 3374ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-31-301Z-unit-1f7ae176-673b-411e-aac9-9bcf5ae85422\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-31-301Z-unit-1f7ae176-673b-411e-aac9-9bcf5ae85422",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 3374,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 12,
+            "failed": 0,
+            "passed": 12,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 12,
+            "suites": 0
+          },
+          "duration_ms": 3307.332417
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "bootstrap/run-15/result.json",
+          "bytes": 429,
+          "sha256": "c7d6992d552bd5240b7b4eaee73b60a6622e31429c29823a7c2ed48f756edad1"
+        },
+        {
+          "path": "bootstrap/run-15/tap.txt",
+          "bytes": 3136,
+          "sha256": "488d1440fc6c2dae08fb254a2ccf36c75667abb9ae3175ad83ac0f38a71bb489"
+        },
+        {
+          "path": "bootstrap/run-15/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "bootstrap/run-15/failures.jsonl",
+          "bytes": 441,
+          "sha256": "5e70a2aadb621a9bce04039e3efc2a1d73192aaa5e028fb4a466f9904a58187d"
+        }
+      ],
+      "durable_artifact_dir": "bootstrap/run-15"
+    },
+    {
+      "index": 16,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 3053ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-34-731Z-unit-679540de-3661-4882-9c32-4b4873ba3a2a\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-34-731Z-unit-679540de-3661-4882-9c32-4b4873ba3a2a",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 3053,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 12,
+            "failed": 0,
+            "passed": 12,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 12,
+            "suites": 0
+          },
+          "duration_ms": 2985.457
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "bootstrap/run-16/result.json",
+          "bytes": 426,
+          "sha256": "11742ab8cbe869a79bbec1870b4fcb77360976563ad781738f3b494087502e33"
+        },
+        {
+          "path": "bootstrap/run-16/tap.txt",
+          "bytes": 3131,
+          "sha256": "855f3f7c1716cefb9d99bfbc8b8f1eb950db751bcc7bd39a1d28a1ee25cd7d26"
+        },
+        {
+          "path": "bootstrap/run-16/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "bootstrap/run-16/failures.jsonl",
+          "bytes": 440,
+          "sha256": "f71fc4f50be12d885156a672d02ffcdce96811c0f48bfa65981143786ab63793"
+        }
+      ],
+      "durable_artifact_dir": "bootstrap/run-16"
+    },
+    {
+      "index": 17,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 3251ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-37-839Z-unit-0c6b2555-9eb5-4e88-ae04-250f0316889b\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-37-839Z-unit-0c6b2555-9eb5-4e88-ae04-250f0316889b",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 3251,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 12,
+            "failed": 0,
+            "passed": 12,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 12,
+            "suites": 0
+          },
+          "duration_ms": 3182.777625
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "bootstrap/run-17/result.json",
+          "bytes": 429,
+          "sha256": "f6b4509cd6a41b988707419f8591b080bbee47c95ff0984667141cc6a3e1d3f4"
+        },
+        {
+          "path": "bootstrap/run-17/tap.txt",
+          "bytes": 3129,
+          "sha256": "34ebd1a8ea3ab6bd0d8a3d46d00a5a5552f12646273159ea97186da86b15048a"
+        },
+        {
+          "path": "bootstrap/run-17/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "bootstrap/run-17/failures.jsonl",
+          "bytes": 444,
+          "sha256": "b233257dfd6f235ee55caeeb22f4993da8c22da6b058c247bdcdffec945f63b8"
+        }
+      ],
+      "durable_artifact_dir": "bootstrap/run-17"
+    },
+    {
+      "index": 18,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 3969ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-41-157Z-unit-a1c80c93-4c91-47be-8853-89aefa905c23\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-41-157Z-unit-a1c80c93-4c91-47be-8853-89aefa905c23",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 3969,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 12,
+            "failed": 0,
+            "passed": 12,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 12,
+            "suites": 0
+          },
+          "duration_ms": 3878.086875
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "bootstrap/run-18/result.json",
+          "bytes": 429,
+          "sha256": "4249ab692d7a92297cda37adc952938fcab5d558c120b2b86590a9ca679eca27"
+        },
+        {
+          "path": "bootstrap/run-18/tap.txt",
+          "bytes": 3136,
+          "sha256": "57545879f782c702ea8a2367464b68d2aa533d7fa1f6806f79613d5581dd46b1"
+        },
+        {
+          "path": "bootstrap/run-18/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "bootstrap/run-18/failures.jsonl",
+          "bytes": 444,
+          "sha256": "dac8027f6a0694e3c8f4fd70b1e28a177c319316635c0c942264051b8984e7e8"
+        }
+      ],
+      "durable_artifact_dir": "bootstrap/run-18"
+    },
+    {
+      "index": 19,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 4572ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-45-192Z-unit-7e99c683-97e0-43bc-8d04-544e9401b63f\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-45-192Z-unit-7e99c683-97e0-43bc-8d04-544e9401b63f",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 4572,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 12,
+            "failed": 0,
+            "passed": 12,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 12,
+            "suites": 0
+          },
+          "duration_ms": 4496.98225
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "bootstrap/run-19/result.json",
+          "bytes": 428,
+          "sha256": "63c286e96757a2b7920a6bf5a572deca7dc76540cdc4b82236cd2a2d06564a84"
+        },
+        {
+          "path": "bootstrap/run-19/tap.txt",
+          "bytes": 3134,
+          "sha256": "0a3a05727b809e3787a0e70d4c04e5d6d41f5e0f93cb20a63a19a9dfb4ced37f"
+        },
+        {
+          "path": "bootstrap/run-19/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "bootstrap/run-19/failures.jsonl",
+          "bytes": 443,
+          "sha256": "3ec1348fc41263f715592ac0b88af1eeefaf2401c88d87ad677c4087ae31b27b"
+        }
+      ],
+      "durable_artifact_dir": "bootstrap/run-19"
+    },
+    {
+      "index": 20,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 3587ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-49-836Z-unit-ebed82b7-35d7-43cc-82e1-3734857f2d72\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-49-836Z-unit-ebed82b7-35d7-43cc-82e1-3734857f2d72",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 3587,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 12,
+            "failed": 0,
+            "passed": 12,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 12,
+            "suites": 0
+          },
+          "duration_ms": 3500.52425
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "bootstrap/run-20/result.json",
+          "bytes": 428,
+          "sha256": "6bfa1fa95a479b854d7d9b961f6bc4d52721a2fa78dfea93bbf654c6ff2b8dcf"
+        },
+        {
+          "path": "bootstrap/run-20/tap.txt",
+          "bytes": 3130,
+          "sha256": "0fc544a7de72787816d6a0cda0f76ca7c53cb42a0a495747043b33e0e09c8e10"
+        },
+        {
+          "path": "bootstrap/run-20/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "bootstrap/run-20/failures.jsonl",
+          "bytes": 443,
+          "sha256": "e8cc9b1a64ef2f58cee5afb0508c5aad097b9130dcb8fac2abfacec33271a977"
+        }
+      ],
+      "durable_artifact_dir": "bootstrap/run-20"
+    },
+    {
+      "index": 21,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 3250ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-53-476Z-unit-c266b19a-2e34-448d-ad60-c72c6282b25a\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-53-476Z-unit-c266b19a-2e34-448d-ad60-c72c6282b25a",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 3250,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 12,
+            "failed": 0,
+            "passed": 12,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 12,
+            "suites": 0
+          },
+          "duration_ms": 3184.033542
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "bootstrap/run-21/result.json",
+          "bytes": 429,
+          "sha256": "4c580736509b52ee4e31dffe9bf7d0ea4614da92cb636317f01d7402b6469bd6"
+        },
+        {
+          "path": "bootstrap/run-21/tap.txt",
+          "bytes": 3135,
+          "sha256": "e477091705c88c49597e9412e4cbc1ade5bccce83f59bb43727980628fee21be"
+        },
+        {
+          "path": "bootstrap/run-21/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "bootstrap/run-21/failures.jsonl",
+          "bytes": 444,
+          "sha256": "e5feaaeb93c4ff506def5ec5e72ed50770d2a6e3e9d03124c788d69958f50641"
+        }
+      ],
+      "durable_artifact_dir": "bootstrap/run-21"
+    },
+    {
+      "index": 22,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 2629ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-56-779Z-unit-ecbe4ab3-5983-41f8-9bb2-d44621a5831f\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-56-779Z-unit-ecbe4ab3-5983-41f8-9bb2-d44621a5831f",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2629,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 12,
+            "failed": 0,
+            "passed": 12,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 12,
+            "suites": 0
+          },
+          "duration_ms": 2543.670791
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "bootstrap/run-22/result.json",
+          "bytes": 429,
+          "sha256": "46fa60614ce75a068b27420020525d72a92f6e545058d7b2074ae45af7a9f61b"
+        },
+        {
+          "path": "bootstrap/run-22/tap.txt",
+          "bytes": 3133,
+          "sha256": "52ffd278df0605ff5174f7821f5d12a5f3664f9636c7f73de2a239f00a78f1c6"
+        },
+        {
+          "path": "bootstrap/run-22/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "bootstrap/run-22/failures.jsonl",
+          "bytes": 444,
+          "sha256": "aa7e3fad44305b2f87934187ba41cce72aaa06b66eaba9eea51e152ecb0b0bec"
+        }
+      ],
+      "durable_artifact_dir": "bootstrap/run-22"
+    },
+    {
+      "index": 23,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 2594ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-59-454Z-unit-170b56f3-82db-42f7-a244-8ec036919301\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-40-59-454Z-unit-170b56f3-82db-42f7-a244-8ec036919301",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2594,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 12,
+            "failed": 0,
+            "passed": 12,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 12,
+            "suites": 0
+          },
+          "duration_ms": 2532.312708
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "bootstrap/run-23/result.json",
+          "bytes": 429,
+          "sha256": "168cc968adec6c3691904d041be879c709846d7cf5f34010465500f4f3396cb1"
+        },
+        {
+          "path": "bootstrap/run-23/tap.txt",
+          "bytes": 3128,
+          "sha256": "142b1c4d83f41ec98a00b4410dc8658879d99f2484f9bc580d500d52a1e95d19"
+        },
+        {
+          "path": "bootstrap/run-23/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "bootstrap/run-23/failures.jsonl",
+          "bytes": 443,
+          "sha256": "41ca73959ddcdd487ab502f7e18b3b7f3e5163f0385cb46031a52d9406ca361d"
+        }
+      ],
+      "durable_artifact_dir": "bootstrap/run-23"
+    },
+    {
+      "index": 24,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 2526ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-02-094Z-unit-0c1d13a1-918c-45ea-a207-b798fa288a74\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-02-094Z-unit-0c1d13a1-918c-45ea-a207-b798fa288a74",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2526,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 12,
+            "failed": 0,
+            "passed": 12,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 12,
+            "suites": 0
+          },
+          "duration_ms": 2444.915125
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "bootstrap/run-24/result.json",
+          "bytes": 429,
+          "sha256": "c47496dd6d86a98bd93d7aaa4ee882a13b738151b9599ab89921232d9ef7aed8"
+        },
+        {
+          "path": "bootstrap/run-24/tap.txt",
+          "bytes": 3129,
+          "sha256": "f0a1b250a8152aa6565c01e6ac0b58d87a1c31f4cdbeb346db60dad3c19c8648"
+        },
+        {
+          "path": "bootstrap/run-24/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "bootstrap/run-24/failures.jsonl",
+          "bytes": 444,
+          "sha256": "1819112f953b57ba7aaf54248ced177d84bec13f0339026593970e8db84819df"
+        }
+      ],
+      "durable_artifact_dir": "bootstrap/run-24"
+    },
+    {
+      "index": 25,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 2885ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-04-668Z-unit-117679a0-a999-48bf-97ba-837b2216f675\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-04-668Z-unit-117679a0-a999-48bf-97ba-837b2216f675",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2885,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 12,
+            "failed": 0,
+            "passed": 12,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 12,
+            "suites": 0
+          },
+          "duration_ms": 2802.238959
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "bootstrap/run-25/result.json",
+          "bytes": 429,
+          "sha256": "f0ebc0844ae2436bc4c93bcbc072741455b1fd52ed51bee864bce9649a0f310e"
+        },
+        {
+          "path": "bootstrap/run-25/tap.txt",
+          "bytes": 3131,
+          "sha256": "fff47b398ff66ec288b022a9b9a0984a7685362fba46ae64999a20c4aaba7440"
+        },
+        {
+          "path": "bootstrap/run-25/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "bootstrap/run-25/failures.jsonl",
+          "bytes": 444,
+          "sha256": "0153ed63152cbf532572f70a1d976425706e5a2be036cfbd677aa1ecd058214f"
+        }
+      ],
+      "durable_artifact_dir": "bootstrap/run-25"
+    }
+  ]
+}

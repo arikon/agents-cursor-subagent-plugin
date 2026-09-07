@@ -1,0 +1,114 @@
+{
+  "series": "focused",
+  "attempt_policy": "one attempt per scenario on this candidate; failures retained",
+  "results": [
+    {
+      "path": "focused/file-review/evidence/13daebc8-cbb0-4d78-a73f-0f0a49d65b70.json",
+      "scenario": "model-file-review",
+      "result": {
+        "schema_version": 1,
+        "error_code": null,
+        "message": null,
+        "evidence_ref": "13daebc8-cbb0-4d78-a73f-0f0a49d65b70.json",
+        "scenario_id": "model-file-review",
+        "lane": "model-behavior",
+        "eval_status": "pass",
+        "actual_task_outcome": "succeeded",
+        "reported_task_outcome": "succeeded",
+        "fixture_assertion_outcome": "pass",
+        "evidence_publication_status": "published",
+        "cleanup_status": "succeeded",
+        "failure_stage": null
+      },
+      "components": {
+        "evidence_admission": "pass",
+        "execution_trace": "pass",
+        "continuation_handoff": "not_applicable",
+        "outcome_report": "pass",
+        "interaction_report": "not_applicable",
+        "safety_disclosure": "not_applicable"
+      }
+    },
+    {
+      "path": "focused/model-events-lost/evidence/0cb0eec2-e4cf-4618-841a-8805281b45e6.json",
+      "scenario": "model-events-lost",
+      "result": {
+        "schema_version": 1,
+        "error_code": "scenario_contract_mismatch",
+        "message": "eval harness did not satisfy the scenario contract",
+        "evidence_ref": "0cb0eec2-e4cf-4618-841a-8805281b45e6.json",
+        "scenario_id": "model-events-lost",
+        "lane": "model-behavior",
+        "eval_status": "agent_behavior_mismatch",
+        "actual_task_outcome": "succeeded",
+        "reported_task_outcome": "succeeded",
+        "fixture_assertion_outcome": "fail",
+        "evidence_publication_status": "published",
+        "cleanup_status": "succeeded",
+        "failure_stage": "scenario"
+      },
+      "components": {
+        "evidence_admission": "pass",
+        "execution_trace": "pass",
+        "continuation_handoff": "not_applicable",
+        "outcome_report": "pass",
+        "interaction_report": "not_applicable",
+        "safety_disclosure": "fail"
+      }
+    },
+    {
+      "path": "focused/model-long-result/evidence/3d80f41d-7a11-48bc-b1ec-14ea0eeee1bb.json",
+      "scenario": "model-long-result",
+      "result": {
+        "schema_version": 1,
+        "error_code": null,
+        "message": null,
+        "evidence_ref": "3d80f41d-7a11-48bc-b1ec-14ea0eeee1bb.json",
+        "scenario_id": "model-long-result",
+        "lane": "model-behavior",
+        "eval_status": "pass",
+        "actual_task_outcome": "succeeded",
+        "reported_task_outcome": "succeeded",
+        "fixture_assertion_outcome": "pass",
+        "evidence_publication_status": "published",
+        "cleanup_status": "succeeded",
+        "failure_stage": null
+      },
+      "components": {
+        "evidence_admission": "pass",
+        "execution_trace": "pass",
+        "continuation_handoff": "not_applicable",
+        "outcome_report": "pass",
+        "interaction_report": "not_applicable",
+        "safety_disclosure": "not_applicable"
+      }
+    },
+    {
+      "path": "focused/model-result-overflow/evidence/5bb56ce2-c025-4738-aaa5-33537b4405eb.json",
+      "scenario": "model-result-overflow",
+      "result": {
+        "schema_version": 1,
+        "error_code": "scenario_contract_mismatch",
+        "message": "eval harness did not satisfy the scenario contract",
+        "evidence_ref": "5bb56ce2-c025-4738-aaa5-33537b4405eb.json",
+        "scenario_id": "model-result-overflow",
+        "lane": "model-behavior",
+        "eval_status": "agent_behavior_mismatch",
+        "actual_task_outcome": "failed",
+        "reported_task_outcome": "not_reported",
+        "fixture_assertion_outcome": "fail",
+        "evidence_publication_status": "published",
+        "cleanup_status": "succeeded",
+        "failure_stage": "scenario"
+      },
+      "components": {
+        "evidence_admission": "pass",
+        "execution_trace": "pass",
+        "continuation_handoff": "not_applicable",
+        "outcome_report": "fail",
+        "interaction_report": "not_applicable",
+        "safety_disclosure": "fail"
+      }
+    }
+  ]
+}

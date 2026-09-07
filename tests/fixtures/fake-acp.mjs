@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 import { createHash } from 'node:crypto';
 import { createInterface } from 'node:readline';
-import { appendFileSync, existsSync, readFileSync } from 'node:fs';
+import { appendFileSync, existsSync, readFileSync, unlinkSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 if (process.argv.includes('--version')) {
+  if (process.env.FAKE_ACP_UNLINK_COMMAND_ON_VERSION) unlinkSync(process.env.FAKE_ACP_UNLINK_COMMAND_ON_VERSION);
   if (process.env.FAKE_ACP_VERSION_MODE === 'overflow') {
     await new Promise((resolve) => process.stdout.write('v'.repeat(64_001), resolve));
   } else if (process.env.FAKE_ACP_VERSION_MODE === 'invalid-utf8') {
@@ -33,6 +34,7 @@ if (process.env.FAKE_ACP_ARGV_LOG) appendFileSync(process.env.FAKE_ACP_ARGV_LOG,
 
 const input = createInterface({ input: process.stdin });
 const send = (message) => process.stdout.write(`${JSON.stringify(message)}${process.env.FAKE_ACP_CRLF ? '\r\n' : '\n'}`);
+const FULL_RESULT_LIMIT_BYTES = 1_048_576;
 const program = process.env.CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH
   ? JSON.parse(readFileSync(process.env.CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH, 'utf8'))
   : null;
@@ -82,7 +84,7 @@ const advanceProgram = () => {
   if (step.type === 'terminal') {
     safeEvidence({ event: 'terminal_armed', step_id: step.step_id, turn_status: step.turn_status });
     const finish = () => {
-      if (step.turn_status === 'failed') {
+      if (step.turn_status === 'failed' && process.env.FAKE_ACP_RESULT_OVERFLOW !== '1') {
         if (!process.env.FAKE_ACP_REJECT_PROMPT) throw new Error('failed terminal requires FAKE_ACP_REJECT_PROMPT');
         const id = promptId;
         promptId = null;
@@ -90,14 +92,22 @@ const advanceProgram = () => {
           message: process.env.FAKE_ACP_PROMPT_ERROR_MESSAGE || 'prompt rejected' } });
         return;
       }
-      if (step.result_text !== null) {
+      if (process.env.FAKE_ACP_RESULT_OVERFLOW === '1') {
+        const progressBytes = Buffer.byteLength(step.progress_text || '', 'utf8');
+        let remaining = FULL_RESULT_LIMIT_BYTES + 1 - progressBytes;
+        while (remaining > 0) {
+          const text = 'R'.repeat(Math.min(8_000, remaining));
+          send({ jsonrpc: '2.0', method: 'session/update', params: { sessionId: 'fake', update: { sessionUpdate: 'agent_message_chunk', content: { text } } } });
+          remaining -= text.length;
+        }
+      } else if (step.result_text !== null) {
         send({ jsonrpc: '2.0', method: 'session/update', params: { sessionId: 'fake', update: { sessionUpdate: 'agent_message_chunk', content: { text: step.result_text } } } });
       }
       const id = promptId;
       promptId = null;
       send({ jsonrpc: '2.0', id, result: { stopReason: 'end_turn' } });
       safeEvidence({ event: 'prompt_result', request_id: id, step_id: step.step_id,
-        result_sha256: typeof step.result_text === 'string'
+        result_sha256: process.env.FAKE_ACP_RESULT_OVERFLOW === '1' ? null : typeof step.result_text === 'string'
           ? createHash('sha256').update(`${step.progress_text || ''}${step.result_text}`).digest('hex') : null });
       const exitAfterThisResult = process.env.FAKE_ACP_EXIT_AFTER_RESULT
         && (program?.resume_step_index === undefined || programStepIndex <= program.resume_step_index);

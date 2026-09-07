@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "path": "scripts/cursor-eval-scenario.mjs",
+      "source_sha256": "f45f2d9db65de4f19051f7ccd8458fd7b166d4784ebb030c8dd10cd21ea5372b",
+      "metric": "branches",
+      "line": 451,
+      "occurrence": 3,
+      "classification": "unreachable_defensive",
+      "disposition": "scenario admission pairs each mode failure with one fixture predicate and rejects their conjunction before this mutual-exclusion guard"
+    },
+    {
+      "path": "scripts/cursor-eval-scenario.mjs",
+      "source_sha256": "f45f2d9db65de4f19051f7ccd8458fd7b166d4784ebb030c8dd10cd21ea5372b",
+      "metric": "branches",
+      "line": 730,
+      "occurrence": 2,
+      "classification": "observable_contract_already_owned",
+      "disposition": "recovery variation tests reject missing or malformed argument proof and changed non-ID projections; an absent request has the same fail-closed no-recovery outcome"
+    },
+    {
+      "path": "scripts/cursor-eval-scenario.mjs",
+      "source_sha256": "f45f2d9db65de4f19051f7ccd8458fd7b166d4784ebb030c8dd10cd21ea5372b",
+      "metric": "branches",
+      "line": 762,
+      "occurrence": 2,
+      "classification": "unreachable_defensive",
+      "disposition": "validRecoveryContext requires contiguous ranges to cover every transcript call, so an admitted call index cannot be outside every range"
+    }
+  ]
+}

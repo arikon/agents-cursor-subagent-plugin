@@ -1,0 +1,10 @@
+{
+  "counts": {
+    "pass": 24,
+    "behavior": 1,
+    "infrastructure": 1
+  },
+  "changes": "Filter only admitted marketplace for Codex 0.153.4; clarify explicitly declared unfinished stage keepalive in skill.",
+  "next_concurrency": 8,
+  "reason": "Remove unrelated remote marketplace discovery rather than reduce evaluation concurrency; preserve failed attempts."
+}

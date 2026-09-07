@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "path": "scripts/eval/finalize-cursor-skill-eval.mjs",
+      "source_sha256": "e42e970e316146261efe344d31e5101d5690245f04a242678aeedaf23b602890",
+      "metric": "branches",
+      "line": 158,
+      "occurrence": 2,
+      "classification": "unreachable_defensive",
+      "disposition": "Empty artifact_root fallback is unreachable after validRelative(result.process.artifact_root) and exact result.artifact_root equality require a nonempty string; missing indexed evidence and driver streams are directly tested in tests/eval-closeout.test.mjs."
+    },
+    {
+      "path": "scripts/eval/finalize-cursor-skill-eval.mjs",
+      "source_sha256": "e42e970e316146261efe344d31e5101d5690245f04a242678aeedaf23b602890",
+      "metric": "branches",
+      "line": 159,
+      "occurrence": 2,
+      "classification": "unreachable_defensive",
+      "disposition": "Empty artifact_root fallback is unreachable after validRelative(result.process.artifact_root) and exact result.artifact_root equality require a nonempty string; missing indexed evidence and driver streams are directly tested in tests/eval-closeout.test.mjs."
+    }
+  ]
+}

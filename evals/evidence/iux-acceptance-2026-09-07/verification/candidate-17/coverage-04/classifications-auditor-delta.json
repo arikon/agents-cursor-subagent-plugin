@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 48,
+      "occurrence": 3,
+      "classification": "observable_contract_already_owned",
+      "disposition": "Falsy sha256 uses the same pre-publication invalid-digest rejection as the malformed snapshot and artifact digest cases owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; it has no distinct effects or error stage."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 58,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "Every assertIdentity caller supplies identityOnly output, or published added/removed already proven byte-for-byte equal to owner-generated identities, so an identity with unexpected fields cannot reach this defensive exact-fields guard."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 96,
+      "occurrence": 5,
+      "classification": "observable_contract_already_owned",
+      "disposition": "Falsy source sha256 uses the same pre-publication invalid-source-metadata rejection as the malformed source digest case owned by coverage audit rejects incomplete, drifting and ambiguously referenced artifacts; it has no distinct effects or error stage."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 154,
+      "occurrence": 2,
+      "classification": "observable_contract_already_owned",
+      "disposition": "Canonical zero-counter path ordering is exercised with zero-bearing source files in both forward and reverse raw-report order by coverage audit occurrences identify raw sibling counters before zero filtering."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 238,
+      "occurrence": 4,
+      "classification": "observable_contract_already_owned",
+      "disposition": "Canonical normalized previous-review ordering for unique paths is exercised in both directions, while duplicate source paths are rejected by the existing malformed snapshot/review owner; comparator equality compatibility has no separate public outcome."
+    }
+  ]
+}

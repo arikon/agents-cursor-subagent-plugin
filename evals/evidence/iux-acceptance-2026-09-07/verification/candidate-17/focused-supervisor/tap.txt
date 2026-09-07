@@ -1,0 +1,591 @@
+TAP version 13
+# Subtest: recovery proof admits grounded address correction without losing its rejected call
+ok 1 - recovery proof admits grounded address correction without losing its rejected call
+  ---
+  duration_ms: 4.066625
+  type: 'test'
+  ...
+# Subtest: recovery proof fails closed for ambiguous rejection, changed intent, missing evidence or another user turn
+ok 2 - recovery proof fails closed for ambiguous rejection, changed intent, missing evidence or another user turn
+  ---
+  duration_ms: 0.600084
+  type: 'test'
+  ...
+# Subtest: recovery oracle audits raw lookup errors even when normalized trace looks successful
+ok 3 - recovery oracle audits raw lookup errors even when normalized trace looks successful
+  ---
+  duration_ms: 1.482708
+  type: 'test'
+  ...
+# Subtest: recovery variation table distinguishes grounded repairs from changed intent and missing proof
+ok 4 - recovery variation table distinguishes grounded repairs from changed intent and missing proof
+  ---
+  duration_ms: 3.651583
+  type: 'test'
+  ...
+# Subtest: candidate inventory detects oracle drift independently of skill and excludes host roots
+ok 5 - candidate inventory detects oracle drift independently of skill and excludes host roots
+  ---
+  duration_ms: 4.296625
+  type: 'test'
+  ...
+# Subtest: recording MCP proxy rejects an omitted target before opening a child transport
+ok 6 - recording MCP proxy rejects an omitted target before opening a child transport
+  ---
+  duration_ms: 59.145584
+  type: 'test'
+  ...
+# Subtest: EvalResultV1 enforces its exact bounded public contract
+ok 7 - EvalResultV1 enforces its exact bounded public contract
+  ---
+  duration_ms: 2.175875
+  type: 'test'
+  ...
+# Subtest: EvidenceManifestV1 accepts one complete closed proof and rejects drifted shapes and digests
+ok 8 - EvidenceManifestV1 accepts one complete closed proof and rejects drifted shapes and digests
+  ---
+  duration_ms: 1.253708
+  type: 'test'
+  ...
+# Subtest: eval classifier preserves skipped, mismatch, and pass outcomes
+ok 9 - eval classifier preserves skipped, mismatch, and pass outcomes
+  ---
+  duration_ms: 0.363708
+  type: 'test'
+  ...
+# Subtest: cleanup, evidence publication, and runner collisions dominate behavior verdicts
+ok 10 - cleanup, evidence publication, and runner collisions dominate behavior verdicts
+  ---
+  duration_ms: 0.445166
+  type: 'test'
+  ...
+# Subtest: EvalResultV1 is the sole bounded stdout artifact
+ok 11 - EvalResultV1 is the sole bounded stdout artifact
+  ---
+  duration_ms: 0.473542
+  type: 'test'
+  ...
+# Subtest: scenario classification depends on observed task outcome rather than reported prose semantics
+ok 12 - scenario classification depends on observed task outcome rather than reported prose semantics
+  ---
+  duration_ms: 0.072958
+  type: 'test'
+  ...
+# Subtest: captured free prose remains evidence while its reported semantics stay unchecked
+ok 13 - captured free prose remains evidence while its reported semantics stay unchecked
+  ---
+  duration_ms: 15.054042
+  type: 'test'
+  ...
+# Subtest: question delivery requires its visible option label rather than the internal option ID
+ok 14 - question delivery requires its visible option label rather than the internal option ID
+  ---
+  duration_ms: 6.720583
+  type: 'test'
+  ...
+# Subtest: launch trace constrains declared effort and fast fields without inventing omission requirements
+ok 15 - launch trace constrains declared effort and fast fields without inventing omission requirements
+  ---
+  duration_ms: 9.213458
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy atomically publishes bounded lifecycle evidence with exact opaque IDs
+ok 16 - stdio recording proxy atomically publishes bounded lifecycle evidence with exact opaque IDs
+  ---
+  duration_ms: 121.60375
+  type: 'test'
+  ...
+# Subtest: recording proxy hashes complete non-ID arguments before bounded projection
+ok 17 - recording proxy hashes complete non-ID arguments before bounded projection
+  ---
+  duration_ms: 121.611375
+  type: 'test'
+  ...
+# Subtest: recording proxy proves only an exact sequential full-result read through EOF
+ok 18 - recording proxy proves only an exact sequential full-result read through EOF
+  ---
+  duration_ms: 123.671208
+  type: 'test'
+  ...
+# Subtest: recording MCP proxy preserves UTF-8 split across transport chunks in both directions
+ok 19 - recording MCP proxy preserves UTF-8 split across transport chunks in both directions
+  ---
+  duration_ms: 103.733834
+  type: 'test'
+  ...
+# Subtest: recording MCP proxy observes final request and response frames without trailing newlines
+ok 20 - recording MCP proxy observes final request and response frames without trailing newlines
+  ---
+  duration_ms: 124.270708
+  type: 'test'
+  ...
+# Subtest: recording MCP proxy drains accepted output before exiting under stdout backpressure
+ok 21 - recording MCP proxy drains accepted output before exiting under stdout backpressure
+  ---
+  duration_ms: 128.717875
+  type: 'test'
+  ...
+# Subtest: recording proxy preserves only bounded public provider error fields
+ok 22 - recording proxy preserves only bounded public provider error fields
+  ---
+  duration_ms: 109.282334
+  type: 'test'
+  ...
+# Subtest: recording MCP proxy proves the exact plugin roots by digest without retaining paths
+ok 23 - recording MCP proxy proves the exact plugin roots by digest without retaining paths
+  ---
+  duration_ms: 222.972291
+  type: 'test'
+  ...
+# Subtest: recording proxy injects one stale question ID as fixture behavior, not user instruction
+ok 24 - recording proxy injects one stale question ID as fixture behavior, not user instruction
+  ---
+  duration_ms: 222.666792
+  type: 'test'
+  ...
+# Subtest: recording proxy injects a handshaken mode protocol error while preserving live status
+ok 25 - recording proxy injects a handshaken mode protocol error while preserving live status
+  ---
+  duration_ms: 109.288542
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy caps call count and evidence bytes
+ok 26 - stdio recording proxy caps call count and evidence bytes
+  ---
+  duration_ms: 256.029291
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy rejects oversized bounded-field evidence without a partial artifact
+ok 27 - stdio recording proxy rejects oversized bounded-field evidence without a partial artifact
+  ---
+  duration_ms: 102.2695
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy controls an immediate publication failure and closes a live child
+ok 28 - stdio recording proxy controls an immediate publication failure and closes a live child
+  ---
+  duration_ms: 114.549667
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy bounds public question answers and option IDs
+ok 29 - stdio recording proxy bounds public question answers and option IDs
+  ---
+  duration_ms: 108.344958
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy ignores malformed and unrelated frames
+ok 30 - stdio recording proxy ignores malformed and unrelated frames
+  ---
+  duration_ms: 112.643416
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy preserves invalid UTF-8 and large numeric IDs byte-for-byte
+ok 31 - stdio recording proxy preserves invalid UTF-8 and large numeric IDs byte-for-byte
+  ---
+  duration_ms: 112.983042
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy fails closed on an oversized no-newline frame
+ok 32 - stdio recording proxy fails closed on an oversized no-newline frame
+  ---
+  duration_ms: 68.990125
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy fails closed on an oversized newline-terminated frame
+ok 33 - stdio recording proxy fails closed on an oversized newline-terminated frame
+  ---
+  duration_ms: 60.742416
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy publishes no partial oversized provider frame
+ok 34 - stdio recording proxy publishes no partial oversized provider frame
+  ---
+  duration_ms: 105.502625
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy flushes a backpressured final response before exit
+ok 35 - stdio recording proxy flushes a backpressured final response before exit
+  ---
+  duration_ms: 112.386959
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy publishes only bounded public fields from malformed lifecycle values
+ok 36 - stdio recording proxy publishes only bounded public fields from malformed lifecycle values
+  ---
+  duration_ms: 115.866042
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy does not publish evidence when no tool call was observed
+ok 37 - stdio recording proxy does not publish evidence when no tool call was observed
+  ---
+  duration_ms: 106.943458
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy stops its child with SIGTERM
+ok 38 - stdio recording proxy stops its child with SIGTERM
+  ---
+  duration_ms: 111.382584
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy stops its child with SIGKILL fallback
+ok 39 - stdio recording proxy stops its child with SIGKILL fallback
+  ---
+  duration_ms: 1113.252542
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy terminates its target when its owning process disappears
+ok 40 - stdio recording proxy terminates its target when its owning process disappears
+  ---
+  duration_ms: 380.093916
+  type: 'test'
+  ...
+# Subtest: evidence is atomically published outside and survives fixture cleanup
+ok 41 - evidence is atomically published outside and survives fixture cleanup
+  ---
+  duration_ms: 10.656375
+  type: 'test'
+  ...
+# Subtest: lane matrix produces the exact child argv and keeps parent deadlines fixed
+    # Subtest: unit
+    ok 1 - unit
+      ---
+      duration_ms: 20.755292
+      type: 'test'
+      ...
+    # Subtest: coverage
+    ok 2 - coverage
+      ---
+      duration_ms: 20.134292
+      type: 'test'
+      ...
+    # Subtest: release
+    ok 3 - release
+      ---
+      duration_ms: 9.800916
+      type: 'test'
+      ...
+    # Subtest: eval
+    ok 4 - eval
+      ---
+      duration_ms: 13.109875
+      type: 'test'
+      ...
+    1..4
+ok 42 - lane matrix produces the exact child argv and keeps parent deadlines fixed
+  ---
+  duration_ms: 76.724209
+  type: 'test'
+  ...
+# Subtest: focused selection keeps the unit process and artifact contract
+ok 43 - focused selection keeps the unit process and artifact contract
+  ---
+  duration_ms: 14.58325
+  type: 'test'
+  ...
+# Subtest: zero executed tests fail even when Node exits successfully
+ok 44 - zero executed tests fail even when Node exits successfully
+  ---
+  duration_ms: 9.565625
+  type: 'test'
+  ...
+# Subtest: malformed file test counts fail closed as no tests despite a successful global summary
+ok 45 - malformed file test counts fail closed as no tests despite a successful global summary
+  ---
+  duration_ms: 12.760459
+  type: 'test'
+  ...
+# Subtest: foreground focused invocation fails when the real Node reporter executes zero tests
+ok 46 - foreground focused invocation fails when the real Node reporter executes zero tests
+  ---
+  duration_ms: 227.45
+  type: 'test'
+  ...
+# Subtest: supervisor rejects bypasses of the full coverage manifest
+ok 47 - supervisor rejects bypasses of the full coverage manifest
+  ---
+  duration_ms: 27.125708
+  type: 'test'
+  ...
+# Subtest: unsupported platform and invalid lane fail closed before spawn and publish completion markers
+ok 48 - unsupported platform and invalid lane fail closed before spawn and publish completion markers
+  ---
+  duration_ms: 7.337042
+  type: 'test'
+  ...
+# Subtest: synchronous spawn failure is reported with bounded artifacts and structured infrastructure error
+ok 49 - synchronous spawn failure is reported with bounded artifacts and structured infrastructure error
+  ---
+  duration_ms: 6.349458
+  type: 'test'
+  ...
+# Subtest: non-Error spawn failure is normalized into the published infrastructure contract
+ok 50 - non-Error spawn failure is normalized into the published infrastructure contract
+  ---
+  duration_ms: 4.822
+  type: 'test'
+  ...
+# Subtest: default paths and dependencies still publish a sanitized invalid-lane marker
+ok 51 - default paths and dependencies still publish a sanitized invalid-lane marker
+  ---
+  duration_ms: 5.864833
+  type: 'test'
+  ...
+# Subtest: clean close publishes a terminal passing result without failures
+ok 52 - clean close publishes a terminal passing result without failures
+  ---
+  duration_ms: 10.740583
+  type: 'test'
+  ...
+# Subtest: terminal result is published only after child stderr is fully persisted
+ok 53 - terminal result is published only after child stderr is fully persisted
+  ---
+  duration_ms: 38.750125
+  type: 'test'
+  ...
+# Subtest: stderr persistence failure becomes a terminal infrastructure error
+ok 54 - stderr persistence failure becomes a terminal infrastructure error
+  ---
+  duration_ms: 21.583458
+  type: 'test'
+  ...
+# Subtest: coverage lane publishes a passing manifest-complete gate result above the accepted threshold
+ok 55 - coverage lane publishes a passing manifest-complete gate result above the accepted threshold
+  ---
+  duration_ms: 30.466917
+  type: 'test'
+  ...
+# Subtest: coverage cannot publish a pass without its complete raw artifacts
+ok 56 - coverage cannot publish a pass without its complete raw artifacts
+  ---
+  duration_ms: 17.700125
+  type: 'test'
+  ...
+# Subtest: coverage cannot pass when measured sources change or disappear during the child run
+ok 57 - coverage cannot pass when measured sources change or disappear during the child run
+  ---
+  duration_ms: 46.9495
+  type: 'test'
+  ...
+# Subtest: coverage lane fails closed when the coverage event is missing
+ok 58 - coverage lane fails closed when the coverage event is missing
+  ---
+  duration_ms: 17.791625
+  type: 'test'
+  ...
+# Subtest: coverage lane fails closed when the reporter publishes a malformed coverage summary
+ok 59 - coverage lane fails closed when the reporter publishes a malformed coverage summary
+  ---
+  duration_ms: 14.022667
+  type: 'test'
+  ...
+# Subtest: coverage lane reports new, missing, and unloaded product sources
+ok 60 - coverage lane reports new, missing, and unloaded product sources
+  ---
+  duration_ms: 71.357125
+  type: 'test'
+  ...
+# Subtest: coverage lane reports every metric below the accepted threshold
+ok 61 - coverage lane reports every metric below the accepted threshold
+  ---
+  duration_ms: 20.724916
+  type: 'test'
+  ...
+# Subtest: coverage lane fails closed when reporter counters are not numeric
+ok 62 - coverage lane fails closed when reporter counters are not numeric
+  ---
+  duration_ms: 22.425416
+  type: 'test'
+  ...
+# Subtest: coverage lane rejects product files with no executable counters
+ok 63 - coverage lane rejects product files with no executable counters
+  ---
+  duration_ms: 13.669667
+  type: 'test'
+  ...
+# Subtest: coverage lane rejects one manifest source missing from the line denominator despite a passing aggregate
+ok 64 - coverage lane rejects one manifest source missing from the line denominator despite a passing aggregate
+  ---
+  duration_ms: 52.711583
+  type: 'test'
+  ...
+# Subtest: coverage lane classifies zero branch and function denominators per source without rejecting valid line coverage
+ok 65 - coverage lane classifies zero branch and function denominators per source without rejecting valid line coverage
+  ---
+  duration_ms: 35.975833
+  type: 'test'
+  ...
+# Subtest: nonzero exit and signal termination produce failed verdicts with distinct terminal causes
+ok 66 - nonzero exit and signal termination produce failed verdicts with distinct terminal causes
+  ---
+  duration_ms: 13.740333
+  type: 'test'
+  ...
+# Subtest: asynchronous child spawn error has infrastructure precedence over a later close
+ok 67 - asynchronous child spawn error has infrastructure precedence over a later close
+  ---
+  duration_ms: 8.416708
+  type: 'test'
+  ...
+# Subtest: SIGINT interruption publishes an interrupted terminal result
+ok 68 - SIGINT interruption publishes an interrupted terminal result
+  ---
+  duration_ms: 33.421333
+  type: 'test'
+  ...
+# Subtest: the first interruption remains authoritative when another signal follows
+ok 69 - the first interruption remains authoritative when another signal follows
+  ---
+  duration_ms: 43.362125
+  type: 'test'
+  ...
+# Subtest: a child that exits during interruption remains an interrupted run
+ok 70 - a child that exits during interruption remains an interrupted run
+  ---
+  duration_ms: 34.707875
+  type: 'test'
+  ...
+# (node:19045) ExperimentalWarning: The MockTimers API is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: failure to signal the child process group is reported as infrastructure failure
+ok 71 - failure to signal the child process group is reported as infrastructure failure
+  ---
+  duration_ms: 35.619166
+  type: 'test'
+  ...
+# Subtest: an unresponsive child process group is force-killed after the shutdown grace period
+ok 72 - an unresponsive child process group is force-killed after the shutdown grace period
+  ---
+  duration_ms: 14.670791
+  type: 'test'
+  ...
+# Subtest: a SIGKILL escalation error is reported without replacing the initiating interruption
+ok 73 - a SIGKILL escalation error is reported without replacing the initiating interruption
+  ---
+  duration_ms: 6.252792
+  type: 'test'
+  ...
+# Subtest: deadline terminates only the owned POSIX process tree and publishes after it exits
+ok 74 - deadline terminates only the owned POSIX process tree and publishes after it exits
+  ---
+  duration_ms: 175.949208
+  type: 'test'
+  ...
+# Subtest: publication failure preserves a preceding non-success cause but replaces provisional clean close
+ok 75 - publication failure preserves a preceding non-success cause but replaces provisional clean close
+  ---
+  duration_ms: 18.137958
+  type: 'test'
+  ...
+# Subtest: failure report formats each supported observable reporter shape
+    # Subtest: nested error message
+    ok 1 - nested error message
+      ---
+      duration_ms: 9.403292
+      type: 'test'
+      ...
+    # Subtest: nested location and causal message
+    ok 2 - nested location and causal message
+      ---
+      duration_ms: 13.641458
+      type: 'test'
+      ...
+    # Subtest: plain failure text
+    ok 3 - plain failure text
+      ---
+      duration_ms: 6.33775
+      type: 'test'
+      ...
+    # Subtest: direct fields
+    ok 4 - direct fields
+      ---
+      duration_ms: 8.773333
+      type: 'test'
+      ...
+    # Subtest: missing failure payload
+    ok 5 - missing failure payload
+      ---
+      duration_ms: 8.606875
+      type: 'test'
+      ...
+    1..5
+ok 76 - failure report formats each supported observable reporter shape
+  ---
+  duration_ms: 48.595042
+  type: 'test'
+  ...
+# Subtest: empty or summary-less reporter streams are incomplete, while malformed JSON is a reporter error
+ok 77 - empty or summary-less reporter streams are incomplete, while malformed JSON is a reporter error
+  ---
+  duration_ms: 744.2535
+  type: 'test'
+  ...
+# Subtest: CLI parses focused files and name filters through the supervisor contract
+ok 78 - CLI parses focused files and name filters through the supervisor contract
+  ---
+  duration_ms: 1.276834
+  type: 'test'
+  ...
+# Subtest: CLI rejects missing and invalid lanes with the stable usage contract
+    # Subtest: missing lane
+    ok 1 - missing lane
+      ---
+      duration_ms: 0.399208
+      type: 'test'
+      ...
+    # Subtest: invalid lane
+    ok 2 - invalid lane
+      ---
+      duration_ms: 0.224833
+      type: 'test'
+      ...
+    1..2
+ok 79 - CLI rejects missing and invalid lanes with the stable usage contract
+  ---
+  duration_ms: 0.978333
+  type: 'test'
+  ...
+# Subtest: CLI usage falls back to the stable script name when argv has no entrypoint
+ok 80 - CLI usage falls back to the stable script name when argv has no entrypoint
+  ---
+  duration_ms: 0.263708
+  type: 'test'
+  ...
+# Subtest: CLI renders each terminal supervisor verdict with current-run diagnostics
+ok 81 - CLI renders each terminal supervisor verdict with current-run diagnostics
+  ---
+  duration_ms: 7.213667
+  type: 'test'
+  ...
+# Subtest: foreground supervisor entrypoint rejects an invalid lane with the public usage contract
+ok 82 - foreground supervisor entrypoint rejects an invalid lane with the public usage contract
+  ---
+  duration_ms: 57.951708
+  type: 'test'
+  ...
+# Subtest: CLI reports an artifact storage failure and exits nonzero
+ok 83 - CLI reports an artifact storage failure and exits nonzero
+  ---
+  duration_ms: 2.958583
+  type: 'test'
+  ...
+# Subtest: legacy coverage entrypoint delegates to the documented coverage lane
+ok 84 - legacy coverage entrypoint delegates to the documented coverage lane
+  ---
+  duration_ms: 0.372167
+  type: 'test'
+  ...
+# Subtest: legacy coverage entrypoint preserves its foreground CLI contract
+ok 85 - legacy coverage entrypoint preserves its foreground CLI contract
+  ---
+  duration_ms: 100.532333
+  type: 'test'
+  ...
+1..85
+# tests 96
+# suites 0
+# pass 96
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4598.877041

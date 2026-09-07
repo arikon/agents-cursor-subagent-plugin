@@ -1,0 +1,183 @@
+{
+  "schema_version": 1,
+  "frozen_at": "2026-09-07T00:34:25.466Z",
+  "evaluator": {
+    "files": [
+      {
+        "path": ".codex-plugin/plugin.json",
+        "bytes": 715,
+        "sha256": "a46b9e12e4a1e0cd11040f0c60edd4f9da99c021c5ae2d8d2cf5bf48053cf994"
+      },
+      {
+        "path": "README.md",
+        "bytes": 14223,
+        "sha256": "ac5aaf356be3ae2adb949c9cc47f158e9c03912f01b210a5732b46417b6fc141"
+      },
+      {
+        "path": "scripts/codex-app-server-client.mjs",
+        "bytes": 14060,
+        "sha256": "f5fa4850c7228aa9ed4b4a0661f2d1dbabae2ffe95ec86b98e3e0ffc36cf4200"
+      },
+      {
+        "path": "scripts/cursor-eval-scenario.mjs",
+        "bytes": 61469,
+        "sha256": "c4515938fb0065d1dc7880ecea8a7f0dbb5f0ff0ff818873db07f8141bb1643b"
+      },
+      {
+        "path": "scripts/cursor-skill-eval.mjs",
+        "bytes": 9672,
+        "sha256": "ac4e06e7cfc0fd4f9fed27f019ccdcffb1c1c959975ba69385ccb0222eed2562"
+      },
+      {
+        "path": "scripts/cursor-subagent-bootstrap.mjs",
+        "bytes": 52347,
+        "sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1"
+      },
+      {
+        "path": "scripts/cursor-subagent-mcp.mjs",
+        "bytes": 65677,
+        "sha256": "90b1e0517012a1993d3b0b7a27e8015559abfcacca32c7a42dea641ecdf22181"
+      },
+      {
+        "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+        "bytes": 14828,
+        "sha256": "90d7b21b5bc7fddbb1450b4ee8b6237181cf15fc9c44f7a9116900b1c81a76f7"
+      },
+      {
+        "path": "scripts/node-test-reporter-v22.mjs",
+        "bytes": 834,
+        "sha256": "51ac5c6e8a019c83e4deb101b209146c3e953069e42a593d862a45b1ade4834f"
+      },
+      {
+        "path": "scripts/recording-mcp-proxy.mjs",
+        "bytes": 16155,
+        "sha256": "96adcd918892da9295ee1c5cf860460dbbf168b5413f4a0a2c99a4370c12c28a"
+      },
+      {
+        "path": "scripts/run-cursor-skill-eval.mjs",
+        "bytes": 23739,
+        "sha256": "e2df3b1778ebbae0e24578f23d6128aa8f4662e0fbd5c96c039addc818cf4c25"
+      },
+      {
+        "path": "scripts/run-node-tests.mjs",
+        "bytes": 18871,
+        "sha256": "bd2a536556ce0c224da10824184e540170f992faab84bdb71a4d6ab20540716d"
+      },
+      {
+        "path": "skills/cursor-subagent/SKILL.md",
+        "bytes": 17474,
+        "sha256": "72e103984d2f5d862cd54a4de501b5ab6105dfc55b80e7b8ab06f5229058780c"
+      },
+      {
+        "path": "skills/cursor-subagent/agents/openai.yaml",
+        "bytes": 251,
+        "sha256": "7e2b2b72bb12d9f72c780db5b31fc7b0d5d0a320f67da4a2701af079453e322e"
+      },
+      {
+        "path": "tests/codex-client-integration.test.mjs",
+        "bytes": 106499,
+        "sha256": "4c4f35d834ae7587455318db4f17806401ff620b7ef5be872073bdf0b27c31c5"
+      },
+      {
+        "path": "tests/fixtures/accelerate-turn-timeout.mjs",
+        "bytes": 406,
+        "sha256": "adee8e3aa892c545d209c1eefdf9bd6be02a875bec20a031c590fdd5391f06ee"
+      },
+      {
+        "path": "tests/fixtures/codex-app-server-v01521.golden.json",
+        "bytes": 1574,
+        "sha256": "79a22cf5b9ae694ce0c5103251ae3e5ae9886717ef850d5318bf864998c3cb33"
+      },
+      {
+        "path": "tests/fixtures/codex-app-server-v01534.golden.json",
+        "bytes": 1987,
+        "sha256": "860abe7af9a1823190ccbb6f0d738f34224a3c8395efc2a997396bf5f4cf5594"
+      },
+      {
+        "path": "tests/fixtures/codex-v01521-adapter.golden.json",
+        "bytes": 1700,
+        "sha256": "f28eeef2d7c341fd4ebc35a5fc954c4fe20cb4877e5666f1f36bf45484fc9ab1"
+      },
+      {
+        "path": "tests/fixtures/codex-v01521-adapter.mjs",
+        "bytes": 10303,
+        "sha256": "4d229196d3e9b6a4dd07c48bdb7bfa37dcd147e5ad40dfc7eaf6d646f5239f05"
+      },
+      {
+        "path": "tests/fixtures/codex-v01534-adapter.golden.json",
+        "bytes": 1643,
+        "sha256": "1210ab5556a3c339eff53c7582b0b520d1a3672f7dd802a87d68646ed800da19"
+      },
+      {
+        "path": "tests/fixtures/codex-v01534-adapter.mjs",
+        "bytes": 125,
+        "sha256": "5ad4cb1117c27ae112e4fe610d4fe155f121c05a77fb0458a6a27c36fc4c2e5e"
+      },
+      {
+        "path": "tests/fixtures/cursor-agent-v20260825.golden.json",
+        "bytes": 4630,
+        "sha256": "476241fb75a582eba3c38b79f9111fe3fc3570d31bcfa9be71a84de769217eb9"
+      },
+      {
+        "path": "tests/fixtures/fake-acp.mjs",
+        "bytes": 32574,
+        "sha256": "4e152fb5bad738d7fd6bdccd00747c6842742c2f9a726bf64134c3001d2840b3"
+      },
+      {
+        "path": "tests/fixtures/fake-codex-adapter-core.mjs",
+        "bytes": 9879,
+        "sha256": "5d4275b817a199a0e137306bce68473a433b285deb59455cef7e5ede129c1a06"
+      },
+      {
+        "path": "tests/fixtures/fake-codex-adapter.mjs",
+        "bytes": 616,
+        "sha256": "cbf0d2161be737265f4ff2928b3c4922fc57fdae3ba0d7cba6d813218d9f258e"
+      },
+      {
+        "path": "tests/fixtures/fake-mcp-version.mjs",
+        "bytes": 669,
+        "sha256": "44fa5a1b1acc368845b279844602cb2a078315d52ac65a34b1b91ea3b19b1310"
+      },
+      {
+        "path": "tests/fixtures/fake-ollama-responses.mjs",
+        "bytes": 12859,
+        "sha256": "d7c6aaa17cae68ec93fbdbf522abd72c19f7b1889d2eddf6e165fd6641422433"
+      },
+      {
+        "path": "tests/fixtures/node-test-reporter-v22.23.1.golden.json",
+        "bytes": 3437,
+        "sha256": "6d2c0e0ba90c0f74a91f4cf7d9f0705f8d649f9ad874765ada6539ac1e12b02c"
+      },
+      {
+        "path": "tests/fixtures/release-fake-acp.mjs",
+        "bytes": 264,
+        "sha256": "98cd6d4735d9a764e2eb74c307f0fc48a87c015b29637a83bc04e6dee2157644"
+      },
+      {
+        "path": "tests/release-e2e.test.mjs",
+        "bytes": 36135,
+        "sha256": "38896f98ae6a09c87932c735c834e01f2dc841a813dccd41c37724d921daf4a2"
+      }
+    ],
+    "selected_runner": "scripts/run-cursor-skill-eval.mjs",
+    "digest": {
+      "bytes": 4341,
+      "sha256": "9550f7acc070a1a8d619730327c5cd3cee222015d415caffc0136dd79c1079e8"
+    }
+  },
+  "corpus": {
+    "bytes": 77433,
+    "sha256": "352221baad3833a68edb50aba9aa1564fc2b4a5821d91ecd6ce30fdf9aa7e55a"
+  },
+  "skill": {
+    "bytes": 17474,
+    "sha256": "72e103984d2f5d862cd54a4de501b5ab6105dfc55b80e7b8ab06f5229058780c"
+  },
+  "verification": {
+    "delta": "Version-specific marketplace filter and single-owner declared-stage cleanup. Corpus unchanged.",
+    "local_root": "../verification/candidate-07",
+    "coverage": "../verification/candidate-06/coverage/result.json",
+    "release": "../verification/candidate-07/release/result.json",
+    "review": "../verification/review.md"
+  }
+}

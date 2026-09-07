@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "path": "scripts/codex-app-server-client.mjs",
+      "source_sha256": "f5fa4850c7228aa9ed4b4a0661f2d1dbabae2ffe95ec86b98e3e0ffc36cf4200",
+      "metric": "branches",
+      "line": 152,
+      "occurrence": 1,
+      "classification": "observable_contract_already_owned",
+      "disposition": "positioned timeout, confirmed-missing and late-final polling tests own returning the latest bounded capture at the deadline"
+    },
+    {
+      "path": "scripts/cursor-eval-scenario.mjs",
+      "source_sha256": "f56bcdbf352eee202fed4537defc8d48f1d23b96ef15c820e445fe3da6fc37ce",
+      "metric": "branches",
+      "line": 451,
+      "occurrence": 3,
+      "classification": "unreachable_defensive",
+      "disposition": "scenario admission pairs each mode failure with one fixture predicate and rejects the conjunction before this mutual-exclusion guard"
+    },
+    {
+      "path": "scripts/cursor-eval-scenario.mjs",
+      "source_sha256": "f56bcdbf352eee202fed4537defc8d48f1d23b96ef15c820e445fe3da6fc37ce",
+      "metric": "branches",
+      "line": 731,
+      "occurrence": 2,
+      "classification": "observable_contract_already_owned",
+      "disposition": "recovery variation tests reject missing or malformed argument proof and changed non-ID projections; an absent request has the same fail-closed no-recovery outcome"
+    },
+    {
+      "path": "scripts/cursor-eval-scenario.mjs",
+      "source_sha256": "f56bcdbf352eee202fed4537defc8d48f1d23b96ef15c820e445fe3da6fc37ce",
+      "metric": "branches",
+      "line": 763,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "validRecoveryContext requires contiguous ranges to cover every transcript call, so an admitted call index cannot be outside every range"
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 387,
+      "occurrence": 2,
+      "classification": "unreachable_defensive",
+      "disposition": "pathKind and canonical parent validation reject a symlinked or foreign managed root before this canonical-directory operand can decide"
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 437,
+      "occurrence": 6,
+      "classification": "unreachable_defensive",
+      "disposition": "the admitted versioned mcp-check adapter always returns a bounded status message; preflight success and adapter-failure outcomes are tested"
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 446,
+      "occurrence": 7,
+      "classification": "unreachable_defensive",
+      "disposition": "the admitted versioned agent-status adapter always returns a bounded status message; authenticated, required and unknown outcomes are tested"
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 673,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "parseArgs throws BootstrapError with a fixed exitCode, so the generic parse exit-code fallback cannot decide"
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 673,
+      "occurrence": 2,
+      "classification": "unreachable_defensive",
+      "disposition": "parseArgs throws BootstrapError with a fixed error code, so the generic invalid-invocation fallback cannot decide"
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "source_sha256": "90d7b21b5bc7fddbb1450b4ee8b6237181cf15fc9c44f7a9116900b1c81a76f7",
+      "metric": "branches",
+      "line": 158,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "foreground matrix interruption tests own one exit 130 and no partial aggregate; an empty active-child set is the scheduler arm of that contract"
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "source_sha256": "2df45550eeae34b051a5ad99b213f48f9e212c3be4a0d1a41bdfdd8c16b48e7e",
+      "metric": "branches",
+      "line": 213,
+      "occurrence": 2,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "stdout backpressure tests prove all accepted output and the final response drain before exit; waiter resolution timing is scheduler-dependent"
+    }
+  ]
+}

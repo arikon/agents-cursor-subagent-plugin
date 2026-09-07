@@ -1,0 +1,34 @@
+TAP version 13
+# [hosted-eval] scenario-loaded
+# [hosted-eval] auth-resolved
+# [hosted-eval] package-installed
+# [hosted-eval] app-server-initialize
+# [hosted-eval] app-server-initialized
+# [hosted-eval] skill-loaded
+# [hosted-eval] thread-started
+# [hosted-eval] turn-started
+# [hosted-eval] cleanup-started
+# Subtest: hosted Codex actually calls the installed Cursor MCP tools
+not ok 1 - hosted Codex actually calls the installed Cursor MCP tools
+  ---
+  duration_ms: 303449.066958
+  type: 'test'
+  location: '/Users/arikon/projects/codex-cursor-subagent-plugin/tests/codex-client-integration.test.mjs:1403:1'
+  failureType: 'testCodeFailure'
+  error: 'recording MCP proxy did not publish tool transcript: null; hosted_diagnostics={"turn":{"id":"01a07ad2-490f-77d1-a502-4d86301e153f","status":"inProgress","error":null},"thread_read_error":null,"notification_methods":["remoteControl/status/changed","thread/started","mcpServer/startupStatus/updated","mcpServer/startupStatus/updated","thread/status/changed","turn/started","mcpServer/startupStatus/updated","mcpServer/startupStatus/updated","item/started","item/completed","mcpServer/startupStatus/updated","mcpServer/startupStatus/updated","deprecationNotice"],"lifecycle_notifications":[{"method":"thread/status/changed","at_ms":1788766996767,"thread_id":"01a07ad2-48fb-7d40-95c4-c24fef9ef925","turn_id":null,"turn_status":{"type":"active","activeFlags":[]}},{"method":"turn/started","at_ms":1788766996768,"thread_id":"01a07ad2-48fb-7d40-95c4-c24fef9ef925","turn_id":"01a07ad2-490f-77d1-a502-4d86301e153f","turn_status":"inProgress"}],"client_requests":[{"id":"client-3","method":"thread/start","at_ms":1788766996723,"thread_id":null},{"id":"client-4","method":"turn/start","at_ms":1788766996750,"thread_id":"01a07ad2-48fb-7d40-95c4-c24fef9ef925"},{"id":"client-5","method":"thread/read","at_ms":1788767296756,"thread_id":"01a07ad2-48fb-7d40-95c4-c24fef9ef925"}],"stderr_tail":"{\\"timestamp\\":\\"2026-09-07T07:43:40.819125Z\\",\\"level\\":\\"WARN\\",\\"fields\\":{\\"message\\":\\"failed to refresh cached remote plugin catalog\\",\\"error\\":\\"failed to parse remote plugin catalog response from https://chatgpt.com/backend-api/ps/plugins/list?scope=GLOBAL&limit=200&pageToken=eyJzY29wZSI6IkdMT0JBTCIsIndvcmtzcGFjZV9pZCI6bnVsbCwiY3JlYXRvcl9hY2NvdW50X3VzZXJfaWQiOm51bGwsImNvbGxlY3Rpb24iOm51bGwsImluY2x1ZGVfcmVzdHJpY3RlZF9wbHVnaW5zIjp0cnVlLCJpbmNsdWRlX3VubGlzdGVkX2dsb2JhbF9wbHVnaW5zIjp0cnVlLCJlbGlnaWJsZV9wbGFuX3R5cGUiOiJwcm8iLCJlbmZvcmNlX3BsYW5fZWxpZ2liaWxpdHkiOmZhbHNlLCJyYW5rX2J5X3BvcHVsYXJpdHkiOnRydWUsImNvbnRpbnVhdGlvbiI6eyJkZXBsb3ltZW50X3R5cGUiOiJwcmltYXJ5IiwicXVlcnlfaWQiOiJyczQ6OTgxODAwZGMtZmNkMi00MGI3LTlhZTctZWYxNzZjN2NjMmJmOjkwNG9pVHc6MDpsZWFmLTliMDA2MzA3LWI5N2ItNGU0NC1hMzMyLTJiYzY2ZmQ0NTlmMiIsImN1cnNvciI6IlpINjlkWEM0Z0x2dmVITHBoSlVLNmZqaTJOR2pQTlMwR3NWQ3BKVlpnX3ZVTmVFRmNaNWNkalM0Q0pncFJaWmdJeVpzMGM4RFZ3WFZQS0RpbVJfUjRWWVkyZmhZRTRHODhrVC05cEt6THR6dTdtVWx3Q1FGblg0eXJNY2lZcmtJWEluc3ZUN3F0TllYWGpob1dZSjBKRUk4OHN2MTFuVzFrc2xGUnhfTjc3MU5HQW1ldEtwQkItejJZclBnOWJyMnRrcXA3RHRVTnAwPSJ9fQ: EOF while parsing a value at line 1 column 0\\",\\"scope\\":\\"Global\\"},\\"target\\":\\"codex_core_plugins::manager\\"}\\n"}'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/arikon/projects/codex-cursor-subagent-plugin/tests/codex-client-integration.test.mjs:1569:15)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 303525.845458

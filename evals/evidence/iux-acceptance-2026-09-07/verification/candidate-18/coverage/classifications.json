@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 48,
+      "occurrence": 2,
+      "classification": "observable_contract_already_owned",
+      "disposition": "This zero operand belongs to the same closed digest-shape validation and pre-publication invalid-digest rejection exercised by malformed snapshot, source, and artifact digest inputs; it has no distinct effects or error stage."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 96,
+      "occurrence": 4,
+      "classification": "observable_contract_already_owned",
+      "disposition": "This zero operand belongs to the same closed source-file metadata validation and pre-publication rejection exercised by invalid source bytes and digest inputs; it has no distinct effects or error stage."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 152,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "After exact raw file count and successful unique known-source mapping for every raw file, mapped.size must equal sources.files.length, so this defensive completeness failure cannot execute."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 426,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "strictArtifactRef admits basename-only refs, therefore resolve(artifactRoot, ref) is lexically inside artifactRoot and this defensive escape rejection cannot execute."
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "source_sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7",
+      "metric": "branches",
+      "line": 429,
+      "occurrence": 2,
+      "classification": "unreachable_defensive",
+      "disposition": "readRegular rejects symlinks and non-files before canonical containment; a basename child regular file resolves inside canonicalArtifactRoot, so this defensive canonical escape rejection cannot execute."
+    }
+  ]
+}

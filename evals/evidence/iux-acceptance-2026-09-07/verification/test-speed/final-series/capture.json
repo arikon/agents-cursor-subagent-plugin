@@ -1,0 +1,1964 @@
+{
+  "group": "capture",
+  "command": [
+    "node",
+    "scripts/run-node-tests.mjs",
+    "unit",
+    "--test",
+    "tests/codex-app-server-client.test.mjs"
+  ],
+  "source_inventory": [
+    {
+      "path": ".codex-plugin/plugin.json",
+      "mode": 33188,
+      "bytes": 715,
+      "sha256": "a46b9e12e4a1e0cd11040f0c60edd4f9da99c021c5ae2d8d2cf5bf48053cf994"
+    },
+    {
+      "path": "README.md",
+      "mode": 33188,
+      "bytes": 14142,
+      "sha256": "44fe5ba342a009fc984438f6ff974ebd61fd1d0121d06bf41009a5941b3d516b"
+    },
+    {
+      "path": "evals/cursor-subagent-scenarios.v1.json",
+      "mode": 33188,
+      "bytes": 80558,
+      "sha256": "4c177c44faccf7b38545aac49a425056f0531cce243b3d8cb502b5dad23da267"
+    },
+    {
+      "path": "scripts/check-openspec-semantics.mjs",
+      "mode": 33188,
+      "bytes": 27928,
+      "sha256": "0c7c04d0fa8adda37086e316dcae685e87a235352b9bdd80a2257e9f94e80a53"
+    },
+    {
+      "path": "scripts/codex-app-server-client.mjs",
+      "mode": 33188,
+      "bytes": 14060,
+      "sha256": "f5fa4850c7228aa9ed4b4a0661f2d1dbabae2ffe95ec86b98e3e0ffc36cf4200"
+    },
+    {
+      "path": "scripts/cursor-eval-scenario.mjs",
+      "mode": 33188,
+      "bytes": 64752,
+      "sha256": "592b7de640615e4e61d15985cc48396fc85556d3a8d95914c513f5a8aa11f0b6"
+    },
+    {
+      "path": "scripts/cursor-skill-eval.mjs",
+      "mode": 33188,
+      "bytes": 10926,
+      "sha256": "39a71bca27a8d9b6a2cfedb2a5772cdd673f2e6f04ea2a88564d2a2f81bda200"
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "mode": 33188,
+      "bytes": 52347,
+      "sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "mode": 33188,
+      "bytes": 65677,
+      "sha256": "90b1e0517012a1993d3b0b7a27e8015559abfcacca32c7a42dea641ecdf22181"
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "mode": 33188,
+      "bytes": 14829,
+      "sha256": "10c4c607579e9ba272da10f6b63f429e550ee9be991177e9912fc0ff109b259a"
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-suite.mjs",
+      "mode": 33188,
+      "bytes": 5041,
+      "sha256": "9c7369d89ad636e59d554e3e684d1923b045cc33ea2d2d2ff572049deff3fbcf"
+    },
+    {
+      "path": "scripts/node-test-reporter-v22.mjs",
+      "mode": 33188,
+      "bytes": 834,
+      "sha256": "51ac5c6e8a019c83e4deb101b209146c3e953069e42a593d862a45b1ade4834f"
+    },
+    {
+      "path": "scripts/openspec-semantic-registry.mjs",
+      "mode": 33188,
+      "bytes": 13369,
+      "sha256": "bb1039b4e2b53d8281609fbcaac05500132d8463c0e9109953e5beac4463ba3e"
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "mode": 33188,
+      "bytes": 16155,
+      "sha256": "96adcd918892da9295ee1c5cf860460dbbf168b5413f4a0a2c99a4370c12c28a"
+    },
+    {
+      "path": "scripts/run-cursor-skill-eval.mjs",
+      "mode": 33188,
+      "bytes": 28834,
+      "sha256": "5c1868db76a2f187371dfb945a3853fd93197c40157c14ae3d0f68bf893f47a5"
+    },
+    {
+      "path": "scripts/run-node-tests.mjs",
+      "mode": 33188,
+      "bytes": 18871,
+      "sha256": "bd2a536556ce0c224da10824184e540170f992faab84bdb71a4d6ab20540716d"
+    },
+    {
+      "path": "scripts/run-unit-coverage.mjs",
+      "mode": 33188,
+      "bytes": 712,
+      "sha256": "24c50d0b2f517da01e8fb1288d38d267577b48bf2f4e8a3530153e3e1cbad30b"
+    },
+    {
+      "path": "skills/cursor-subagent/SKILL.md",
+      "mode": 33188,
+      "bytes": 18194,
+      "sha256": "e44bea901628d99b9e5be52ea8f1405068697ba9d04560b1d3d022e1609b9277"
+    },
+    {
+      "path": "skills/cursor-subagent/agents/openai.yaml",
+      "mode": 33188,
+      "bytes": 251,
+      "sha256": "7e2b2b72bb12d9f72c780db5b31fc7b0d5d0a320f67da4a2701af079453e322e"
+    },
+    {
+      "path": "tests/bootstrap.test.mjs",
+      "mode": 33188,
+      "bytes": 105410,
+      "sha256": "2f81043adf1218152d62dd5ae9128d9e7b07a3db7a9e4e9aeb7010429e61ec84"
+    },
+    {
+      "path": "tests/check-openspec-semantics.test.mjs",
+      "mode": 33188,
+      "bytes": 47392,
+      "sha256": "ef60c23000d8e337a038d842d220a82bcd3e73d93eeea3ffb71008bf83b35a9e"
+    },
+    {
+      "path": "tests/claude-marketplace-canary.test.mjs",
+      "mode": 33188,
+      "bytes": 3573,
+      "sha256": "232030d969ee38c63bb91b78903594d78d47cb339a039167f2c82b55a08b4d6a"
+    },
+    {
+      "path": "tests/codex-app-server-client.test.mjs",
+      "mode": 33188,
+      "bytes": 28435,
+      "sha256": "3003b47af986b4f463ee9cef5b6fd3bdd5ef26dd0b70c0ba07bd0af4981e688a"
+    },
+    {
+      "path": "tests/codex-client-integration.test.mjs",
+      "mode": 33188,
+      "bytes": 108037,
+      "sha256": "549c6d35b38d8d98415690ba800e9b6aee3c28b2895746ab43fed1f057d872d0"
+    },
+    {
+      "path": "tests/cursor-skill-eval.test.mjs",
+      "mode": 33188,
+      "bytes": 51600,
+      "sha256": "dd0e5144e45eeed3b389de27175391d0d555aceac444b2fdcbccebd99570e427"
+    },
+    {
+      "path": "tests/eval-matrix.test.mjs",
+      "mode": 33188,
+      "bytes": 18116,
+      "sha256": "6907624c774c35aa551a0f2a8de452ad5ab5c8962eb87f51f187ed99dbe5966d"
+    },
+    {
+      "path": "tests/facade.test.mjs",
+      "mode": 33188,
+      "bytes": 4476,
+      "sha256": "e7d3e41b42b7b4c9f16c0cf20c946c3d5eb1218becd3f002a629153a71da6212"
+    },
+    {
+      "path": "tests/fixtures/accelerate-turn-timeout.mjs",
+      "mode": 33188,
+      "bytes": 406,
+      "sha256": "adee8e3aa892c545d209c1eefdf9bd6be02a875bec20a031c590fdd5391f06ee"
+    },
+    {
+      "path": "tests/fixtures/codex-app-server-v01521.golden.json",
+      "mode": 33188,
+      "bytes": 1574,
+      "sha256": "79a22cf5b9ae694ce0c5103251ae3e5ae9886717ef850d5318bf864998c3cb33"
+    },
+    {
+      "path": "tests/fixtures/codex-app-server-v01534.golden.json",
+      "mode": 33188,
+      "bytes": 1987,
+      "sha256": "860abe7af9a1823190ccbb6f0d738f34224a3c8395efc2a997396bf5f4cf5594"
+    },
+    {
+      "path": "tests/fixtures/codex-v01521-adapter.golden.json",
+      "mode": 33188,
+      "bytes": 1700,
+      "sha256": "889583631514e1755706a7916ad8e4d82b928118d4d6a10592b33fa010f81ac8"
+    },
+    {
+      "path": "tests/fixtures/codex-v01521-adapter.mjs",
+      "mode": 33188,
+      "bytes": 10182,
+      "sha256": "b73bde0dec555e4ce88ff9a95a9a46379c874e0300a73a74f37880f3232b19d9"
+    },
+    {
+      "path": "tests/fixtures/codex-v01534-adapter.golden.json",
+      "mode": 33188,
+      "bytes": 1594,
+      "sha256": "e881a7e0a7ec08ed3919bf22e54c225640effb533e5384e01a832ee9e6264f38"
+    },
+    {
+      "path": "tests/fixtures/codex-v01534-adapter.mjs",
+      "mode": 33188,
+      "bytes": 125,
+      "sha256": "5ad4cb1117c27ae112e4fe610d4fe155f121c05a77fb0458a6a27c36fc4c2e5e"
+    },
+    {
+      "path": "tests/fixtures/cursor-agent-v20260825.golden.json",
+      "mode": 33188,
+      "bytes": 4630,
+      "sha256": "476241fb75a582eba3c38b79f9111fe3fc3570d31bcfa9be71a84de769217eb9"
+    },
+    {
+      "path": "tests/fixtures/fake-acp.mjs",
+      "mode": 33261,
+      "bytes": 32574,
+      "sha256": "4e152fb5bad738d7fd6bdccd00747c6842742c2f9a726bf64134c3001d2840b3"
+    },
+    {
+      "path": "tests/fixtures/fake-app-server.mjs",
+      "mode": 33188,
+      "bytes": 9046,
+      "sha256": "e1297a3e9817e3ed453b22de4a39d7b1fd00286e877fb902305eb5e591cfdb65"
+    },
+    {
+      "path": "tests/fixtures/fake-codex-adapter-core.mjs",
+      "mode": 33188,
+      "bytes": 9879,
+      "sha256": "5d4275b817a199a0e137306bce68473a433b285deb59455cef7e5ede129c1a06"
+    },
+    {
+      "path": "tests/fixtures/fake-codex-adapter.mjs",
+      "mode": 33188,
+      "bytes": 616,
+      "sha256": "cbf0d2161be737265f4ff2928b3c4922fc57fdae3ba0d7cba6d813218d9f258e"
+    },
+    {
+      "path": "tests/fixtures/fake-codex-cli-v01521.mjs",
+      "mode": 33188,
+      "bytes": 2351,
+      "sha256": "305b7b2caeb3e9bdce7e45a5ebadca99bf8295d13ff15f1e64f4392e172835f1"
+    },
+    {
+      "path": "tests/fixtures/fake-cursor-agent-status.mjs",
+      "mode": 33261,
+      "bytes": 1623,
+      "sha256": "a70f48be3f083b7bc52b39f7a631ab055aa31ee8513cf1652635b6a538a8ae5d"
+    },
+    {
+      "path": "tests/fixtures/fake-eval-matrix-child.mjs",
+      "mode": 33188,
+      "bytes": 4401,
+      "sha256": "824f3cfa164f1526096719dbaac7ff1669fcb18577262e3d1b1c5ab9d28534a9"
+    },
+    {
+      "path": "tests/fixtures/fake-mcp-version.mjs",
+      "mode": 33188,
+      "bytes": 669,
+      "sha256": "44fa5a1b1acc368845b279844602cb2a078315d52ac65a34b1b91ea3b19b1310"
+    },
+    {
+      "path": "tests/fixtures/fake-ollama-responses.mjs",
+      "mode": 33188,
+      "bytes": 12859,
+      "sha256": "d7c6aaa17cae68ec93fbdbf522abd72c19f7b1889d2eddf6e165fd6641422433"
+    },
+    {
+      "path": "tests/fixtures/kill-wait-command.mjs",
+      "mode": 33188,
+      "bytes": 277,
+      "sha256": "abb55a9b35474073fba560853f0712cf946eaa7c055eefa2ea248a68778a9fe5"
+    },
+    {
+      "path": "tests/fixtures/node-test-reporter-v22.23.1.golden.json",
+      "mode": 33188,
+      "bytes": 3437,
+      "sha256": "6d2c0e0ba90c0f74a91f4cf7d9f0705f8d649f9ad874765ada6539ac1e12b02c"
+    },
+    {
+      "path": "tests/fixtures/release-fake-acp.mjs",
+      "mode": 33188,
+      "bytes": 264,
+      "sha256": "98cd6d4735d9a764e2eb74c307f0fc48a87c015b29637a83bc04e6dee2157644"
+    },
+    {
+      "path": "tests/fixtures/release-plan-fixture.txt",
+      "mode": 33188,
+      "bytes": 20,
+      "sha256": "bf9a0a0f53b7050fcc90fe3cfd415811b5358bace2ed11c652e913eb3a8ea4e5"
+    },
+    {
+      "path": "tests/fixtures/run-unit-coverage-loader.mjs",
+      "mode": 33188,
+      "bytes": 414,
+      "sha256": "8075aefc547c5810373b7400dbfb6e120a6c0b5f1c4fa33add37606a33fd516c"
+    },
+    {
+      "path": "tests/fixtures/supervisor-process-tree.mjs",
+      "mode": 33188,
+      "bytes": 1392,
+      "sha256": "b858c585a3a667676a73087fd514d43915c2baf2c2163c489e1c0ce6b907d6fe"
+    },
+    {
+      "path": "tests/mcp-smoke.test.mjs",
+      "mode": 33188,
+      "bytes": 2740,
+      "sha256": "6772303b77e7d3d104b8505f5542bbeaa0a805eb39b8739c858f900f27099935"
+    },
+    {
+      "path": "tests/mcp-transport.test.mjs",
+      "mode": 33188,
+      "bytes": 15948,
+      "sha256": "07aac46cc89020ddac70f11903ac9cf01b193653e32cb177ab3eee6c2e5fe215"
+    },
+    {
+      "path": "tests/node-test-reporter-v22.test.mjs",
+      "mode": 33188,
+      "bytes": 2202,
+      "sha256": "f2c395131cf6fa66de0324544d8991b1de943a8c19e6fc59def9cd56da7b4073"
+    },
+    {
+      "path": "tests/node-test-supervisor.test.mjs",
+      "mode": 33188,
+      "bytes": 49639,
+      "sha256": "5dbaf12566d39905cacd06259f711aff9a59dcf6ef2550b75c3f5640cd0cc5ba"
+    },
+    {
+      "path": "tests/release-e2e.test.mjs",
+      "mode": 33188,
+      "bytes": 36260,
+      "sha256": "294dc2053a2919acd199195574f4c5951c0f4911fae246a431f333d84097c544"
+    },
+    {
+      "path": "tests/run-cursor-skill-eval.test.mjs",
+      "mode": 33188,
+      "bytes": 128925,
+      "sha256": "89c660d2b6c96f06b6526d66afd9f5628359ff4e04b176b7e4634b3b0f46e945"
+    },
+    {
+      "path": "tests/runtime.test.mjs",
+      "mode": 33188,
+      "bytes": 174156,
+      "sha256": "8248fab7016ec26c419c4e87dbd071be6c04f842ea8ae09a8614fc38e6adf2c0"
+    }
+  ],
+  "controlled_load": "one bounded CPU child",
+  "median_ms": 2393,
+  "maximum_ms": 2954,
+  "gates": {
+    "series_complete": true,
+    "all_passed": true,
+    "source_unchanged": true
+  },
+  "runs": [
+    {
+      "index": 1,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 2391ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-14-061Z-unit-202f51ec-cb05-4c00-90be-a5a7e4ab1a34\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-14-061Z-unit-202f51ec-cb05-4c00-90be-a5a7e4ab1a34",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2391,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 38,
+            "failed": 0,
+            "passed": 38,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 38,
+            "suites": 0
+          },
+          "duration_ms": 2312.028334
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "capture/run-01/result.json",
+          "bytes": 429,
+          "sha256": "642f95b08f87c1e1ef2b6e22d84d8f72b7ed7691342c50edb26e304e2c2b9292"
+        },
+        {
+          "path": "capture/run-01/tap.txt",
+          "bytes": 8017,
+          "sha256": "f109a587db55385b2a47f6f17ab489d4f315ed3700d3635320240f2453f302ed"
+        },
+        {
+          "path": "capture/run-01/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "capture/run-01/failures.jsonl",
+          "bytes": 458,
+          "sha256": "34bf2854dc53d5537def50564bc5dbfe4a29dd374e07a081207d1296a4cd8122"
+        }
+      ],
+      "durable_artifact_dir": "capture/run-01"
+    },
+    {
+      "index": 2,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 2361ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-16-501Z-unit-245cfd1b-8a97-45d0-9ede-b6573abf0e8c\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-16-501Z-unit-245cfd1b-8a97-45d0-9ede-b6573abf0e8c",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2361,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 38,
+            "failed": 0,
+            "passed": 38,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 38,
+            "suites": 0
+          },
+          "duration_ms": 2256.862792
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "capture/run-02/result.json",
+          "bytes": 429,
+          "sha256": "1873a872907d773d9f825c0da7c673dde9660dec016593981b2143435c806b05"
+        },
+        {
+          "path": "capture/run-02/tap.txt",
+          "bytes": 8013,
+          "sha256": "411ddde71776c3b52871b5edbf2340ea7f48f3b73129a51b1611d291f559bb52"
+        },
+        {
+          "path": "capture/run-02/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "capture/run-02/failures.jsonl",
+          "bytes": 458,
+          "sha256": "bced7e1387757b10b3a4e8356b14d001646a5e92d4fc04c80f7e126d3aed9092"
+        }
+      ],
+      "durable_artifact_dir": "capture/run-02"
+    },
+    {
+      "index": 3,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 2310ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-18-942Z-unit-d1c81d27-8b26-4b3b-a6c2-3b008e7b7957\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-18-942Z-unit-d1c81d27-8b26-4b3b-a6c2-3b008e7b7957",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2310,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 38,
+            "failed": 0,
+            "passed": 38,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 38,
+            "suites": 0
+          },
+          "duration_ms": 2255.647708
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "capture/run-03/result.json",
+          "bytes": 429,
+          "sha256": "38997481ca0340f1d0de0b40a3d095ddd17edeb440a407b39bc05b7f7ce111f4"
+        },
+        {
+          "path": "capture/run-03/tap.txt",
+          "bytes": 8004,
+          "sha256": "9ce91b9cdaea00d8d40b115358c5307b342663e09eb42516d62b4cd13d6f992c"
+        },
+        {
+          "path": "capture/run-03/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "capture/run-03/failures.jsonl",
+          "bytes": 457,
+          "sha256": "ea995c492f576d0679d606d4144d7e1b0e59124b67c5074e5e3593e775175d70"
+        }
+      ],
+      "durable_artifact_dir": "capture/run-03"
+    },
+    {
+      "index": 4,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 2458ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-21-300Z-unit-b35be4d3-0a82-4c1e-a068-5880e769fc4e\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-21-300Z-unit-b35be4d3-0a82-4c1e-a068-5880e769fc4e",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2458,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 38,
+            "failed": 0,
+            "passed": 38,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 38,
+            "suites": 0
+          },
+          "duration_ms": 2395.619
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "capture/run-04/result.json",
+          "bytes": 426,
+          "sha256": "d335756d87dd989647544406c6ec6bdc1fa3511017d929465d3704c6328ea31e"
+        },
+        {
+          "path": "capture/run-04/tap.txt",
+          "bytes": 8008,
+          "sha256": "d5e811f9ee141ac22b58c3bdc02809fb10409f37cfb7ae83cfd95f9fc64ffbcd"
+        },
+        {
+          "path": "capture/run-04/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "capture/run-04/failures.jsonl",
+          "bytes": 455,
+          "sha256": "b54ca6368e375639df812c388e85c37ee19e2b7d920f2f546eeb5cddee895055"
+        }
+      ],
+      "durable_artifact_dir": "capture/run-04"
+    },
+    {
+      "index": 5,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 2392ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-23-811Z-unit-577eacee-0884-42f1-82eb-96fb47983fa4\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-23-811Z-unit-577eacee-0884-42f1-82eb-96fb47983fa4",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2392,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 38,
+            "failed": 0,
+            "passed": 38,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 38,
+            "suites": 0
+          },
+          "duration_ms": 2327.551084
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "capture/run-05/result.json",
+          "bytes": 429,
+          "sha256": "f14525891fcf891910edc3f3c40e175cf9fa417412b6767ef258da850e657f4b"
+        },
+        {
+          "path": "capture/run-05/tap.txt",
+          "bytes": 8016,
+          "sha256": "3e702d07de47f1d098a6e0108c925fb6c499fedcf146efdaff64c0227188ebda"
+        },
+        {
+          "path": "capture/run-05/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "capture/run-05/failures.jsonl",
+          "bytes": 458,
+          "sha256": "afe578e54132287fc52185313e1671fc979314dc97208bfb89af982134c388a3"
+        }
+      ],
+      "durable_artifact_dir": "capture/run-05"
+    },
+    {
+      "index": 6,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 2418ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-26-251Z-unit-922c55a6-b3bd-44eb-b088-651b66b4b0dd\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-26-251Z-unit-922c55a6-b3bd-44eb-b088-651b66b4b0dd",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2418,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 38,
+            "failed": 0,
+            "passed": 38,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 38,
+            "suites": 0
+          },
+          "duration_ms": 2358.614167
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "capture/run-06/result.json",
+          "bytes": 429,
+          "sha256": "93e2d8246414a2a00213c076d3a8313c3498877020fc785ddd7497326192af80"
+        },
+        {
+          "path": "capture/run-06/tap.txt",
+          "bytes": 8012,
+          "sha256": "c7d5a54a758331bdf91c08b4edb99ef519be3c991d3b2ed02f0f115c7f46743c"
+        },
+        {
+          "path": "capture/run-06/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "capture/run-06/failures.jsonl",
+          "bytes": 457,
+          "sha256": "1874ad3fbec9478769bea50a380138a3f4fa35b7a116458b1a704a61373221ff"
+        }
+      ],
+      "durable_artifact_dir": "capture/run-06"
+    },
+    {
+      "index": 7,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 2404ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-28-717Z-unit-20eec15d-55d0-4bfa-90f1-6aecdeabb87a\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-28-717Z-unit-20eec15d-55d0-4bfa-90f1-6aecdeabb87a",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2404,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 38,
+            "failed": 0,
+            "passed": 38,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 38,
+            "suites": 0
+          },
+          "duration_ms": 2333.521541
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "capture/run-07/result.json",
+          "bytes": 429,
+          "sha256": "8eddb0530a2717ec704bcfd8737624f1aada77dd2fea0838574ebf40a0220f35"
+        },
+        {
+          "path": "capture/run-07/tap.txt",
+          "bytes": 8015,
+          "sha256": "5c402e3e484d314d95e41dd39212f591d5106dcb1c1ef9472fd74b0594c3372f"
+        },
+        {
+          "path": "capture/run-07/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "capture/run-07/failures.jsonl",
+          "bytes": 458,
+          "sha256": "eaeabf4f2a4f8c359d914b72e9920014ee8d0402ca02b3d056e06cf844586442"
+        }
+      ],
+      "durable_artifact_dir": "capture/run-07"
+    },
+    {
+      "index": 8,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 2319ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-31-175Z-unit-a8012905-9c78-44a4-a7c6-9e79c46c19bf\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-31-175Z-unit-a8012905-9c78-44a4-a7c6-9e79c46c19bf",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2319,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 38,
+            "failed": 0,
+            "passed": 38,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 38,
+            "suites": 0
+          },
+          "duration_ms": 2264.659125
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "capture/run-08/result.json",
+          "bytes": 429,
+          "sha256": "793e8ff67958f3321e038535bf30b3b77b4112ff21bcbbdc035b632a8d90ae07"
+        },
+        {
+          "path": "capture/run-08/tap.txt",
+          "bytes": 8015,
+          "sha256": "11be630a06c0e5d5389e8828fdfab6c483b3c27ae6b1ba4fcbcc625aebe36543"
+        },
+        {
+          "path": "capture/run-08/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "capture/run-08/failures.jsonl",
+          "bytes": 458,
+          "sha256": "dd63fed97dd1c90f4e9a7dd00e08174c252763087805696602fc3f7e21303b55"
+        }
+      ],
+      "durable_artifact_dir": "capture/run-08"
+    },
+    {
+      "index": 9,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 2378ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-33-540Z-unit-df9c01e7-4534-460a-b5a1-f060b1ca86cd\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-33-540Z-unit-df9c01e7-4534-460a-b5a1-f060b1ca86cd",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2378,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 38,
+            "failed": 0,
+            "passed": 38,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 38,
+            "suites": 0
+          },
+          "duration_ms": 2316.041875
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "capture/run-09/result.json",
+          "bytes": 429,
+          "sha256": "cf66eed2febb510001b0f11f3012094c40498ee563cd8bfd8c7b070a6d77477a"
+        },
+        {
+          "path": "capture/run-09/tap.txt",
+          "bytes": 8012,
+          "sha256": "64d21902a7e4ca37766963637e60bc4599adfba41ac869ae9a844ffe283bd733"
+        },
+        {
+          "path": "capture/run-09/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "capture/run-09/failures.jsonl",
+          "bytes": 458,
+          "sha256": "10657f71312a02fb739f308141031ecaee5d6eff4e8700742a87d6d2941e57d3"
+        }
+      ],
+      "durable_artifact_dir": "capture/run-09"
+    },
+    {
+      "index": 10,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 2357ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-35-963Z-unit-098e5419-b71c-4101-a668-4968175900df\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-35-963Z-unit-098e5419-b71c-4101-a668-4968175900df",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2357,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 38,
+            "failed": 0,
+            "passed": 38,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 38,
+            "suites": 0
+          },
+          "duration_ms": 2293.298458
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "capture/run-10/result.json",
+          "bytes": 429,
+          "sha256": "da4b5a38136d9ead52d9091b6f2cde5e380e97d2275838ea514fb02bf3f1fc4b"
+        },
+        {
+          "path": "capture/run-10/tap.txt",
+          "bytes": 8011,
+          "sha256": "b8dfc00df50849c1660fd5e294ec3a7f0ee84f1e4c17487239ccd68ba597fb61"
+        },
+        {
+          "path": "capture/run-10/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "capture/run-10/failures.jsonl",
+          "bytes": 458,
+          "sha256": "92bfdc5ec2a30808e43c2af19884b82670c48bb5dfe104acf92395eb4ebcb872"
+        }
+      ],
+      "durable_artifact_dir": "capture/run-10"
+    },
+    {
+      "index": 11,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 2349ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-38-369Z-unit-c46437f3-fe7c-4e50-9981-1d8d6e2d5d16\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-38-369Z-unit-c46437f3-fe7c-4e50-9981-1d8d6e2d5d16",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2349,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 38,
+            "failed": 0,
+            "passed": 38,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 38,
+            "suites": 0
+          },
+          "duration_ms": 2295.428958
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "capture/run-11/result.json",
+          "bytes": 429,
+          "sha256": "71dc9970e1c2a1d95dea604b82625b866d82983dd0f3556dddf9864d6c01b657"
+        },
+        {
+          "path": "capture/run-11/tap.txt",
+          "bytes": 8019,
+          "sha256": "f23cbe35eb4a453e2579d36e1b4c2b0e7467c770e40b65eca2087230e7770897"
+        },
+        {
+          "path": "capture/run-11/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "capture/run-11/failures.jsonl",
+          "bytes": 458,
+          "sha256": "942569d6fb02548b390d244b96746e9c5ab221063ad9734b25eeddc410ba3caf"
+        }
+      ],
+      "durable_artifact_dir": "capture/run-11"
+    },
+    {
+      "index": 12,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 2323ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-40-763Z-unit-341f9323-2a7f-4f16-bdd9-bbd2e243ebd7\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-40-763Z-unit-341f9323-2a7f-4f16-bdd9-bbd2e243ebd7",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2323,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 38,
+            "failed": 0,
+            "passed": 38,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 38,
+            "suites": 0
+          },
+          "duration_ms": 2270.033791
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "capture/run-12/result.json",
+          "bytes": 429,
+          "sha256": "0c87fa493cd4904d39ea439005385425ff70612761b6fc8cd94825cce12a4f8b"
+        },
+        {
+          "path": "capture/run-12/tap.txt",
+          "bytes": 8016,
+          "sha256": "bf2f71e03168e87bd079789f9b3b0376ef20efa8a14eb03edeee537b8966dae7"
+        },
+        {
+          "path": "capture/run-12/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "capture/run-12/failures.jsonl",
+          "bytes": 458,
+          "sha256": "47c8e6c5f96e1e4b57f685b4293959e94c781db3f8bbb52e31a033b3344368dd"
+        }
+      ],
+      "durable_artifact_dir": "capture/run-12"
+    },
+    {
+      "index": 13,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 2368ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-43-132Z-unit-d06e134c-55ce-4783-be7e-a08fe259e449\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-43-132Z-unit-d06e134c-55ce-4783-be7e-a08fe259e449",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2368,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 38,
+            "failed": 0,
+            "passed": 38,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 38,
+            "suites": 0
+          },
+          "duration_ms": 2313.350459
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "capture/run-13/result.json",
+          "bytes": 429,
+          "sha256": "bf7b4728e2f7999a6bdd8be7762dac60a003f443162a45205f3b919a75fec172"
+        },
+        {
+          "path": "capture/run-13/tap.txt",
+          "bytes": 8016,
+          "sha256": "db58163d2d7186add335705bed691f1d6c22ed8c3803dce304cdb58232a7fec4"
+        },
+        {
+          "path": "capture/run-13/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "capture/run-13/failures.jsonl",
+          "bytes": 456,
+          "sha256": "dcdb07472605ab3b876a26c37eeb1b1c3fb1769bc2e2943f897c60f99dae1bf3"
+        }
+      ],
+      "durable_artifact_dir": "capture/run-13"
+    },
+    {
+      "index": 14,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 2582ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-45-562Z-unit-ed0d53c9-13a6-4a2a-a3e1-11b7e2b17d47\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-45-562Z-unit-ed0d53c9-13a6-4a2a-a3e1-11b7e2b17d47",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2582,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 38,
+            "failed": 0,
+            "passed": 38,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 38,
+            "suites": 0
+          },
+          "duration_ms": 2496.20675
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "capture/run-14/result.json",
+          "bytes": 428,
+          "sha256": "71d522e7b8f5cb081339667587689150fe493093c8e80f7269ccedc4bbf92d6a"
+        },
+        {
+          "path": "capture/run-14/tap.txt",
+          "bytes": 8017,
+          "sha256": "6454433194ddc5413dcfba0e70b35439031b4a10a96d4127d8f7e3e87ef30ccc"
+        },
+        {
+          "path": "capture/run-14/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "capture/run-14/failures.jsonl",
+          "bytes": 457,
+          "sha256": "67d364afc89b870cd7070a4fdd777cb4713d25b64e6c6997aa06c3896f22db20"
+        }
+      ],
+      "durable_artifact_dir": "capture/run-14"
+    },
+    {
+      "index": 15,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 2866ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-48-257Z-unit-bb3bfc20-10c3-461c-8a5e-ad629ec122c5\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-48-257Z-unit-bb3bfc20-10c3-461c-8a5e-ad629ec122c5",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2866,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 38,
+            "failed": 0,
+            "passed": 38,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 38,
+            "suites": 0
+          },
+          "duration_ms": 2768.239792
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "capture/run-15/result.json",
+          "bytes": 429,
+          "sha256": "1f76e3de6c2ef4440f677272c4aff2bac5a5096f6baa50586b750af849fe1e5d"
+        },
+        {
+          "path": "capture/run-15/tap.txt",
+          "bytes": 8008,
+          "sha256": "8a357a2d7ba9f1327c415d8c502353b31319b8d10b0e345cd8dac1662e4cd0e4"
+        },
+        {
+          "path": "capture/run-15/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "capture/run-15/failures.jsonl",
+          "bytes": 458,
+          "sha256": "bec35bdabc589b80760e50f2923b7e65333e91f7aec2b9fe4a64bb0361f0756f"
+        }
+      ],
+      "durable_artifact_dir": "capture/run-15"
+    },
+    {
+      "index": 16,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 2479ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-51-175Z-unit-44318ba4-fae8-4e6a-bd13-143ce6b0838e\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-51-175Z-unit-44318ba4-fae8-4e6a-bd13-143ce6b0838e",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2479,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 38,
+            "failed": 0,
+            "passed": 38,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 38,
+            "suites": 0
+          },
+          "duration_ms": 2417.572
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "capture/run-16/result.json",
+          "bytes": 426,
+          "sha256": "0d0ee799521a7d7948693c1bf5c43d8f8cc1fd0ee39a2fa9f78fb87a835c2920"
+        },
+        {
+          "path": "capture/run-16/tap.txt",
+          "bytes": 8009,
+          "sha256": "75037e9a2255e526f22079e94e887ef559c1ac676a788a4df2b87f452b06bc8c"
+        },
+        {
+          "path": "capture/run-16/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "capture/run-16/failures.jsonl",
+          "bytes": 455,
+          "sha256": "51bd257b6ddbb6c4f661dd512c88c5aa523c835d2a4c076e1e52a8dd8a300d0c"
+        }
+      ],
+      "durable_artifact_dir": "capture/run-16"
+    },
+    {
+      "index": 17,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 2549ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-53-702Z-unit-3adeb78a-637d-4b9e-a9bd-7d83f96b89c6\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-53-702Z-unit-3adeb78a-637d-4b9e-a9bd-7d83f96b89c6",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2549,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 38,
+            "failed": 0,
+            "passed": 38,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 38,
+            "suites": 0
+          },
+          "duration_ms": 2463.148208
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "capture/run-17/result.json",
+          "bytes": 429,
+          "sha256": "51f2e151d57ab85df3d9b775cae1e79b45c85eb2c52d908c3a318530b3adaf8f"
+        },
+        {
+          "path": "capture/run-17/tap.txt",
+          "bytes": 8011,
+          "sha256": "9c4f0754d83820c9168cfec4c46cfe76f1647d22c5f91b204ecd1e3a03d16afd"
+        },
+        {
+          "path": "capture/run-17/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "capture/run-17/failures.jsonl",
+          "bytes": 457,
+          "sha256": "1b510c9f06b1837b019a67f1a0d72ca344f4d689fd7e954e3de53a1e970295d7"
+        }
+      ],
+      "durable_artifact_dir": "capture/run-17"
+    },
+    {
+      "index": 18,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 2954ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-56-306Z-unit-478c890e-b01d-4bc2-a9d6-8c0795fb3d7f\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-56-306Z-unit-478c890e-b01d-4bc2-a9d6-8c0795fb3d7f",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2954,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 38,
+            "failed": 0,
+            "passed": 38,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 38,
+            "suites": 0
+          },
+          "duration_ms": 2860.660333
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "capture/run-18/result.json",
+          "bytes": 429,
+          "sha256": "1164f09a744c1d7066f5a7a231829a1abce31ebb761a597e75405ae18ff551c7"
+        },
+        {
+          "path": "capture/run-18/tap.txt",
+          "bytes": 8006,
+          "sha256": "8825b53a14c10368c0c0b22ec7c799647a015f60a0430bd78af2a2428754b687"
+        },
+        {
+          "path": "capture/run-18/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "capture/run-18/failures.jsonl",
+          "bytes": 458,
+          "sha256": "fb3ca16be499bf4aae6f9f7f445569ccd9650ee5f8dd945c1196b18237977e31"
+        }
+      ],
+      "durable_artifact_dir": "capture/run-18"
+    },
+    {
+      "index": 19,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 2466ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-59-317Z-unit-957436db-72d9-42b2-855e-509826e864ae\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-41-59-317Z-unit-957436db-72d9-42b2-855e-509826e864ae",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2466,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 38,
+            "failed": 0,
+            "passed": 38,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 38,
+            "suites": 0
+          },
+          "duration_ms": 2399.343666
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "capture/run-19/result.json",
+          "bytes": 429,
+          "sha256": "932dbf09bf12918b504d0cf3d1907c304a82e2ffd5d5a723bad26a1faaeee7c7"
+        },
+        {
+          "path": "capture/run-19/tap.txt",
+          "bytes": 8012,
+          "sha256": "31e90134f542be34d0a764e159023f50cd6356e5450bcddb00b0393d2acd21e2"
+        },
+        {
+          "path": "capture/run-19/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "capture/run-19/failures.jsonl",
+          "bytes": 456,
+          "sha256": "bf9aa33d5b15bc33ee9fcb5aa345211253fac79339900238291f42f29470e9d5"
+        }
+      ],
+      "durable_artifact_dir": "capture/run-19"
+    },
+    {
+      "index": 20,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 2393ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-42-01-839Z-unit-1e691b81-2348-48b6-9ff3-5ad7c8fa18e0\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-42-01-839Z-unit-1e691b81-2348-48b6-9ff3-5ad7c8fa18e0",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2393,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 38,
+            "failed": 0,
+            "passed": 38,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 38,
+            "suites": 0
+          },
+          "duration_ms": 2330.411125
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "capture/run-20/result.json",
+          "bytes": 429,
+          "sha256": "0c59ab193988c7158a6e491cc3f93a90af91903678929850b04bfaa9841f31a3"
+        },
+        {
+          "path": "capture/run-20/tap.txt",
+          "bytes": 8011,
+          "sha256": "acf89b0d84967138343f8ea27479abf1deee3bc5488eb5902f59e1ea91509631"
+        },
+        {
+          "path": "capture/run-20/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "capture/run-20/failures.jsonl",
+          "bytes": 458,
+          "sha256": "73f5d3a30a075eaf3834cd4f95ed406b999d1efa1842963dd07303095355f430"
+        }
+      ],
+      "durable_artifact_dir": "capture/run-20"
+    },
+    {
+      "index": 21,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 2387ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-42-04-284Z-unit-1d8c958c-77f2-441d-ac93-78b96f55bbf8\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-42-04-284Z-unit-1d8c958c-77f2-441d-ac93-78b96f55bbf8",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2387,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 38,
+            "failed": 0,
+            "passed": 38,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 38,
+            "suites": 0
+          },
+          "duration_ms": 2330.777916
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "capture/run-21/result.json",
+          "bytes": 429,
+          "sha256": "41a11ebb1fa13eb46e1cce9c7380dea41e369c8bceadff51a5cd338bca054681"
+        },
+        {
+          "path": "capture/run-21/tap.txt",
+          "bytes": 8011,
+          "sha256": "3695752ab56c06d1155808c38a441aef44595328796c8db31317dd2c2bbcbceb"
+        },
+        {
+          "path": "capture/run-21/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "capture/run-21/failures.jsonl",
+          "bytes": 457,
+          "sha256": "1e021ab88722560f5ca77411164e4624f0fe29929a2f7cc4e1d7d9e49e701e5f"
+        }
+      ],
+      "durable_artifact_dir": "capture/run-21"
+    },
+    {
+      "index": 22,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 2393ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-42-06-742Z-unit-b2e2cbf9-22f3-4dad-b29a-664c58ec2091\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-42-06-742Z-unit-b2e2cbf9-22f3-4dad-b29a-664c58ec2091",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2393,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 38,
+            "failed": 0,
+            "passed": 38,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 38,
+            "suites": 0
+          },
+          "duration_ms": 2333.154541
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "capture/run-22/result.json",
+          "bytes": 429,
+          "sha256": "cb876560dc8a8809fb541156119e1085f763f96cf0916dcb3bb753101fdd3f1d"
+        },
+        {
+          "path": "capture/run-22/tap.txt",
+          "bytes": 8016,
+          "sha256": "cfd81fb5d3f1fdc193cc9c0eb244b74a6e770bba34574de0fb1f827e14fb3a84"
+        },
+        {
+          "path": "capture/run-22/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "capture/run-22/failures.jsonl",
+          "bytes": 458,
+          "sha256": "63f20af9eb0b0f2267fce760d635ca51e68584cc254462eae064b774d69613e1"
+        }
+      ],
+      "durable_artifact_dir": "capture/run-22"
+    },
+    {
+      "index": 23,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 2526ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-42-09-186Z-unit-f94cbfe2-1c75-41c3-bad5-de1db5a69e3f\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-42-09-186Z-unit-f94cbfe2-1c75-41c3-bad5-de1db5a69e3f",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2526,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 38,
+            "failed": 0,
+            "passed": 38,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 38,
+            "suites": 0
+          },
+          "duration_ms": 2460.921042
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "capture/run-23/result.json",
+          "bytes": 429,
+          "sha256": "6d05449ba4a6343b18f17192ab023f69227c1bbd637cd41942e09ae7b146d40f"
+        },
+        {
+          "path": "capture/run-23/tap.txt",
+          "bytes": 8009,
+          "sha256": "6dfd4ee7e7ecdb6a11f2425bab2469ae95955f09df76a6f578b37ab391df87dc"
+        },
+        {
+          "path": "capture/run-23/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "capture/run-23/failures.jsonl",
+          "bytes": 458,
+          "sha256": "1e357749a7c77baf05318a9da5d627eec3cb90447802f38ec2dc468571fde26d"
+        }
+      ],
+      "durable_artifact_dir": "capture/run-23"
+    },
+    {
+      "index": 24,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 2593ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-42-11-760Z-unit-99e2117f-1f95-4bf0-80e7-82e4b7724a2c\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-42-11-760Z-unit-99e2117f-1f95-4bf0-80e7-82e4b7724a2c",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2593,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 38,
+            "failed": 0,
+            "passed": 38,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 38,
+            "suites": 0
+          },
+          "duration_ms": 2534.000958
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "capture/run-24/result.json",
+          "bytes": 429,
+          "sha256": "9424ff3cd4d4a910b7e5d153b26320709582643f698799d2907eecac18d07e74"
+        },
+        {
+          "path": "capture/run-24/tap.txt",
+          "bytes": 8019,
+          "sha256": "7069087a3d0cc1df9c1a47c4cfeff9508fe6f748028a58f7d3d9b74e84d2019d"
+        },
+        {
+          "path": "capture/run-24/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "capture/run-24/failures.jsonl",
+          "bytes": 458,
+          "sha256": "b37f3c4f8eee6b480b6bda377248faced0cf8c5fa2272c63b3c5885a70fa00fb"
+        }
+      ],
+      "durable_artifact_dir": "capture/run-24"
+    },
+    {
+      "index": 25,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS unit: 2670ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-42-14-409Z-unit-c6404307-34e9-4ffa-a107-13689faeff6b\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-42-14-409Z-unit-c6404307-34e9-4ffa-a107-13689faeff6b",
+      "result": {
+        "schema_version": 1,
+        "lane": "unit",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 2670,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 38,
+            "failed": 0,
+            "passed": 38,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0,
+            "topLevel": 38,
+            "suites": 0
+          },
+          "duration_ms": 2609.927542
+        },
+        "coverage": null,
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "capture/run-25/result.json",
+          "bytes": 429,
+          "sha256": "d99534485c7475acbeaa1d150338f23a402d7a21710e70b51adb1f89aa8136ce"
+        },
+        {
+          "path": "capture/run-25/tap.txt",
+          "bytes": 8014,
+          "sha256": "0101f14552164f22f40d131817a45cae4bbd5ef2d825094ed4948b59addd47a4"
+        },
+        {
+          "path": "capture/run-25/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "capture/run-25/failures.jsonl",
+          "bytes": 458,
+          "sha256": "4c1a632e2bf9a39c61fbc0c3408e14d7b8531afd1e8f87e82d6e362928b1336a"
+        }
+      ],
+      "durable_artifact_dir": "capture/run-25"
+    }
+  ]
+}

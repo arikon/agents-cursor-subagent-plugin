@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-09-07T09:39:46.703251+00:00",
+  "scope": "Recovery taxonomy and acceptance automation; hosted acceptance remains pending",
+  "reviewers": [
+    {
+      "agent": "astra_critic",
+      "model": "gpt-5.6-sol",
+      "verdict": "OKAY",
+      "scope": "recovery taxonomy; automation contracts; runtime envelope removal and auditor supplied-result reference repair; latest 17 coverage-audit behavioral test extensions"
+    },
+    {
+      "agent": "baseline_scope",
+      "verdict": "CLEAR",
+      "scope": "architecture classifications and final five finalizer coverage repairs; four finalizer ENOENT and capture-type repairs"
+    }
+  ],
+  "acceptance_scope": {
+    "checked": [
+      "mechanics",
+      "evidence",
+      "exact_delivery"
+    ],
+    "not_checked": [
+      "reported_task_outcome",
+      "outcome_report",
+      "safety_disclosure"
+    ]
+  },
+  "remaining": [
+    "fresh frozen diagnostic serial=1",
+    "fresh high serial=3",
+    "fresh medium serial=3",
+    "deterministic closeout and OpenSpec verification"
+  ],
+  "sources": [
+    {
+      "path": "scripts/cursor-eval-scenario.mjs",
+      "bytes": 69032,
+      "sha256": "f56bcdbf352eee202fed4537defc8d48f1d23b96ef15c820e445fe3da6fc37ce"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "bytes": 65395,
+      "sha256": "6f7217223b0a0ea61186ca6fc7ff2b3a21ec65362a73d715bd695fc3e575d331"
+    },
+    {
+      "path": "scripts/audit-node-coverage.mjs",
+      "bytes": 28366,
+      "sha256": "ac8e2c5b48a5e7188dad793c0178bc0531f5ca168cbef147b7f087a1fbd2a4b7"
+    },
+    {
+      "path": "scripts/eval/finalize-cursor-skill-eval.mjs",
+      "bytes": 29823,
+      "sha256": "e42e970e316146261efe344d31e5101d5690245f04a242678aeedaf23b602890"
+    },
+    {
+      "path": "scripts/run-node-tests.mjs",
+      "bytes": 20857,
+      "sha256": "0ab147c2456df7836e70f2502a9c758f59a51e9a1f173c1cb44838f51c881bae"
+    },
+    {
+      "path": "tests/cursor-skill-eval.test.mjs",
+      "bytes": 75651,
+      "sha256": "97d05051464e479a7617b12766c8d11b6320f595ae80845e2b08d4194ec3f8ed"
+    },
+    {
+      "path": "tests/codex-client-integration.test.mjs",
+      "bytes": 116753,
+      "sha256": "a4c7210a3a3fdd0c529a469b1de4b8a1537d348503839abca5bbe61346538575"
+    },
+    {
+      "path": "tests/coverage-audit.test.mjs",
+      "bytes": 31924,
+      "sha256": "164c36259e4705db1297cf294a9ae257c1ce35c104c94903c5dea0e25c73e3b9"
+    },
+    {
+      "path": "tests/eval-closeout.test.mjs",
+      "bytes": 44885,
+      "sha256": "9ee39e4a1dbbb0dc93fa5dda1e9e0f72e5c6e03fce4c80cfd135692ad9a21e80"
+    }
+  ],
+  "parent_verification": "Final opposite-order auditor table passes focused-auditor-03; all 94 coverage counters classified, source unchanged; strict and semantic gates pass. Hosted gates pending."
+}

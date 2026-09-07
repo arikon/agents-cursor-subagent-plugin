@@ -102,7 +102,10 @@ async function main() {
     return { registrations: result.marketplaces.map(({ name, root }) => ({ id: name, path: root })) };
   }
   if (operation === 'plugin-list') {
-    const result = await json(['plugin', 'list', '--json']);
+    const args = VERSION === 'codex-cli 0.153.4'
+      ? ['plugin', 'list', '--marketplace', ID, '--json']
+      : ['plugin', 'list', '--json'];
+    const result = await json(args);
     if (!Array.isArray(result.installed)) throw new Error('plugin list schema drift');
     return { registrations: result.installed.map((item) => ({ id: item.name, marketplace_id: item.marketplaceName,
       source: item.source?.source === 'local' ? item.source.path : '', version: item.version })) };
@@ -119,7 +122,6 @@ async function main() {
         ...(process.env.CURSOR_EVAL_INJECT_MODE_PROTOCOL_ERROR_ONCE === '1' ? { CURSOR_EVAL_INJECT_MODE_PROTOCOL_ERROR_ONCE: '1' } : {}),
         ...(process.env.CURSOR_EVAL_TIMEOUT_PRELOAD ? { NODE_OPTIONS: `--import=${process.env.CURSOR_EVAL_TIMEOUT_PRELOAD}` } : {}),
         ...(process.env.FAKE_ACP_ACCELERATE_TURN_TIMEOUT === '1' ? { FAKE_ACP_ACCELERATE_TURN_TIMEOUT: '1' } : {}),
-        ...(process.env.FAKE_ACP_ACCELERATE_MODE_TIMEOUT === '1' ? { FAKE_ACP_ACCELERATE_MODE_TIMEOUT: '1' } : {}),
         ...(process.env.FAKE_ACP_ACCELERATE_WAIT_TIMEOUT === '1' ? { FAKE_ACP_ACCELERATE_WAIT_TIMEOUT: '1' } : {}),
         ...(process.env.CURSOR_EVAL_EXPECTED_PLUGIN_DIRS_SHA256 ? { CURSOR_EVAL_EXPECTED_PLUGIN_DIRS_SHA256: process.env.CURSOR_EVAL_EXPECTED_PLUGIN_DIRS_SHA256 } : {}) } } } })).toString('base64') },
   ] };

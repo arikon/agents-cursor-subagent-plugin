@@ -1,0 +1,34 @@
+TAP version 13
+# [hosted-eval] scenario-loaded
+# [hosted-eval] auth-resolved
+# [hosted-eval] package-installed
+# [hosted-eval] app-server-initialize
+# [hosted-eval] app-server-initialized
+# [hosted-eval] skill-loaded
+# [hosted-eval] thread-started
+# [hosted-eval] turn-started
+# [hosted-eval] cleanup-started
+# Subtest: hosted Codex actually calls the installed Cursor MCP tools
+not ok 1 - hosted Codex actually calls the installed Cursor MCP tools
+  ---
+  duration_ms: 182013.10675
+  type: 'test'
+  location: '/Users/arikon/projects/codex-cursor-subagent-plugin/tests/codex-client-integration.test.mjs:1304:1'
+  failureType: 'testCodeFailure'
+  error: 'follow-up anchor did not appear: {"followup":{"after_kind":"wait-timeout","input":"Добавь к этой проверке второй этап, потребуй, чтобы Cursor включил точный маркер ACTIVE_SECOND_OK в свой результат, и сообщи итог обоих этапов с этим маркером."},"latest":null}; hosted_diagnostics={"turn":{"id":"01a07962-9e69-7362-931d-7bf202c2dabb","status":"inProgress","error":null},"thread_read_error":null,"notification_methods":["deprecationNotice","deprecationNotice","deprecationNotice","deprecationNotice","deprecationNotice","deprecationNotice","deprecationNotice","deprecationNotice","deprecationNotice","deprecationNotice","deprecationNotice","deprecationNotice","deprecationNotice","deprecationNotice","deprecationNotice","deprecationNotice","deprecationNotice","deprecationNotice","deprecationNotice","deprecationNotice"],"lifecycle_notifications":[{"method":"thread/status/changed","at_ms":1788742901362,"thread_id":"01a07962-9e5f-7741-be63-f8eb49b80bc9","turn_id":null,"turn_status":{"type":"active","activeFlags":[]}},{"method":"turn/started","at_ms":1788742901362,"thread_id":"01a07962-9e5f-7741-be63-f8eb49b80bc9","turn_id":"01a07962-9e69-7362-931d-7bf202c2dabb","turn_status":"inProgress"}],"client_requests":[{"id":"client-76","method":"thread/read","at_ms":1788743044177,"thread_id":"01a07962-9e5f-7741-be63-f8eb49b80bc9"},{"id":"client-77","method":"thread/read","at_ms":1788743046178,"thread_id":"01a07962-9e5f-7741-be63-f8eb49b80bc9"},{"id":"client-78","method":"thread/read","at_ms":1788743048178,"thread_id":"01a07962-9e5f-7741-be63-f8eb49b80bc9"},{"id":"client-79","method":"thread/read","at_ms":1788743050187,"thread_id":"01a07962-9e5f-7741-be63-f8eb49b80bc9"},{"id":"client-80","method":"thread/read","at_ms":1788743052189,"thread_id":"01a07962-9e5f-7741-be63-f8eb49b80bc9"},{"id":"client-81","method":"thread/read","at_ms":1788743054208,"thread_id":"01a07962-9e5f-7741-be63-f8eb49b80bc9"},{"id":"client-82","method":"thread/read","at_ms":1788743056224,"thread_id":"01a07962-9e5f-7741-be63-f8eb49b80bc9"},{"id":"client-83","method":"thread/read","at_ms":1788743058229,"thread_id":"01a07962-9e5f-7741-be63-f8eb49b80bc9"},{"id":"client-84","method":"thread/read","at_ms":1788743060239,"thread_id":"01a07962-9e5f-7741-be63-f8eb49b80bc9"},{"id":"client-85","method":"thread/read","at_ms":1788743062263,"thread_id":"01a07962-9e5f-7741-be63-f8eb49b80bc9"},{"id":"client-86","method":"thread/read","at_ms":1788743064268,"thread_id":"01a07962-9e5f-7741-be63-f8eb49b80bc9"},{"id":"client-87","method":"thread/read","at_ms":1788743066292,"thread_id":"01a07962-9e5f-7741-be63-f8eb49b80bc9"},{"id":"client-88","method":"thread/read","at_ms":1788743068295,"thread_id":"01a07962-9e5f-7741-be63-f8eb49b80bc9"},{"id":"client-89","method":"thread/read","at_ms":1788743070299,"thread_id":"01a07962-9e5f-7741-be63-f8eb49b80bc9"},{"id":"client-90","method":"thread/read","at_ms":1788743072309,"thread_id":"01a07962-9e5f-7741-be63-f8eb49b80bc9"},{"id":"client-91","method":"thread/read","at_ms":1788743074312,"thread_id":"01a07962-9e5f-7741-be63-f8eb49b80bc9"},{"id":"client-92","method":"thread/read","at_ms":1788743076324,"thread_id":"01a07962-9e5f-7741-be63-f8eb49b80bc9"},{"id":"client-93","method":"thread/read","at_ms":1788743078333,"thread_id":"01a07962-9e5f-7741-be63-f8eb49b80bc9"},{"id":"client-94","method":"thread/read","at_ms":1788743080348,"thread_id":"01a07962-9e5f-7741-be63-f8eb49b80bc9"},{"id":"client-95","method":"thread/read","at_ms":1788743081358,"thread_id":"01a07962-9e5f-7741-be63-f8eb49b80bc9"}],"stderr_tail":"{\\"timestamp\\":\\"2026-09-07T01:02:03.946231Z\\",\\"level\\":\\"WARN\\",\\"fields\\":{\\"message\\":\\"failed to refresh cached remote plugin catalog\\",\\"error\\":\\"failed to parse remote plugin catalog response from https://chatgpt.com/backend-api/ps/plugins/list?scope=GLOBAL&limit=200&pageToken=eyJzY29wZSI6IkdMT0JBTCIsIndvcmtzcGFjZV9pZCI6bnVsbCwiY3JlYXRvcl9hY2NvdW50X3VzZXJfaWQiOm51bGwsImNvbGxlY3Rpb24iOm51bGwsImluY2x1ZGVfcmVzdHJpY3RlZF9wbHVnaW5zIjp0cnVlLCJpbmNsdWRlX3VubGlzdGVkX2dsb2JhbF9wbHVnaW5zIjp0cnVlLCJlbGlnaWJsZV9wbGFuX3R5cGUiOiJwcm8iLCJlbmZvcmNlX3BsYW5fZWxpZ2liaWxpdHkiOmZhbHNlLCJyYW5rX2J5X3BvcHVsYXJpdHkiOnRydWUsImNvbnRpbnVhdGlvbiI6eyJkZXBsb3ltZW50X3R5cGUiOiJwcmltYXJ5IiwicXVlcnlfaWQiOiJyczQ6Y2U5MDJmYWItMjVlMS00MGFiLWIzYzctYjRkYWZkYjE3YjZhOnhHQTNHYlI6MDpsZWFmLTFmMTMxZDc0LTIzNGEtNGFmYi1iNGQyLTc3MTdhM2U1NjQwNCIsImN1cnNvciI6IlpINjlkWEM0Z0x2dmVITHBoSlVLNmZqaTJOR2pQTlMwR3NWQ3BKVlpnX3ZVTmVFRmNaNWNkalM0Q0pncFJaWmdTWDFtSmVob2dSVjEwNTF6MGpRMmZxVWVRSXZLcHlONEpWNFRpbDdJdm51NzloZHEta3JDRWVCZ2JZVXhlVVlKZHB5dzFDY0F1aE5YVkVMVWI0T3BWcmtoSllleWQ5NHRTZ3RuTXhQMnM2Y25ZZTFMM0RNbm9lZVEzTGJRMmd5UTRrbmNreWEtVllvPSJ9fQ: EOF while parsing a value at line 1 column 0\\",\\"scope\\":\\"Global\\"},\\"target\\":\\"codex_core_plugins::manager\\"}\\n{\\"timestamp\\":\\"2026-09-07T01:02:39.099264Z\\",\\"level\\":\\"WARN\\",\\"fields\\":{\\"message\\":\\"failed to download remote installed plugin bundle\\",\\"remote_plugin_id\\":\\"plugin_connector_1p_2330815c823c8191941e5dc465bb899f\\",\\"plugin\\":\\"openai-templates\\",\\"marketplace\\":\\"openai-curated-remote\\",\\"error\\":\\"failed to read remote plugin bundle download response from https://sdmntprsouthcentralus.oaiusercontent.com/files/00000000-9268-81f7-8926-83f58a34537f/raw?se=2026-09-07T01%3A06%3A41Z&sp=r&sv=2026-02-06&sr=b&scid=d748cfef-ddd1-42f7-9ead-a778b9781066&skoid=e5e3659d-4463-4dbf-b2ce-ee32bc0a0a8d&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-06T21%3A11%3A52Z&ske=2026-09-07T21%3A11%3A52Z&sks=b&skv=2026-02-06&sig=8tvlPhK4unAg/ZFFO7exqAupGcuDxoXQYi2BUKGY4ow%3D: error decoding response body\\"},\\"target\\":\\"codex_core_plugins::remote::remote_installed_plugin_sync\\"}\\n"}'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/arikon/projects/codex-cursor-subagent-plugin/tests/codex-client-integration.test.mjs:1467:15)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 182083.930583

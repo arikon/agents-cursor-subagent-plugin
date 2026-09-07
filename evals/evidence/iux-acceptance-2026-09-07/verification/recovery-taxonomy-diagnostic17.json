@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "kind": "diagnostic-recovery-replay",
+  "acceptance_evidence": false,
+  "source": {
+    "path": "diagnostic-17/high.json.artifacts/serial-1/model-runtime-recovery-attempt-1/evidence/23153f8a-4c0a-487a-896e-b6c6ca6c015b.json",
+    "bytes": 10143,
+    "sha256": "4c70305a03240506997343f321d221a0f2690589b24b7c378542b65260024874"
+  },
+  "original_verdict": "agent_behavior_mismatch",
+  "original_mismatches": [
+    "trace-mismatch"
+  ],
+  "oracle": {
+    "path": "scripts/cursor-eval-scenario.mjs",
+    "bytes": 68980,
+    "sha256": "152ef2278165d6a51832cc44aaf2a211adf1ac3dfbccb2ddee60ca81c0a6150c"
+  },
+  "recomputed_recovered_calls": [
+    {
+      "failed_call_index": 2,
+      "successful_call_index": 3,
+      "codex_turn_index": 1,
+      "tool": "cursor_wait",
+      "error_code": "invalid_args",
+      "correction_kind": "wait_state"
+    }
+  ],
+  "note": "Only recovery proof is recomputed. Original result is unchanged; this is not a new scenario verdict or a hosted baseline."
+}

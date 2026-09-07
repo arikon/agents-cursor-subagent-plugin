@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: recovery oracle audits raw lookup errors even when normalized trace looks successful
+ok 1 - recovery oracle audits raw lookup errors even when normalized trace looks successful
+  ---
+  duration_ms: 2.30125
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 74.758

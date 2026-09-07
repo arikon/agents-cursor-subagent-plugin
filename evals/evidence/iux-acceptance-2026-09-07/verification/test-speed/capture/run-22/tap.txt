@@ -1,0 +1,238 @@
+TAP version 13
+# Subtest: versioned golden fixes the admitted persistent-turn and skill-load surface
+ok 1 - versioned golden fixes the admitted persistent-turn and skill-load surface
+  ---
+  duration_ms: 7.25575
+  type: 'test'
+  ...
+# Subtest: current versioned golden fixes the paginated final-capture surface
+ok 2 - current versioned golden fixes the paginated final-capture surface
+  ---
+  duration_ms: 1.57375
+  type: 'test'
+  ...
+# Subtest: app-server client normalizes positive installed-skill evidence
+ok 3 - app-server client normalizes positive installed-skill evidence
+  ---
+  duration_ms: 40.016667
+  type: 'test'
+  ...
+# Subtest: app-server client accepts text content when collecting installed-skill evidence
+ok 4 - app-server client accepts text content when collecting installed-skill evidence
+  ---
+  duration_ms: 38.139041
+  type: 'test'
+  ...
+# Subtest: app-server client preserves diagnostics and a missing optional plugin identity
+ok 5 - app-server client preserves diagnostics and a missing optional plugin identity
+  ---
+  duration_ms: 35.319833
+  type: 'test'
+  ...
+# Subtest: app-server client starts an isolated thread through the public request contract
+ok 6 - app-server client starts an isolated thread through the public request contract
+  ---
+  duration_ms: 37.478667
+  type: 'test'
+  ...
+# Subtest: app-server client captures an exact final across paginated turns and items
+ok 7 - app-server client captures an exact final across paginated turns and items
+  ---
+  duration_ms: 38.276959
+  type: 'test'
+  ...
+# Subtest: app-server client waits for a late indexed final
+ok 8 - app-server client waits for a late indexed final
+  ---
+  duration_ms: 39.399333
+  type: 'test'
+  ...
+# Subtest: app-server client distinguishes a confirmed missing final from an empty final
+ok 9 - app-server client distinguishes a confirmed missing final from an empty final
+  ---
+  duration_ms: 41.434375
+  type: 'test'
+  ...
+# Subtest: app-server client records the admitted legacy null phase
+ok 10 - app-server client records the admitted legacy null phase
+  ---
+  duration_ms: 39.495583
+  type: 'test'
+  ...
+# Subtest: app-server client keeps nonterminal and corrupt extraction incomplete
+ok 11 - app-server client keeps nonterminal and corrupt extraction incomplete
+  ---
+  duration_ms: 41.892125
+  type: 'test'
+  ...
+# Subtest: app-server client returns exact long text and rejects a pagination cursor cycle
+ok 12 - app-server client returns exact long text and rejects a pagination cursor cycle
+  ---
+  duration_ms: 48.993125
+  type: 'test'
+  ...
+# Subtest: app-server client admits the exact text limit and rejects the next byte under default transport limits
+ok 13 - app-server client admits the exact text limit and rejects the next byte under default transport limits
+  ---
+  duration_ms: 60.96025
+  type: 'test'
+  ...
+# Subtest: app-server client attributes a corrupt item page to item extraction
+ok 14 - app-server client attributes a corrupt item page to item extraction
+  ---
+  duration_ms: 41.298875
+  type: 'test'
+  ...
+# Subtest: app-server client applies one deadline to slow pages and caps the page override
+ok 15 - app-server client applies one deadline to slow pages and caps the page override
+  ---
+  duration_ms: 145.398917
+  type: 'test'
+  ...
+# Subtest: app-server client rejects an agent message without its required id
+ok 16 - app-server client rejects an agent message without its required id
+  ---
+  duration_ms: 52.530583
+  type: 'test'
+  ...
+# Subtest: app-server client classifies bounded pagination and request failures by source
+ok 17 - app-server client classifies bounded pagination and request failures by source
+  ---
+  duration_ms: 392.13675
+  type: 'test'
+  ...
+# Subtest: app-server client sends the admitted explicit skill input
+ok 18 - app-server client sends the admitted explicit skill input
+  ---
+  duration_ms: 36.712542
+  type: 'test'
+  ...
+# Subtest: app-server client archives an isolated eval thread before transport close
+ok 19 - app-server client archives an isolated eval thread before transport close
+  ---
+  duration_ms: 36.658083
+  type: 'test'
+  ...
+# Subtest: app-server client completes a turn around notifications and an admitted elicitation
+ok 20 - app-server client completes a turn around notifications and an admitted elicitation
+  ---
+  duration_ms: 38.3795
+  type: 'test'
+  ...
+# Subtest: app-server client normalizes omitted server-request params to null
+ok 21 - app-server client normalizes omitted server-request params to null
+  ---
+  duration_ms: 34.773167
+  type: 'test'
+  ...
+# Subtest: app-server client serializes a server-request handler failure as JSON-RPC error
+ok 22 - app-server client serializes a server-request handler failure as JSON-RPC error
+  ---
+  duration_ms: 37.045833
+  type: 'test'
+  ...
+# Subtest: app-server client denies an unsupported server request by default
+ok 23 - app-server client denies an unsupported server request by default
+  ---
+  duration_ms: 37.878041
+  type: 'test'
+  ...
+# Subtest: app-server client rejects absent skill evidence
+ok 24 - app-server client rejects absent skill evidence
+  ---
+  duration_ms: 36.76475
+  type: 'test'
+  ...
+# Subtest: app-server client rejects catalog evidence when installed skill bytes are unavailable
+ok 25 - app-server client rejects catalog evidence when installed skill bytes are unavailable
+  ---
+  duration_ms: 38.617292
+  type: 'test'
+  ...
+# Subtest: app-server client rejects an invalid skills catalog response
+ok 26 - app-server client rejects an invalid skills catalog response
+  ---
+  duration_ms: 38.01
+  type: 'test'
+  ...
+# Subtest: app-server client ignores malformed and unrelated frames before a valid response
+ok 27 - app-server client ignores malformed and unrelated frames before a valid response
+  ---
+  duration_ms: 38.079666
+  type: 'test'
+  ...
+# Subtest: app-server client uses a stable fallback for an error without a message
+ok 28 - app-server client uses a stable fallback for an error without a message
+  ---
+  duration_ms: 37.383875
+  type: 'test'
+  ...
+# Subtest: app-server client rejects a request when the server exits before responding
+ok 29 - app-server client rejects a request when the server exits before responding
+  ---
+  duration_ms: 40.047917
+  type: 'test'
+  ...
+# Subtest: app-server client rejects a request issued after its transport has exited
+ok 30 - app-server client rejects a request issued after its transport has exited
+  ---
+  duration_ms: 32.913625
+  type: 'test'
+  ...
+# Subtest: app-server client rejects spawn failure
+ok 31 - app-server client rejects spawn failure
+  ---
+  duration_ms: 1.052459
+  type: 'test'
+  ...
+# Subtest: app-server client rejects a timed-out request
+ok 32 - app-server client rejects a timed-out request
+  ---
+  duration_ms: 42.112125
+  type: 'test'
+  ...
+# Subtest: app-server client rejects aggregate output overflow
+ok 33 - app-server client rejects aggregate output overflow
+  ---
+  duration_ms: 42.320209
+  type: 'test'
+  ...
+# Subtest: app-server client closes a cooperative process gracefully
+ok 34 - app-server client closes a cooperative process gracefully
+  ---
+  duration_ms: 45.220542
+  type: 'test'
+  ...
+# Subtest: app-server client escalates shutdown when the process ignores TERM
+ok 35 - app-server client escalates shutdown when the process ignores TERM
+  ---
+  duration_ms: 12.798125
+  type: 'test'
+  ...
+# Subtest: app-server client rejects shutdown when close is not observed after SIGKILL
+ok 36 - app-server client rejects shutdown when close is not observed after SIGKILL
+  ---
+  duration_ms: 10.121417
+  type: 'test'
+  ...
+# Subtest: app-server client rejects requests after shutdown
+ok 37 - app-server client rejects requests after shutdown
+  ---
+  duration_ms: 43.107792
+  type: 'test'
+  ...
+# Subtest: app-server client shutdown is idempotent
+ok 38 - app-server client shutdown is idempotent
+  ---
+  duration_ms: 46.017
+  type: 'test'
+  ...
+1..38
+# tests 38
+# suites 0
+# pass 38
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1891.98475

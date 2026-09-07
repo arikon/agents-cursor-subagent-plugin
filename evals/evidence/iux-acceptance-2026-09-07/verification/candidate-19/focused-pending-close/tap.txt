@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: plan decisions use adapter-owned wire encoding and close settles pending once
+ok 1 - plan decisions use adapter-owned wire encoding and close settles pending once
+  ---
+  duration_ms: 281.983917
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 347.58175

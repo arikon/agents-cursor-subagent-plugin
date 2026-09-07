@@ -1,0 +1,2 @@
+{"type":"test:summary","data":{"success":true,"counts":{"tests":41,"failed":0,"passed":41,"cancelled":0,"skipped":0,"todo":0,"topLevel":5,"suites":0},"duration_ms":385.164333,"file":"/Users/arikon/projects/codex-cursor-subagent-plugin/tests/coverage-audit.test.mjs"}}
+{"type":"test:summary","data":{"success":true,"counts":{"tests":41,"failed":0,"passed":41,"cancelled":0,"skipped":0,"todo":0,"topLevel":5,"suites":0},"duration_ms":445.238792}}

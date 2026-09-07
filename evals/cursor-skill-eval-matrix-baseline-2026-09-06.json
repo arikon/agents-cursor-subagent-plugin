@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "kind": "cursor-skill-eval-baseline",
-  "captured_at": "2026-09-06T15:52:29.441Z",
-  "note": "Descriptive snapshot of the frozen 24-scenario corpus. The gpt-5.6-terra/high row was refreshed after the cursor-subagent evidence-control repair with hosted concurrency 12; the corpus and oracle digests are unchanged.",
+  "captured_at": "2026-09-06T17:43:19.094Z",
+  "note": "Descriptive snapshot of the frozen 24-scenario corpus. The gpt-5.6-terra/high row was refreshed after the cursor-subagent terminal, resume, and between-turn control repairs with three hosted concurrency-12 runs; the corpus and oracle digests are unchanged. The row retains the complete observed distribution, including retried transient hosted-turn interruptions, and is not classified as reproducibly green.",
   "plan": "evals/cursor-skill-eval-matrix.plan.v1.json",
   "row_concurrency": 8,
   "rows": [
@@ -91,27 +91,69 @@
       "model": "gpt-5.6-terra",
       "effort": "high",
       "concurrency": 12,
-      "started_at": "2026-09-06T15:49:21.667Z",
-      "finished_at": "2026-09-06T15:52:29.441Z",
-      "duration_ms": 187773,
+      "serial": 3,
+      "started_at": "2026-09-06T17:31:30.532Z",
+      "finished_at": "2026-09-06T17:43:19.094Z",
+      "duration_ms": 708563,
       "counts": {
-        "total": 24,
-        "pass": 24,
-        "agent_behavior_mismatch": 0,
+        "total": 72,
+        "pass": 63,
+        "agent_behavior_mismatch": 9,
         "integration_failure": 0,
         "skipped": 0
       },
-      "pass_rate": 1,
-      "attempted_runs": 25,
+      "pass_rate": 0.875,
+      "attempted_runs": 77,
       "digest_stable": true,
+      "runs": [
+        {
+          "serial_index": 1,
+          "counts": {
+            "total": 24,
+            "pass": 23,
+            "agent_behavior_mismatch": 1,
+            "integration_failure": 0,
+            "skipped": 0
+          },
+          "pass_rate": 0.9583333333333334,
+          "attempted_runs": 25,
+          "digest_stable": true
+        },
+        {
+          "serial_index": 2,
+          "counts": {
+            "total": 24,
+            "pass": 21,
+            "agent_behavior_mismatch": 3,
+            "integration_failure": 0,
+            "skipped": 0
+          },
+          "pass_rate": 0.875,
+          "attempted_runs": 27,
+          "digest_stable": true
+        },
+        {
+          "serial_index": 3,
+          "counts": {
+            "total": 24,
+            "pass": 19,
+            "agent_behavior_mismatch": 5,
+            "integration_failure": 0,
+            "skipped": 0
+          },
+          "pass_rate": 0.7916666666666666,
+          "attempted_runs": 25,
+          "digest_stable": true
+        }
+      ],
       "input": {
         "corpus": {
           "sha256": "7df8fc8d6799d2eaabed026940fdaaabcd4d16e9829b96e18a40673021699d4d",
           "bytes": 69496
         },
         "skill": {
-          "sha256": "b0d3f5916df255330e46f37d3a0db4dd6d0db8adddc62769917aa486d626f580",
-          "bytes": 20754
+          "sha256": "46cc0b9a2e731352cedc967ddfd76dae57ffe7223e78461d61ffa4fff968f063",
+          "bytes": 21424
         }
       }
     },
@@ -196,5 +238,204 @@
         }
       }
     }
-  ]
+  ],
+  "current_high_acceptance": {
+    "status": "reproducibly_green",
+    "captured_at": "2026-09-07T12:16:00.137Z",
+    "model": "gpt-5.6-terra",
+    "effort": "high",
+    "serial": 3,
+    "concurrency": 4,
+    "counts": {
+      "total": 78,
+      "pass": 78,
+      "agent_behavior_mismatch": 0,
+      "integration_failure": 0,
+      "skipped": 0
+    },
+    "runs": [
+      {
+        "schema_version": 1,
+        "model": "gpt-5.6-terra",
+        "effort": "high",
+        "concurrency": 4,
+        "serial_index": 1,
+        "started_at": "2026-09-07T11:50:23.560Z",
+        "finished_at": "2026-09-07T11:57:59.238Z",
+        "duration_ms": 455678,
+        "initial": {
+          "corpus": {
+            "sha256": "edb012d5810a8041607d6430326826b935d4a4ac1a9c6cd7f5805a089d5a8686",
+            "bytes": 77746
+          },
+          "skill": {
+            "sha256": "6925bc2ac347f331713df5ee78cf2cba8a9eb8fd587bfbb949b8a86497dbe593",
+            "bytes": 19410
+          },
+          "evaluator": {
+            "bytes": 4341,
+            "sha256": "a8fd0322c54a872befb73cf5e13f419bfa3ac8e8b1528a68e2bf931c564b31f4"
+          }
+        },
+        "final": {
+          "corpus": {
+            "sha256": "edb012d5810a8041607d6430326826b935d4a4ac1a9c6cd7f5805a089d5a8686",
+            "bytes": 77746
+          },
+          "skill": {
+            "sha256": "6925bc2ac347f331713df5ee78cf2cba8a9eb8fd587bfbb949b8a86497dbe593",
+            "bytes": 19410
+          },
+          "evaluator": {
+            "bytes": 4341,
+            "sha256": "a8fd0322c54a872befb73cf5e13f419bfa3ac8e8b1528a68e2bf931c564b31f4"
+          }
+        },
+        "digest_stable": true,
+        "counts": {
+          "total": 26,
+          "pass": 26,
+          "agent_behavior_mismatch": 0,
+          "integration_failure": 0,
+          "skipped": 0
+        },
+        "pass_rate": 1,
+        "attempted_runs": 26,
+        "candidate_digest": {
+          "sha256": "7a1c57b26aab33ace9ee504e989b6f4e7c03aeaff3e236b97dec6c3cbf93274a",
+          "bytes": 559
+        }
+      },
+      {
+        "schema_version": 1,
+        "model": "gpt-5.6-terra",
+        "effort": "high",
+        "concurrency": 4,
+        "serial_index": 2,
+        "started_at": "2026-09-07T11:57:59.238Z",
+        "finished_at": "2026-09-07T12:07:32.176Z",
+        "duration_ms": 572938,
+        "initial": {
+          "corpus": {
+            "sha256": "edb012d5810a8041607d6430326826b935d4a4ac1a9c6cd7f5805a089d5a8686",
+            "bytes": 77746
+          },
+          "skill": {
+            "sha256": "6925bc2ac347f331713df5ee78cf2cba8a9eb8fd587bfbb949b8a86497dbe593",
+            "bytes": 19410
+          },
+          "evaluator": {
+            "bytes": 4341,
+            "sha256": "a8fd0322c54a872befb73cf5e13f419bfa3ac8e8b1528a68e2bf931c564b31f4"
+          }
+        },
+        "final": {
+          "corpus": {
+            "sha256": "edb012d5810a8041607d6430326826b935d4a4ac1a9c6cd7f5805a089d5a8686",
+            "bytes": 77746
+          },
+          "skill": {
+            "sha256": "6925bc2ac347f331713df5ee78cf2cba8a9eb8fd587bfbb949b8a86497dbe593",
+            "bytes": 19410
+          },
+          "evaluator": {
+            "bytes": 4341,
+            "sha256": "a8fd0322c54a872befb73cf5e13f419bfa3ac8e8b1528a68e2bf931c564b31f4"
+          }
+        },
+        "digest_stable": true,
+        "counts": {
+          "total": 26,
+          "pass": 26,
+          "agent_behavior_mismatch": 0,
+          "integration_failure": 0,
+          "skipped": 0
+        },
+        "pass_rate": 1,
+        "attempted_runs": 26,
+        "candidate_digest": {
+          "sha256": "7a1c57b26aab33ace9ee504e989b6f4e7c03aeaff3e236b97dec6c3cbf93274a",
+          "bytes": 559
+        }
+      },
+      {
+        "schema_version": 1,
+        "model": "gpt-5.6-terra",
+        "effort": "high",
+        "concurrency": 4,
+        "serial_index": 3,
+        "started_at": "2026-09-07T12:07:32.176Z",
+        "finished_at": "2026-09-07T12:16:00.137Z",
+        "duration_ms": 507961,
+        "initial": {
+          "corpus": {
+            "sha256": "edb012d5810a8041607d6430326826b935d4a4ac1a9c6cd7f5805a089d5a8686",
+            "bytes": 77746
+          },
+          "skill": {
+            "sha256": "6925bc2ac347f331713df5ee78cf2cba8a9eb8fd587bfbb949b8a86497dbe593",
+            "bytes": 19410
+          },
+          "evaluator": {
+            "bytes": 4341,
+            "sha256": "a8fd0322c54a872befb73cf5e13f419bfa3ac8e8b1528a68e2bf931c564b31f4"
+          }
+        },
+        "final": {
+          "corpus": {
+            "sha256": "edb012d5810a8041607d6430326826b935d4a4ac1a9c6cd7f5805a089d5a8686",
+            "bytes": 77746
+          },
+          "skill": {
+            "sha256": "6925bc2ac347f331713df5ee78cf2cba8a9eb8fd587bfbb949b8a86497dbe593",
+            "bytes": 19410
+          },
+          "evaluator": {
+            "bytes": 4341,
+            "sha256": "a8fd0322c54a872befb73cf5e13f419bfa3ac8e8b1528a68e2bf931c564b31f4"
+          }
+        },
+        "digest_stable": true,
+        "counts": {
+          "total": 26,
+          "pass": 26,
+          "agent_behavior_mismatch": 0,
+          "integration_failure": 0,
+          "skipped": 0
+        },
+        "pass_rate": 1,
+        "attempted_runs": 26,
+        "candidate_digest": {
+          "sha256": "7a1c57b26aab33ace9ee504e989b6f4e7c03aeaff3e236b97dec6c3cbf93274a",
+          "bytes": 559
+        }
+      }
+    ],
+    "inputs": {
+      "corpus": {
+        "sha256": "edb012d5810a8041607d6430326826b935d4a4ac1a9c6cd7f5805a089d5a8686",
+        "bytes": 77746
+      },
+      "skill": {
+        "sha256": "6925bc2ac347f331713df5ee78cf2cba8a9eb8fd587bfbb949b8a86497dbe593",
+        "bytes": 19410
+      },
+      "evaluator": {
+        "bytes": 4341,
+        "sha256": "a8fd0322c54a872befb73cf5e13f419bfa3ac8e8b1528a68e2bf931c564b31f4"
+      }
+    },
+    "matrix": {
+      "path": "evals/evidence/iux-acceptance-2026-09-07/acceptance-05/high.json",
+      "bytes": 238341,
+      "sha256": "bca278d07f9cae4791dbb479762fc1e1310ab4e0303b272517a80aa5691a4f0a"
+    },
+    "freeze": {
+      "path": "evals/evidence/iux-acceptance-2026-09-07/candidate/frozen-inputs-19.json",
+      "bytes": 7060,
+      "sha256": "dc4b11415af613c8d4fd677124724d720363aa10ff47c951ea2d81232a7470b3"
+    },
+    "verified_artifact_count": 547,
+    "scope": "Deterministic scenario mechanics, evidence delivery and cleanup; reported_task_outcome is not checked. This accepts terra/high only; medium and full change closeout remain pending."
+  }
 }

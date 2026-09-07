@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "purpose": "negative real-evidence closeout rehearsal; not acceptance",
+  "exit_code": 1,
+  "stdout": "",
+  "stderr": "non-passing matrix result: model-file-review\n",
+  "before": {
+    "baseline.json": "c7fe194f67e7d46b7649ec1834c3a3c5e0360fe9ffe3f1895f3743af0acd923d",
+    "report.md": "1f4b4d92e6b96c25409fd9881febcf24b01c1be3d1f1919c82f925f7c6662f72",
+    "tasks.md": "5015c9397172baadc27a09f40a8ed83a52c817a754f6e826377d0ec4d1a09998"
+  },
+  "after": {
+    "baseline.json": "c7fe194f67e7d46b7649ec1834c3a3c5e0360fe9ffe3f1895f3743af0acd923d",
+    "report.md": "1f4b4d92e6b96c25409fd9881febcf24b01c1be3d1f1919c82f925f7c6662f72",
+    "tasks.md": "5015c9397172baadc27a09f40a8ed83a52c817a754f6e826377d0ec4d1a09998"
+  },
+  "targets_unchanged": true,
+  "proof_published": false
+}

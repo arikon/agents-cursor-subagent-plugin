@@ -9,20 +9,19 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { MARKER_NAME, runBootstrap, runPackageCommand } from '../scripts/cursor-subagent-bootstrap.mjs';
 import { CodexAppServerClient } from '../scripts/codex-app-server-client.mjs';
-import { canonicalJson, evaluateScenario, materializeScenario } from '../scripts/cursor-eval-scenario.mjs';
-import { applySkillSensitivity } from '../scripts/cursor-skill-eval.mjs';
+import { canonicalJson, evaluateScenario, findRecoveredCalls, materializeScenario } from '../scripts/cursor-eval-scenario.mjs';
+import { readEvaluatorInventory } from '../scripts/cursor-skill-eval.mjs';
 import { parseChildResult, runHarness } from '../scripts/run-cursor-skill-eval.mjs';
 
 const repository = fileURLToPath(new URL('..', import.meta.url));
 const codex = process.env.CURSOR_EVAL_CODEX_EXECUTABLE || '/Applications/ChatGPT.app/Contents/Resources/codex';
-const adapter = fileURLToPath(new URL('./fixtures/codex-v01521-adapter.mjs', import.meta.url));
+const adapter = fileURLToPath(new URL('./fixtures/codex-v01534-adapter.mjs', import.meta.url));
 const fakeAcp = fileURLToPath(new URL('./fixtures/release-fake-acp.mjs', import.meta.url));
 const fakeProvider = fileURLToPath(new URL('./fixtures/fake-ollama-responses.mjs', import.meta.url));
 const turnTimeoutPreload = fileURLToPath(new URL('./fixtures/accelerate-turn-timeout.mjs', import.meta.url));
 const skill = 'codex-cursor-subagent-plugin:cursor-subagent';
-const skillSensitivity = process.env.CURSOR_EVAL_SKILL_SENSITIVITY || null;
 const HOSTED_APP_SERVER_OUTPUT_LIMIT = 16 * 1_048_576;
-const HOSTED_OBSERVATION_TIMEOUT_MS = 180_000;
+const HOSTED_OBSERVATION_TIMEOUT_MS = 300_000;
 
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
@@ -34,10 +33,15 @@ async function configureFakeAgent(path, values = {}) {
   await chmod(path, 0o755);
 }
 
-function acceptOnlyCursorToolElicitation({ method, params }) {
-  if (method !== 'mcpServer/elicitation/request'
-    || params?.serverName !== 'cursor-subagent'
-    || params?._meta?.codex_approval_kind !== 'mcp_tool_call') {
+function isCursorToolElicitation({ method, params }) {
+  return method === 'mcpServer/elicitation/request'
+    && params?.serverName === 'cursor-subagent'
+    && params?._meta?.codex_approval_kind === 'mcp_tool_call';
+}
+
+function acceptOnlyCursorToolElicitation(request) {
+  if (!isCursorToolElicitation(request)) {
+    const { method } = request;
     throw new Error(`unexpected app-server request: ${method}`);
   }
   return { action: 'accept' };
@@ -48,25 +52,16 @@ async function layout(workspaceOverride = null) {
   const source = join(root, 'source'); const workspace = workspaceOverride || join(root, 'workspace'); const home = join(root, 'codex-home');
   await mkdir(source); if (!workspaceOverride) await mkdir(workspace); await mkdir(home);
   const originalSkill = await readFile(join(repository, 'skills/cursor-subagent/SKILL.md'));
-  const expectedSourceSkill = digestFromEnvironment('CURSOR_EVAL_EXPECTED_SOURCE_SKILL', false);
-  if (expectedSourceSkill) assert.deepEqual({ sha256: sha256(originalSkill), bytes: originalSkill.length }, expectedSourceSkill, 'sensitivity source skill drifted');
   for (const path of ['.codex-plugin/plugin.json', 'README.md', 'scripts/cursor-subagent-mcp.mjs', 'scripts/recording-mcp-proxy.mjs', 'scripts/cursor-subagent-bootstrap.mjs']) {
     await mkdir(join(source, path, '..'), { recursive: true }); await cp(join(repository, path), join(source, path));
   }
   await cp(join(repository, 'skills'), join(source, 'skills'), { recursive: true });
-  if (skillSensitivity) {
-    const skillPath = join(source, 'skills/cursor-subagent/SKILL.md');
-    const original = await readFile(skillPath, 'utf8');
-    await writeFile(skillPath, applySkillSensitivity(original, skillSensitivity), 'utf8');
-  }
   const fakeAgentRoot = join(root, 'fake-agent');
   await mkdir(fakeAgentRoot);
   await configureFakeAgent(join(fakeAgentRoot, 'agent'));
   await cp(fileURLToPath(new URL('./fixtures/fake-acp.mjs', import.meta.url)), join(fakeAgentRoot, 'fake-acp.mjs'));
   await cp(turnTimeoutPreload, join(fakeAgentRoot, 'accelerate-turn-timeout.mjs'));
   const skillBytes = await readFile(join(source, 'skills/cursor-subagent/SKILL.md'));
-  const expectedLoadedSkill = digestFromEnvironment('CURSOR_EVAL_EXPECTED_LOADED_SKILL', false);
-  if (expectedLoadedSkill) assert.deepEqual({ sha256: sha256(skillBytes), bytes: skillBytes.length }, expectedLoadedSkill, 'sensitivity loaded skill drifted');
   return { root, source, hidden: join(root, 'source.hidden'), workspace, allowedWorkspace: await realpath(workspace), home,
     managed: join(root, 'marketplace'), fakeAgent: join(fakeAgentRoot, 'agent'), skillSha256: sha256(skillBytes), skillBytes: skillBytes.length };
 }
@@ -77,6 +72,17 @@ function digestFromEnvironment(prefix, required = true) {
   assert.match(digest.sha256 || '', /^[a-f0-9]{64}$/, `${prefix} sha256 is missing or invalid`);
   assert.ok(Number.isSafeInteger(digest.bytes) && digest.bytes > 0 && digest.bytes <= 1_048_576, `${prefix} bytes is missing or invalid`);
   return digest;
+}
+
+async function evaluatorProof() {
+  const inventory = await readEvaluatorInventory();
+  const expected = digestFromEnvironment('CURSOR_EVAL_EVALUATOR', false);
+  if (expected) assert.deepEqual(inventory.digest, expected, 'evaluator inventory differs from candidate admission');
+  return inventory.digest;
+}
+
+async function assertEvaluatorUnchanged(expected) {
+  assert.deepEqual((await readEvaluatorInventory()).digest, expected, 'evaluator inventory changed before cleanup');
 }
 
 async function readOuterScenario() {
@@ -149,6 +155,10 @@ async function readSafeEvidence(path) {
 
 export function observationsFromEvidence(scenario, transcriptEvidence, safeEvidence, outcomes) {
   const calls = transcriptEvidence.calls;
+  const recoveredProjectionIndices = new Set(findRecoveredCalls(
+    transcriptEvidence, (scenario.followups?.length || 0) + 1,
+  ).flatMap(({ failed_call_index: start, successful_call_index: end }) =>
+    Array.from({ length: end - start }, (_value, index) => start + index)));
   const callbackEvidence = safeEvidence.filter(({ kind }) => ['answer', 'decision', 'read-result', 'write-result', 'burst.ack', 'callback.failure'].includes(kind));
   const callbackById = new Map(callbackEvidence.map((entry) => [String(entry.callback_id), entry]));
   const terminalEvidence = safeEvidence.map((entry, index) => ({ entry, index }))
@@ -165,12 +175,13 @@ export function observationsFromEvidence(scenario, transcriptEvidence, safeEvide
   let sessionId;
   let turnId;
   let cursorSessionId;
-  let expectedEventCursor;
   let expectedProgressRevision = 0;
   let sawWaitTimeout = false;
   let activeFollowupObserved = false;
   let previousTerminalEvidenceIndex = -1;
   const completedTurnIds = new Set();
+  const completeResultReadTurns = new Set();
+  const fullResultDigestByTurn = new Map();
   const codexTurnIndexForCall = (callIndex) => {
     const rangeIndex = transcriptEvidence.turn_call_ranges?.findIndex(({ start, end }) => callIndex >= start && callIndex < end) ?? -1;
     return rangeIndex < 0 ? 1 : rangeIndex + 1;
@@ -188,6 +199,9 @@ export function observationsFromEvidence(scenario, transcriptEvidence, safeEvide
   const promptContractForTurn = (codexTurnIndex) => promptContractEvidence
     .find(({ index }) => codexTurnIndexForSafeEvidence(index, codexTurnIndex) === codexTurnIndex)?.entry;
   for (const [callIndex, call] of calls.entries()) {
+    if (recoveredProjectionIndices.has(callIndex + 1)) {
+      continue;
+    }
     const codexTurnIndex = codexTurnIndexForCall(callIndex);
     const traceLengthBeforeCall = trace.length;
     let expectedFailure = false;
@@ -202,7 +216,6 @@ export function observationsFromEvidence(scenario, transcriptEvidence, safeEvide
       sessionId = call.response?.session_id;
       turnId = call.response?.turn_id;
       cursorSessionId = call.response?.cursor_session_id;
-      expectedEventCursor = call.response?.last_event_id;
       if (sessionId) trace.push({ kind: 'session.allocated', session_id: sessionId,
         ...(call.request?.mode !== undefined ? { mode: call.request.mode } : {}),
         ...(call.request?.model !== undefined ? { model: call.request.model } : {}),
@@ -231,7 +244,6 @@ export function observationsFromEvidence(scenario, transcriptEvidence, safeEvide
     } else if (call.tool === 'cursor_resume_session' && callOutcome === 'succeeded') {
       sessionId = call.response?.session_id;
       turnId = undefined;
-      expectedEventCursor = call.response?.last_event_id;
       expectedProgressRevision = 0;
       trace.push({ kind: 'session.resumed', matched: call.request?.cursor_session_id === cursorSessionId
         && call.response?.cursor_session_id === cursorSessionId,
@@ -241,7 +253,6 @@ export function observationsFromEvidence(scenario, transcriptEvidence, safeEvide
       session_id: sessionId, call_outcome: callOutcome });
     } else if (call.tool === 'cursor_send_prompt' && callOutcome === 'succeeded') {
       turnId = call.response?.turn_id;
-      expectedEventCursor = call.response?.last_event_id;
       expectedProgressRevision = 0;
       if (turnId) {
         trace.push({ kind: 'turn.started', session_id: sessionId, turn_id: turnId, call_outcome: callOutcome });
@@ -258,14 +269,13 @@ export function observationsFromEvidence(scenario, transcriptEvidence, safeEvide
       trace.push({ kind: 'session.mode-changed', mode: call.request?.mode,
         session_id: call.request?.session_id || call.response?.session_id, call_outcome: callOutcome });
     } else if (call.tool === 'cursor_wait') {
-      const cursorMatched = call.request?.after_event_id === expectedEventCursor;
       const timeoutOmitted = call.request?.timeout_ms === undefined;
       const effectiveTimeoutMs = timeoutOmitted ? 30_000 : call.request.timeout_ms;
       const progressRevisionMatched = expectedProgressRevision === 0
         ? call.request?.after_progress_revision === undefined || call.request?.after_progress_revision === 0
         : call.request?.after_progress_revision === expectedProgressRevision;
       if (call.response?.wait_timeout === true) {
-        trace.push({ kind: 'turn.wait-timeout', timeout_ms: effectiveTimeoutMs, timeout_omitted: timeoutOmitted, cursor_matched: cursorMatched,
+        trace.push({ kind: 'turn.wait-timeout', timeout_ms: effectiveTimeoutMs, timeout_omitted: timeoutOmitted,
           progress_revision_matched: progressRevisionMatched, ...ids, call_outcome: callOutcome });
         if (activeFollowupEvidence && !activeFollowupObserved) {
           trace.push({ kind: 'turn.followup-received-active', ...ids, call_outcome: 'succeeded' });
@@ -274,13 +284,12 @@ export function observationsFromEvidence(scenario, transcriptEvidence, safeEvide
         sawWaitTimeout = true;
       }
       if (call.response?.events_lost === true) {
-        trace.push({ kind: 'turn.events-lost', events_lost: true,
-          cursor_matched: cursorMatched, ...ids, call_outcome: callOutcome });
+        trace.push({ kind: 'turn.events-lost', events_lost: true, ...ids, call_outcome: callOutcome });
       }
       const terminalStatus = call.response?.turn_status;
       const terminal = ['completed', 'failed', 'timed_out'].includes(terminalStatus);
       if (terminal && sawWaitTimeout) {
-        trace.push({ kind: 'turn.wait-recovered', timeout_ms: effectiveTimeoutMs, timeout_omitted: timeoutOmitted, cursor_matched: cursorMatched,
+        trace.push({ kind: 'turn.wait-recovered', timeout_ms: effectiveTimeoutMs, timeout_omitted: timeoutOmitted,
           progress_revision_matched: progressRevisionMatched, ...ids, call_outcome: callOutcome });
         sawWaitTimeout = false;
       }
@@ -291,7 +300,6 @@ export function observationsFromEvidence(scenario, transcriptEvidence, safeEvide
         trace.push({ kind: 'session.tombstoned', session_state: call.response.session_state,
           session_id: ids.session_id, call_outcome: callOutcome });
       }
-      expectedEventCursor = call.response?.resume_after_event_id ?? call.response?.last_event_id ?? expectedEventCursor;
       if (Number.isSafeInteger(call.response?.progress_revision)) expectedProgressRevision = call.response.progress_revision;
       for (const event of call.response?.events || []) {
         const evidence = progressEvidence.find(({ kind, step_id: stepId }) => kind === `progress.${event.kind}`
@@ -321,13 +329,16 @@ export function observationsFromEvidence(scenario, transcriptEvidence, safeEvide
         const terminalProof = completedEvidenceRecord?.entry;
         const armedProof = terminalStatus === 'completed' ? null : armedEvidenceRecord?.entry;
         const terminalStepId = terminalProof?.step_id || armedProof?.step_id || 'unobserved:terminal';
+        if (ids.turn_id && typeof terminalProof?.result_sha256 === 'string') {
+          fullResultDigestByTurn.set(ids.turn_id, { sha256: terminalProof.result_sha256, step_id: terminalStepId });
+        }
         const terminalKind = terminalStatus === 'timed_out' ? 'turn.timed-out'
           : terminalStatus === 'failed' ? 'turn.failed' : 'turn.completed';
         trace.push({ kind: terminalKind, step_id: terminalStepId,
           ...ids, call_outcome: callOutcome });
         if (call.response?.terminal_receipt) {
           const receipt = call.response?.terminal_receipt;
-          const expectedDigest = terminalProof?.result_sha256 ?? null;
+          const expectedDigest = call.response?.result?.text_sha256 ?? terminalProof?.result_sha256 ?? null;
           trace.push({ kind: 'turn.receipt', step_id: terminalStepId,
             matched: receipt?.result_sha256 === expectedDigest,
             result_truncated: receipt?.result_truncated === true,
@@ -336,6 +347,18 @@ export function observationsFromEvidence(scenario, transcriptEvidence, safeEvide
         if (terminalStatus === 'completed' && call.response?.session_state === 'tombstone') {
           trace.push({ kind: 'session.tombstoned', session_state: 'tombstone',
             session_id: ids.session_id, call_outcome: callOutcome });
+        }
+      }
+    } else if (call.tool === 'cursor_read_result') {
+      if (call.response?.result_read?.eof === true) {
+        const expected = fullResultDigestByTurn.get(ids.turn_id);
+        const complete = call.response.result_read.complete === true
+          && typeof expected?.sha256 === 'string' && call.response.result_read.sha256 === expected.sha256;
+        if (!complete || !completeResultReadTurns.has(ids.turn_id)) {
+          trace.push({ kind: 'turn.result-read', complete,
+            step_id: expected?.step_id || 'unobserved:terminal',
+            ...ids, call_outcome: callOutcome });
+          if (complete) completeResultReadTurns.add(ids.turn_id);
         }
       }
     } else if (call.tool === 'cursor_session_status' && callOutcome === 'succeeded'
@@ -358,18 +381,21 @@ export function observationsFromEvidence(scenario, transcriptEvidence, safeEvide
       const requestId = call.request?.request_id;
       const observedCallback = callbackById.get(String(requestId)) || callbackEvidence.find(({ kind }) => kind === 'callback.failure');
       const requestKind = call.tool.slice('cursor_answer_'.length);
-      expectedEventCursor = call.response?.last_event_id ?? expectedEventCursor;
       trace.push({ kind: `answer.${requestKind}`, step_id: observedCallback?.step_id || `unobserved:${requestId}`,
         ...ids, request_id: requestId, call_outcome: callOutcome,
         codex_turn_index: codexTurnIndex,
         ...(requestKind === 'question' ? { option_ids: call.request?.answers?.flatMap(({ selected_option_ids: optionIds }) => optionIds || []) || [] }
           : { decision: call.request?.decision }) });
+    } else if (call.tool === 'cursor_close_session' && callOutcome === 'failed') {
+      trace.push({ kind: 'call.failed', ...ids, call_outcome: callOutcome });
+      expectedFailure = true;
     } else if (call.tool === 'cursor_close_session') {
       const closeTurnId = call.request?.turn_id || call.response?.turn_id || call.response?.terminal_receipt?.turn_id;
       const closedSessionId = call.request?.session_id || call.response?.session_id;
       // Wrapper-loss scenarios require the observed tombstone, rather than only
       // the caller's close attempt, before an explicit resume is admissible.
       if (call.response?.session_state === 'tombstone'
+        && !trace.some(({ kind, session_id: observedSessionId }) => kind === 'session.tombstoned' && observedSessionId === closedSessionId)
         && scenario.expected_trace.some(({ kind }) => kind === 'session.tombstoned')
         && calls.slice(callIndex + 1).some(({ tool }) => tool === 'cursor_resume_session')) {
         trace.push({ kind: 'session.tombstoned', session_state: 'tombstone',
@@ -382,7 +408,9 @@ export function observationsFromEvidence(scenario, transcriptEvidence, safeEvide
     } else {
       trace.push({ kind: 'unexpected-operation', ...ids, call_outcome: callOutcome });
     }
-    if (trace.length === traceLengthBeforeCall) trace.push({ kind: 'call.observed', ...ids, call_outcome: callOutcome });
+    if (trace.length === traceLengthBeforeCall && !(call.tool === 'cursor_read_result' && callOutcome === 'succeeded')) {
+      trace.push({ kind: 'call.observed', ...ids, call_outcome: callOutcome });
+    }
     if (callOutcome !== 'succeeded' && !expectedFailure) trace.push({ kind: 'call.failed', ...ids, call_outcome: callOutcome });
   }
   if (transcriptEvidence.dropped_calls > 0) trace.push({ kind: 'dropped-calls', session_id: sessionId, turn_id: turnId,
@@ -393,6 +421,26 @@ export function observationsFromEvidence(scenario, transcriptEvidence, safeEvide
   const effects = safeEvidence.filter(({ kind }) => kind?.startsWith('effect.file-'))
     .map(({ step_id, callback_id, kind }) => ({ step_id, callback_id, kind }));
   return { trace, callbacks, effects, ...outcomes };
+}
+
+function scoreWithCapturedFinals(scenario, observations, reports = null) {
+  const count = (scenario.followups?.length || 0) + 1;
+  const checks = scenario.report_checks || [];
+  const texts = reports || Array.from({ length: count }, (_value, index) => checks
+    .filter(({ turn_index: turnIndex }) => turnIndex === index + 1)
+    .flatMap(({ required_fragments: fragments }) => fragments.map((fragment) => Array.isArray(fragment) ? fragment[0] : fragment))
+    .join('\n') || 'completed');
+  const scenarioForScore = { ...scenario, followups: scenario.followups || [], report_checks: scenario.report_checks?.map((check, index, checks) => ({
+    turn_index: check.turn_index, category: check.category || 'interaction',
+    required_fragments: check.required_fragments, forbidden_fragments: check.forbidden_fragments,
+  })) || [],
+  };
+  const capturedFinals = Array.from({ length: count }, (_, index) => ({
+    turn_index: index + 1, text: texts[index] ?? '', turn_id: `codex-turn-${index + 1}`,
+    turn_status: 'completed', phase: 'final_answer', source: 'thread/items/list',
+    completeness: 'complete', error_code: null,
+  }));
+  return evaluateScenario(scenarioForScore, { ...observations, captured_finals: capturedFinals });
 }
 
 export async function resolveHostedAuthFile(env = process.env, dependencies = {}) {
@@ -437,7 +485,7 @@ test('observed MCP transcript drives oracle order, IDs, call outcomes and droppe
       { kind: 'answer.question', step_id: 'question-1', option_ids: ['yes'] }, { kind: 'turn.completed', step_id: 'terminal-1' },
       { kind: 'session.close-attempted' },
     ],
-    expected_actual_task_outcome: 'succeeded', expected_reported_task_outcome: 'succeeded', expected_enabled_eval_status: 'pass',
+    expected_actual_task_outcome: 'succeeded', expected_enabled_eval_status: 'pass',
   };
   let callId = 0;
   const call = (tool, request, response) => ({ direction: 'request', tool, call_id: ++callId, request, response });
@@ -447,14 +495,40 @@ test('observed MCP transcript drives oracle order, IDs, call outcomes and droppe
   const terminal = call('cursor_wait', { session_id: 'session-1', turn_id: 'turn-1' }, { ok: true, turn_status: 'completed' });
   const close = call('cursor_close_session', { session_id: 'session-1' }, { ok: true });
   const safe = [{ kind: 'answer', step_id: 'question-1', callback_id: 'request-1', option_ids: ['yes'] }, { event: 'prompt_result', step_id: 'terminal-1' }];
-  const outcomes = { actual_task_outcome: 'succeeded', reported_task_outcome: 'succeeded' };
+  const outcomes = { actual_task_outcome: 'succeeded', reported_task_outcome: 'not_checked' };
   const observe = (calls, safeEvidence = safe, droppedCalls = 0) => observationsFromEvidence(scenario, { calls, dropped_calls: droppedCalls }, safeEvidence, outcomes);
-  assert.equal(evaluateScenario(scenario, observe([delegate, pending, answer, terminal, close])).eval_status, 'pass');
+  assert.equal(scoreWithCapturedFinals(scenario, observe([delegate, pending, answer, terminal, close])).eval_status, 'pass');
 
-  const answerBeforePending = evaluateScenario(scenario, observe([delegate, answer, pending, terminal, close]));
+  const watermarkedPending = structuredClone(pending); watermarkedPending.response.last_event_id = 4;
+  const watermarkedAnswer = structuredClone(answer); watermarkedAnswer.response.last_event_id = 6;
+  for (const afterEventId of [4, 6, 0, undefined]) {
+    const nextWait = structuredClone(terminal);
+    if (afterEventId === undefined) delete nextWait.request.after_event_id;
+    else nextWait.request.after_event_id = afterEventId;
+    assert.equal(scoreWithCapturedFinals(scenario,
+      observe([delegate, watermarkedPending, watermarkedAnswer, nextWait, close])).eval_status, 'pass');
+  }
+  const repeatedCursorScenario = structuredClone(scenario);
+  repeatedCursorScenario.expected_trace.splice(4, 0,
+    { kind: 'turn.wait-timeout', timeout_ms: 1000, timeout_omitted: false, progress_revision_matched: true },
+    { kind: 'turn.wait-recovered', timeout_ms: 2000, timeout_omitted: false, progress_revision_matched: true });
+  const repeatedCursorWait = structuredClone(terminal);
+  repeatedCursorWait.request = { ...repeatedCursorWait.request, after_event_id: 4, timeout_ms: 1000 };
+  repeatedCursorWait.response = { ok: true, session_id: 'session-1', turn_id: 'turn-1', turn_status: 'running', wait_timeout: true };
+  const repeatedCursorTerminal = structuredClone(terminal);
+  repeatedCursorTerminal.request = { ...repeatedCursorTerminal.request, after_event_id: 4, timeout_ms: 2000 };
+  const repeatedCursorObservations = observationsFromEvidence(repeatedCursorScenario,
+    { calls: [delegate, watermarkedPending, watermarkedAnswer, repeatedCursorWait, repeatedCursorTerminal, close], dropped_calls: 0 }, safe, outcomes);
+  assert.equal(scoreWithCapturedFinals(repeatedCursorScenario, repeatedCursorObservations).eval_status, 'pass');
+  const futureWait = structuredClone(terminal); futureWait.request.after_event_id = 7;
+  futureWait.response = { ok: false, error_code: 'invalid_args' };
+  assert.equal(scoreWithCapturedFinals(scenario,
+    observe([delegate, watermarkedPending, watermarkedAnswer, futureWait, close])).eval_status, 'agent_behavior_mismatch');
+
+  const answerBeforePending = scoreWithCapturedFinals(scenario, observe([delegate, answer, pending, terminal, close]));
   assert.ok(answerBeforePending.mismatches.includes('answer-before-pending'));
   const wrongIdAnswer = structuredClone(answer); wrongIdAnswer.request.request_id = 'wrong-request';
-  const wrongId = evaluateScenario(scenario, observe([delegate, pending, wrongIdAnswer, terminal, close,
+  const wrongId = scoreWithCapturedFinals(scenario, observe([delegate, pending, wrongIdAnswer, terminal, close,
   ], [{ kind: 'callback.failure', step_id: 'question-1', callback_id: 'request-1', reason: 'id-mismatch' }, ...safe.slice(1)]));
   assert.ok(wrongId.mismatches.includes('id-mismatch'));
   const staleRecoveryScenario = structuredClone(scenario);
@@ -464,10 +538,10 @@ test('observed MCP transcript drives oracle order, IDs, call outcomes and droppe
   const staleAnswer = call('cursor_answer_question', {
     session_id: 'session-1', turn_id: 'turn-1', request_id: 'stale-request', answers: [{ selected_option_ids: ['yes'] }],
   }, { ok: false, session_id: 'session-1', turn_id: 'turn-1', error_code: 'unknown_request' });
-  assert.equal(evaluateScenario(staleRecoveryScenario, observe([delegate, pending, staleAnswer, pending, answer, terminal, close])).eval_status, 'pass');
+  assert.equal(scoreWithCapturedFinals(staleRecoveryScenario, observe([delegate, pending, staleAnswer, pending, answer, terminal, close])).eval_status, 'pass');
   const failedAnswer = structuredClone(answer); failedAnswer.response.ok = false;
-  assert.ok(evaluateScenario(scenario, observe([delegate, pending, failedAnswer, terminal, close])).mismatches.includes('trace-mismatch'));
-  assert.ok(evaluateScenario(scenario, observe([delegate, pending, answer, terminal, close,
+  assert.ok(scoreWithCapturedFinals(scenario, observe([delegate, pending, failedAnswer, terminal, close])).mismatches.includes('trace-mismatch'));
+  assert.ok(scoreWithCapturedFinals(scenario, observe([delegate, pending, answer, terminal, close,
     call('cursor_session_status', { session_id: 'session-1' }, { ok: true })])).mismatches.includes('operation-after-close'));
   const failedResumeCleanup = {
     ...scenario,
@@ -479,18 +553,18 @@ test('observed MCP transcript drives oracle order, IDs, call outcomes and droppe
       { kind: 'session.close-attempted' },
     ],
   };
-  const failedResumeCleanupResult = evaluateScenario(failedResumeCleanup, {
+  const failedResumeCleanupResult = scoreWithCapturedFinals(failedResumeCleanup, {
     trace: [
       { kind: 'session.allocated', mode: 'ask', session_id: 'session-old', call_outcome: 'succeeded' },
       { kind: 'session.tombstoned', session_state: 'tombstone', session_id: 'session-old', call_outcome: 'succeeded' },
       { kind: 'session.resume-failed', matched: true, session_id: 'session-failed', call_outcome: 'succeeded' },
       { kind: 'session.close-attempted', session_id: 'session-failed', call_outcome: 'succeeded' },
-    ], callbacks: [], effects: [], actual_task_outcome: 'succeeded', reported_task_outcome: 'succeeded', dropped_calls: 0,
+    ], callbacks: [], effects: [], actual_task_outcome: 'succeeded', reported_task_outcome: 'not_checked', dropped_calls: 0,
   });
   assert.equal(failedResumeCleanupResult.eval_status, 'pass', JSON.stringify(failedResumeCleanupResult));
   const overflow = observe([delegate, pending, answer, terminal, close], safe, 3);
   assert.equal(overflow.trace.at(-1).dropped_calls, 3);
-  assert.equal(evaluateScenario(scenario, overflow).eval_status, 'agent_behavior_mismatch');
+  assert.equal(scoreWithCapturedFinals(scenario, overflow).eval_status, 'agent_behavior_mismatch');
 });
 
 test('session-level observations do not inherit a prior turn ID', () => {
@@ -502,7 +576,7 @@ test('session-level observations do not inherit a prior turn ID', () => {
       { kind: 'turn.completed', step_id: 'terminal-1' }, { kind: 'session.mode-changed', mode: 'plan' },
       { kind: 'session.close-attempted' },
     ],
-    expected_actual_task_outcome: 'succeeded', expected_reported_task_outcome: 'succeeded', expected_enabled_eval_status: 'pass',
+    expected_actual_task_outcome: 'succeeded', expected_enabled_eval_status: 'pass',
   };
   const calls = [
     { tool: 'cursor_delegate', request: { mode: 'ask' }, response: { ok: true, session_id: 'S', turn_id: 'T' } },
@@ -512,11 +586,73 @@ test('session-level observations do not inherit a prior turn ID', () => {
   ];
   const observations = observationsFromEvidence(scenario, { calls, dropped_calls: 0 },
     [{ event: 'prompt_result', step_id: 'terminal-1' }],
-    { actual_task_outcome: 'succeeded', reported_task_outcome: 'succeeded' });
+    { actual_task_outcome: 'succeeded', reported_task_outcome: 'not_checked' });
   for (const entry of observations.trace.filter(({ kind }) => ['session.mode-changed', 'session.close-attempted'].includes(kind))) {
     assert.equal(Object.hasOwn(entry, 'turn_id'), false);
   }
-  assert.deepEqual(evaluateScenario(scenario, observations).mismatches, []);
+  assert.deepEqual(scoreWithCapturedFinals(scenario, observations).mismatches, []);
+
+  const privatePrompt = 'private close rationale';
+  const argumentsDigest = sha256(privatePrompt);
+  const recoveredCloseCalls = [...calls.slice(0, -1),
+    { tool: 'cursor_close_session', request: { session_id: 'typo', arguments_without_session_turn_sha256: argumentsDigest },
+      response: { ok: false, error_code: 'unknown_session' } },
+    { tool: 'cursor_close_session', request: { session_id: 'S', arguments_without_session_turn_sha256: argumentsDigest },
+      response: { ok: true, session_id: 'S', session_state: 'tombstone' } }];
+  const recoveryTranscript = { calls: recoveredCloseCalls, dropped_calls: 0,
+    turn_call_ranges: [{ start: 0, end: recoveredCloseCalls.length }], unexpected_input_requests: 0 };
+  const recoveredClose = observationsFromEvidence(scenario, recoveryTranscript,
+    [{ event: 'prompt_result', step_id: 'terminal-1' }],
+    { actual_task_outcome: 'succeeded', reported_task_outcome: 'not_checked' });
+  assert.equal(recoveryTranscript.calls.filter(({ tool }) => tool === 'cursor_close_session').length, 2);
+  assert.equal(recoveredClose.trace.filter(({ kind }) => kind === 'session.close-attempted').length, 1);
+  assert.deepEqual(recoveredClose.trace, observations.trace);
+  assert.equal(JSON.stringify(recoveryTranscript).includes(privatePrompt), false);
+
+  for (const diagnosticCount of [1, 2]) {
+    const withStatus = structuredClone(recoveryTranscript);
+    withStatus.calls.splice(-1, 0, ...Array.from({ length: diagnosticCount }, () => ({
+      tool: 'cursor_session_status', request: { session_id: 'S', arguments_without_session_turn_sha256: sha256('{}') },
+      response: { ok: true, session_id: 'S', session_state: 'live' },
+    })));
+    withStatus.turn_call_ranges[0].end = withStatus.calls.length;
+    const original = structuredClone(withStatus);
+    const projected = observationsFromEvidence(scenario, withStatus,
+      [{ event: 'prompt_result', step_id: 'terminal-1' }],
+      { actual_task_outcome: 'succeeded', reported_task_outcome: 'not_checked' });
+    assert.equal(scoreWithCapturedFinals(scenario, { ...projected, transcript: withStatus }).eval_status, 'pass');
+    assert.deepEqual(withStatus, original);
+    withStatus.calls.at(-2).request.turn_id = 'T';
+    const malformed = observationsFromEvidence(scenario, withStatus,
+      [{ event: 'prompt_result', step_id: 'terminal-1' }],
+      { actual_task_outcome: 'succeeded', reported_task_outcome: 'not_checked' });
+    assert.equal(scoreWithCapturedFinals(scenario, { ...malformed, transcript: withStatus }).eval_status, 'agent_behavior_mismatch');
+  }
+
+  const cursorScenario = structuredClone(scenario);
+  cursorScenario.expected_trace.splice(2, 0, { kind: 'turn.events-lost', events_lost: true });
+  const cursorCalls = structuredClone(calls);
+  cursorCalls[0].response.last_event_id = 2;
+  cursorCalls[1].request = { session_id: 'S', turn_id: 'T', after_event_id: 3,
+    arguments_without_session_turn_sha256: sha256(canonicalJson({ after_event_id: 3 })) };
+  cursorCalls[1].response.events_lost = true;
+  cursorCalls.splice(1, 0,
+    { tool: 'cursor_wait', request: { arguments_without_session_turn_sha256: sha256('{}') },
+      response: { ok: false, error_code: 'invalid_args' } },
+    { tool: 'cursor_session_status', request: { session_id: 'S', arguments_without_session_turn_sha256: sha256('{}') },
+      response: { ok: true, session_id: 'S', last_event_id: 3 } });
+  const cursorTranscript = { calls: cursorCalls, dropped_calls: 0, unexpected_input_requests: 0,
+    turn_call_ranges: [{ start: 0, end: cursorCalls.length }] };
+  const cursorObservation = observationsFromEvidence(cursorScenario, cursorTranscript,
+    [{ event: 'prompt_result', step_id: 'terminal-1' }],
+    { actual_task_outcome: 'succeeded', reported_task_outcome: 'not_checked' });
+  assert.equal(scoreWithCapturedFinals(cursorScenario, { ...cursorObservation, transcript: cursorTranscript }).eval_status, 'pass');
+
+  const missingRecoveryProof = { calls: recoveredCloseCalls, dropped_calls: 0 };
+  const unrecoveredClose = observationsFromEvidence(scenario, missingRecoveryProof,
+    [{ event: 'prompt_result', step_id: 'terminal-1' }],
+    { actual_task_outcome: 'succeeded', reported_task_outcome: 'not_checked' });
+  assert.ok(unrecoveredClose.trace.some(({ kind }) => kind === 'call.failed'));
 });
 
 test('runtime recovery trace proves the old wrapper tombstone without duplicating terminal evidence', () => {
@@ -530,7 +666,7 @@ test('runtime recovery trace proves the old wrapper tombstone without duplicatin
       { kind: 'session.resumed', matched: true }, { kind: 'turn.started' }, { kind: 'turn.completed', step_id: 'terminal-2' },
       { kind: 'turn.receipt', step_id: 'terminal-2', matched: true, result_truncated: false }, { kind: 'session.close-attempted' },
     ],
-    expected_actual_task_outcome: 'succeeded', expected_reported_task_outcome: 'succeeded', expected_enabled_eval_status: 'pass',
+    expected_actual_task_outcome: 'succeeded', expected_enabled_eval_status: 'pass',
   };
   const digest1 = 'a'.repeat(64); const digest2 = 'b'.repeat(64);
   const calls = [
@@ -547,28 +683,51 @@ test('runtime recovery trace proves the old wrapper tombstone without duplicatin
     { event: 'prompt_result', step_id: 'terminal-2', result_sha256: digest2 },
   ];
   const observations = observationsFromEvidence(scenario, { calls, dropped_calls: 0 }, safe,
-    { actual_task_outcome: 'succeeded', reported_task_outcome: 'succeeded' });
+    { actual_task_outcome: 'succeeded', reported_task_outcome: 'not_checked' });
   assert.equal(observations.trace.filter(({ kind }) => kind === 'turn.completed').length, 2);
-  assert.equal(evaluateScenario(scenario, observations).eval_status, 'pass');
+  assert.equal(scoreWithCapturedFinals(scenario, observations).eval_status, 'pass');
   const directTombstoneCalls = structuredClone(calls);
   directTombstoneCalls[1].response.session_state = 'tombstone';
   directTombstoneCalls.splice(2, 1);
   const directTombstone = observationsFromEvidence(scenario, { calls: directTombstoneCalls, dropped_calls: 0 }, safe,
-    { actual_task_outcome: 'succeeded', reported_task_outcome: 'succeeded' });
+    { actual_task_outcome: 'succeeded', reported_task_outcome: 'not_checked' });
   const firstTerminal = directTombstone.trace.findIndex(({ kind }) => kind === 'turn.completed');
   assert.deepEqual(directTombstone.trace.slice(firstTerminal, firstTerminal + 3).map(({ kind }) => kind),
     ['turn.completed', 'turn.receipt', 'session.tombstoned']);
-  assert.equal(evaluateScenario(scenario, directTombstone).eval_status, 'pass');
+  assert.equal(scoreWithCapturedFinals(scenario, directTombstone).eval_status, 'pass');
+  const idempotentCloseCalls = structuredClone(directTombstoneCalls);
+  idempotentCloseCalls.splice(2, 0, {
+    tool: 'cursor_close_session', request: { session_id: 'session-1' },
+    response: { ok: true, session_id: 'session-1', session_state: 'tombstone' },
+  });
+  const idempotentClose = observationsFromEvidence(scenario, { calls: idempotentCloseCalls, dropped_calls: 0 }, safe,
+    { actual_task_outcome: 'succeeded', reported_task_outcome: 'not_checked' });
+  assert.deepEqual(idempotentClose.trace.slice(firstTerminal, firstTerminal + 4).map(({ kind }) => kind),
+    ['turn.completed', 'turn.receipt', 'session.tombstoned', 'session.close-attempted']);
+  assert.equal(scoreWithCapturedFinals(scenario, idempotentClose).eval_status, 'pass');
+  const repeatedTombstoneCalls = structuredClone(directTombstoneCalls);
+  repeatedTombstoneCalls.splice(2, 0, structuredClone(repeatedTombstoneCalls[1]));
+  const repeatedTombstone = observationsFromEvidence(scenario, { calls: repeatedTombstoneCalls, dropped_calls: 0 }, safe,
+    { actual_task_outcome: 'succeeded', reported_task_outcome: 'not_checked' });
+  assert.ok(scoreWithCapturedFinals(scenario, repeatedTombstone).mismatches.includes('operation-after-close'));
+  const postCloseDelegateCalls = structuredClone(idempotentCloseCalls);
+  postCloseDelegateCalls.splice(3, 0, {
+    tool: 'cursor_delegate', request: { mode: 'ask' },
+    response: { ok: true, session_id: 'session-replacement', turn_id: 'turn-replacement', cursor_session_id: 'cursor-replacement' },
+  });
+  const postCloseDelegate = observationsFromEvidence(scenario, { calls: postCloseDelegateCalls, dropped_calls: 0 }, safe,
+    { actual_task_outcome: 'succeeded', reported_task_outcome: 'not_checked' });
+  assert.ok(scoreWithCapturedFinals(scenario, postCloseDelegate).mismatches.includes('operation-after-close'));
   const closeTombstoneCalls = structuredClone(calls);
   closeTombstoneCalls[2] = {
     tool: 'cursor_close_session', request: { session_id: 'session-1' },
     response: { ok: true, session_id: 'session-1', session_state: 'tombstone' },
   };
   const closeTombstone = observationsFromEvidence(scenario, { calls: closeTombstoneCalls, dropped_calls: 0 }, safe,
-    { actual_task_outcome: 'succeeded', reported_task_outcome: 'succeeded' });
+    { actual_task_outcome: 'succeeded', reported_task_outcome: 'not_checked' });
   assert.deepEqual(closeTombstone.trace.slice(firstTerminal, firstTerminal + 3).map(({ kind }) => kind),
     ['turn.completed', 'turn.receipt', 'session.tombstoned']);
-  assert.equal(evaluateScenario(scenario, closeTombstone).eval_status, 'pass');
+  assert.equal(scoreWithCapturedFinals(scenario, closeTombstone).eval_status, 'pass');
 });
 
 test('scripted providers use distinct OS-assigned endpoints in parallel', async (t) => {
@@ -577,7 +736,7 @@ test('scripted providers use distinct OS-assigned endpoints in parallel', async 
   assert.notEqual(providers[0].endpoint, providers[1].endpoint);
 });
 
-test('timeout acceleration preload scopes each runtime timer to its own fault flag', async () => {
+test('timeout acceleration preload scopes the admitted turn and wait timers to their own fault flags', async () => {
   const probe = async (flag) => new Promise((resolveProbe, rejectProbe) => {
     const source = `const delays=[3600000,15000,30000];const fired={};await Promise.all(delays.map((delay)=>new Promise((done)=>{let value=false;const handle=setTimeout(()=>{value=true;},delay);setTimeout(()=>{clearTimeout(handle);fired[delay]=value;done();},250);})));process.stdout.write(JSON.stringify(fired));`;
     const env = { ...process.env, NODE_OPTIONS: `--import=${turnTimeoutPreload}`, ...(flag ? { [flag]: '1' } : {}) };
@@ -590,12 +749,11 @@ test('timeout acceleration preload scopes each runtime timer to its own fault fl
       ? resolveProbe(JSON.parse(Buffer.concat(stdout).toString('utf8')))
       : rejectProbe(new Error(Buffer.concat(stderr).toString('utf8'))));
   });
-  const [none, turn, mode, wait] = await Promise.all([
-    probe(null), probe('FAKE_ACP_ACCELERATE_TURN_TIMEOUT'), probe('FAKE_ACP_ACCELERATE_MODE_TIMEOUT'), probe('FAKE_ACP_ACCELERATE_WAIT_TIMEOUT'),
+  const [none, turn, wait] = await Promise.all([
+    probe(null), probe('FAKE_ACP_ACCELERATE_TURN_TIMEOUT'), probe('FAKE_ACP_ACCELERATE_WAIT_TIMEOUT'),
   ]);
   assert.deepEqual(none, { 15000: false, 30000: false, 3600000: false });
   assert.deepEqual(turn, { 15000: false, 30000: false, 3600000: true });
-  assert.deepEqual(mode, { 15000: true, 30000: false, 3600000: false });
   assert.deepEqual(wait, { 15000: false, 30000: true, 3600000: false });
 });
 
@@ -626,171 +784,144 @@ test('hosted credential resolution supports explicit and portable paths with a c
   assert.deepEqual(seen, ['/fixture/auth.json', '/portable/home/.codex/auth.json']);
 });
 
-function reportBindingValues(transcriptEvidence, binding, turnIndex, reportContext) {
-  if (binding === 'next_provider_operation_requires_new_user_decision') return [true];
-  if (binding === 'work_in_progress') return [true];
-  if (binding === 'observation_gap') return [true];
-  if (binding === 'history_reconstructed') return [false];
-  if (binding === 'evidence_scope') return ['current_normalized_state'];
-  const range = transcriptEvidence?.turn_call_ranges?.[turnIndex - 1];
-  if (!range || !Number.isSafeInteger(range.start) || !Number.isSafeInteger(range.end)
-    || range.start < 0 || range.end < range.start) return [];
-  const allCalls = transcriptEvidence.calls || [];
-  let segmentStartIndex = -1;
-  for (let index = 0; index < range.end; index += 1) {
-    const { tool, response } = allCalls[index] || {};
-    if (['cursor_delegate', 'cursor_resume_session'].includes(tool) && response?.ok === true
-      && typeof response?.session_id === 'string') segmentStartIndex = index;
-  }
-  const turnCalls = allCalls.slice(range.start, range.end);
-  if (['cursor_session_id', 'model', 'effort', 'fast', 'plugin_dir'].includes(binding)) {
-    const segmentStart = allCalls[segmentStartIndex];
-    if (!segmentStart) return [];
-    if (binding === 'plugin_dir') return segmentStart.request?.plugin_dirs_matched === true
-      && typeof reportContext?.plugin_dir === 'string' ? [reportContext.plugin_dir] : [];
-    if (binding === 'cursor_session_id') return typeof segmentStart.response.cursor_session_id === 'string'
-      ? [segmentStart.response.cursor_session_id] : [];
-    const value = segmentStart.request?.[binding] ?? segmentStart.response?.[binding];
-    return value === undefined || value === null ? [] : [value];
-  }
-  if (binding === 'session_id' || binding === 'turn_id') {
-    const currentCall = turnCalls.findLast(({ request, response }) =>
-      request?.[binding] !== undefined || response?.[binding] !== undefined);
-    return currentCall ? [currentCall.request?.[binding], currentCall.response?.[binding]]
-      .filter((value) => value !== undefined && value !== null) : [];
-  }
-  const responses = turnCalls.flatMap(({ response }) => response ? [response] : []);
-  if (binding === 'pending_request_id') return responses.flatMap(({ pending }) => (pending || []).map(({ request_id: requestId }) => requestId));
-  if (binding === 'terminal_result_sha256') {
-    const receipt = responses.findLast(({ terminal_receipt: candidate }) => candidate)?.terminal_receipt;
-    return receipt?.result_sha256 ? [receipt.result_sha256] : [];
-  }
-  if (['terminal_receipt', 'terminal_reason', 'provider_error'].includes(binding)) {
-    const response = responses.findLast((candidate) => candidate[binding] !== undefined && candidate[binding] !== null);
-    return response ? [response[binding]] : [];
-  }
-  return responses.flatMap((response) => response[binding] === undefined || response[binding] === null ? [] : [response[binding]]);
-}
+test('recording proxy proves a full result only after sequential paging reaches EOF', async (t) => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'cursor-result-read-proof-')));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const target = join(root, 'target.mjs');
+  const evidence = join(root, 'evidence.json');
+  await writeFile(target, `import { createInterface } from 'node:readline';
+const pages = [{offset:0,next_offset:3,eof:false,text:'abc',total_bytes:6,sha256:'${sha256('abcdef')}'},{offset:3,next_offset:null,eof:true,text:'def',total_bytes:6,sha256:'${sha256('abcdef')}'}];
+for await (const line of createInterface({input:process.stdin})) { const request=JSON.parse(line); const page=pages.shift(); process.stdout.write(JSON.stringify({jsonrpc:'2.0',id:request.id,result:{isError:false,content:[{type:'text',text:JSON.stringify({session_id:'S',turn_id:'T',...page})}]}})+'\\n'); }
+`, 'utf8');
+  const recorder = fileURLToPath(new URL('../scripts/recording-mcp-proxy.mjs', import.meta.url));
+  const child = spawn(process.execPath, [recorder, target], { env: { ...process.env, CURSOR_EVAL_MCP_EVIDENCE: evidence }, stdio: ['pipe', 'ignore', 'pipe'] });
+  const errors = []; child.stderr.on('data', (chunk) => errors.push(chunk));
+  for (const [id, offset] of [[1, 0], [2, 3]]) child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id, method: 'tools/call', params: {
+    name: 'cursor_read_result', arguments: { session_id: 'S', turn_id: 'T', offset },
+  } })}\n`);
+  child.stdin.end();
+  const code = await new Promise((resolveClose) => child.once('close', resolveClose));
+  assert.equal(code, 0, Buffer.concat(errors).toString('utf8'));
+  const published = JSON.parse(await readFile(evidence, 'utf8'));
+  assert.deepEqual(published.transcript.map(({ response }) => response.result_read), [
+    { complete: false, eof: false },
+    { complete: true, eof: true, total_bytes: 6, sha256: sha256('abcdef') },
+  ]);
+});
 
-function parsedReportObjects(text) {
-  const objects = [];
-  const collect = (value) => {
-    if (!value || Array.isArray(value) || typeof value !== 'object') return;
-    objects.push(value);
-    for (const nested of Object.values(value)) collect(nested);
+test('observer separates preview receipt proof from complete full-result paging proof', () => {
+  const previewDigest = sha256('preview'); const fullDigest = sha256('preview-tail');
+  const scenario = {
+    scenario_kind: 'programmed', followups: [],
+    expected_actual_task_outcome: 'succeeded', expected_enabled_eval_status: 'pass', report_checks: [],
+    program: { steps: [{ type: 'terminal', step_id: 'terminal-1', turn_status: 'completed', result_text: 'preview-tail' }] },
+    expected_trace: [
+      { kind: 'session.allocated', mode: 'ask' }, { kind: 'turn.started' },
+      { kind: 'turn.completed', step_id: 'terminal-1' },
+      { kind: 'turn.receipt', step_id: 'terminal-1', matched: true, result_truncated: true },
+      { kind: 'turn.result-read', step_id: 'terminal-1', complete: true },
+      { kind: 'session.close-attempted' },
+    ],
   };
-  for (let start = 0; start < text.length; start += 1) {
-    if (text[start] !== '{') continue;
-    let depth = 0; let quoted = false; let escaped = false;
-    for (let end = start; end < text.length; end += 1) {
-      const character = text[end];
-      if (quoted) {
-        if (escaped) escaped = false;
-        else if (character === '\\') escaped = true;
-        else if (character === '"') quoted = false;
-      } else if (character === '"') quoted = true;
-      else if (character === '{') depth += 1;
-      else if (character === '}') {
-        depth -= 1;
-        if (depth === 0) {
-          try { collect(JSON.parse(text.slice(start, end + 1))); } catch {}
-          start = end;
-          break;
-        }
-      }
-    }
-  }
-  return objects;
-}
+  const calls = [
+    { tool: 'cursor_delegate', request: { mode: 'ask' }, response: { ok: true, session_id: 'S', turn_id: 'T' } },
+    { tool: 'cursor_wait', request: { session_id: 'S', turn_id: 'T' }, response: { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'completed',
+      result: { text_bytes: 7, text_sha256: previewDigest, truncated: true },
+      terminal_receipt: { result_sha256: previewDigest, result_truncated: true } } },
+    { tool: 'cursor_read_result', request: { session_id: 'S', turn_id: 'T', offset: 0 }, response: { ok: true, session_id: 'S', turn_id: 'T', result_read: { complete: false, eof: false } } },
+    { tool: 'cursor_read_result', request: { session_id: 'S', turn_id: 'T', offset: 7 }, response: { ok: true, session_id: 'S', turn_id: 'T', result_read: { complete: true, eof: true, total_bytes: 12, sha256: fullDigest } } },
+    { tool: 'cursor_close_session', request: { session_id: 'S' }, response: { ok: true, session_id: 'S' } },
+  ];
+  const observations = observationsFromEvidence(scenario, { calls, dropped_calls: 0 },
+    [{ event: 'prompt_result', step_id: 'terminal-1', result_sha256: fullDigest }],
+    { actual_task_outcome: 'succeeded' });
+  assert.deepEqual(observations.trace.map(({ kind, matched, complete }) => ({ kind, ...(matched === undefined ? {} : { matched }),
+    ...(complete === undefined ? {} : { complete }) })), [
+    { kind: 'session.allocated' }, { kind: 'turn.started' }, { kind: 'turn.completed' },
+    { kind: 'turn.receipt', matched: true }, { kind: 'turn.result-read', complete: true },
+    { kind: 'session.close-attempted' },
+  ]);
 
-function parsedRootReportObjects(text) {
-  const objects = [];
-  for (let start = 0; start < text.length; start += 1) {
-    if (text[start] !== '{') continue;
-    let depth = 0; let quoted = false; let escaped = false;
-    for (let end = start; end < text.length; end += 1) {
-      const character = text[end];
-      if (quoted) {
-        if (escaped) escaped = false;
-        else if (character === '\\') escaped = true;
-        else if (character === '"') quoted = false;
-      } else if (character === '"') quoted = true;
-      else if (character === '{') depth += 1;
-      else if (character === '}') {
-        depth -= 1;
-        if (depth === 0) {
-          try { objects.push(JSON.parse(text.slice(start, end + 1))); } catch {}
-          start = end;
-          break;
-        }
-      }
-    }
-  }
-  return objects;
-}
+  const precloseAndPostcloseReread = [...calls, calls[2], calls[3]];
+  assert.equal(precloseAndPostcloseReread.filter(({ tool }) => tool === 'cursor_read_result').length, 4);
+  const rereadObservations = observationsFromEvidence(scenario, { calls: precloseAndPostcloseReread, dropped_calls: 0 },
+    [{ event: 'prompt_result', step_id: 'terminal-1', result_sha256: fullDigest }],
+    { actual_task_outcome: 'succeeded' });
+  assert.deepEqual(rereadObservations.trace.filter(({ kind }) => kind === 'turn.result-read'), [
+    { kind: 'turn.result-read', complete: true, step_id: 'terminal-1', session_id: 'S', turn_id: 'T', call_outcome: 'succeeded' },
+  ]);
+  assert.equal(scoreWithCapturedFinals(scenario, rereadObservations).eval_status, 'pass');
 
-function reportBindingValue(reportObject, binding) {
-  if (binding === 'pending_request_id') return reportObject.request_id;
-  if (binding === 'terminal_result_sha256') return reportObject.terminal_receipt?.result_sha256;
-  if (binding === 'plugin_dir') return Array.isArray(reportObject.plugin_dirs) ? reportObject.plugin_dirs : [];
-  return reportObject[binding];
-}
+  const firstCompleteAfterClose = observationsFromEvidence(scenario,
+    { calls: [calls[0], calls[1], calls[4], calls[2], calls[3]], dropped_calls: 0 },
+    [{ event: 'prompt_result', step_id: 'terminal-1', result_sha256: fullDigest }],
+    { actual_task_outcome: 'succeeded' });
+  assert.ok(firstCompleteAfterClose.trace.findIndex(({ kind }) => kind === 'session.close-attempted')
+    < firstCompleteAfterClose.trace.findIndex(({ kind }) => kind === 'turn.result-read'));
+  assert.equal(scoreWithCapturedFinals(scenario, firstCompleteAfterClose).eval_status, 'agent_behavior_mismatch');
 
-function reportBindingCandidates(reportObject, binding) {
-  const values = [];
-  const visit = (value) => {
-    if (!value || Array.isArray(value) || typeof value !== 'object') return;
-    const candidate = reportBindingValue(value, binding);
-    if (candidate !== undefined) values.push(candidate);
-    for (const nested of Object.values(value)) visit(nested);
-  };
-  visit(reportObject);
-  return values;
-}
+  const invalidEof = structuredClone(calls[3]); invalidEof.response.result_read.complete = false;
+  const invalidDigest = structuredClone(calls[3]); invalidDigest.response.result_read.sha256 = sha256('corrupt');
+  const invalidLaterObservations = observationsFromEvidence(scenario,
+    { calls: [...calls, invalidEof, invalidDigest], dropped_calls: 0 },
+    [{ event: 'prompt_result', step_id: 'terminal-1', result_sha256: fullDigest }],
+    { actual_task_outcome: 'succeeded' });
+  assert.deepEqual(invalidLaterObservations.trace.filter(({ kind }) => kind === 'turn.result-read').map(({ complete }) => complete),
+    [true, false, false]);
+  assert.equal(scoreWithCapturedFinals(scenario, invalidLaterObservations).eval_status, 'agent_behavior_mismatch');
 
-function reportBindingsMatch(transcriptEvidence, bindings, turnIndex, reportContext, text) {
-  if (bindings.length === 0) return true;
-  const expected = Object.fromEntries(bindings.map((binding) => [binding,
-    reportBindingValues(transcriptEvidence, binding, turnIndex, reportContext)]));
-  if (Object.values(expected).some((values) => values.length === 0)) return false;
-  return parsedRootReportObjects(text).some((reportObject) => bindings.every((binding) => {
-    const reported = reportBindingCandidates(reportObject, binding);
-    if (binding === 'plugin_dir') return expected[binding].some((value) =>
-      reported.some((candidate) => Array.isArray(candidate) && candidate.includes(value)));
-    return expected[binding].some((value) => reported.some((candidate) =>
-      canonicalJson(candidate) === canonicalJson(value)));
-  }));
-}
+  const failedRead = { tool: 'cursor_read_result', request: { session_id: 'S', turn_id: 'T', offset: 12 },
+    response: { ok: false, error_code: 'unknown_turn' } };
+  const failedReadObservations = observationsFromEvidence(scenario,
+    { calls: [calls[0], calls[1], calls[2], calls[3], failedRead, calls[4]], dropped_calls: 0 },
+    [{ event: 'prompt_result', step_id: 'terminal-1', result_sha256: fullDigest }],
+    { actual_task_outcome: 'succeeded' });
+  assert.ok(failedReadObservations.trace.some(({ kind, call_outcome: outcome }) => kind === 'call.failed' && outcome === 'failed'));
+});
 
-function reportCheckDiagnostics(scenario, reports, transcriptEvidence, reportContext) {
-  return (scenario.report_checks || []).map(({ turn_index: turnIndex, required_fragments: required,
-    forbidden_fragments: forbidden, required_bindings: bindings = [] }) => {
-    const report = reports[turnIndex - 1] || '';
-    const objects = parsedRootReportObjects(report);
-    return {
-      turn_index: turnIndex,
-      missing_fragments: required.filter((fragment) => !report.includes(fragment)),
-      forbidden_fragments: forbidden.filter((fragment) => report.includes(fragment)),
-      bindings: Object.fromEntries(bindings.map((binding) => {
-        const expected = reportBindingValues(transcriptEvidence, binding, turnIndex, reportContext);
-        const reported = objects.flatMap((object) => reportBindingCandidates(object, binding));
-        return [binding, { matched: expected.some((value) => reported.some((candidate) =>
-          canonicalJson(candidate) === canonicalJson(value))), expected, reported }];
-      })),
-    };
+test('result-overflow fixture emits one finite ACP stream beyond the runtime cap', async (t) => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'cursor-result-overflow-')));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const programPath = join(root, 'program.json');
+  await writeFile(programPath, JSON.stringify({ kind: 'fake-acp', steps: [{ type: 'terminal', step_id: 'overflow',
+    turn_status: 'failed', progress_text: 'P'.repeat(512), result_text: null }] }), 'utf8');
+  const child = spawn(process.execPath, [fileURLToPath(new URL('./fixtures/fake-acp.mjs', import.meta.url))], {
+    env: { ...process.env, CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH: programPath, FAKE_ACP_RESULT_OVERFLOW: '1' },
+    stdio: ['pipe', 'pipe', 'pipe'],
   });
-}
+  t.after(() => { if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL'); });
+  let resultBytes = 0;
+  const completed = new Promise((resolveCompleted, rejectCompleted) => {
+    child.once('error', rejectCompleted);
+    createInterface({ input: child.stdout }).on('line', (line) => {
+      const message = JSON.parse(line);
+      const text = message.params?.update?.content?.text;
+      if (typeof text === 'string') resultBytes += Buffer.byteLength(text, 'utf8');
+      if (message.id === 3) resolveCompleted(message);
+    });
+  });
+  for (const request of [
+    { jsonrpc: '2.0', id: 1, method: 'initialize', params: {} },
+    { jsonrpc: '2.0', id: 2, method: 'session/new', params: {} },
+    { jsonrpc: '2.0', id: 3, method: 'session/prompt', params: { prompt: [{ type: 'text', text: 'review' }] } },
+  ]) child.stdin.write(`${JSON.stringify(request)}\n`);
+  const terminal = await completed;
+  assert.deepEqual(terminal.result, { stopReason: 'end_turn' });
+  assert.equal(resultBytes, 1_048_577);
+  child.stdin.end();
+});
 
-async function observeFixtureOutcome(scenario, workspace, reportedTexts = [], safeEvidence = [], transcriptEvidence = null, reportContext = null) {
+async function observeFixtureOutcome(scenario, workspace, _reportedTexts = [], safeEvidence = [], transcriptEvidence = null) {
   const predicate = scenario.fixture_predicate;
   let actual;
-  if (predicate.kind === 'file-text') actual = await readFile(join(workspace, ...predicate.path.split('/')), 'utf8').then((text) => text === predicate.text ? 'succeeded' : 'failed', () => 'failed');
+  if (predicate.kind === 'file-text') actual = await readFile(join(workspace, ...predicate.path.split('/')), 'utf8').then((value) => value === predicate.text ? 'succeeded' : 'failed', () => 'failed');
   else if (predicate.kind === 'file-absent') actual = await readFile(join(workspace, ...predicate.path.split('/'))).then(() => 'failed', (error) => error.code === 'ENOENT' ? 'succeeded' : Promise.reject(error));
   else if (predicate.kind === 'terminal-token') {
-    const expectedDigest = sha256(Buffer.from(predicate.token));
-    actual = safeEvidence.some(({ event, result_sha256: resultSha256 }) => event === 'prompt_result' && resultSha256 === expectedDigest) ? 'succeeded' : 'failed';
-  }
-  else if (predicate.kind === 'terminal-status') actual = transcriptEvidence?.calls?.some(({ response }) => response?.turn_status === predicate.status) ? 'failed' : 'succeeded';
+    const terminal = scenario.program.steps.filter(({ type }) => type === 'terminal').at(-1);
+    const expectedDigest = typeof terminal?.result_text === 'string' && terminal.result_text.includes(predicate.token)
+      ? sha256(`${terminal.progress_text || ''}${terminal.result_text}`) : null;
+    actual = safeEvidence.some(({ event, result_sha256: digest }) => event === 'prompt_result' && digest === expectedDigest) ? 'succeeded' : 'failed';
+  } else if (predicate.kind === 'terminal-status') actual = transcriptEvidence?.calls?.some(({ response }) => response?.turn_status === predicate.status) ? 'failed' : 'succeeded';
   else if (predicate.kind === 'resume-failed') actual = transcriptEvidence?.calls?.some(({ tool, response }) => tool === 'cursor_resume_session'
     && response?.session_state === 'tombstone') ? 'failed' : 'succeeded';
   else if (predicate.kind === 'mode-change-failed') actual = transcriptEvidence?.calls?.some(({ tool, response }) => tool === 'cursor_set_mode'
@@ -798,102 +929,12 @@ async function observeFixtureOutcome(scenario, workspace, reportedTexts = [], sa
   else if (predicate.kind === 'mode-recovery-status') actual = transcriptEvidence?.calls?.some(({ tool, response }) => tool === 'cursor_session_status'
     && response?.session_state === predicate.session_state && response?.active_turn_present === predicate.active_turn) ? 'failed' : 'succeeded';
   else if (predicate.kind === 'delegate-init-failed') actual = transcriptEvidence?.calls?.some(({ tool, response }) => tool === 'cursor_delegate'
-    && response?.session_state === 'tombstone' && response?.failure_kind === predicate.failure_kind
-    && response?.turn_id === undefined) ? 'failed' : 'succeeded';
+    && response?.session_state === 'tombstone' && response?.failure_kind === predicate.failure_kind && response?.turn_id === undefined) ? 'failed' : 'succeeded';
   else if (predicate.kind === 'start-rejected') actual = transcriptEvidence?.calls?.some(({ tool, response }) => tool === 'cursor_delegate'
     && response?.error_code === predicate.error_code) ? 'failed' : 'succeeded';
   else actual = 'succeeded';
-  const reports = Array.isArray(reportedTexts) ? reportedTexts : [reportedTexts];
-  const reportContractMatched = scenario.report_checks
-    ? scenario.report_checks.every(({ turn_index: turnIndex, required_fragments: required, forbidden_fragments: forbidden, required_bindings: bindings = [] }) => {
-      const text = reports[turnIndex - 1] || '';
-      const bindingsMatched = reportBindingsMatch(transcriptEvidence, bindings, turnIndex, reportContext, text);
-      return required.every((fragment) => text.includes(fragment)) && forbidden.every((fragment) => !text.includes(fragment)) && bindingsMatched;
-    })
-    : (() => {
-      const terminalReportToken = scenario.program.steps.filter(({ type }) => type === 'terminal').at(-1)?.result_text;
-      const reportToken = scenario.expected_reported_task_outcome === 'failed' ? 'CURSOR_EVAL_FAILED' : terminalReportToken;
-      return typeof reportToken === 'string' && (reports.at(-1) || '').includes(reportToken);
-    })();
-  const reported = reportContractMatched ? scenario.expected_reported_task_outcome : 'not_reported';
-  return { actual_task_outcome: actual, reported_task_outcome: reported };
+  return { actual_task_outcome: actual };
 }
-
-export function terminalReportText(items) {
-  const messages = (items || []).flatMap(({ item }) => item?.type === 'agentMessage' ? [item] : []);
-  const explicitFinal = messages.filter(({ phase }) => phase === 'final_answer').at(-1);
-  if (explicitFinal) return explicitFinal.text;
-  const legacyFinal = messages.filter(({ phase }) => phase === null).at(-1);
-  return legacyFinal?.text || '';
-}
-
-test('correct MCP trace still fails when commentary repeats the token but the terminal final answer omits it', async () => {
-  const scenario = {
-    scenario_kind: 'programmed',
-    program: { steps: [{ type: 'terminal', step_id: 'terminal-1', result_text: 'REPORT_SUCCESS_TOKEN' }] },
-    expected_trace: [
-      { kind: 'session.allocated', mode: 'ask' }, { kind: 'turn.started' },
-      { kind: 'turn.completed', step_id: 'terminal-1' }, { kind: 'session.close-attempted' },
-    ],
-    fixture_predicate: { kind: 'none' }, expected_actual_task_outcome: 'succeeded',
-    expected_reported_task_outcome: 'succeeded', expected_enabled_eval_status: 'pass',
-  };
-  const calls = [
-    { tool: 'cursor_delegate', request: { mode: 'ask' }, response: { ok: true, session_id: 'S', turn_id: 'T' } },
-    { tool: 'cursor_wait', request: { session_id: 'S', turn_id: 'T' }, response: { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'completed' } },
-    { tool: 'cursor_close_session', request: { session_id: 'S' }, response: { ok: true, session_id: 'S' } },
-  ];
-  const safeEvidence = [{ event: 'prompt_result', step_id: 'terminal-1' }];
-  const reportedText = terminalReportText([
-    { item: { type: 'agentMessage', phase: 'commentary', text: 'REPORT_SUCCESS_TOKEN' } },
-    { item: { type: 'agentMessage', phase: 'final_answer', text: 'Cursor failed; I could not verify the result.' } },
-  ]);
-  const outcomes = await observeFixtureOutcome(scenario, '', reportedText, safeEvidence);
-  const observations = observationsFromEvidence(scenario, { calls, dropped_calls: 0 }, safeEvidence, outcomes);
-  assert.equal(outcomes.reported_task_outcome, 'not_reported');
-  assert.ok(evaluateScenario(scenario, observations).mismatches.includes('reported-outcome-mismatch'));
-});
-
-test('reported outcome binds caller-visible IDs and receipts to observed MCP values', async () => {
-  const scenario = {
-    program: { steps: [{ type: 'terminal', result_text: 'DONE' }] }, fixture_predicate: { kind: 'none' },
-    expected_reported_task_outcome: 'succeeded',
-    report_checks: [{ turn_index: 1, required_fragments: ['DONE', 'terminal_receipt'], forbidden_fragments: [],
-      required_bindings: ['session_id', 'cursor_session_id', 'model', 'terminal_receipt', 'terminal_result_sha256'] }],
-  };
-  const transcript = { calls: [{ tool: 'cursor_delegate', request: { mode: 'ask' }, response: { ok: true, session_id: 'session-real', cursor_session_id: 'cursor-real', model: 'auto',
-    terminal_receipt: { session_id: 'session-real', turn_id: 'turn-real', turn_status: 'completed', last_event_id: 7,
-      result_sha256: 'a'.repeat(64), result_truncated: false } } }], turn_call_ranges: [{ start: 0, end: 1 }] };
-  const completeReceipt = `DONE terminal_receipt ${JSON.stringify({ session_id: 'session-real', cursor_session_id: 'cursor-real', model: 'auto',
-    terminal_receipt: transcript.calls[0].response.terminal_receipt })}`;
-  assert.equal((await observeFixtureOutcome(scenario, '', [completeReceipt], [], transcript)).reported_task_outcome, 'succeeded');
-  const nestedLaunch = completeReceipt.replace('"model":"auto"', '"requested_launch":{"model":"auto"}');
-  assert.equal((await observeFixtureOutcome(scenario, '', [nestedLaunch], [], transcript)).reported_task_outcome, 'succeeded');
-  assert.equal((await observeFixtureOutcome(scenario, '', ['DONE terminal_receipt session-fabricated cursor-fabricated'], [], transcript)).reported_task_outcome, 'not_reported');
-  const secondTurnScenario = { ...scenario, report_checks: [{ ...scenario.report_checks[0], turn_index: 2 }] };
-  const scoped = { calls: [...transcript.calls, { response: { session_id: 'session-real', terminal_receipt: {
-    session_id: 'session-real', turn_id: 'turn-second', turn_status: 'completed', last_event_id: 11,
-    result_sha256: 'b'.repeat(64), result_truncated: false } } }],
-    turn_call_ranges: [{ start: 0, end: 1 }, { start: 1, end: 2 }] };
-  assert.equal((await observeFixtureOutcome(secondTurnScenario, '', [`unused`, completeReceipt], [], scoped)).reported_task_outcome, 'not_reported');
-});
-
-test('events-lost report bindings require exact typed current-state evidence', async () => {
-  const scenario = {
-    program: { steps: [] }, fixture_predicate: { kind: 'none' }, expected_reported_task_outcome: 'succeeded',
-    report_checks: [{ turn_index: 1, required_fragments: [], forbidden_fragments: [],
-      required_bindings: ['observation_gap', 'history_reconstructed', 'evidence_scope'] }],
-  };
-  const transcript = { calls: [], turn_call_ranges: [{ start: 0, end: 0 }] };
-  const exact = JSON.stringify({ observation_gap: true, history_reconstructed: false, evidence_scope: 'current_normalized_state' });
-  assert.equal((await observeFixtureOutcome(scenario, '', [exact], [], transcript)).reported_task_outcome, 'succeeded');
-  for (const invalid of [
-    { observation_gap: false, history_reconstructed: false, evidence_scope: 'current_normalized_state' },
-    { observation_gap: true, history_reconstructed: true, evidence_scope: 'current_normalized_state' },
-    { observation_gap: true, history_reconstructed: false, evidence_scope: 'reconstructed_history' },
-  ]) assert.equal((await observeFixtureOutcome(scenario, '', [JSON.stringify(invalid)], [], transcript)).reported_task_outcome, 'not_reported');
-});
-
 test('safe file effects keep their pre-follow-up authority provenance when terminal observation happens later', () => {
   const digest = sha256(Buffer.from('DONE'));
   const scenario = {
@@ -905,7 +946,7 @@ test('safe file effects keep their pre-follow-up authority provenance when termi
     prior_authority: { kind: 'none' },
     followups: [{ input: 'Теперь разрешаю запись.', granted_actions: [{ operation: 'write', path: 'late.txt' }] }],
     expected_trace: [], fixture_predicate: { kind: 'none' },
-    expected_actual_task_outcome: 'succeeded', expected_reported_task_outcome: 'succeeded',
+    expected_actual_task_outcome: 'succeeded',
   };
   const transcript = { calls: [
     { tool: 'cursor_delegate', request: { mode: 'agent' }, response: { ok: true, session_id: 'S', turn_id: 'T', last_event_id: 1 } },
@@ -920,140 +961,9 @@ test('safe file effects keep their pre-follow-up authority provenance when termi
     { event: 'prompt_result', step_id: 'terminal-1', result_sha256: digest },
   ];
   const observations = observationsFromEvidence(scenario, transcript, safeEvidence,
-    { actual_task_outcome: 'succeeded', reported_task_outcome: 'succeeded' });
+    { actual_task_outcome: 'succeeded', reported_task_outcome: 'not_checked' });
   assert.equal(observations.trace.find(({ kind }) => kind === 'effect.file-written').codex_turn_index, 1);
-  assert.ok(evaluateScenario(scenario, observations).mismatches.includes('authority-mismatch'));
-});
-
-test('null-result failed receipt binding is atomic and rejects incomplete reports', async () => {
-  const scenario = { program: { steps: [] }, fixture_predicate: { kind: 'none' }, expected_reported_task_outcome: 'failed',
-    report_checks: [{ turn_index: 1, required_fragments: ['terminal_receipt'], forbidden_fragments: [], required_bindings: ['terminal_receipt'] }] };
-  const transcript = { calls: [{ response: { terminal_receipt: {
-    session_id: 'session-failed', turn_id: 'turn-failed', turn_status: 'failed', last_event_id: 9,
-    result_sha256: null, result_truncated: false,
-  } } }], turn_call_ranges: [{ start: 0, end: 1 }] };
-  const receipt = transcript.calls[0].response.terminal_receipt;
-  const exact = `terminal_receipt ${JSON.stringify({ terminal_receipt: receipt })}`;
-  assert.equal((await observeFixtureOutcome(scenario, '', [exact], [], transcript)).reported_task_outcome, 'failed');
-  for (const modified of [
-    { ...receipt, session_id: 'fabricated' },
-    { ...receipt, turn_id: 'fabricated' },
-    { ...receipt, turn_status: 'cancelled' },
-    { ...receipt, last_event_id: 10 },
-    { ...receipt, result_sha256: 'a'.repeat(64) },
-    { ...receipt, result_truncated: true },
-  ]) {
-    const decoy = `${JSON.stringify({ terminal_receipt: modified })} session-failed turn-failed failed 9 null false`;
-    assert.equal((await observeFixtureOutcome(scenario, '', [`terminal_receipt ${decoy}`], [], transcript)).reported_task_outcome, 'not_reported');
-  }
-});
-
-test('terminal reason binding requires one exact bounded reason object', async () => {
-  const scenario = { program: { steps: [] }, fixture_predicate: { kind: 'none' }, expected_reported_task_outcome: 'failed',
-    report_checks: [{ turn_index: 1, required_fragments: ['terminal_reason'], forbidden_fragments: [], required_bindings: ['terminal_reason'] }] };
-  const transcript = { calls: [{ response: { terminal_reason: { text: 'ACP provider error', truncated: false } } }],
-    turn_call_ranges: [{ start: 0, end: 1 }] };
-  const exact = `terminal_reason ${JSON.stringify({ terminal_reason: transcript.calls[0].response.terminal_reason })}`;
-  assert.equal((await observeFixtureOutcome(scenario, '', [exact], [], transcript)).reported_task_outcome, 'failed');
-  for (const incomplete of [
-    'terminal_reason {"terminal_reason":{"text":"fabricated","truncated":false}} ACP provider error',
-    'terminal_reason {"terminal_reason":{"truncated":false}} ACP provider error text',
-    'terminal_reason {"terminal_reason":{"text":"ACP provider error","truncated":true}} false',
-  ]) {
-    assert.equal((await observeFixtureOutcome(scenario, '', [incomplete], [], transcript)).reported_task_outcome, 'not_reported');
-  }
-});
-
-test('failed mode-change report binds the request session and response error', async () => {
-  const scenario = { program: { steps: [] }, fixture_predicate: { kind: 'none' }, expected_reported_task_outcome: 'failed',
-    report_checks: [{ turn_index: 1, required_fragments: ['mode_timeout'], forbidden_fragments: [], required_bindings: ['session_id', 'error_code'] }] };
-  const transcript = { calls: [{ tool: 'cursor_set_mode', request: { session_id: 'session-mode', mode: 'plan' },
-    response: { ok: false, error_code: 'mode_timeout' } }], turn_call_ranges: [{ start: 0, end: 1 }] };
-  assert.equal((await observeFixtureOutcome(scenario, '', ['mode_timeout {"session_id":"session-mode","error_code":"mode_timeout"}'], [], transcript)).reported_task_outcome, 'failed');
-  assert.equal((await observeFixtureOutcome(scenario, '', ['mode_timeout {"session_id":"session-fabricated","error_code":"mode_timeout"} session-mode'], [], transcript)).reported_task_outcome, 'not_reported');
-  assert.equal((await observeFixtureOutcome(scenario, '', ['protocol_error {"session_id":"session-mode","error_code":"protocol_error"} mode_timeout'], [], transcript)).reported_task_outcome, 'not_reported');
-
-  const providerError = { code: -32000, message: { text: 'set_mode failed', truncated: false } };
-  const providerScenario = { ...scenario, report_checks: [{ turn_index: 1,
-    required_fragments: ['protocol_error', 'provider_error'], forbidden_fragments: [],
-    required_bindings: ['session_id', 'error_code', 'provider_error'] }] };
-  const providerTranscript = { calls: [{ tool: 'cursor_set_mode', request: { session_id: 'session-provider', mode: 'agent' },
-    response: { ok: false, error_code: 'protocol_error', provider_error: providerError } }], turn_call_ranges: [{ start: 0, end: 1 }] };
-  const exactProviderReport = `protocol_error provider_error ${JSON.stringify({ session_id: 'session-provider', error_code: 'protocol_error', provider_error: providerError })}`;
-  assert.equal((await observeFixtureOutcome(providerScenario, '', [exactProviderReport], [], providerTranscript)).reported_task_outcome, 'failed');
-  assert.equal((await observeFixtureOutcome(providerScenario, '', ['protocol_error provider_error {"session_id":"session-provider","error_code":"protocol_error"} set_mode failed'], [], providerTranscript)).reported_task_outcome, 'not_reported');
-});
-
-test('session-scoped report bindings retain only the latest observed allocation segment', async () => {
-  const scenario = {
-    program: { steps: [] }, fixture_predicate: { kind: 'none' }, expected_reported_task_outcome: 'succeeded',
-    report_checks: [{ turn_index: 2, required_fragments: ['cursor_session_id', 'model'], forbidden_fragments: [],
-      required_bindings: ['cursor_session_id', 'model'] }],
-  };
-  const retained = { calls: [
-    { tool: 'cursor_delegate', request: { mode: 'ask' }, response: { ok: true, session_id: 'session-live', cursor_session_id: 'cursor-live', model: 'auto' } },
-    { tool: 'cursor_wait', request: { session_id: 'session-live', turn_id: 'turn-1' }, response: { ok: true, session_id: 'session-live', turn_id: 'turn-1', wait_timeout: true } },
-    { tool: 'cursor_answer_permission', request: { session_id: 'session-live', turn_id: 'turn-1' }, response: { ok: true, session_id: 'session-live', turn_id: 'turn-1' } },
-    { tool: 'cursor_wait', request: { session_id: 'session-live', turn_id: 'turn-1' }, response: { ok: true, session_id: 'session-live', turn_id: 'turn-1', turn_status: 'completed' } },
-  ], dropped_calls: 0, turn_call_ranges: [{ start: 0, end: 2 }, { start: 2, end: 4 }] };
-  assert.equal((await observeFixtureOutcome(scenario, '', ['', '{"cursor_session_id":"cursor-live","model":"auto"}'], [], retained)).reported_task_outcome, 'succeeded');
-
-  const replaced = { calls: [
-    { tool: 'cursor_delegate', request: { model: 'old-model' }, response: { ok: true, session_id: 'session-old', cursor_session_id: 'cursor-old', model: 'old-model' } },
-    { tool: 'cursor_close_session', request: { session_id: 'session-old' }, response: { ok: true, session_id: 'session-old', session_state: 'tombstone' } },
-    { tool: 'cursor_resume_session', request: { cursor_session_id: 'cursor-new', model: 'new-model' }, response: { ok: true, session_id: 'session-new', cursor_session_id: 'cursor-new', model: 'new-model' } },
-    { tool: 'cursor_wait', request: { session_id: 'session-new', turn_id: 'turn-new' }, response: { ok: true, session_id: 'session-new', turn_id: 'turn-new', turn_status: 'completed' } },
-  ], dropped_calls: 0, turn_call_ranges: [{ start: 0, end: 2 }, { start: 2, end: 4 }] };
-  assert.equal((await observeFixtureOutcome(scenario, '', ['', '{"cursor_session_id":"cursor-old","model":"old-model"} cursor-new new-model'], [], replaced)).reported_task_outcome, 'not_reported');
-  assert.equal((await observeFixtureOutcome(scenario, '', ['', '{"cursor_session_id":"cursor-new","model":"new-model"}'], [], replaced)).reported_task_outcome, 'succeeded');
-
-  const oldReceipt = { session_id: 'session-old', turn_id: 'turn-old', turn_status: 'completed', last_event_id: 2,
-    result_sha256: 'a'.repeat(64), result_truncated: false };
-  const newReceipt = { session_id: 'session-new', turn_id: 'turn-new', turn_status: 'completed', last_event_id: 4,
-    result_sha256: 'b'.repeat(64), result_truncated: false };
-  const changed = { calls: [
-    { tool: 'cursor_delegate', request: { model: 'old-model' }, response: { ok: true, session_id: 'session-old', cursor_session_id: 'cursor-old', model: 'old-model' } },
-    { tool: 'cursor_close_session', request: { session_id: 'session-old' }, response: { ok: true, session_id: 'session-old', terminal_receipt: oldReceipt } },
-    { tool: 'cursor_resume_session', request: { model: 'new-model', cursor_session_id: 'cursor-old' }, response: { ok: true, session_id: 'session-new', cursor_session_id: 'cursor-old', model: 'new-model' } },
-    { tool: 'cursor_wait', request: { session_id: 'session-new', turn_id: 'turn-new' }, response: { ok: true, session_id: 'session-new', turn_id: 'turn-new', terminal_receipt: newReceipt } },
-  ], dropped_calls: 0, turn_call_ranges: [{ start: 0, end: 1 }, { start: 1, end: 4 }] };
-  const changedScenario = { ...scenario, report_checks: [{ turn_index: 2, required_fragments: ['terminal_receipt'], forbidden_fragments: [],
-    required_bindings: ['session_id', 'cursor_session_id', 'model', 'terminal_receipt', 'terminal_result_sha256'] }] };
-  const staleReceiptReport = JSON.stringify({ session_id: 'session-new', cursor_session_id: 'cursor-old', model: 'new-model', terminal_receipt: oldReceipt });
-  const currentReceiptReport = JSON.stringify({ session_id: 'session-new', cursor_session_id: 'cursor-old', model: 'new-model', terminal_receipt: newReceipt });
-  assert.equal((await observeFixtureOutcome(changedScenario, '', ['', `terminal_receipt ${staleReceiptReport}`], [], changed)).reported_task_outcome, 'not_reported');
-  assert.equal((await observeFixtureOutcome(changedScenario, '', ['', `terminal_receipt ${currentReceiptReport}`], [], changed)).reported_task_outcome, 'succeeded');
-
-  const sameLiveOldReceipt = { ...oldReceipt, session_id: 'session-live' };
-  const sameLiveNewReceipt = { ...newReceipt, session_id: 'session-live' };
-  const sameLive = { calls: [
-    { tool: 'cursor_delegate', request: { mode: 'ask' }, response: { ok: true, session_id: 'session-live', cursor_session_id: 'cursor-live' } },
-    { tool: 'cursor_wait', request: { session_id: 'session-live', turn_id: 'turn-old' }, response: { ok: true, session_id: 'session-live', turn_id: 'turn-old', terminal_receipt: sameLiveOldReceipt } },
-    { tool: 'cursor_set_mode', request: { session_id: 'session-live', mode: 'plan' }, response: { ok: true, session_id: 'session-live', terminal_receipt: sameLiveOldReceipt } },
-    { tool: 'cursor_send_prompt', request: { session_id: 'session-live' }, response: { ok: true, session_id: 'session-live', turn_id: 'turn-new' } },
-    { tool: 'cursor_wait', request: { session_id: 'session-live', turn_id: 'turn-new' }, response: { ok: true, session_id: 'session-live', turn_id: 'turn-new', terminal_receipt: sameLiveNewReceipt } },
-  ], dropped_calls: 0, turn_call_ranges: [{ start: 0, end: 2 }, { start: 2, end: 5 }] };
-  const sameLiveScenario = { ...scenario, report_checks: [{ turn_index: 2, required_fragments: ['terminal_receipt'], forbidden_fragments: [],
-    required_bindings: ['session_id', 'terminal_receipt', 'terminal_result_sha256'] }] };
-  assert.equal((await observeFixtureOutcome(sameLiveScenario, '', ['', `terminal_receipt ${JSON.stringify({ session_id: 'session-live', terminal_receipt: sameLiveOldReceipt })}`], [], sameLive)).reported_task_outcome, 'not_reported');
-  assert.equal((await observeFixtureOutcome(sameLiveScenario, '', ['', `terminal_receipt ${JSON.stringify({ session_id: 'session-live', terminal_receipt: sameLiveNewReceipt })}`], [], sameLive)).reported_task_outcome, 'succeeded');
-
-  const exactTurnScenario = { ...scenario, report_checks: [{ turn_index: 2, required_fragments: ['turn_id'], forbidden_fragments: [],
-    required_bindings: ['session_id', 'turn_id'] }] };
-  assert.equal((await observeFixtureOutcome(exactTurnScenario, '', ['', '{"session_id":"session-live","turn_id":"turn-old"}'], [], sameLive)).reported_task_outcome, 'not_reported');
-  assert.equal((await observeFixtureOutcome(exactTurnScenario, '', ['', '{"session_id":"session-live","turn_id":"turn-new"}'], [], sameLive)).reported_task_outcome, 'succeeded');
-
-  const failedResume = { calls: [
-    { tool: 'cursor_delegate', response: { ok: true, session_id: 'session-old', cursor_session_id: 'cursor-old' } },
-    { tool: 'cursor_close_session', request: { session_id: 'session-old' }, response: { ok: true, session_id: 'session-old' } },
-    { tool: 'cursor_resume_session', request: { cursor_session_id: 'cursor-old' }, response: {
-      ok: true, session_id: 'session-failed', cursor_session_id: 'cursor-old', session_state: 'tombstone', failure_kind: 'load',
-    } },
-  ], dropped_calls: 0, turn_call_ranges: [{ start: 0, end: 1 }, { start: 1, end: 3 }] };
-  const failedResumeScenario = { ...scenario, expected_reported_task_outcome: 'failed', report_checks: [{ turn_index: 2,
-    required_fragments: ['failure_kind'], forbidden_fragments: [], required_bindings: ['session_id', 'cursor_session_id', 'failure_kind'] }] };
-  assert.equal((await observeFixtureOutcome(failedResumeScenario, '', ['', 'failure_kind {"session_id":"session-old","cursor_session_id":"cursor-old","failure_kind":"load"}'], [], failedResume)).reported_task_outcome, 'not_reported');
-  assert.equal((await observeFixtureOutcome(failedResumeScenario, '', ['', 'failure_kind {"session_id":"session-failed","cursor_session_id":"cursor-old","failure_kind":"load"}'], [], failedResume)).reported_task_outcome, 'failed');
+  assert.ok(scoreWithCapturedFinals(scenario, observations).mismatches.includes('authority-mismatch'));
 });
 
 test('observer derives mode timeout and active-followup provider failure only from MCP evidence', () => {
@@ -1065,7 +975,7 @@ test('observer derives mode timeout and active-followup provider failure only fr
     { kind: 'turn.completed', step_id: 'terminal-1' },
     { kind: 'turn.receipt', step_id: 'terminal-1', matched: true, result_truncated: false },
     { kind: 'session.mode-change-failed', error_code: 'mode_timeout' },
-  ], prior_authority: { kind: 'none' }, expected_actual_task_outcome: 'failed', expected_reported_task_outcome: 'failed' };
+  ], prior_authority: { kind: 'none' }, expected_actual_task_outcome: 'failed' };
   const modeCalls = [
     { tool: 'cursor_delegate', request: { mode: 'ask' }, response: { ok: true, session_id: 'S', turn_id: 'T', last_event_id: 1 } },
     { tool: 'cursor_wait', request: { session_id: 'S', turn_id: 'T', after_event_id: 1, timeout_ms: 1000 }, response: { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'completed', last_event_id: 3, resume_after_event_id: 3,
@@ -1075,8 +985,8 @@ test('observer derives mode timeout and active-followup provider failure only fr
   const modeSafe = [{ event: 'terminal_armed', step_id: 'terminal-1', turn_status: 'completed' },
     { event: 'prompt_result', step_id: 'terminal-1', result_sha256: modeDigest }];
   const modeObservations = observationsFromEvidence(modeScenario, { calls: modeCalls, dropped_calls: 0 }, modeSafe,
-    { actual_task_outcome: 'failed', reported_task_outcome: 'failed' });
-  assert.deepEqual(evaluateScenario(modeScenario, modeObservations).mismatches, []);
+    { actual_task_outcome: 'failed', reported_task_outcome: 'not_checked' });
+  assert.deepEqual(scoreWithCapturedFinals(modeScenario, modeObservations).mismatches, []);
 
   const providerScenario = { ...modeScenario, expected_trace: [
     { kind: 'session.allocated', mode: 'ask' }, { kind: 'turn.started' },
@@ -1091,19 +1001,19 @@ test('observer derives mode timeout and active-followup provider failure only fr
     { tool: 'cursor_session_status', request: { session_id: 'S' }, response: { ok: true, session_id: 'S', session_state: 'tombstone' } },
   ];
   const providerObservations = observationsFromEvidence(providerScenario, { calls: providerCalls, dropped_calls: 0 }, modeSafe,
-    { actual_task_outcome: 'failed', reported_task_outcome: 'failed' });
-  assert.deepEqual(evaluateScenario(providerScenario, providerObservations).mismatches, []);
+    { actual_task_outcome: 'failed', reported_task_outcome: 'not_checked' });
+  assert.deepEqual(scoreWithCapturedFinals(providerScenario, providerObservations).mismatches, []);
 
   const failedScenario = { scenario_kind: 'programmed', program: { steps: [
     { type: 'terminal', step_id: 'terminal-failed', turn_status: 'failed', result_text: null },
   ] }, expected_trace: [
     { kind: 'session.allocated', mode: 'ask' }, { kind: 'turn.started' },
-    { kind: 'turn.wait-timeout', timeout_ms: 1000, timeout_omitted: false, cursor_matched: true, progress_revision_matched: true },
-    { kind: 'turn.wait-recovered', timeout_ms: 2000, timeout_omitted: false, cursor_matched: true, progress_revision_matched: true },
+    { kind: 'turn.wait-timeout', timeout_ms: 1000, timeout_omitted: false, progress_revision_matched: true },
+    { kind: 'turn.wait-recovered', timeout_ms: 2000, timeout_omitted: false, progress_revision_matched: true },
     { kind: 'turn.failed', step_id: 'terminal-failed' },
     { kind: 'turn.receipt', step_id: 'terminal-failed', matched: true, result_truncated: false },
     { kind: 'session.close-attempted' },
-  ], prior_authority: { kind: 'none' }, expected_actual_task_outcome: 'failed', expected_reported_task_outcome: 'failed' };
+  ], prior_authority: { kind: 'none' }, expected_actual_task_outcome: 'failed' };
   const failedCalls = [
     { tool: 'cursor_delegate', request: { mode: 'ask' }, response: { ok: true, session_id: 'SF', turn_id: 'TF', last_event_id: 1 } },
     { tool: 'cursor_wait', request: { session_id: 'SF', turn_id: 'TF', after_event_id: 1, timeout_ms: 1000 }, response: { ok: true, session_id: 'SF', turn_id: 'TF', turn_status: 'running', last_event_id: 1, resume_after_event_id: 1, wait_timeout: true } },
@@ -1114,16 +1024,16 @@ test('observer derives mode timeout and active-followup provider failure only fr
   ];
   const failedSafe = [{ event: 'terminal_armed', step_id: 'terminal-failed', turn_status: 'failed' }];
   const failedObservations = observationsFromEvidence(failedScenario, { calls: failedCalls, dropped_calls: 0 }, failedSafe,
-    { actual_task_outcome: 'failed', reported_task_outcome: 'failed' });
-  assert.deepEqual(evaluateScenario(failedScenario, failedObservations).mismatches, []);
+    { actual_task_outcome: 'failed', reported_task_outcome: 'not_checked' });
+  assert.deepEqual(scoreWithCapturedFinals(failedScenario, failedObservations).mismatches, []);
   assert.equal(failedObservations.trace.filter(({ kind }) => kind === 'turn.started').length, 1);
   const lateTombstoneCalls = structuredClone(failedCalls);
   lateTombstoneCalls[2].response.session_state = 'tombstone';
   const lateTombstoneObservations = observationsFromEvidence(failedScenario,
     { calls: lateTombstoneCalls, dropped_calls: 0 }, failedSafe,
-    { actual_task_outcome: 'failed', reported_task_outcome: 'failed' });
+    { actual_task_outcome: 'failed', reported_task_outcome: 'not_checked' });
   assert.deepEqual(lateTombstoneObservations.trace, failedObservations.trace);
-  assert.deepEqual(evaluateScenario(failedScenario, lateTombstoneObservations).mismatches, []);
+  assert.deepEqual(scoreWithCapturedFinals(failedScenario, lateTombstoneObservations).mismatches, []);
 });
 
 test('safe file effect before failed terminal remains in the causal authority trace', () => {
@@ -1142,7 +1052,7 @@ test('safe file effect before failed terminal remains in the causal authority tr
       { kind: 'turn.receipt', step_id: 'terminal-failed', matched: true, result_truncated: false },
       { kind: 'session.close-attempted' },
     ],
-    expected_actual_task_outcome: 'failed', expected_reported_task_outcome: 'failed',
+    expected_actual_task_outcome: 'failed',
   };
   const calls = [
     { tool: 'cursor_delegate', request: { mode: 'agent' }, response: { ok: true, session_id: 'S', turn_id: 'T', last_event_id: 1 } },
@@ -1159,9 +1069,9 @@ test('safe file effect before failed terminal remains in the causal authority tr
     { event: 'terminal_armed', step_id: 'terminal-failed', turn_status: 'failed' },
   ];
   const observations = observationsFromEvidence(scenario, { calls, dropped_calls: 0 }, safeEvidence,
-    { actual_task_outcome: 'failed', reported_task_outcome: 'failed' });
+    { actual_task_outcome: 'failed', reported_task_outcome: 'not_checked' });
   assert.equal(observations.trace.find(({ kind }) => kind === 'effect.file-written').codex_turn_index, 1);
-  assert.ok(evaluateScenario(scenario, observations).mismatches.includes('authority-mismatch'));
+  assert.ok(scoreWithCapturedFinals(scenario, observations).mismatches.includes('authority-mismatch'));
 });
 
 test('delegate start rejection is observed without inventing a session or close', async () => {
@@ -1170,7 +1080,7 @@ test('delegate start rejection is observed without inventing a session or close'
     program: { steps: [{ type: 'terminal', step_id: 'terminal-unused', result_text: 'UNEXPECTED' }] },
     expected_trace: [{ kind: 'session.start-rejected', error_code: 'scope_rejected' }],
     fixture_predicate: { kind: 'start-rejected', error_code: 'scope_rejected' },
-    expected_actual_task_outcome: 'failed', expected_reported_task_outcome: 'failed', expected_enabled_eval_status: 'pass',
+    expected_actual_task_outcome: 'failed', expected_enabled_eval_status: 'pass',
     report_checks: [{ turn_index: 1, required_fragments: ['scope_rejected'], forbidden_fragments: [] }],
   };
   const transcript = { calls: [{ tool: 'cursor_delegate', request: { mode: 'ask', plugin_dirs_count: 1 },
@@ -1178,7 +1088,7 @@ test('delegate start rejection is observed without inventing a session or close'
   const outcomes = await observeFixtureOutcome(scenario, '', ['scope_rejected'], [], transcript);
   const observations = observationsFromEvidence(scenario, transcript, [], outcomes);
   assert.deepEqual(observations.trace, [{ kind: 'session.start-rejected', error_code: 'scope_rejected', call_outcome: 'failed' }]);
-  assert.deepEqual(evaluateScenario(scenario, observations).mismatches, []);
+  assert.deepEqual(scoreWithCapturedFinals(scenario, observations, ['scope_rejected']).mismatches, []);
 });
 
 test('allocated delegate init tombstone is reported without wait, retry or fallback', async () => {
@@ -1187,9 +1097,9 @@ test('allocated delegate init tombstone is reported without wait, retry or fallb
     program: { steps: [{ type: 'terminal', step_id: 'terminal-unused', result_text: 'UNEXPECTED' }] },
     expected_trace: [{ kind: 'session.allocated', mode: 'ask' }, { kind: 'session.tombstoned', session_state: 'tombstone' }],
     fixture_predicate: { kind: 'delegate-init-failed', failure_kind: 'init' },
-    expected_actual_task_outcome: 'failed', expected_reported_task_outcome: 'failed', expected_enabled_eval_status: 'pass',
-    report_checks: [{ turn_index: 1, required_fragments: ['session_id', 'failure_kind', 'provider_error'], forbidden_fragments: [],
-      required_bindings: ['session_id', 'failure_kind', 'provider_error'] }],
+    expected_actual_task_outcome: 'failed', expected_enabled_eval_status: 'pass',
+    report_checks: [{ turn_index: 1, category: 'interaction',
+      required_fragments: ['session_id', 'failure_kind', 'provider_error'], forbidden_fragments: [] }],
   };
   const transcript = { calls: [{ tool: 'cursor_delegate', request: { mode: 'ask' }, response: {
     ok: true, session_id: 'session-init-failed', session_state: 'tombstone', failure_kind: 'init',
@@ -1203,103 +1113,9 @@ test('allocated delegate init tombstone is reported without wait, retry or fallb
     { kind: 'session.allocated', session_id: 'session-init-failed', mode: 'ask', call_outcome: 'succeeded' },
     { kind: 'session.tombstoned', session_state: 'tombstone', session_id: 'session-init-failed', call_outcome: 'succeeded' },
   ]);
-  assert.deepEqual(outcomes, { actual_task_outcome: 'failed', reported_task_outcome: 'failed' });
-  assert.deepEqual(evaluateScenario(scenario, observations).mismatches, []);
-  for (const incomplete of [
-    'session_id failure_kind provider_error {"session_id":"session-init-failed","failure_kind":"init","provider_error":{"message":{"text":"authentication required","truncated":false}}} -32001',
-    'session_id failure_kind provider_error {"session_id":"session-init-failed","failure_kind":"init","provider_error":{"code":-32001,"message":{"truncated":false}}} authentication required',
-    'session_id failure_kind provider_error {"session_id":"session-init-failed","failure_kind":"init","provider_error":{"code":-32001,"message":{"text":"authentication required","truncated":true}}} false',
-  ]) {
-    assert.equal((await observeFixtureOutcome(scenario, '', [incomplete], [], transcript)).reported_task_outcome, 'not_reported');
-  }
+  assert.deepEqual(outcomes, { actual_task_outcome: 'failed' });
+  assert.deepEqual(scoreWithCapturedFinals(scenario, observations, [report]).mismatches, []);
 });
-
-test('failed resume report requires exact provider diagnostics and a new user decision', async () => {
-  const providerError = { code: -32000, message: { text: 'session not found', truncated: false } };
-  const terminalReason = { text: 'ACP provider error', truncated: false };
-  const receipt = { session_id: 'session-base', turn_id: 'turn-base', turn_status: 'completed',
-    last_event_id: 2, result_sha256: 'a'.repeat(64), result_truncated: false };
-  const scenario = {
-    scenario_kind: 'programmed',
-    program: { steps: [{ type: 'terminal', step_id: 'terminal-1', result_text: 'RESUME_BASE_OK' }] },
-    fixture_predicate: { kind: 'resume-failed' },
-    expected_actual_task_outcome: 'failed', expected_reported_task_outcome: 'failed',
-    report_checks: [
-      { turn_index: 1, required_fragments: ['RESUME_BASE_OK', 'cursor_session_id', 'terminal_receipt'], forbidden_fragments: [],
-        required_bindings: ['cursor_session_id', 'terminal_result_sha256', 'terminal_receipt'] },
-      { turn_index: 2, required_fragments: ['resume', 'failed', 'cursor_session_id', 'session_id', 'failure_kind',
-        'terminal_reason', 'provider_error', 'new user decision'], forbidden_fragments: ['RESUME_BASE_OK'],
-        required_bindings: ['cursor_session_id', 'session_id', 'failure_kind', 'terminal_reason', 'provider_error'] },
-    ],
-  };
-  const transcript = { calls: [
-    { tool: 'cursor_delegate', request: { mode: 'ask' }, response: { ok: true, session_id: 'session-base',
-      cursor_session_id: 'cursor-provider', turn_id: 'turn-base', last_event_id: 1 } },
-    { tool: 'cursor_wait', request: { session_id: 'session-base', turn_id: 'turn-base', after_event_id: 1 },
-      response: { ok: true, session_id: 'session-base', turn_id: 'turn-base', turn_status: 'completed', terminal_receipt: receipt } },
-    { tool: 'cursor_resume_session', request: { cwd: '/tmp/workspace', cursor_session_id: 'cursor-provider', mode: 'ask' },
-      response: { ok: true, session_id: 'session-resume', cursor_session_id: 'cursor-provider', session_state: 'tombstone',
-        failure_kind: 'load', terminal_reason: terminalReason, provider_error: providerError } },
-  ], dropped_calls: 0, turn_call_ranges: [{ start: 0, end: 2 }, { start: 2, end: 3 }] };
-  const firstReport = `RESUME_BASE_OK cursor_session_id terminal_receipt ${JSON.stringify({
-    cursor_session_id: 'cursor-provider', terminal_receipt: receipt,
-  })}`;
-  const recovery = { cursor_session_id: 'cursor-provider', session_id: 'session-resume', failure_kind: 'load',
-    terminal_reason: terminalReason, provider_error: providerError };
-  const secondReport = `resume failed cursor_session_id session_id failure_kind terminal_reason provider_error new user decision ${JSON.stringify(recovery)}`;
-  assert.deepEqual(await observeFixtureOutcome(scenario, '', [firstReport, secondReport], [], transcript), {
-    actual_task_outcome: 'failed', reported_task_outcome: 'failed',
-  });
-  for (const invalidRecovery of [
-    { ...recovery, provider_error: undefined },
-    { ...recovery, provider_error: { message: providerError.message } },
-    { ...recovery, provider_error: { code: providerError.code, message: { text: providerError.message.text, truncated: true } } },
-    { ...recovery, terminal_reason: undefined },
-  ]) {
-    const incomplete = `resume failed cursor_session_id session_id failure_kind terminal_reason provider_error new user decision ${JSON.stringify(invalidRecovery)}`;
-    assert.equal((await observeFixtureOutcome(scenario, '', [firstReport, incomplete], [], transcript)).reported_task_outcome, 'not_reported');
-  }
-  assert.equal((await observeFixtureOutcome(scenario, '', [firstReport,
-    `resume failed cursor_session_id session_id failure_kind terminal_reason provider_error ${JSON.stringify(recovery)}`], [], transcript)).reported_task_outcome, 'not_reported');
-});
-
-test('pending report must contain provider context rather than a user-prompt decoy', async () => {
-  const scenario = {
-    initial_input: 'Show the returned context; USER_PROMPT_DECOY is not that context.',
-    program: { steps: [{ type: 'pending', prompt: 'PROVIDER_CONTEXT_SECRET' }] },
-    fixture_predicate: { kind: 'none' }, expected_reported_task_outcome: 'succeeded',
-    report_checks: [{ turn_index: 1, required_fragments: ['PROVIDER_CONTEXT_SECRET'], forbidden_fragments: ['USER_PROMPT_DECOY'],
-      required_bindings: ['pending_request_id'] }],
-  };
-  const transcript = { calls: [{ response: { pending: [{ request_id: 'request-real' }] } }], turn_call_ranges: [{ start: 0, end: 1 }] };
-  assert.equal((await observeFixtureOutcome(scenario, '', ['USER_PROMPT_DECOY {"request_id":"request-real"}'], [], transcript)).reported_task_outcome, 'not_reported');
-  assert.equal((await observeFixtureOutcome(scenario, '', ['PROVIDER_CONTEXT_SECRET {"request_id":"request-real"}'], [], transcript)).reported_task_outcome, 'succeeded');
-});
-
-test('events-lost report proves current-state-only handling without a negation polarity trap', async () => {
-  const scenario = {
-    program: { steps: [] }, fixture_predicate: { kind: 'none' }, expected_reported_task_outcome: 'succeeded',
-    report_checks: [{ turn_index: 1,
-      required_fragments: ['EVENTS_LOST_OK', 'events_lost', 'OBSERVATION_GAP_UNVERIFIABLE', 'USED_CURRENT_STATE_ONLY', 'terminal_receipt'],
-      forbidden_fragments: ['I reconstructed missing events', 'missing events were recovered', 'I inferred missing events'] }],
-  };
-  const safeReport = 'EVENTS_LOST_OK events_lost OBSERVATION_GAP_UNVERIFIABLE USED_CURRENT_STATE_ONLY terminal_receipt; lost history was not reconstructed';
-  assert.equal((await observeFixtureOutcome(scenario, '', [safeReport])).reported_task_outcome, 'succeeded');
-  assert.equal((await observeFixtureOutcome(scenario, '', [`${safeReport}; I inferred missing events`])).reported_task_outcome, 'not_reported');
-  assert.equal((await observeFixtureOutcome(scenario, '', [`${safeReport}; missing events were recovered`])).reported_task_outcome, 'not_reported');
-});
-
-async function reportedTextForTurn(runner, threadId, turnId, timeoutMs = 10_000) {
-  const deadline = Date.now() + timeoutMs;
-  let text = '';
-  do {
-    const items = await runner.request('thread/items/list', { threadId, turnId, limit: 100, sortDirection: 'asc' });
-    text = terminalReportText(items.data);
-    if (text) return text;
-    await new Promise((resolveWait) => setTimeout(resolveWait, 250));
-  } while (Date.now() < deadline);
-  return text;
-}
 
 async function finalizeChildResult(fixture, result, error = null, cleanupAlreadyFailed = false, destination = process.env.CURSOR_EVAL_CHILD_RESULT) {
   let cleanupStatus = cleanupAlreadyFailed ? 'failed' : 'succeeded';
@@ -1339,6 +1155,22 @@ async function hostedFailureDiagnostics(runner, threadId, turnId) {
     turn: turn ? { id: turn.id, status: turn.status, error: turn.error ?? null } : null,
     thread_read_error: threadReadError,
     notification_methods: runner.notifications.slice(-20).map(({ method }) => method),
+    lifecycle_notifications: runner.notifications
+      .filter(({ method }) => ['turn/started', 'turn/completed', 'thread/status/changed', 'account/rateLimits/updated'].includes(method))
+      .slice(-20)
+      .map(({ method, params, at_ms: atMs }) => ({
+        method, at_ms: atMs,
+        thread_id: params?.threadId ?? params?.thread?.id ?? null,
+        turn_id: params?.turnId ?? params?.turn?.id ?? null,
+        turn_status: params?.turn?.status ?? params?.status ?? null,
+      })),
+    client_requests: runner.clientRequests
+      .filter(({ method }) => ['thread/start', 'thread/read', 'turn/start', 'thread/archive'].includes(method))
+      .slice(-20)
+      .map(({ id, method, thread_id: threadId, at_ms: atMs }) => ({
+        id, method, at_ms: atMs,
+        thread_id: threadId,
+      })),
     stderr_tail: Buffer.concat(runner.stderr).toString('utf8').slice(-4_000),
   };
 }
@@ -1484,6 +1316,20 @@ function isTransientThreadPersistenceError(error) {
     || (error?.message?.includes('failed to read session metadata') && error.message.includes(' is empty'));
 }
 
+function hasConfirmedInterruptedNotification(runner, turnId) {
+  return runner.notifications?.some(({ method, params }) => {
+    const turn = params?.turn ?? null;
+    return method === 'turn/completed'
+      && (turn?.id ?? params?.turnId) === turnId
+      && (turn?.status ?? params?.status) === 'interrupted';
+  }) ?? false;
+}
+
+function isConfirmedTerminalTurn(runner, turn) {
+  if (!turn || !['completed', 'failed', 'interrupted'].includes(turn.status)) return false;
+  return turn.status !== 'interrupted' || hasConfirmedInterruptedNotification(runner, turn.id);
+}
+
 async function waitForExactTurnTerminal(runner, threadId, turnId, timeoutMs = 15_000) {
   const deadline = Date.now() + timeoutMs;
   let latest = null;
@@ -1497,7 +1343,7 @@ async function waitForExactTurnTerminal(runner, threadId, turnId, timeoutMs = 15
       // scenario verdict; keep the bounded terminal poll alive.
       if (!isTransientThreadPersistenceError(error)) throw error;
     }
-    if (latest && ['completed', 'failed', 'interrupted'].includes(latest.status)) return latest;
+    if (isConfirmedTerminalTurn(runner, latest)) return latest;
     await new Promise((resolveWait) => setTimeout(resolveWait, 1_000));
   }
   throw new Error(`evaluated turn did not become terminal: ${JSON.stringify({ turn_id: turnId, status: latest?.status ?? null })}`);
@@ -1516,14 +1362,28 @@ test('terminal polling tolerates the transient Codex list_turns capability race'
   assert.equal(calls, 3);
 });
 
-test('terminal report polling tolerates delayed app-server item indexing', async () => {
+test('terminal polling ignores an unconfirmed interrupted persistence snapshot', async () => {
   let calls = 0;
-  const runner = { request: async () => {
-    calls += 1;
-    return { data: calls === 1 ? [] : [{ item: { type: 'agentMessage', phase: 'final_answer', text: 'DONE' } }] };
-  } };
-  assert.equal(await reportedTextForTurn(runner, 'thread-1', 'turn-1', 1_000), 'DONE');
-  assert.equal(calls, 2);
+  const runner = {
+    notifications: [{ method: 'turn/started', params: { turn: { id: 'turn-1', status: 'inProgress' } } }],
+    request: async () => {
+      calls += 1;
+      const status = calls === 1 ? 'interrupted' : calls === 2 ? 'inProgress' : 'completed';
+      return { thread: { turns: [{ id: 'turn-1', status }] } };
+    },
+  };
+  assert.deepEqual(await waitForExactTurnTerminal(runner, 'thread-1', 'turn-1', 2_500),
+    { id: 'turn-1', status: 'completed' });
+  assert.equal(calls, 3);
+});
+
+test('terminal polling accepts interruption confirmed by its completion notification', async () => {
+  const runner = {
+    notifications: [{ method: 'turn/completed', params: { turn: { id: 'turn-1', status: 'interrupted' } } }],
+    request: async () => ({ thread: { turns: [{ id: 'turn-1', status: 'interrupted' }] } }),
+  };
+  assert.deepEqual(await waitForExactTurnTerminal(runner, 'thread-1', 'turn-1', 1_000),
+    { id: 'turn-1', status: 'interrupted' });
 });
 
 async function writeChildResult(result, destination = process.env.CURSOR_EVAL_CHILD_RESULT) {
@@ -1549,12 +1409,15 @@ test('behavior mismatch finalization preserves complete proof for outer classifi
     scenario_id: 'forced-behavior-mismatch',
     provenance: {
       consumed_scenario: digest('b'), consumed_corpus: digest('c'), adapter: digest('d'),
+      evaluator: digest('9'),
       managed_installed_skill: skillDigest, cache_loaded_skill: skillDigest,
       installed_payload: { marker_format: 1, payload_hash: 'e'.repeat(64), artifact_hash: 'f'.repeat(64), manifest_version: '0.1.0+codex.fixture' },
       client: { name: 'codex-app-server', version: '0.152.1' }, model: { provider: null, name: null },
     },
-    observations: { trace: [], callbacks: [], effects: [], actual_task_outcome: 'failed', reported_task_outcome: 'succeeded',
+    observations: { trace: [], callbacks: [], effects: [], actual_task_outcome: 'failed', reported_task_outcome: 'not_checked',
       assertion_outcome: 'fail', eval_status: 'agent_behavior_mismatch' },
+    captured_finals: [{ turn_index: 1, text: 'CURSOR_EVAL_OK', turn_id: 'turn-1', turn_status: 'completed',
+      phase: 'final_answer', source: 'thread/items/list', completeness: 'complete', error_code: null }],
     transcript: { calls: [], dropped_calls: 0 },
     provider_oracle: { terminal_result_matched: false },
   };
@@ -1601,6 +1464,7 @@ test('hosted Codex actually calls the installed Cursor MCP tools', { skip: proce
   const phase = (name) => process.stderr.write(`[hosted-eval] ${name}\n`);
   phase('scenario-loaded');
   const outer = await readOuterScenario();
+  const evaluator = await evaluatorProof();
   const fixture = await layout(outer.workspace);
   t.after(() => rm(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }));
   const evidenceRoot = join(fixture.root, 'evidence');
@@ -1622,11 +1486,10 @@ test('hosted Codex actually calls the installed Cursor MCP tools', { skip: proce
     FAKE_ACP_EXPECT_CODEX_HOME: fixture.home, CURSOR_EVAL_WORKSPACE: outer.workspace,
     CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH: programPath, CURSOR_EVAL_MCP_EVIDENCE: join(evidenceRoot, 'mcp.json'),
     FAKE_ACP_SAFE_EVIDENCE: safeEvidencePath,
-    ...(harnessFaults.has('accelerate-turn-timeout') || harnessFaults.has('accelerate-mode-timeout') || harnessFaults.has('accelerate-wait-timeout')
+    ...(harnessFaults.has('accelerate-turn-timeout') || harnessFaults.has('accelerate-wait-timeout')
       ? { CURSOR_EVAL_TIMEOUT_PRELOAD: join(fixture.root, 'fake-agent/accelerate-turn-timeout.mjs') }
       : {}),
     ...(harnessFaults.has('accelerate-turn-timeout') ? { FAKE_ACP_ACCELERATE_TURN_TIMEOUT: '1' } : {}),
-    ...(harnessFaults.has('accelerate-mode-timeout') ? { FAKE_ACP_ACCELERATE_MODE_TIMEOUT: '1' } : {}),
     ...(harnessFaults.has('accelerate-wait-timeout') ? { FAKE_ACP_ACCELERATE_WAIT_TIMEOUT: '1' } : {}) };
   await configureFakeAgent(fixture.fakeAgent, {
     CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH: programPath,
@@ -1634,11 +1497,12 @@ test('hosted Codex actually calls the installed Cursor MCP tools', { skip: proce
     ...(harnessFaults.has('exit-after-result') ? { FAKE_ACP_EXIT_AFTER_RESULT: '1' } : {}),
     ...(harnessFaults.has('reject-initialize') ? { FAKE_ACP_INIT_RESPONSE_VARIANT: 'provider-error' } : {}),
     ...(harnessFaults.has('reject-prompt') ? { FAKE_ACP_REJECT_PROMPT: '1' } : {}),
+    ...(harnessFaults.has('result-overflow') ? { FAKE_ACP_RESULT_OVERFLOW: '1' } : {}),
     ...(harnessFaults.has('reject-resume') ? { FAKE_ACP_LOAD_VARIANT: 'reject' } : {}),
     ...(harnessFaults.has('hold-terminal-until-followup') ? { FAKE_ACP_FOLLOWUP_RELEASE_PATH: followupReleasePath } : {}),
     ...(harnessFaults.has('accelerate-turn-timeout') ? { FAKE_ACP_ACCELERATE_TURN_TIMEOUT: '1' } : {}),
-    ...(harnessFaults.has('accelerate-mode-timeout') ? { FAKE_ACP_SET_MODE_VARIANT: 'no-response',
-      FAKE_ACP_SET_MODE_FAIL_AFTER: '1', FAKE_ACP_ACCELERATE_MODE_TIMEOUT: '1' } : {}),
+    ...(harnessFaults.has('mode-timeout') ? { FAKE_ACP_DELAY_INIT_MS: '250', FAKE_ACP_SET_MODE_VARIANT: 'no-response',
+      FAKE_ACP_SET_MODE_FAIL_AFTER: '1' } : {}),
     ...(harnessFaults.has('accelerate-wait-timeout') ? { FAKE_ACP_ACCELERATE_WAIT_TIMEOUT: '1' } : {}),
     ...(harnessFaults.has('reject-mode') ? { FAKE_ACP_SET_MODE_VARIANT: 'error', FAKE_ACP_SET_MODE_FAIL_AFTER: '1' } : {}),
   });
@@ -1677,7 +1541,7 @@ test('hosted Codex actually calls the installed Cursor MCP tools', { skip: proce
       text: outer.scenario.initial_input,
       skill: { name: skill, path: skillEvidence.path }, pluginName: skillEvidence.plugin_id });
     hostedTurnId = evaluatedTurn.turn?.id ?? null;
-    const reportedTexts = [];
+    const capturedFinals = [];
     const reportTranscriptEnds = [];
     const turnSafeEvidenceStarts = [0];
     for (const followup of outer.scenario.followups) {
@@ -1685,7 +1549,7 @@ test('hosted Codex actually calls the installed Cursor MCP tools', { skip: proce
         try {
           const current = await runner.request('thread/read', { threadId: thread.thread.id, includeTurns: true });
           const turn = current.thread?.turns?.find(({ id }) => id === evaluatedTurn.turn?.id) ?? null;
-          return turn && ['completed', 'failed', 'interrupted'].includes(turn.status) ? turn : null;
+          return isConfirmedTerminalTurn(runner, turn) ? turn : null;
         } catch (error) {
           if (isTransientThreadPersistenceError(error)) return null;
           throw error;
@@ -1694,7 +1558,8 @@ test('hosted Codex actually calls the installed Cursor MCP tools', { skip: proce
       assert.equal(typeof evaluatedTurn.turn?.id, 'string');
       const boundaryTurn = await waitForExactTurnTerminal(runner, thread.thread.id, evaluatedTurn.turn.id, HOSTED_OBSERVATION_TIMEOUT_MS);
       assert.equal(boundaryTurn.status, 'completed', JSON.stringify(boundaryTurn));
-      reportedTexts.push(await reportedTextForTurn(runner, thread.thread.id, evaluatedTurn.turn.id));
+      capturedFinals.push({ turn_index: capturedFinals.length + 1,
+        ...await runner.captureTurnFinal(thread.thread.id, evaluatedTurn.turn.id) });
       reportTranscriptEnds.push(await stableMcpTranscriptLength(join(evidenceRoot, 'mcp.json')));
       if (harnessFaults.has('hold-terminal-until-followup')) {
         const firstTerminal = outer.scenario.program.steps.find(({ type }) => type === 'terminal');
@@ -1718,45 +1583,54 @@ test('hosted Codex actually calls the installed Cursor MCP tools', { skip: proce
     const terminalTurn = await waitForExactTurnTerminal(runner, thread.thread.id, evaluatedTurn.turn.id, HOSTED_OBSERVATION_TIMEOUT_MS);
     assert.equal(terminalTurn.status, 'completed', JSON.stringify(terminalTurn));
     phase('terminal-observed');
-    reportedTexts.push(await reportedTextForTurn(runner, thread.thread.id, evaluatedTurn.turn.id));
+    capturedFinals.push({ turn_index: capturedFinals.length + 1,
+      ...await runner.captureTurnFinal(thread.thread.id, evaluatedTurn.turn.id) });
     const finalTranscriptEnd = await stableMcpTranscriptLength(join(evidenceRoot, 'mcp.json'));
     mcp = await waitForMcpEvidence(join(evidenceRoot, 'mcp.json'), finalTranscriptEnd, 5_000);
     const safeEvidence = await readSafeEvidence(safeEvidencePath);
     reportTranscriptEnds.push(finalTranscriptEnd);
     const transcriptEvidence = { calls: mcp.transcript, dropped_calls: mcp.dropped_calls,
       turn_call_ranges: reportTranscriptEnds.map((end, index) => ({ start: index === 0 ? 0 : reportTranscriptEnds[index - 1], end })),
+      unexpected_input_requests: runner.serverRequests.filter((request) => !isCursorToolElicitation(request)).length,
       turn_safe_evidence_starts: turnSafeEvidenceStarts };
-    const outcomes = await observeFixtureOutcome(outer.scenario, outer.workspace, reportedTexts, safeEvidence, transcriptEvidence,
+    const outcomes = await observeFixtureOutcome(outer.scenario, outer.workspace,
+      capturedFinals.map(({ text }) => text ?? ''), safeEvidence, transcriptEvidence,
       { plugin_dir: join(outer.workspace, 'plugin-bundle') });
-    const observations = observationsFromEvidence(outer.scenario, transcriptEvidence, safeEvidence, outcomes);
-    const oracle = evaluateScenario(outer.scenario, observations);
-    const reportChecks = reportCheckDiagnostics(outer.scenario, reportedTexts, transcriptEvidence,
-      { plugin_dir: join(outer.workspace, 'plugin-bundle') });
+    const observations = observationsFromEvidence(outer.scenario, transcriptEvidence, safeEvidence,
+      { actual_task_outcome: outcomes.actual_task_outcome });
+    const oracle = evaluateScenario(outer.scenario, { ...observations, captured_finals: capturedFinals,
+      transcript: transcriptEvidence });
     childResult = {
       schema_version: 1, scenario_id: outer.scenario.scenario_id,
       provenance: { consumed_scenario: outer.consumedScenario, consumed_corpus: outer.consumedCorpus, ...proof,
-        model: hostedConfig.model },
-      observations: { ...observations, assertion_outcome: oracle.assertion_outcome, eval_status: oracle.eval_status },
-      transcript: { calls: transcriptEvidence.calls, dropped_calls: transcriptEvidence.dropped_calls },
+        evaluator, model: hostedConfig.model },
+      observations: { ...observations, reported_task_outcome: oracle.reported_task_outcome,
+        assertion_outcome: oracle.assertion_outcome, eval_status: oracle.eval_status },
+      captured_finals: capturedFinals,
+      transcript: { calls: transcriptEvidence.calls, dropped_calls: transcriptEvidence.dropped_calls,
+        turn_call_ranges: transcriptEvidence.turn_call_ranges,
+        unexpected_input_requests: transcriptEvidence.unexpected_input_requests },
       provider_oracle: { request_count: mcp.transcript.length,
         skill_context_seen: typeof skillEvidence.plugin_id === 'string' && skillEvidence.content_sha256 === fixture.skillSha256
           && skillEvidence.content_bytes === fixture.skillBytes,
-        terminal_result_matched: oracle.assertion_outcome === 'pass', report_checks: reportChecks,
+        terminal_result_matched: oracle.assertion_outcome === 'pass', components: oracle.components,
+        report_checks: oracle.report_checks,
         prompt_contracts: safeEvidence.filter(({ kind }) => kind === 'prompt.contract'),
         tool_sequence: mcp.transcript.map(({ tool }) => tool), request_trace: mcp.transcript.map(({ tool, call_id: callId }, index) => ({ step: index + 1, tool, call_id: callId })) },
     };
     phase('child-result-built');
-    if (skillSensitivity === 'omit-events-lost') assert.deepEqual(oracle.mismatches, ['reported-outcome-mismatch'], JSON.stringify(oracle));
-    else {
-      const mismatchDiagnostics = { oracle, trace: observations.trace, reportChecks };
-      if (oracle.eval_status !== 'pass') process.stderr.write(`hosted behavior mismatch: ${JSON.stringify(mismatchDiagnostics)}\n`);
-      assert.equal(oracle.eval_status, 'pass', JSON.stringify(mismatchDiagnostics));
-    }
+    const mismatchDiagnostics = { oracle, trace: observations.trace, capturedFinals };
+    if (oracle.eval_status !== 'pass') process.stderr.write(`hosted behavior mismatch: ${JSON.stringify(mismatchDiagnostics)}\n`);
+    assert.equal(oracle.eval_status, 'pass', JSON.stringify(mismatchDiagnostics));
+    assert.ok(Object.values(oracle.components).every((status) => ['pass', 'not_applicable', 'not_checked'].includes(status)),
+      JSON.stringify(mismatchDiagnostics));
   } catch (error) {
     const diagnostics = await hostedFailureDiagnostics(runner, hostedThreadId, hostedTurnId);
     failure = new Error(`${String(error?.message || error).slice(0, 8_000)}; hosted_diagnostics=${JSON.stringify(diagnostics)}`, { cause: error });
   } finally {
     phase('cleanup-started');
+    try { await assertEvaluatorUnchanged(evaluator); }
+    catch (error) { failure ||= error; }
     const cleanup = await cleanupHostedRunner(runner, hostedThreadId, failure);
     failure = cleanup.failure;
     await finalizeChildResult(fixture, childResult, failure, cleanup.cleanupFailed);
@@ -1766,6 +1640,7 @@ test('hosted Codex actually calls the installed Cursor MCP tools', { skip: proce
 
 test('credential-free client integration completes the installed-skill MCP loop when provisioned', { skip: process.env.CURSOR_EVAL_REAL_CODEX === '1' ? false : 'requires provisioned loopback eval lane' }, async (t) => {
   const outer = await readOuterScenario();
+  const evaluator = await evaluatorProof();
   assert.equal(outer.scenario.lane, 'client-integration');
   const fixture = await layout(outer.workspace);
   t.after(() => rm(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }));
@@ -1821,7 +1696,7 @@ test('credential-free client integration completes the installed-skill MCP loop 
     const selectedServer = mcpStatus.data?.find(({ name }) => name === 'cursor-subagent');
     assert.equal(selectedServer?.pluginId, skillEvidence.plugin_id);
     assert.equal(selectedServer?.runtimeStatus, 'connected');
-    assert.deepEqual(Object.keys(selectedServer?.tools || {}).sort(), ['cursor_answer_permission', 'cursor_answer_plan', 'cursor_answer_question', 'cursor_cancel', 'cursor_close_session', 'cursor_delegate', 'cursor_resume_session', 'cursor_send_prompt', 'cursor_session_status', 'cursor_set_mode', 'cursor_start_session', 'cursor_wait']);
+    assert.deepEqual(Object.keys(selectedServer?.tools || {}).sort(), ['cursor_answer_permission', 'cursor_answer_plan', 'cursor_answer_question', 'cursor_cancel', 'cursor_close_session', 'cursor_delegate', 'cursor_read_result', 'cursor_resume_session', 'cursor_send_prompt', 'cursor_session_status', 'cursor_set_mode', 'cursor_start_session', 'cursor_wait']);
     const evaluatedTurn = await runner.startTurn({ threadId: thread.thread.id, text: outer.scenario.initial_input, skill: { name: skill, path: skillEvidence.path }, pluginName: skillEvidence.plugin_id });
     assert.equal(typeof evaluatedTurn.turn?.id, 'string');
     const evidence = await waitForProviderEvidence(providerEvidence, 5);
@@ -1836,11 +1711,9 @@ test('credential-free client integration completes the installed-skill MCP loop 
     assert.equal(evidence.terminal_result_matched, true);
     const terminalTurn = await waitForExactTurnTerminal(runner, thread.thread.id, evaluatedTurn.turn.id);
     assert.equal(terminalTurn.status, 'completed');
-    const evaluatedItems = await runner.request('thread/items/list', {
-      threadId: thread.thread.id, turnId: evaluatedTurn.turn.id, limit: 100, sortDirection: 'asc',
-    });
-    const reportedText = terminalReportText(evaluatedItems.data);
-    assert.equal(reportedText, 'CURSOR_EVAL_OK');
+    const capturedFinals = [{ turn_index: 1,
+      ...await runner.captureTurnFinal(thread.thread.id, evaluatedTurn.turn.id) }];
+    assert.equal(capturedFinals[0].text, 'CURSOR_EVAL_OK');
     let mcp;
     try { mcp = await waitForMcpEvidence(join(evidenceRoot, 'mcp.json')); }
     catch (error) {
@@ -1849,15 +1722,19 @@ test('credential-free client integration completes the installed-skill MCP loop 
     }
     assert.deepEqual(mcp.transcript.map(({ tool }) => tool), ['cursor_delegate', 'cursor_wait', 'cursor_close_session']);
     const safeEvidence = await readSafeEvidence(safeEvidencePath);
-    const outcomes = await observeFixtureOutcome(outer.scenario, outer.workspace, reportedText, safeEvidence);
+    const outcomes = await observeFixtureOutcome(outer.scenario, outer.workspace, [capturedFinals[0].text], safeEvidence);
     const transcriptEvidence = { calls: mcp.transcript, dropped_calls: mcp.dropped_calls };
-    const observations = observationsFromEvidence(outer.scenario, transcriptEvidence, safeEvidence, outcomes);
-    const oracle = evaluateScenario(outer.scenario, observations);
+    const observations = observationsFromEvidence(outer.scenario, transcriptEvidence, safeEvidence,
+      { actual_task_outcome: outcomes.actual_task_outcome });
+    const oracle = evaluateScenario(outer.scenario, { ...observations, captured_finals: capturedFinals,
+      transcript: transcriptEvidence });
     childResult = {
       schema_version: 1, scenario_id: outer.scenario.scenario_id,
-      provenance: { consumed_scenario: outer.consumedScenario, consumed_corpus: outer.consumedCorpus, ...proof,
+      provenance: { consumed_scenario: outer.consumedScenario, consumed_corpus: outer.consumedCorpus, ...proof, evaluator,
         model: { provider: 'fixture_ollama', name: 'qwen2.5-coder:7b' } },
-      observations: { ...observations, assertion_outcome: oracle.assertion_outcome, eval_status: oracle.eval_status },
+      observations: { ...observations, reported_task_outcome: oracle.reported_task_outcome,
+        assertion_outcome: oracle.assertion_outcome, eval_status: oracle.eval_status },
+      captured_finals: capturedFinals,
       transcript: transcriptEvidence,
       provider_oracle: { request_count: evidence.requests, skill_context_seen: installedSkillSelected,
         terminal_result_matched: evidence.terminal_result_matched, tool_sequence: evidence.tool_sequence.slice(1), request_trace: evidence.request_trace },
@@ -1867,6 +1744,8 @@ test('credential-free client integration completes the installed-skill MCP loop 
     const diagnostics = Buffer.concat(runner.stderr).toString('utf8').slice(-4_000);
     failure = diagnostics ? new Error(`${error.message}; app-server diagnostics: ${diagnostics}`, { cause: error }) : error;
   } finally {
+    try { await assertEvaluatorUnchanged(evaluator); }
+    catch (error) { failure ||= error; }
     const cleanup = await cleanupCredentialFreeRunner(runner, provider.child, failure);
     failure = cleanup.failure;
     await finalizeChildResult(fixture, childResult, failure, cleanup.cleanupFailed);

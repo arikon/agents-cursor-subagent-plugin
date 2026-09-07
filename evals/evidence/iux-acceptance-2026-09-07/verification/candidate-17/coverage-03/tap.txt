@@ -1,0 +1,3702 @@
+TAP version 13
+# Subtest: fake adapter CLI and in-process runner have normalized outcome parity
+ok 1 - fake adapter CLI and in-process runner have normalized outcome parity
+  ---
+  duration_ms: 377.349417
+  type: 'test'
+  ...
+# Subtest: CLI returns one machine-readable invalid-invocation envelope
+ok 2 - CLI returns one machine-readable invalid-invocation envelope
+  ---
+  duration_ms: 113.719916
+  type: 'test'
+  ...
+# Subtest: CLI bounds diagnostics in its machine-readable failure envelope
+ok 3 - CLI bounds diagnostics in its machine-readable failure envelope
+  ---
+  duration_ms: 62.367959
+  type: 'test'
+  ...
+# Subtest: CLI rejects an option without its value
+ok 4 - CLI rejects an option without its value
+  ---
+  duration_ms: 56.288125
+  type: 'test'
+  ...
+# Subtest: CLI rejects a duplicate singleton option
+ok 5 - CLI rejects a duplicate singleton option
+  ---
+  duration_ms: 53.968666
+  type: 'test'
+  ...
+# Subtest: CLI rejects a relative filesystem boundary
+ok 6 - CLI rejects a relative filesystem boundary
+  ---
+  duration_ms: 60.578209
+  type: 'test'
+  ...
+# Subtest: CLI install rejects a malformed package manifest without publishing artifacts
+ok 7 - CLI install rejects a malformed package manifest without publishing artifacts
+  ---
+  duration_ms: 273.600167
+  type: 'test'
+  ...
+# Subtest: CLI install rejects a non-object package manifest without publishing artifacts
+ok 8 - CLI install rejects a non-object package manifest without publishing artifacts
+  ---
+  duration_ms: 253.037542
+  type: 'test'
+  ...
+# Subtest: CLI install rejects an incomplete package payload without publishing artifacts
+ok 9 - CLI install rejects an incomplete package payload without publishing artifacts
+  ---
+  duration_ms: 229.098625
+  type: 'test'
+  ...
+# Subtest: CLI install requires the recording proxy as a managed payload owner entry
+ok 10 - CLI install requires the recording proxy as a managed payload owner entry
+  ---
+  duration_ms: 242.456583
+  type: 'test'
+  ...
+# Subtest: CLI install rejects a package without its required skill tree
+ok 11 - CLI install rejects a package without its required skill tree
+  ---
+  duration_ms: 246.381542
+  type: 'test'
+  ...
+# Subtest: CLI install rejects a symbolic link inside the published skill tree
+ok 12 - CLI install rejects a symbolic link inside the published skill tree
+  ---
+  duration_ms: 241.294125
+  type: 'test'
+  ...
+# Subtest: CLI update rejects an absent managed installation
+ok 13 - CLI update rejects an absent managed installation
+  ---
+  duration_ms: 244.256292
+  type: 'test'
+  ...
+# Subtest: CLI uninstall is idempotent when the managed installation is absent
+ok 14 - CLI uninstall is idempotent when the managed installation is absent
+  ---
+  duration_ms: 229.766875
+  type: 'test'
+  ...
+# Subtest: CLI install rejects an overlapping managed topology before publication
+ok 15 - CLI install rejects an overlapping managed topology before publication
+  ---
+  duration_ms: 54.93025
+  type: 'test'
+  ...
+# Subtest: CLI install rejects a missing source root without creating managed state
+ok 16 - CLI install rejects a missing source root without creating managed state
+  ---
+  duration_ms: 56.525834
+  type: 'test'
+  ...
+# Subtest: CLI install rejects a source root reached through a symbolic link
+ok 17 - CLI install rejects a source root reached through a symbolic link
+  ---
+  duration_ms: 59.942416
+  type: 'test'
+  ...
+# Subtest: CLI preflight rejects a managed root that is not a directory
+ok 18 - CLI preflight rejects a managed root that is not a directory
+  ---
+  duration_ms: 216.874334
+  type: 'test'
+  ...
+# Subtest: CLI preflight rejects a managed root reached through a symbolic link without mutating its target
+ok 19 - CLI preflight rejects a managed root reached through a symbolic link without mutating its target
+  ---
+  duration_ms: 209.947334
+  type: 'test'
+  ...
+# Subtest: CLI install exposes interrupted owned staging as recovery_required
+ok 20 - CLI install exposes interrupted owned staging as recovery_required
+  ---
+  duration_ms: 788.366958
+  type: 'test'
+  ...
+# Subtest: CLI preflight reports unavailable registrations while completing independent checks
+ok 21 - CLI preflight reports unavailable registrations while completing independent checks
+  ---
+  duration_ms: 293.027625
+  type: 'test'
+  ...
+# Subtest: CLI preflight reports an absent managed installation without creating it
+ok 22 - CLI preflight reports an absent managed installation without creating it
+  ---
+  duration_ms: 511.486291
+  type: 'test'
+  ...
+# Subtest: CLI reports an unavailable adapter executable without publishing artifacts
+ok 23 - CLI reports an unavailable adapter executable without publishing artifacts
+  ---
+  duration_ms: 62.111042
+  type: 'test'
+  ...
+# Subtest: CLI rejects malformed adapter envelopes without publishing artifacts
+ok 24 - CLI rejects malformed adapter envelopes without publishing artifacts
+  ---
+  duration_ms: 297.89225
+  type: 'test'
+  ...
+# Subtest: CLI install publishes a self-contained managed package
+ok 25 - CLI install publishes a self-contained managed package
+  ---
+  duration_ms: 547.352167
+  type: 'test'
+  ...
+# Subtest: CLI update replaces the published package with the requested payload
+ok 26 - CLI update replaces the published package with the requested payload
+  ---
+  duration_ms: 1126.390083
+  type: 'test'
+  ...
+# Subtest: CLI preflight reports a completed installation ready for use
+ok 27 - CLI preflight reports a completed installation ready for use
+  ---
+  duration_ms: 932.648833
+  type: 'test'
+  ...
+# Subtest: CLI uninstall removes its managed publication and registrations
+ok 28 - CLI uninstall removes its managed publication and registrations
+  ---
+  duration_ms: 1105.282666
+  type: 'test'
+  ...
+# Subtest: canonical manifest normalization sorts objects recursively and preserves arrays
+ok 29 - canonical manifest normalization sorts objects recursively and preserves arrays
+  ---
+  duration_ms: 1.126208
+  type: 'test'
+  ...
+# Subtest: versioned Codex adapter admission and help match its checked-in golden surface
+ok 30 - versioned Codex adapter admission and help match its checked-in golden surface
+  ---
+  duration_ms: 6474.834166
+  type: 'test'
+  ...
+# Subtest: versioned adapter bounds nested Cursor commands and waits for killed child close
+ok 31 - versioned adapter bounds nested Cursor commands and waits for killed child close
+  ---
+  duration_ms: 2160.741833
+  type: 'test'
+  ...
+# Subtest: package command waits for child close after timeout and output overflow kills
+ok 32 - package command waits for child close after timeout and output overflow kills
+  ---
+  duration_ms: 550.493709
+  type: 'test'
+  ...
+# Subtest: package command reports close timeout while a descendant retains the killed child output pipe
+ok 33 - package command reports close timeout while a descendant retains the killed child output pipe
+  ---
+  duration_ms: 202.100541
+  type: 'test'
+  ...
+# Subtest: package command keeps the first kill reason when overflow precedes its timeout
+ok 34 - package command keeps the first kill reason when overflow precedes its timeout
+  ---
+  duration_ms: 336.337791
+  type: 'test'
+  ...
+# Subtest: package command bounds simultaneous stdout and stderr overflow with one terminal outcome
+ok 35 - package command bounds simultaneous stdout and stderr overflow with one terminal outcome
+  ---
+  duration_ms: 35.02875
+  type: 'test'
+  ...
+# Subtest: treeHashV1 has a stable byte-framed golden vector
+ok 36 - treeHashV1 has a stable byte-framed golden vector
+  ---
+  duration_ms: 0.244458
+  type: 'test'
+  ...
+# Subtest: strict parser separates malformed invocation from semantic topology failure
+ok 37 - strict parser separates malformed invocation from semantic topology failure
+  ---
+  duration_ms: 251.296583
+  type: 'test'
+  ...
+# Subtest: bootstrap rejects malformed adapter command configuration before publication
+ok 38 - bootstrap rejects malformed adapter command configuration before publication
+  ---
+  duration_ms: 28.67625
+  type: 'test'
+  ...
+# Subtest: preflight is read-only, emits exactly eight checks and reports missing executable as not_ready
+ok 39 - preflight is read-only, emits exactly eight checks and reports missing executable as not_ready
+  ---
+  duration_ms: 226.4475
+  type: 'test'
+  ...
+# Subtest: preflight rejects an executable inside managed publication topology without executing it
+ok 40 - preflight rejects an executable inside managed publication topology without executing it
+  ---
+  duration_ms: 356.415958
+  type: 'test'
+  ...
+# Subtest: preflight classifies every unsuccessful Node version-command outcome as incompatible
+ok 41 - preflight classifies every unsuccessful Node version-command outcome as incompatible
+  ---
+  duration_ms: 1251.147083
+  type: 'test'
+  ...
+# Subtest: fake adapter drives portable install, identical no-op, update, preflight and uninstall
+ok 42 - fake adapter drives portable install, identical no-op, update, preflight and uninstall
+  ---
+  duration_ms: 2304.121208
+  type: 'test'
+  ...
+# Subtest: README documents the verified Codex cache refresh and reinstall sequence
+ok 43 - README documents the verified Codex cache refresh and reinstall sequence
+  ---
+  duration_ms: 0.552458
+  type: 'test'
+  ...
+# Subtest: unknown adapter version is rejected before fake mutation
+ok 44 - unknown adapter version is rejected before fake mutation
+  ---
+  duration_ms: 49.567791
+  type: 'test'
+  ...
+# Subtest: each backup cleanup deletion boundary is fail-closed as cleanup_required
+ok 45 - each backup cleanup deletion boundary is fail-closed as cleanup_required
+  ---
+  duration_ms: 228.207292
+  type: 'test'
+  ...
+# Subtest: failed compensation preserves observed state and returns recovery_required
+ok 46 - failed compensation preserves observed state and returns recovery_required
+  ---
+  duration_ms: 866.514333
+  type: 'test'
+  ...
+# Subtest: update and uninstall also return recovery_required when compensation cannot restore registrations
+ok 47 - update and uninstall also return recovery_required when compensation cannot restore registrations
+  ---
+  duration_ms: 95.617459
+  type: 'test'
+  ...
+# Subtest: config-only update changes artifact hash without changing payload cachebuster
+ok 48 - config-only update changes artifact hash without changing payload cachebuster
+  ---
+  duration_ms: 1176.435958
+  type: 'test'
+  ...
+# Subtest: install no-op compares the desired generated artifact hash as well as payload hash
+ok 49 - install no-op compares the desired generated artifact hash as well as payload hash
+  ---
+  duration_ms: 867.281833
+  type: 'test'
+  ...
+# Subtest: strict marker and registration tuples reject extra marker fields and duplicate owned IDs
+ok 50 - strict marker and registration tuples reject extra marker fields and duplicate owned IDs
+  ---
+  duration_ms: 1952.15825
+  type: 'test'
+  ...
+# Subtest: strict marker validation rejects every malformed owned identity before mutation
+ok 51 - strict marker validation rejects every malformed owned identity before mutation
+  ---
+  duration_ms: 38.441625
+  type: 'test'
+  ...
+# Subtest: owned marker rejects post-publication payload drift before mutation
+ok 52 - owned marker rejects post-publication payload drift before mutation
+  ---
+  duration_ms: 680.864167
+  type: 'test'
+  ...
+# Subtest: publication remnant classification rejects conflicting, foreign and invalid paths
+ok 53 - publication remnant classification rejects conflicting, foreign and invalid paths
+  ---
+  duration_ms: 720.577542
+  type: 'test'
+  ...
+# Subtest: preflight classifies foreign and duplicate owned registrations independently
+ok 54 - preflight classifies foreign and duplicate owned registrations independently
+  ---
+  duration_ms: 244.743709
+  type: 'test'
+  ...
+# Subtest: preflight requires authenticated status and a version-bound admitted adapter
+ok 55 - preflight requires authenticated status and a version-bound admitted adapter
+  ---
+  duration_ms: 1603.887583
+  type: 'test'
+  ...
+# Subtest: preflight reports marketplace and plugin registrations independently
+ok 56 - preflight reports marketplace and plugin registrations independently
+  ---
+  duration_ms: 244.225834
+  type: 'test'
+  ...
+# Subtest: preflight isolates adapter-backed check failures and remains read-only
+ok 57 - preflight isolates adapter-backed check failures and remains read-only
+  ---
+  duration_ms: 1584.024375
+  type: 'test'
+  ...
+# Subtest: backup and registration recovery classification distinguishes owned deltas from foreign drift
+ok 58 - backup and registration recovery classification distinguishes owned deltas from foreign drift
+  ---
+  duration_ms: 1537.001584
+  type: 'test'
+  ...
+# Subtest: interrupted uninstall cleanup is classified as cleanup_required on the next invocation
+ok 59 - interrupted uninstall cleanup is classified as cleanup_required on the next invocation
+  ---
+  duration_ms: 1102.543042
+  type: 'test'
+  ...
+# Subtest: versioned adapter help drift fails before mutation without staging remnants
+ok 60 - versioned adapter help drift fails before mutation without staging remnants
+  ---
+  duration_ms: 90.71
+  type: 'test'
+  ...
+# Subtest: incompatible adapter render payload fails before mutation without staging remnants
+ok 61 - incompatible adapter render payload fails before mutation without staging remnants
+  ---
+  duration_ms: 1585.574292
+  type: 'test'
+  ...
+# Subtest: incompatible adapter registration entries fail before publication
+ok 62 - incompatible adapter registration entries fail before publication
+  ---
+  duration_ms: 353.414459
+  type: 'test'
+  ...
+# Subtest: negative, nonzero, partial and output-overflow mutators compensate only their observed registration delta
+ok 63 - negative, nonzero, partial and output-overflow mutators compensate only their observed registration delta
+  ---
+  duration_ms: 64.587791
+  type: 'test'
+  ...
+# Subtest: mutator timeout compensates an observed partial add and list reread failure requires recovery
+ok 64 - mutator timeout compensates an observed partial add and list reread failure requires recovery
+  ---
+  duration_ms: 1773.176084
+  type: 'test'
+  ...
+# Subtest: registration reread failure during compensation requires recovery without advancing publication
+ok 65 - registration reread failure during compensation requires recovery without advancing publication
+  ---
+  duration_ms: 72.996291
+  type: 'test'
+  ...
+# Subtest: install preserves recovery evidence when marketplace compensation cannot reread registrations
+ok 66 - install preserves recovery evidence when marketplace compensation cannot reread registrations
+  ---
+  duration_ms: 577.150083
+  type: 'test'
+  ...
+# Subtest: uninstall preserves recovery evidence when publication plugin compensation cannot reread registrations
+ok 67 - uninstall preserves recovery evidence when publication plugin compensation cannot reread registrations
+  ---
+  duration_ms: 1152.966125
+  type: 'test'
+  ...
+# Subtest: update reports recovery when publication rollback cannot rename the owned backup into place
+ok 68 - update reports recovery when publication rollback cannot rename the owned backup into place
+  ---
+  duration_ms: 1051.771709
+  type: 'test'
+  ...
+# Subtest: rejected and timed-out compensation commands classify install, update and uninstall by observed state
+ok 69 - rejected and timed-out compensation commands classify install, update and uninstall by observed state
+  ---
+  duration_ms: 253.68275
+  type: 'test'
+  ...
+# Subtest: failed stage preparation reports recovery_required when its owned staging cannot be removed
+ok 70 - failed stage preparation reports recovery_required when its owned staging cannot be removed
+  ---
+  duration_ms: 225.714667
+  type: 'test'
+  ...
+# Subtest: reread failures preserve every recoverable artifact and expose the observed lifecycle state
+ok 71 - reread failures preserve every recoverable artifact and expose the observed lifecycle state
+  ---
+  duration_ms: 956.557542
+  type: 'test'
+  ...
+# Subtest: uncertain remove outcomes compensate their observed delta and never advance lifecycle
+ok 72 - uncertain remove outcomes compensate their observed delta and never advance lifecycle
+  ---
+  duration_ms: 104.948541
+  type: 'test'
+  ...
+# Subtest: reported successful no-op mutations do not advance their lifecycle
+ok 73 - reported successful no-op mutations do not advance their lifecycle
+  ---
+  duration_ms: 94.859166
+  type: 'test'
+  ...
+# Subtest: update and uninstall never add compensation over foreign, duplicate or coupled observed tuples
+ok 74 - update and uninstall never add compensation over foreign, duplicate or coupled observed tuples
+  ---
+  duration_ms: 110.478458
+  type: 'test'
+  ...
+# Subtest: pre-commit publication rename faults compensate install and update while uninstall commit fault is cleanup_required
+ok 75 - pre-commit publication rename faults compensate install and update while uninstall commit fault is cleanup_required
+  ---
+  duration_ms: 283.458084
+  type: 'test'
+  ...
+# Subtest: plugin registration version must equal the installed cachebuster
+ok 76 - plugin registration version must equal the installed cachebuster
+  ---
+  duration_ms: 984.616917
+  type: 'test'
+  ...
+# Subtest: semantic gate accepts a complete five-change contract tree
+ok 77 - semantic gate accepts a complete five-change contract tree
+  ---
+  duration_ms: 29.224292
+  type: 'test'
+  ...
+# Subtest: semantic gate accepts corpus owner requirements from authoritative main specs
+ok 78 - semantic gate accepts corpus owner requirements from authoritative main specs
+  ---
+  duration_ms: 15.828125
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects a programmed corpus row without its facade owner
+ok 79 - semantic gate rejects a programmed corpus row without its facade owner
+  ---
+  duration_ms: 19.469625
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects a row-level copy of the uniform lifecycle owner
+ok 80 - semantic gate rejects a row-level copy of the uniform lifecycle owner
+  ---
+  duration_ms: 12.86975
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects any extra authoritative owner not implied by row semantics
+ok 81 - semantic gate rejects any extra authoritative owner not implied by row semantics
+  ---
+  duration_ms: 13.922291
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects a read effect corpus row without Workspace discipline owner
+ok 82 - semantic gate rejects a read effect corpus row without Workspace discipline owner
+  ---
+  duration_ms: 13.693833
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects a write effect corpus row without Workspace discipline owner
+ok 83 - semantic gate rejects a write effect corpus row without Workspace discipline owner
+  ---
+  duration_ms: 13.547416
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects composite launch progress without every exercised owner
+ok 84 - semantic gate rejects composite launch progress without every exercised owner
+  ---
+  duration_ms: 11.42525
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects resume trace without its runtime owner
+ok 85 - semantic gate rejects resume trace without its runtime owner
+  ---
+  duration_ms: 14.18425
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects addressed wait trace without its runtime owner
+ok 86 - semantic gate rejects addressed wait trace without its runtime owner
+  ---
+  duration_ms: 12.217584
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects full result read without its runtime owner
+ok 87 - semantic gate rejects full result read without its runtime owner
+  ---
+  duration_ms: 14.809583
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects result overflow without its runtime owner
+ok 88 - semantic gate rejects result overflow without its runtime owner
+  ---
+  duration_ms: 11.739209
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects file callback without its derived owner
+ok 89 - semantic gate rejects file callback without its derived owner
+  ---
+  duration_ms: 14.029959
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects failed mode transition without its derived owner
+ok 90 - semantic gate rejects failed mode transition without its derived owner
+  ---
+  duration_ms: 13.399709
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects provider rejection without its derived owner
+ok 91 - semantic gate rejects provider rejection without its derived owner
+  ---
+  duration_ms: 11.384709
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects retention gap without its derived owner
+ok 92 - semantic gate rejects retention gap without its derived owner
+  ---
+  duration_ms: 14.249083
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects turn deadline without its derived owner
+ok 93 - semantic gate rejects turn deadline without its derived owner
+  ---
+  duration_ms: 12.413709
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects missing plugin directory without its derived owner
+ok 94 - semantic gate rejects missing plugin directory without its derived owner
+  ---
+  duration_ms: 12.684958
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects corpus harness_faults missing from its owner spec
+ok 95 - semantic gate rejects corpus harness_faults missing from its owner spec
+  ---
+  duration_ms: 10.967416
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects corpus skill_sensitivity missing from its owner spec
+ok 96 - semantic gate rejects corpus skill_sensitivity missing from its owner spec
+  ---
+  duration_ms: 11.262917
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects drift in an exact owned requirement label
+ok 97 - semantic gate rejects drift in an exact owned requirement label
+  ---
+  duration_ms: 12.866125
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects unknown corpus owner capability
+ok 98 - semantic gate rejects unknown corpus owner capability
+  ---
+  duration_ms: 14.832458
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects unknown corpus owner requirement
+ok 99 - semantic gate rejects unknown corpus owner requirement
+  ---
+  duration_ms: 11.02425
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects expanded corpus owner reference shape
+ok 100 - semantic gate rejects expanded corpus owner reference shape
+  ---
+  duration_ms: 11.441584
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects non-object corpus owner reference
+ok 101 - semantic gate rejects non-object corpus owner reference
+  ---
+  duration_ms: 13.392917
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects malformed corpus owner document
+ok 102 - semantic gate rejects malformed corpus owner document
+  ---
+  duration_ms: 13.2635
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects corpus without scenarios
+ok 103 - semantic gate rejects corpus without scenarios
+  ---
+  duration_ms: 11.474709
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects corpus row without owner requirements
+ok 104 - semantic gate rejects corpus row without owner requirements
+  ---
+  duration_ms: 13.122083
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects null corpus row
+ok 105 - semantic gate rejects null corpus row
+  ---
+  duration_ms: 11.229375
+  type: 'test'
+  ...
+# Subtest: semantic gate accepts a registered skip-specs tooling change without a capability delta
+ok 106 - semantic gate accepts a registered skip-specs tooling change without a capability delta
+  ---
+  duration_ms: 15.104542
+  type: 'test'
+  ...
+# Subtest: semantic gate limits capability claims to the Capabilities section
+ok 107 - semantic gate limits capability claims to the Capabilities section
+  ---
+  duration_ms: 16.220125
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects a missing public-invariant index
+ok 108 - semantic gate rejects a missing public-invariant index
+  ---
+  duration_ms: 14.423833
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects an owner reference when the owner has no requirement-id mapping
+ok 109 - semantic gate rejects an owner reference when the owner has no requirement-id mapping
+  ---
+  duration_ms: 12.40075
+  type: 'test'
+  ...
+# Subtest: semantic gate reads only the requested requirement block from a multi-requirement main spec
+ok 110 - semantic gate reads only the requested requirement block from a multi-requirement main spec
+  ---
+  duration_ms: 16.515458
+  type: 'test'
+  ...
+# Subtest: semantic gate treats a main-spec directory without spec.md as having no owner requirements
+ok 111 - semantic gate treats a main-spec directory without spec.md as having no owner requirements
+  ---
+  duration_ms: 13.287
+  type: 'test'
+  ...
+# Subtest: semantic gate admits a corpus owner requirement declared by the same active change delta
+ok 112 - semantic gate admits a corpus owner requirement declared by the same active change delta
+  ---
+  duration_ms: 12.683333
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects a corpus owner requirement declared only by another change delta
+ok 113 - semantic gate rejects a corpus owner requirement declared only by another change delta
+  ---
+  duration_ms: 14.189167
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects reference-only change without skip_specs marker
+ok 114 - semantic gate rejects reference-only change without skip_specs marker
+  ---
+  duration_ms: 15.748542
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects reference-only change with conflicting skip_specs marker
+ok 115 - semantic gate rejects reference-only change with conflicting skip_specs marker
+  ---
+  duration_ms: 21.553167
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects reference-only change with an invalid owner reference
+ok 116 - semantic gate rejects reference-only change with an invalid owner reference
+  ---
+  duration_ms: 13.192458
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects reference-only change with a missing owner change
+ok 117 - semantic gate rejects reference-only change with a missing owner change
+  ---
+  duration_ms: 14.528625
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects reference-only change without an owner reference
+ok 118 - semantic gate rejects reference-only change without an owner reference
+  ---
+  duration_ms: 12.761583
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects reference-only change with artifact traceability drift
+ok 119 - semantic gate rejects reference-only change with artifact traceability drift
+  ---
+  duration_ms: 14.321
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects reference-only change with an invalid requirement ID
+ok 120 - semantic gate rejects reference-only change with an invalid requirement ID
+  ---
+  duration_ms: 14.414834
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects reference-only change with a capability delta
+ok 121 - semantic gate rejects reference-only change with a capability delta
+  ---
+  duration_ms: 15.418541
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects reference-only change with a capability claim
+ok 122 - semantic gate rejects reference-only change with a capability claim
+  ---
+  duration_ms: 13.374542
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects skip_specs on a capability-owning change
+ok 123 - semantic gate rejects skip_specs on a capability-owning change
+  ---
+  duration_ms: 18.672625
+  type: 'test'
+  ...
+# Subtest: CLI contract publishes a terminal success verdict
+ok 124 - CLI contract publishes a terminal success verdict
+  ---
+  duration_ms: 14.254709
+  type: 'test'
+  ...
+# Subtest: CLI contract publishes every semantic failure and a non-zero verdict
+ok 125 - CLI contract publishes every semantic failure and a non-zero verdict
+  ---
+  duration_ms: 11.458917
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects missing project convergence policy
+ok 126 - semantic gate rejects missing project convergence policy
+  ---
+  duration_ms: 11.278667
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects unsupported schema
+ok 127 - semantic gate rejects unsupported schema
+  ---
+  duration_ms: 17.1965
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects duplicated project governance
+ok 128 - semantic gate rejects duplicated project governance
+  ---
+  duration_ms: 15.911792
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects missing baseline field
+ok 129 - semantic gate rejects missing baseline field
+  ---
+  duration_ms: 12.366083
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects missing capability declaration
+ok 130 - semantic gate rejects missing capability declaration
+  ---
+  duration_ms: 11.354459
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects duplicated requirement ownership
+ok 131 - semantic gate rejects duplicated requirement ownership
+  ---
+  duration_ms: 12.260292
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects modified requirement without task traceability
+ok 132 - semantic gate rejects modified requirement without task traceability
+  ---
+  duration_ms: 13.659167
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects normative keyword outside delta spec
+ok 133 - semantic gate rejects normative keyword outside delta spec
+  ---
+  duration_ms: 13.291041
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects runtime internal leaked into facade artifacts
+ok 134 - semantic gate rejects runtime internal leaked into facade artifacts
+  ---
+  duration_ms: 17.862667
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects missing facade owner reference
+ok 135 - semantic gate rejects missing facade owner reference
+  ---
+  duration_ms: 11.191084
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects missing scenario matrix contract
+ok 136 - semantic gate rejects missing scenario matrix contract
+  ---
+  duration_ms: 13.492583
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects future multi-delegate scope in current tasks
+ok 137 - semantic gate rejects future multi-delegate scope in current tasks
+  ---
+  duration_ms: 12.04275
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects runtime wire term leaked into facade spec
+ok 138 - semantic gate rejects runtime wire term leaked into facade spec
+  ---
+  duration_ms: 11.527875
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects missing runtime SSOT claim
+ok 139 - semantic gate rejects missing runtime SSOT claim
+  ---
+  duration_ms: 10.312625
+  type: 'test'
+  ...
+# Subtest: semantic gate resolves a registered change from the archive
+ok 140 - semantic gate resolves a registered change from the archive
+  ---
+  duration_ms: 11.84375
+  type: 'test'
+  ...
+# Subtest: semantic gate diagnoses missing and ambiguous roots for every registered role
+ok 141 - semantic gate diagnoses missing and ambiguous roots for every registered role
+  ---
+  duration_ms: 136.23975
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects an empty capability spec
+ok 142 - semantic gate rejects an empty capability spec
+  ---
+  duration_ms: 17.04725
+  type: 'test'
+  ...
+# Subtest: semantic gate admits an owner-approved complete replacement without requiring stale source lines
+ok 143 - semantic gate admits an owner-approved complete replacement without requiring stale source lines
+  ---
+  duration_ms: 12.842292
+  type: 'test'
+  ...
+# Subtest: semantic gate admits an archived replacement only after its exact delta is synced to main
+ok 144 - semantic gate admits an archived replacement only after its exact delta is synced to main
+  ---
+  duration_ms: 21.512208
+  type: 'test'
+  ...
+# Subtest: replacement lineage admits a registered future supersession without trusting mutable current text
+ok 145 - replacement lineage admits a registered future supersession without trusting mutable current text
+  ---
+  duration_ms: 0.267167
+  type: 'test'
+  ...
+# Subtest: replacement lineage terminates when registered replacements contain a cycle
+ok 146 - replacement lineage terminates when registered replacements contain a cycle
+  ---
+  duration_ms: 0.08825
+  type: 'test'
+  ...
+# Subtest: eval replacement rejects stale hardcoded corpus counts outside the corpus
+ok 147 - eval replacement rejects stale hardcoded corpus counts outside the corpus
+  ---
+  duration_ms: 0.590542
+  type: 'test'
+  ...
+# Subtest: semantic gate applies the fixed corpus-count rule to the interactive eval modification
+ok 148 - semantic gate applies the fixed corpus-count rule to the interactive eval modification
+  ---
+  duration_ms: 15.378625
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects an unreasoned replacement bypass
+ok 149 - semantic gate rejects an unreasoned replacement bypass
+  ---
+  duration_ms: 10.321583
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects a replacement when the frozen source digest drifts
+ok 150 - semantic gate rejects a replacement when the frozen source digest drifts
+  ---
+  duration_ms: 10.031875
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects missing modified delta
+ok 151 - semantic gate rejects missing modified delta
+  ---
+  duration_ms: 10.83575
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects orphaned authority rule
+ok 152 - semantic gate rejects orphaned authority rule
+  ---
+  duration_ms: 11.554084
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects incomplete modified requirement copy
+ok 153 - semantic gate rejects incomplete modified requirement copy
+  ---
+  duration_ms: 10.194333
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects incomplete EvalResultV1
+ok 154 - semantic gate rejects incomplete EvalResultV1
+  ---
+  duration_ms: 9.643459
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects unconditional transcript
+ok 155 - semantic gate rejects unconditional transcript
+  ---
+  duration_ms: 10.056458
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects invalid external adapter eval status
+ok 156 - semantic gate rejects invalid external adapter eval status
+  ---
+  duration_ms: 9.515625
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects inaccurate owner reference
+ok 157 - semantic gate rejects inaccurate owner reference
+  ---
+  duration_ms: 9.693667
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects an unregistered active directory without a baseline
+ok 158 - semantic gate rejects an unregistered active directory without a baseline
+  ---
+  duration_ms: 9.961209
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects an unregistered active directory with a baseline
+ok 159 - semantic gate rejects an unregistered active directory with a baseline
+  ---
+  duration_ms: 12.349208
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects a registered active change without a baseline
+ok 160 - semantic gate rejects a registered active change without a baseline
+  ---
+  duration_ms: 10.04025
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects missing node-supervisor owner
+ok 161 - semantic gate rejects missing node-supervisor owner
+  ---
+  duration_ms: 10.676042
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects broken NTS id mapping
+ok 162 - semantic gate rejects broken NTS id mapping
+  ---
+  duration_ms: 10.650958
+  type: 'test'
+  ...
+# Subtest: semantic gate rejects missing NTS task trace
+ok 163 - semantic gate rejects missing NTS task trace
+  ---
+  duration_ms: 9.075958
+  type: 'test'
+  ...
+# Subtest: Claude marketplace installs a cache-local Cursor ACP plugin
+ok 164 - Claude marketplace installs a cache-local Cursor ACP plugin # SKIP set CLAUDE_MARKETPLACE_CANARY=1 to run the live Claude CLI canary
+  ---
+  duration_ms: 1.092917
+  type: 'test'
+  ...
+# Subtest: versioned golden fixes the admitted persistent-turn and skill-load surface
+ok 165 - versioned golden fixes the admitted persistent-turn and skill-load surface
+  ---
+  duration_ms: 6.654417
+  type: 'test'
+  ...
+# Subtest: current versioned golden fixes the paginated final-capture surface
+ok 166 - current versioned golden fixes the paginated final-capture surface
+  ---
+  duration_ms: 1.361917
+  type: 'test'
+  ...
+# Subtest: app-server client normalizes positive installed-skill evidence
+ok 167 - app-server client normalizes positive installed-skill evidence
+  ---
+  duration_ms: 45.383583
+  type: 'test'
+  ...
+# Subtest: app-server client accepts text content when collecting installed-skill evidence
+ok 168 - app-server client accepts text content when collecting installed-skill evidence
+  ---
+  duration_ms: 45.011166
+  type: 'test'
+  ...
+# Subtest: app-server client preserves diagnostics and a missing optional plugin identity
+ok 169 - app-server client preserves diagnostics and a missing optional plugin identity
+  ---
+  duration_ms: 43.068625
+  type: 'test'
+  ...
+# Subtest: app-server client starts an isolated thread through the public request contract
+ok 170 - app-server client starts an isolated thread through the public request contract
+  ---
+  duration_ms: 45.096333
+  type: 'test'
+  ...
+# Subtest: app-server client captures an exact final across paginated turns and items
+ok 171 - app-server client captures an exact final across paginated turns and items
+  ---
+  duration_ms: 45.194542
+  type: 'test'
+  ...
+# Subtest: app-server client waits for a late indexed final
+ok 172 - app-server client waits for a late indexed final
+  ---
+  duration_ms: 46.470542
+  type: 'test'
+  ...
+# Subtest: app-server client distinguishes a confirmed missing final from an empty final
+ok 173 - app-server client distinguishes a confirmed missing final from an empty final
+  ---
+  duration_ms: 54.253583
+  type: 'test'
+  ...
+# Subtest: app-server client records the admitted legacy null phase
+ok 174 - app-server client records the admitted legacy null phase
+  ---
+  duration_ms: 46.212542
+  type: 'test'
+  ...
+# Subtest: app-server client keeps nonterminal and corrupt extraction incomplete
+ok 175 - app-server client keeps nonterminal and corrupt extraction incomplete
+  ---
+  duration_ms: 47.362167
+  type: 'test'
+  ...
+# Subtest: app-server client returns exact long text and rejects a pagination cursor cycle
+ok 176 - app-server client returns exact long text and rejects a pagination cursor cycle
+  ---
+  duration_ms: 46.663042
+  type: 'test'
+  ...
+# Subtest: app-server client admits the exact text limit and rejects the next byte under default transport limits
+ok 177 - app-server client admits the exact text limit and rejects the next byte under default transport limits
+  ---
+  duration_ms: 62.721166
+  type: 'test'
+  ...
+# Subtest: app-server client attributes a corrupt item page to item extraction
+ok 178 - app-server client attributes a corrupt item page to item extraction
+  ---
+  duration_ms: 44.719834
+  type: 'test'
+  ...
+# Subtest: app-server client applies one deadline to slow pages and caps the page override
+ok 179 - app-server client applies one deadline to slow pages and caps the page override
+  ---
+  duration_ms: 649.896375
+  type: 'test'
+  ...
+# Subtest: app-server client rejects an agent message without its required id
+ok 180 - app-server client rejects an agent message without its required id
+  ---
+  duration_ms: 44.751333
+  type: 'test'
+  ...
+# Subtest: app-server client classifies bounded pagination and request failures by source
+ok 181 - app-server client classifies bounded pagination and request failures by source
+  ---
+  duration_ms: 1361.544291
+  type: 'test'
+  ...
+# Subtest: app-server client sends the admitted explicit skill input
+ok 182 - app-server client sends the admitted explicit skill input
+  ---
+  duration_ms: 44.607875
+  type: 'test'
+  ...
+# Subtest: app-server client archives an isolated eval thread before transport close
+ok 183 - app-server client archives an isolated eval thread before transport close
+  ---
+  duration_ms: 47.359709
+  type: 'test'
+  ...
+# Subtest: app-server client completes a turn around notifications and an admitted elicitation
+ok 184 - app-server client completes a turn around notifications and an admitted elicitation
+  ---
+  duration_ms: 44.670208
+  type: 'test'
+  ...
+# Subtest: app-server client normalizes omitted server-request params to null
+ok 185 - app-server client normalizes omitted server-request params to null
+  ---
+  duration_ms: 41.649084
+  type: 'test'
+  ...
+# Subtest: app-server client serializes a server-request handler failure as JSON-RPC error
+ok 186 - app-server client serializes a server-request handler failure as JSON-RPC error
+  ---
+  duration_ms: 44.992792
+  type: 'test'
+  ...
+# Subtest: app-server client denies an unsupported server request by default
+ok 187 - app-server client denies an unsupported server request by default
+  ---
+  duration_ms: 43.590958
+  type: 'test'
+  ...
+# Subtest: app-server client rejects absent skill evidence
+ok 188 - app-server client rejects absent skill evidence
+  ---
+  duration_ms: 42.762291
+  type: 'test'
+  ...
+# Subtest: app-server client rejects catalog evidence when installed skill bytes are unavailable
+ok 189 - app-server client rejects catalog evidence when installed skill bytes are unavailable
+  ---
+  duration_ms: 44.013292
+  type: 'test'
+  ...
+# Subtest: app-server client rejects an invalid skills catalog response
+ok 190 - app-server client rejects an invalid skills catalog response
+  ---
+  duration_ms: 48.217708
+  type: 'test'
+  ...
+# Subtest: app-server client ignores malformed and unrelated frames before a valid response
+ok 191 - app-server client ignores malformed and unrelated frames before a valid response
+  ---
+  duration_ms: 47.062625
+  type: 'test'
+  ...
+# Subtest: app-server client uses a stable fallback for an error without a message
+ok 192 - app-server client uses a stable fallback for an error without a message
+  ---
+  duration_ms: 45.592667
+  type: 'test'
+  ...
+# Subtest: app-server client rejects a request when the server exits before responding
+ok 193 - app-server client rejects a request when the server exits before responding
+  ---
+  duration_ms: 44.102209
+  type: 'test'
+  ...
+# Subtest: app-server client rejects a request issued after its transport has exited
+ok 194 - app-server client rejects a request issued after its transport has exited
+  ---
+  duration_ms: 34.945125
+  type: 'test'
+  ...
+# Subtest: app-server client rejects spawn failure
+ok 195 - app-server client rejects spawn failure
+  ---
+  duration_ms: 1.084
+  type: 'test'
+  ...
+# Subtest: app-server client rejects a timed-out request
+ok 196 - app-server client rejects a timed-out request
+  ---
+  duration_ms: 47.361208
+  type: 'test'
+  ...
+# Subtest: app-server client rejects aggregate output overflow
+ok 197 - app-server client rejects aggregate output overflow
+  ---
+  duration_ms: 39.431875
+  type: 'test'
+  ...
+# Subtest: app-server client closes a cooperative process gracefully
+ok 198 - app-server client closes a cooperative process gracefully
+  ---
+  duration_ms: 44.915916
+  type: 'test'
+  ...
+# Subtest: app-server client escalates shutdown when the process ignores TERM
+ok 199 - app-server client escalates shutdown when the process ignores TERM
+  ---
+  duration_ms: 12.286584
+  type: 'test'
+  ...
+# Subtest: app-server client rejects shutdown when close is not observed after SIGKILL
+ok 200 - app-server client rejects shutdown when close is not observed after SIGKILL
+  ---
+  duration_ms: 9.316167
+  type: 'test'
+  ...
+# Subtest: app-server client rejects requests after shutdown
+ok 201 - app-server client rejects requests after shutdown
+  ---
+  duration_ms: 42.513583
+  type: 'test'
+  ...
+# Subtest: app-server client shutdown is idempotent
+ok 202 - app-server client shutdown is idempotent
+  ---
+  duration_ms: 45.379
+  type: 'test'
+  ...
+# Subtest: coverage audit reuses exact reviewed identities and classifies every new ordered zero counter
+ok 203 - coverage audit reuses exact reviewed identities and classifies every new ordered zero counter
+  ---
+  duration_ms: 33.395
+  type: 'test'
+  ...
+# Subtest: coverage audit invalidates previous classifications when the source hash changes
+ok 204 - coverage audit invalidates previous classifications when the source hash changes
+  ---
+  duration_ms: 0.350041
+  type: 'test'
+  ...
+# Subtest: coverage audit occurrences identify raw sibling counters before zero filtering
+ok 205 - coverage audit occurrences identify raw sibling counters before zero filtering
+  ---
+  duration_ms: 0.159084
+  type: 'test'
+  ...
+# Subtest: coverage audit rejects incomplete, drifting and ambiguously referenced artifacts
+    # Subtest: nonpass
+    ok 1 - nonpass
+      ---
+      duration_ms: 2.556459
+      type: 'test'
+      ...
+    # Subtest: unstable snapshot
+    ok 2 - unstable snapshot
+      ---
+      duration_ms: 2.545833
+      type: 'test'
+      ...
+    # Subtest: invalid snapshot digest
+    ok 3 - invalid snapshot digest
+      ---
+      duration_ms: 2.397084
+      type: 'test'
+      ...
+    # Subtest: open snapshot shape
+    ok 4 - open snapshot shape
+      ---
+      duration_ms: 2.028458
+      type: 'test'
+      ...
+    # Subtest: invalid source file metadata
+    ok 5 - invalid source file metadata
+      ---
+      duration_ms: 1.776584
+      type: 'test'
+      ...
+    # Subtest: manifest differs from source snapshot
+    ok 6 - manifest differs from source snapshot
+      ---
+      duration_ms: 1.630917
+      type: 'test'
+      ...
+    # Subtest: invalid artifact digest descriptors
+    ok 7 - invalid artifact digest descriptors
+      ---
+      duration_ms: 1.715375
+      type: 'test'
+      ...
+    # Subtest: missing artifact reference
+    ok 8 - missing artifact reference
+      ---
+      duration_ms: 2.523625
+      type: 'test'
+      ...
+    # Subtest: escaping artifact reference
+    ok 9 - escaping artifact reference
+      ---
+      duration_ms: 2.507625
+      type: 'test'
+      ...
+    # Subtest: nested artifact reference
+    ok 10 - nested artifact reference
+      ---
+      duration_ms: 2.523084
+      type: 'test'
+      ...
+    # Subtest: missing artifact
+    ok 11 - missing artifact
+      ---
+      duration_ms: 2.617083
+      type: 'test'
+      ...
+    # Subtest: missing last coverage
+    ok 12 - missing last coverage
+      ---
+      duration_ms: 2.916041
+      type: 'test'
+      ...
+    # Subtest: unknown raw source
+    ok 13 - unknown raw source
+      ---
+      duration_ms: 3.142
+      type: 'test'
+      ...
+    # Subtest: raw report file count differs
+    ok 14 - raw report file count differs
+      ---
+      duration_ms: 2.90325
+      type: 'test'
+      ...
+    # Subtest: raw report path is relative
+    ok 15 - raw report path is relative
+      ---
+      duration_ms: 2.423917
+      type: 'test'
+      ...
+    # Subtest: raw report metric is missing
+    ok 16 - raw report metric is missing
+      ---
+      duration_ms: 2.677458
+      type: 'test'
+      ...
+    # Subtest: negative raw counter
+    ok 17 - negative raw counter
+      ---
+      duration_ms: 3.007208
+      type: 'test'
+      ...
+    # Subtest: duplicate raw source
+    ok 18 - duplicate raw source
+      ---
+      duration_ms: 2.34125
+      type: 'test'
+      ...
+    # Subtest: source snapshot files are not sorted
+    ok 19 - source snapshot files are not sorted
+      ---
+      duration_ms: 1.794333
+      type: 'test'
+      ...
+    # Subtest: artifact bytes differ from the supervisor digest
+    ok 20 - artifact bytes differ from the supervisor digest
+      ---
+      duration_ms: 2.631625
+      type: 'test'
+      ...
+    # Subtest: output directory symlink
+    ok 21 - output directory symlink
+      ---
+      duration_ms: 3.4645
+      type: 'test'
+      ...
+    # Subtest: output parent symlink
+    ok 22 - output parent symlink
+      ---
+      duration_ms: 2.633083
+      type: 'test'
+      ...
+    # Subtest: missing output parent
+    ok 23 - missing output parent
+      ---
+      duration_ms: 2.205708
+      type: 'test'
+      ...
+    # Subtest: open previous audit schema
+    ok 24 - open previous audit schema
+      ---
+      duration_ms: 2.582583
+      type: 'test'
+      ...
+    # Subtest: open normalized previous audit schema
+    ok 25 - open normalized previous audit schema
+      ---
+      duration_ms: 3.307292
+      type: 'test'
+      ...
+    # Subtest: symlinked previous audit input
+    ok 26 - symlinked previous audit input
+      ---
+      duration_ms: 2.694292
+      type: 'test'
+      ...
+    # Subtest: previous audit input is a directory
+    ok 27 - previous audit input is a directory
+      ---
+      duration_ms: 2.229417
+      type: 'test'
+      ...
+    # Subtest: malformed review decisions
+    ok 28 - malformed review decisions
+      ---
+      duration_ms: 18.87225
+      type: 'test'
+      ...
+    # Subtest: snapshot destination already contains different bytes
+    ok 29 - snapshot destination already contains different bytes
+      ---
+      duration_ms: 3.350417
+      type: 'test'
+      ...
+    # Subtest: snapshot destination is a symlink
+    ok 30 - snapshot destination is a symlink
+      ---
+      duration_ms: 2.806958
+      type: 'test'
+      ...
+    # Subtest: duplicate supervisor artifact destinations
+    ok 31 - duplicate supervisor artifact destinations
+      ---
+      duration_ms: 2.719458
+      type: 'test'
+      ...
+    # Subtest: result artifact reference names a different file
+    ok 32 - result artifact reference names a different file
+      ---
+      duration_ms: 2.587708
+      type: 'test'
+      ...
+    # Subtest: supervisor artifact collides with an audit output
+    ok 33 - supervisor artifact collides with an audit output
+      ---
+      duration_ms: 3.273375
+      type: 'test'
+      ...
+    # Subtest: source artifacts already in the output directory are retained
+    ok 34 - source artifacts already in the output directory are retained
+      ---
+      duration_ms: 3.665208
+      type: 'test'
+      ...
+    # Subtest: extra sidecar decision
+    ok 35 - extra sidecar decision
+      ---
+      duration_ms: 2.778417
+      type: 'test'
+      ...
+    # Subtest: duplicate sidecar decision
+    ok 36 - duplicate sidecar decision
+      ---
+      duration_ms: 3.909834
+      type: 'test'
+      ...
+    1..36
+ok 206 - coverage audit rejects incomplete, drifting and ambiguously referenced artifacts
+  ---
+  duration_ms: 115.134417
+  type: 'test'
+  ...
+# Subtest: coverage audit CLI exits one with a published review queue and zero only after exact classification
+ok 207 - coverage audit CLI exits one with a published review queue and zero only after exact classification
+  ---
+  duration_ms: 249.045125
+  type: 'test'
+  ...
+# Subtest: recovery proof admits grounded address correction without losing its rejected call
+ok 208 - recovery proof admits grounded address correction without losing its rejected call
+  ---
+  duration_ms: 1.863083
+  type: 'test'
+  ...
+# Subtest: recovery proof fails closed for ambiguous rejection, changed intent, missing evidence or another user turn
+ok 209 - recovery proof fails closed for ambiguous rejection, changed intent, missing evidence or another user turn
+  ---
+  duration_ms: 0.461416
+  type: 'test'
+  ...
+# Subtest: recovery oracle audits raw lookup errors even when normalized trace looks successful
+ok 210 - recovery oracle audits raw lookup errors even when normalized trace looks successful
+  ---
+  duration_ms: 1.290792
+  type: 'test'
+  ...
+# Subtest: recovery variation table distinguishes grounded repairs from changed intent and missing proof
+ok 211 - recovery variation table distinguishes grounded repairs from changed intent and missing proof
+  ---
+  duration_ms: 2.563625
+  type: 'test'
+  ...
+# Subtest: candidate inventory detects oracle drift independently of skill and excludes host roots
+ok 212 - candidate inventory detects oracle drift independently of skill and excludes host roots
+  ---
+  duration_ms: 2.981542
+  type: 'test'
+  ...
+# Subtest: recording MCP proxy rejects an omitted target before opening a child transport
+ok 213 - recording MCP proxy rejects an omitted target before opening a child transport
+  ---
+  duration_ms: 45.332208
+  type: 'test'
+  ...
+# Subtest: EvalResultV1 enforces its exact bounded public contract
+ok 214 - EvalResultV1 enforces its exact bounded public contract
+  ---
+  duration_ms: 0.565083
+  type: 'test'
+  ...
+# Subtest: EvidenceManifestV1 accepts one complete closed proof and rejects drifted shapes and digests
+ok 215 - EvidenceManifestV1 accepts one complete closed proof and rejects drifted shapes and digests
+  ---
+  duration_ms: 0.401666
+  type: 'test'
+  ...
+# Subtest: eval classifier preserves skipped, mismatch, and pass outcomes
+ok 216 - eval classifier preserves skipped, mismatch, and pass outcomes
+  ---
+  duration_ms: 0.080416
+  type: 'test'
+  ...
+# Subtest: cleanup, evidence publication, and runner collisions dominate behavior verdicts
+ok 217 - cleanup, evidence publication, and runner collisions dominate behavior verdicts
+  ---
+  duration_ms: 0.063167
+  type: 'test'
+  ...
+# Subtest: EvalResultV1 is the sole bounded stdout artifact
+ok 218 - EvalResultV1 is the sole bounded stdout artifact
+  ---
+  duration_ms: 0.33675
+  type: 'test'
+  ...
+# Subtest: scenario classification depends on observed task outcome rather than reported prose semantics
+ok 219 - scenario classification depends on observed task outcome rather than reported prose semantics
+  ---
+  duration_ms: 0.067375
+  type: 'test'
+  ...
+# Subtest: captured free prose remains evidence while its reported semantics stay unchecked
+ok 220 - captured free prose remains evidence while its reported semantics stay unchecked
+  ---
+  duration_ms: 8.340875
+  type: 'test'
+  ...
+# Subtest: question delivery requires its visible option label rather than the internal option ID
+ok 221 - question delivery requires its visible option label rather than the internal option ID
+  ---
+  duration_ms: 4.151417
+  type: 'test'
+  ...
+# Subtest: launch trace constrains declared effort and fast fields without inventing omission requirements
+ok 222 - launch trace constrains declared effort and fast fields without inventing omission requirements
+  ---
+  duration_ms: 5.081417
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy atomically publishes bounded lifecycle evidence with exact opaque IDs
+ok 223 - stdio recording proxy atomically publishes bounded lifecycle evidence with exact opaque IDs
+  ---
+  duration_ms: 94.782875
+  type: 'test'
+  ...
+# Subtest: recording proxy hashes complete non-ID arguments before bounded projection
+ok 224 - recording proxy hashes complete non-ID arguments before bounded projection
+  ---
+  duration_ms: 93.471792
+  type: 'test'
+  ...
+# Subtest: recording proxy proves only an exact sequential full-result read through EOF
+ok 225 - recording proxy proves only an exact sequential full-result read through EOF
+  ---
+  duration_ms: 92.496875
+  type: 'test'
+  ...
+# Subtest: recording MCP proxy preserves UTF-8 split across transport chunks in both directions
+ok 226 - recording MCP proxy preserves UTF-8 split across transport chunks in both directions
+  ---
+  duration_ms: 86.810708
+  type: 'test'
+  ...
+# Subtest: recording MCP proxy observes final request and response frames without trailing newlines
+ok 227 - recording MCP proxy observes final request and response frames without trailing newlines
+  ---
+  duration_ms: 88.151666
+  type: 'test'
+  ...
+# Subtest: recording MCP proxy drains accepted output before exiting under stdout backpressure
+ok 228 - recording MCP proxy drains accepted output before exiting under stdout backpressure
+  ---
+  duration_ms: 98.35325
+  type: 'test'
+  ...
+# Subtest: recording proxy preserves only bounded public provider error fields
+ok 229 - recording proxy preserves only bounded public provider error fields
+  ---
+  duration_ms: 89.315208
+  type: 'test'
+  ...
+# Subtest: recording MCP proxy proves the exact plugin roots by digest without retaining paths
+ok 230 - recording MCP proxy proves the exact plugin roots by digest without retaining paths
+  ---
+  duration_ms: 184.3095
+  type: 'test'
+  ...
+# Subtest: recording proxy injects one stale question ID as fixture behavior, not user instruction
+ok 231 - recording proxy injects one stale question ID as fixture behavior, not user instruction
+  ---
+  duration_ms: 187.847167
+  type: 'test'
+  ...
+# Subtest: recording proxy injects a handshaken mode protocol error while preserving live status
+ok 232 - recording proxy injects a handshaken mode protocol error while preserving live status
+  ---
+  duration_ms: 89.6115
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy caps call count and evidence bytes
+ok 233 - stdio recording proxy caps call count and evidence bytes
+  ---
+  duration_ms: 143.730958
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy rejects oversized bounded-field evidence without a partial artifact
+ok 234 - stdio recording proxy rejects oversized bounded-field evidence without a partial artifact
+  ---
+  duration_ms: 90.040333
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy controls an immediate publication failure and closes a live child
+ok 235 - stdio recording proxy controls an immediate publication failure and closes a live child
+  ---
+  duration_ms: 93.364
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy bounds public question answers and option IDs
+ok 236 - stdio recording proxy bounds public question answers and option IDs
+  ---
+  duration_ms: 103.151167
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy ignores malformed and unrelated frames
+ok 237 - stdio recording proxy ignores malformed and unrelated frames
+  ---
+  duration_ms: 104.575417
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy preserves invalid UTF-8 and large numeric IDs byte-for-byte
+ok 238 - stdio recording proxy preserves invalid UTF-8 and large numeric IDs byte-for-byte
+  ---
+  duration_ms: 95.168625
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy fails closed on an oversized no-newline frame
+ok 239 - stdio recording proxy fails closed on an oversized no-newline frame
+  ---
+  duration_ms: 61.540708
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy fails closed on an oversized newline-terminated frame
+ok 240 - stdio recording proxy fails closed on an oversized newline-terminated frame
+  ---
+  duration_ms: 60.562
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy publishes no partial oversized provider frame
+ok 241 - stdio recording proxy publishes no partial oversized provider frame
+  ---
+  duration_ms: 97.514083
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy flushes a backpressured final response before exit
+ok 242 - stdio recording proxy flushes a backpressured final response before exit
+  ---
+  duration_ms: 94.445042
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy publishes only bounded public fields from malformed lifecycle values
+ok 243 - stdio recording proxy publishes only bounded public fields from malformed lifecycle values
+  ---
+  duration_ms: 90.001458
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy does not publish evidence when no tool call was observed
+ok 244 - stdio recording proxy does not publish evidence when no tool call was observed
+  ---
+  duration_ms: 80.823084
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy stops its child with SIGTERM
+ok 245 - stdio recording proxy stops its child with SIGTERM
+  ---
+  duration_ms: 84.639917
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy stops its child with SIGKILL fallback
+ok 246 - stdio recording proxy stops its child with SIGKILL fallback
+  ---
+  duration_ms: 1085.426834
+  type: 'test'
+  ...
+# Subtest: stdio recording proxy terminates its target when its owning process disappears
+ok 247 - stdio recording proxy terminates its target when its owning process disappears
+  ---
+  duration_ms: 351.354083
+  type: 'test'
+  ...
+# Subtest: evidence is atomically published outside and survives fixture cleanup
+ok 248 - evidence is atomically published outside and survives fixture cleanup
+  ---
+  duration_ms: 6.817333
+  type: 'test'
+  ...
+# Subtest: closeout validates all gates, preserves history, and checks only tasks 5.8 through 5.11
+ok 249 - closeout validates all gates, preserves history, and checks only tasks 5.8 through 5.11
+  ---
+  duration_ms: 632.8105
+  type: 'test'
+  ...
+# Subtest: closeout CLI accepts only explicit paths and publishes its proof
+ok 250 - closeout CLI accepts only explicit paths and publishes its proof
+  ---
+  duration_ms: 847.535
+  type: 'test'
+  ...
+# Subtest: closeout validation rejects malformed paths and evidence without mutating destinations
+ok 251 - closeout validation rejects malformed paths and evidence without mutating destinations
+  ---
+  duration_ms: 728.324083
+  type: 'test'
+  ...
+# Subtest: closeout rejects traversal, hash drift, incomplete finals, dropped calls, and incomplete coverage
+ok 252 - closeout rejects traversal, hash drift, incomplete finals, dropped calls, and incomplete coverage
+  ---
+  duration_ms: 689.7235
+  type: 'test'
+  ...
+# Subtest: closeout rejects symlinked bundle roots and matrix artifact parents
+ok 253 - closeout rejects symlinked bundle roots and matrix artifact parents
+  ---
+  duration_ms: 612.797583
+  type: 'test'
+  ...
+# Subtest: closeout rejects each CLI, bundle, JSON, and artifact boundary before publication
+ok 254 - closeout rejects each CLI, bundle, JSON, and artifact boundary before publication
+  ---
+  duration_ms: 381.75375
+  type: 'test'
+  ...
+# Subtest: closeout reaches matrix index, evidence, supervisor, capture, set, and summary guards
+ok 255 - closeout reaches matrix index, evidence, supervisor, capture, set, and summary guards
+  ---
+  duration_ms: 1191.4395
+  type: 'test'
+  ...
+# Subtest: closeout reconstructs coverage evidence and rejects each inconsistent boundary
+ok 256 - closeout reconstructs coverage evidence and rejects each inconsistent boundary
+  ---
+  duration_ms: 350.591166
+  type: 'test'
+  ...
+# Subtest: closeout validates freeze, documents, local refs, snapshots, and publication destinations
+ok 257 - closeout validates freeze, documents, local refs, snapshots, and publication destinations
+  ---
+  duration_ms: 3684.984875
+  type: 'test'
+  ...
+# Subtest: per-file publisher leaves a recoverable prefix and an idempotent rerun repairs it
+ok 258 - per-file publisher leaves a recoverable prefix and an idempotent rerun repairs it
+  ---
+  duration_ms: 1323.091
+  type: 'test'
+  ...
+# Subtest: matrix rejects invalid launch settings before starting evaluation
+ok 259 - matrix rejects invalid launch settings before starting evaluation
+  ---
+  duration_ms: 364.776208
+  type: 'test'
+  ...
+# Subtest: matrix preserves the first failure without automatic scenario retry
+ok 260 - matrix preserves the first failure without automatic scenario retry
+  ---
+  duration_ms: 490.286625
+  type: 'test'
+  ...
+# Subtest: high and medium share candidate identity and bundle survives relocation
+ok 261 - high and medium share candidate identity and bundle survives relocation
+  ---
+  duration_ms: 1124.362542
+  type: 'test'
+  ...
+# Subtest: matrix rejects malformed verdicts and missing or drifting candidate evidence
+ok 262 - matrix rejects malformed verdicts and missing or drifting candidate evidence
+  ---
+  duration_ms: 2446.441125
+  type: 'test'
+  ...
+# Subtest: matrix retains an atomic failure bundle when no child supplies candidate proof
+ok 263 - matrix retains an atomic failure bundle when no child supplies candidate proof
+  ---
+  duration_ms: 498.179542
+  type: 'test'
+  ...
+# Subtest: eval matrix emits per-scenario progress and writes atomic aggregate statistics
+ok 264 - eval matrix emits per-scenario progress and writes atomic aggregate statistics
+  ---
+  duration_ms: 525.850625
+  type: 'test'
+  ...
+# Subtest: eval matrix records every independent serial run without collapsing failed evidence
+ok 265 - eval matrix records every independent serial run without collapsing failed evidence
+  ---
+  duration_ms: 1351.636208
+  type: 'test'
+  ...
+# Subtest: interrupted eval matrix terminates active children without publishing a partial summary
+ok 266 - interrupted eval matrix terminates active children without publishing a partial summary
+  ---
+  duration_ms: 62.842666
+  type: 'test'
+  ...
+# Subtest: eval suite runs saved model rows with default parallelism and preserves every row result
+ok 267 - eval suite runs saved model rows with default parallelism and preserves every row result
+  ---
+  duration_ms: 1008.40975
+  type: 'test'
+  ...
+# Subtest: suite preserves failed children and rejects stale green output after nonzero exit
+ok 268 - suite preserves failed children and rejects stale green output after nonzero exit
+  ---
+  duration_ms: 213.824667
+  type: 'test'
+  ...
+# Subtest: suite rejects invalid plans and launch settings before starting rows
+ok 269 - suite rejects invalid plans and launch settings before starting rows
+  ---
+  duration_ms: 527.3865
+  type: 'test'
+  ...
+# Subtest: cursor_delegate forwards optional launch parameters exactly once
+ok 270 - cursor_delegate forwards optional launch parameters exactly once
+  ---
+  duration_ms: 2.187792
+  type: 'test'
+  ...
+# Subtest: cursor_delegate performs exactly one start and one first prompt without wait or retry
+ok 271 - cursor_delegate performs exactly one start and one first prompt without wait or retry
+  ---
+  duration_ms: 0.203083
+  type: 'test'
+  ...
+# Subtest: cursor_delegate preserves start failures and allocated tombstones unchanged
+ok 272 - cursor_delegate preserves start failures and allocated tombstones unchanged
+  ---
+  duration_ms: 0.42225
+  type: 'test'
+  ...
+# Subtest: cursor_delegate preserves first-prompt error and closes the allocated session exactly once
+ok 273 - cursor_delegate preserves first-prompt error and closes the allocated session exactly once
+  ---
+  duration_ms: 0.143584
+  type: 'test'
+  ...
+# Subtest: source MCP manifest uses only portable runtime paths
+ok 274 - source MCP manifest uses only portable runtime paths
+  ---
+  duration_ms: 1.397791
+  type: 'test'
+  ...
+# Subtest: Claude marketplace plugin uses the cached plugin root without changing authority
+ok 275 - Claude marketplace plugin uses the cached plugin root without changing authority
+  ---
+  duration_ms: 0.744042
+  type: 'test'
+  ...
+# Subtest: MCP server fails loudly when its packaged manifest is absent
+ok 276 - MCP server fails loudly when its packaged manifest is absent
+  ---
+  duration_ms: 52.453459
+  type: 'test'
+  ...
+# Subtest: MCP startup negotiates the public protocol and exposes no resources or prompts
+ok 277 - MCP startup negotiates the public protocol and exposes no resources or prompts
+  ---
+  duration_ms: 49.998417
+  type: 'test'
+  ...
+# Subtest: MCP tools/list publishes the stable tool names and answer schemas
+ok 278 - MCP tools/list publishes the stable tool names and answer schemas
+  ---
+  duration_ms: 48.391917
+  type: 'test'
+  ...
+# Subtest: MCP maps requests and notifications to standard JSON-RPC outcomes
+ok 279 - MCP maps requests and notifications to standard JSON-RPC outcomes
+  ---
+  duration_ms: 51.878292
+  type: 'test'
+  ...
+# Subtest: MCP keeps notifications silent and bounds untrusted tool errors
+ok 280 - MCP keeps notifications silent and bounds untrusted tool errors
+  ---
+  duration_ms: 51.620209
+  type: 'test'
+  ...
+# Subtest: MCP wires cursor_read_result through the public tool boundary
+ok 281 - MCP wires cursor_read_result through the public tool boundary
+  ---
+  duration_ms: 144.939209
+  type: 'test'
+  ...
+# Subtest: MCP tools/call wires interactive answers, status and cancellation
+    # Subtest: question
+    ok 1 - question
+      ---
+      duration_ms: 149.850459
+      type: 'test'
+      ...
+    # Subtest: plan
+    ok 2 - plan
+      ---
+      duration_ms: 144.936875
+      type: 'test'
+      ...
+    # Subtest: permission
+    ok 3 - permission
+      ---
+      duration_ms: 146.451
+      type: 'test'
+      ...
+    1..3
+ok 282 - MCP tools/call wires interactive answers, status and cancellation
+  ---
+  duration_ms: 588.641042
+  type: 'test'
+  ...
+# Subtest: MCP exposes adapter bootstrap failures as terminal session state
+    # Subtest: not-json
+    ok 1 - not-json
+      ---
+      duration_ms: 47.023375
+      type: 'test'
+      ...
+    # Subtest: [42]
+    ok 2 - [42]
+      ---
+      duration_ms: 46.448291
+      type: 'test'
+      ...
+    1..2
+ok 283 - MCP exposes adapter bootstrap failures as terminal session state
+  ---
+  duration_ms: 93.858958
+  type: 'test'
+  ...
+# Subtest: MCP framing rejects malformed and oversized input, then resumes at frame boundaries
+ok 284 - MCP framing rejects malformed and oversized input, then resumes at frame boundaries
+  ---
+  duration_ms: 49.459041
+  type: 'test'
+  ...
+# Subtest: MCP server fails closed when its packaged manifest version is corrupted
+    # Subtest: {"version":"corrupt"}
+    ok 1 - {"version":"corrupt"}
+      ---
+      duration_ms: 46.165417
+      type: 'test'
+      ...
+    # Subtest: {"version":1}
+    ok 2 - {"version":1}
+      ---
+      duration_ms: 46.533916
+      type: 'test'
+      ...
+    # Subtest: {}
+    ok 3 - {}
+      ---
+      duration_ms: 50.509458
+      type: 'test'
+      ...
+    1..3
+ok 285 - MCP server fails closed when its packaged manifest version is corrupted
+  ---
+  duration_ms: 143.726083
+  type: 'test'
+  ...
+# Subtest: MCP tools/call wires one complete session through stdio JSON-RPC
+ok 286 - MCP tools/call wires one complete session through stdio JSON-RPC
+  ---
+  duration_ms: 143.214084
+  type: 'test'
+  ...
+# Subtest: Node 22.23.1 adapter emits only the supervisor event contract as ordered JSONL
+ok 287 - Node 22.23.1 adapter emits only the supervisor event contract as ordered JSONL
+  ---
+  duration_ms: 3.698875
+  type: 'test'
+  ...
+# Subtest: reporter preserves actionable Error diagnostics in event payloads
+ok 288 - reporter preserves actionable Error diagnostics in event payloads
+  ---
+  duration_ms: 0.524958
+  type: 'test'
+  ...
+# Subtest: lane matrix produces the exact child argv and keeps parent deadlines fixed
+    # Subtest: unit
+    ok 1 - unit
+      ---
+      duration_ms: 9.2985
+      type: 'test'
+      ...
+    # Subtest: coverage
+    ok 2 - coverage
+      ---
+      duration_ms: 7.896292
+      type: 'test'
+      ...
+    # Subtest: release
+    ok 3 - release
+      ---
+      duration_ms: 3.757
+      type: 'test'
+      ...
+    # Subtest: eval
+    ok 4 - eval
+      ---
+      duration_ms: 3.562417
+      type: 'test'
+      ...
+    1..4
+ok 289 - lane matrix produces the exact child argv and keeps parent deadlines fixed
+  ---
+  duration_ms: 30.622625
+  type: 'test'
+  ...
+# Subtest: focused selection keeps the unit process and artifact contract
+ok 290 - focused selection keeps the unit process and artifact contract
+  ---
+  duration_ms: 6.144041
+  type: 'test'
+  ...
+# Subtest: zero executed tests fail even when Node exits successfully
+ok 291 - zero executed tests fail even when Node exits successfully
+  ---
+  duration_ms: 3.9815
+  type: 'test'
+  ...
+# Subtest: malformed file test counts fail closed as no tests despite a successful global summary
+ok 292 - malformed file test counts fail closed as no tests despite a successful global summary
+  ---
+  duration_ms: 3.680292
+  type: 'test'
+  ...
+# Subtest: foreground focused invocation fails when the real Node reporter executes zero tests
+ok 293 - foreground focused invocation fails when the real Node reporter executes zero tests
+  ---
+  duration_ms: 184.905209
+  type: 'test'
+  ...
+# Subtest: supervisor rejects bypasses of the full coverage manifest
+ok 294 - supervisor rejects bypasses of the full coverage manifest
+  ---
+  duration_ms: 7.129
+  type: 'test'
+  ...
+# Subtest: unsupported platform and invalid lane fail closed before spawn and publish completion markers
+ok 295 - unsupported platform and invalid lane fail closed before spawn and publish completion markers
+  ---
+  duration_ms: 2.034667
+  type: 'test'
+  ...
+# Subtest: synchronous spawn failure is reported with bounded artifacts and structured infrastructure error
+ok 296 - synchronous spawn failure is reported with bounded artifacts and structured infrastructure error
+  ---
+  duration_ms: 1.896458
+  type: 'test'
+  ...
+# Subtest: non-Error spawn failure is normalized into the published infrastructure contract
+ok 297 - non-Error spawn failure is normalized into the published infrastructure contract
+  ---
+  duration_ms: 1.408042
+  type: 'test'
+  ...
+# Subtest: default paths and dependencies still publish a sanitized invalid-lane marker
+ok 298 - default paths and dependencies still publish a sanitized invalid-lane marker
+  ---
+  duration_ms: 1.190875
+  type: 'test'
+  ...
+# Subtest: clean close publishes a terminal passing result without failures
+ok 299 - clean close publishes a terminal passing result without failures
+  ---
+  duration_ms: 3.3805
+  type: 'test'
+  ...
+# Subtest: terminal result is published only after child stderr is fully persisted
+ok 300 - terminal result is published only after child stderr is fully persisted
+  ---
+  duration_ms: 29.819042
+  type: 'test'
+  ...
+# Subtest: stderr persistence failure becomes a terminal infrastructure error
+ok 301 - stderr persistence failure becomes a terminal infrastructure error
+  ---
+  duration_ms: 14.2925
+  type: 'test'
+  ...
+# Subtest: coverage lane publishes a passing manifest-complete gate result above the accepted threshold
+ok 302 - coverage lane publishes a passing manifest-complete gate result above the accepted threshold
+  ---
+  duration_ms: 8.844291
+  type: 'test'
+  ...
+# Subtest: coverage cannot publish a pass without its complete raw artifacts
+ok 303 - coverage cannot publish a pass without its complete raw artifacts
+  ---
+  duration_ms: 5.571333
+  type: 'test'
+  ...
+# Subtest: coverage cannot pass when measured sources change or disappear during the child run
+ok 304 - coverage cannot pass when measured sources change or disappear during the child run
+  ---
+  duration_ms: 13.673
+  type: 'test'
+  ...
+# Subtest: coverage lane fails closed when the coverage event is missing
+ok 305 - coverage lane fails closed when the coverage event is missing
+  ---
+  duration_ms: 5.97775
+  type: 'test'
+  ...
+# Subtest: coverage lane fails closed when the reporter publishes a malformed coverage summary
+ok 306 - coverage lane fails closed when the reporter publishes a malformed coverage summary
+  ---
+  duration_ms: 5.015292
+  type: 'test'
+  ...
+# Subtest: coverage lane reports new, missing, and unloaded product sources
+ok 307 - coverage lane reports new, missing, and unloaded product sources
+  ---
+  duration_ms: 24.277917
+  type: 'test'
+  ...
+# Subtest: coverage lane reports every metric below the accepted threshold
+ok 308 - coverage lane reports every metric below the accepted threshold
+  ---
+  duration_ms: 6.016625
+  type: 'test'
+  ...
+# Subtest: coverage lane fails closed when reporter counters are not numeric
+ok 309 - coverage lane fails closed when reporter counters are not numeric
+  ---
+  duration_ms: 5.746625
+  type: 'test'
+  ...
+# Subtest: coverage lane rejects product files with no executable counters
+ok 310 - coverage lane rejects product files with no executable counters
+  ---
+  duration_ms: 6.196875
+  type: 'test'
+  ...
+# Subtest: coverage lane rejects one manifest source missing from the line denominator despite a passing aggregate
+ok 311 - coverage lane rejects one manifest source missing from the line denominator despite a passing aggregate
+  ---
+  duration_ms: 16.753209
+  type: 'test'
+  ...
+# Subtest: coverage lane classifies zero branch and function denominators per source without rejecting valid line coverage
+ok 312 - coverage lane classifies zero branch and function denominators per source without rejecting valid line coverage
+  ---
+  duration_ms: 8.38825
+  type: 'test'
+  ...
+# Subtest: nonzero exit and signal termination produce failed verdicts with distinct terminal causes
+ok 313 - nonzero exit and signal termination produce failed verdicts with distinct terminal causes
+  ---
+  duration_ms: 6.231917
+  type: 'test'
+  ...
+# Subtest: asynchronous child spawn error has infrastructure precedence over a later close
+ok 314 - asynchronous child spawn error has infrastructure precedence over a later close
+  ---
+  duration_ms: 3.400167
+  type: 'test'
+  ...
+# Subtest: SIGINT interruption publishes an interrupted terminal result
+ok 315 - SIGINT interruption publishes an interrupted terminal result
+  ---
+  duration_ms: 29.163708
+  type: 'test'
+  ...
+# Subtest: the first interruption remains authoritative when another signal follows
+ok 316 - the first interruption remains authoritative when another signal follows
+  ---
+  duration_ms: 39.029209
+  type: 'test'
+  ...
+# Subtest: a child that exits during interruption remains an interrupted run
+ok 317 - a child that exits during interruption remains an interrupted run
+  ---
+  duration_ms: 27.948916
+  type: 'test'
+  ...
+# (node:75592) ExperimentalWarning: The MockTimers API is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: failure to signal the child process group is reported as infrastructure failure
+ok 318 - failure to signal the child process group is reported as infrastructure failure
+  ---
+  duration_ms: 28.476417
+  type: 'test'
+  ...
+# Subtest: an unresponsive child process group is force-killed after the shutdown grace period
+ok 319 - an unresponsive child process group is force-killed after the shutdown grace period
+  ---
+  duration_ms: 2.87575
+  type: 'test'
+  ...
+# Subtest: a SIGKILL escalation error is reported without replacing the initiating interruption
+ok 320 - a SIGKILL escalation error is reported without replacing the initiating interruption
+  ---
+  duration_ms: 2.337833
+  type: 'test'
+  ...
+# Subtest: deadline terminates only the owned POSIX process tree and publishes after it exits
+ok 321 - deadline terminates only the owned POSIX process tree and publishes after it exits
+  ---
+  duration_ms: 128.215667
+  type: 'test'
+  ...
+# Subtest: publication failure preserves a preceding non-success cause but replaces provisional clean close
+ok 322 - publication failure preserves a preceding non-success cause but replaces provisional clean close
+  ---
+  duration_ms: 6.080209
+  type: 'test'
+  ...
+# Subtest: failure report formats each supported observable reporter shape
+    # Subtest: nested error message
+    ok 1 - nested error message
+      ---
+      duration_ms: 3.659292
+      type: 'test'
+      ...
+    # Subtest: nested location and causal message
+    ok 2 - nested location and causal message
+      ---
+      duration_ms: 3.308375
+      type: 'test'
+      ...
+    # Subtest: plain failure text
+    ok 3 - plain failure text
+      ---
+      duration_ms: 4.653
+      type: 'test'
+      ...
+    # Subtest: direct fields
+    ok 4 - direct fields
+      ---
+      duration_ms: 3.365542
+      type: 'test'
+      ...
+    # Subtest: missing failure payload
+    ok 5 - missing failure payload
+      ---
+      duration_ms: 3.433833
+      type: 'test'
+      ...
+    1..5
+ok 323 - failure report formats each supported observable reporter shape
+  ---
+  duration_ms: 19.002292
+  type: 'test'
+  ...
+# Subtest: empty or summary-less reporter streams are incomplete, while malformed JSON is a reporter error
+ok 324 - empty or summary-less reporter streams are incomplete, while malformed JSON is a reporter error
+  ---
+  duration_ms: 690.565542
+  type: 'test'
+  ...
+# Subtest: CLI parses focused files and name filters through the supervisor contract
+ok 325 - CLI parses focused files and name filters through the supervisor contract
+  ---
+  duration_ms: 0.710417
+  type: 'test'
+  ...
+# Subtest: CLI rejects missing and invalid lanes with the stable usage contract
+    # Subtest: missing lane
+    ok 1 - missing lane
+      ---
+      duration_ms: 0.261667
+      type: 'test'
+      ...
+    # Subtest: invalid lane
+    ok 2 - invalid lane
+      ---
+      duration_ms: 0.114917
+      type: 'test'
+      ...
+    1..2
+ok 326 - CLI rejects missing and invalid lanes with the stable usage contract
+  ---
+  duration_ms: 0.577958
+  type: 'test'
+  ...
+# Subtest: CLI usage falls back to the stable script name when argv has no entrypoint
+ok 327 - CLI usage falls back to the stable script name when argv has no entrypoint
+  ---
+  duration_ms: 0.08675
+  type: 'test'
+  ...
+# Subtest: CLI renders each terminal supervisor verdict with current-run diagnostics
+ok 328 - CLI renders each terminal supervisor verdict with current-run diagnostics
+  ---
+  duration_ms: 2.425958
+  type: 'test'
+  ...
+# Subtest: foreground supervisor entrypoint rejects an invalid lane with the public usage contract
+ok 329 - foreground supervisor entrypoint rejects an invalid lane with the public usage contract
+  ---
+  duration_ms: 46.805917
+  type: 'test'
+  ...
+# Subtest: CLI reports an artifact storage failure and exits nonzero
+ok 330 - CLI reports an artifact storage failure and exits nonzero
+  ---
+  duration_ms: 1.480041
+  type: 'test'
+  ...
+# Subtest: legacy coverage entrypoint delegates to the documented coverage lane
+ok 331 - legacy coverage entrypoint delegates to the documented coverage lane
+  ---
+  duration_ms: 0.177
+  type: 'test'
+  ...
+# Subtest: legacy coverage entrypoint preserves its foreground CLI contract
+ok 332 - legacy coverage entrypoint preserves its foreground CLI contract
+  ---
+  duration_ms: 75.653083
+  type: 'test'
+  ...
+# Subtest: corpus-owned scenario inventory, materialization and pure oracle stay in one process
+ok 333 - corpus-owned scenario inventory, materialization and pure oracle stay in one process
+  ---
+  duration_ms: 259.031875
+  type: 'test'
+  ...
+# scenario counts {"admission":28,"materialization":28,"oracle":27,"packageReference":1}
+# Subtest: materialization preserves literal non-fixture authority targets and rejects an oversized admitted payload
+ok 334 - materialization preserves literal non-fixture authority targets and rejects an oversized admitted payload
+  ---
+  duration_ms: 5.395167
+  type: 'test'
+  ...
+# Subtest: capture admission remains exact while report semantics stay unchecked
+ok 335 - capture admission remains exact while report semantics stay unchecked
+  ---
+  duration_ms: 0.870583
+  type: 'test'
+  ...
+# Subtest: event-burst callback failure remains an execution mismatch with complete capture evidence
+ok 336 - event-burst callback failure remains an execution mismatch with complete capture evidence
+  ---
+  duration_ms: 0.271
+  type: 'test'
+  ...
+# Subtest: interaction and continuation components remain mechanical while prose semantics stay unchecked
+ok 337 - interaction and continuation components remain mechanical while prose semantics stay unchecked
+  ---
+  duration_ms: 0.310709
+  type: 'test'
+  ...
+# Subtest: long-result corpus rows keep the exact preview boundary and overflow recovery contract
+ok 338 - long-result corpus rows keep the exact preview boundary and overflow recovery contract
+  ---
+  duration_ms: 0.13075
+  type: 'test'
+  ...
+# Subtest: eval runner emits exactly one bounded lane-specific skipped EvalResultV1
+ok 339 - eval runner emits exactly one bounded lane-specific skipped EvalResultV1
+  ---
+  duration_ms: 176.042958
+  type: 'test'
+  ...
+# Subtest: eval runner returns a bounded machine-readable integration failure for an unknown scenario
+ok 340 - eval runner returns a bounded machine-readable integration failure for an unknown scenario
+  ---
+  duration_ms: 57.918458
+  type: 'test'
+  ...
+# Subtest: eval runner defaults to the credential-free client scenario when no scenario is supplied
+ok 341 - eval runner defaults to the credential-free client scenario when no scenario is supplied
+  ---
+  duration_ms: 57.981167
+  type: 'test'
+  ...
+# Subtest: eval runner bounds an untrusted unknown scenario name in its public result
+ok 342 - eval runner bounds an untrusted unknown scenario name in its public result
+  ---
+  duration_ms: 56.910916
+  type: 'test'
+  ...
+# Subtest: runner selects each lane and propagates the scenario environment expected by its harness
+ok 343 - runner selects each lane and propagates the scenario environment expected by its harness
+  ---
+  duration_ms: 20.376875
+  type: 'test'
+  ...
+# Subtest: runner reports evaluator inventory failures and frozen digest drift before starting a harness
+ok 344 - runner reports evaluator inventory failures and frozen digest drift before starting a harness
+  ---
+  duration_ms: 7.530041
+  type: 'test'
+  ...
+# Subtest: runner has a bounded default failure when an admitted corpus has no client scenario
+ok 345 - runner has a bounded default failure when an admitted corpus has no client scenario
+  ---
+  duration_ms: 3.03225
+  type: 'test'
+  ...
+# Subtest: cleanup failure overrides a behavior mismatch after evidence publication
+ok 346 - cleanup failure overrides a behavior mismatch after evidence publication
+  ---
+  duration_ms: 3.096583
+  type: 'test'
+  ...
+# Subtest: publication failure has integration precedence and still performs cleanup
+ok 347 - publication failure has integration precedence and still performs cleanup
+  ---
+  duration_ms: 2.954209
+  type: 'test'
+  ...
+# Subtest: runner and fixture setup catches always return valid stage-specific EvalResultV1 objects
+ok 348 - runner and fixture setup catches always return valid stage-specific EvalResultV1 objects
+  ---
+  duration_ms: 10.065458
+  type: 'test'
+  ...
+# Subtest: runner admits string corpus input and rejects empty or oversized corpus bytes before fixture setup
+ok 349 - runner admits string corpus input and rejects empty or oversized corpus bytes before fixture setup
+  ---
+  duration_ms: 2.41375
+  type: 'test'
+  ...
+# Subtest: runner preserves adapter-admission classification from an enabled harness boundary
+ok 350 - runner preserves adapter-admission classification from an enabled harness boundary
+  ---
+  duration_ms: 2.454542
+  type: 'test'
+  ...
+# Subtest: runner owns the disposable fixture lifecycle by default
+ok 351 - runner owns the disposable fixture lifecycle by default
+  ---
+  duration_ms: 7.308709
+  type: 'test'
+  ...
+# Subtest: runner normalizes a harness infrastructure failure without child evidence
+ok 352 - runner normalizes a harness infrastructure failure without child evidence
+  ---
+  duration_ms: 2.605458
+  type: 'test'
+  ...
+# Subtest: runner does not publish durable evidence before complete programmed or package proof
+ok 353 - runner does not publish durable evidence before complete programmed or package proof
+  ---
+  duration_ms: 4.411834
+  type: 'test'
+  ...
+# Subtest: runner distinguishes malformed proof inspection from missing runner evidence
+ok 354 - runner distinguishes malformed proof inspection from missing runner evidence
+  ---
+  duration_ms: 4.96875
+  type: 'test'
+  ...
+# Subtest: runner treats missing child evidence as an integration failure before behavior classification
+ok 355 - runner treats missing child evidence as an integration failure before behavior classification
+  ---
+  duration_ms: 2.17225
+  type: 'test'
+  ...
+# Subtest: published evidence is emitted after cleanup with exact child provenance and the final EvalResultV1
+ok 356 - published evidence is emitted after cleanup with exact child provenance and the final EvalResultV1
+  ---
+  duration_ms: 2.380417
+  type: 'test'
+  ...
+# Subtest: actual failure outcomes are classified without grading reported prose
+ok 357 - actual failure outcomes are classified without grading reported prose
+  ---
+  duration_ms: 4.53475
+  type: 'test'
+  ...
+# Subtest: runner rejects the removed skill sensitivity probe instead of silently passing it
+ok 358 - runner rejects the removed skill sensitivity probe instead of silently passing it
+  ---
+  duration_ms: 1.922708
+  type: 'test'
+  ...
+# Subtest: cleanup failure remains the primary stage when failure-artifact publication also fails
+ok 359 - cleanup failure remains the primary stage when failure-artifact publication also fails
+  ---
+  duration_ms: 2.598584
+  type: 'test'
+  ...
+# Subtest: child cleanup failure takes precedence over otherwise successful scenario evidence
+ok 360 - child cleanup failure takes precedence over otherwise successful scenario evidence
+  ---
+  duration_ms: 2.934042
+  type: 'test'
+  ...
+# Subtest: package integration failure without a harness code uses the stable child failure fallback
+ok 361 - package integration failure without a harness code uses the stable child failure fallback
+  ---
+  duration_ms: 2.100917
+  type: 'test'
+  ...
+# Subtest: published evidence classifies a partial child proof as integration failure and normalizes optional sections
+ok 362 - published evidence classifies a partial child proof as integration failure and normalizes optional sections
+  ---
+  duration_ms: 2.226416
+  type: 'test'
+  ...
+# Subtest: child-result parser normalizes exact provenance and builds the closed private manifest
+ok 363 - child-result parser normalizes exact provenance and builds the closed private manifest
+  ---
+  duration_ms: 0.993
+  type: 'test'
+  ...
+# Subtest: child-result parser admits only complete recovery context while preserving legacy transcripts
+ok 364 - child-result parser admits only complete recovery context while preserving legacy transcripts
+  ---
+  duration_ms: 1.226708
+  type: 'test'
+  ...
+# Subtest: child-result parser preserves the explicit compatibility defaults for partial observations and package references
+ok 365 - child-result parser preserves the explicit compatibility defaults for partial observations and package references
+  ---
+  duration_ms: 1.272459
+  type: 'test'
+  ...
+# Subtest: child-result parser rejects malformed JSON and oversized evidence
+ok 366 - child-result parser rejects malformed JSON and oversized evidence
+  ---
+  duration_ms: 0.257375
+  type: 'test'
+  ...
+# Subtest: child-result parser rejects every required evidence-contract violation
+ok 367 - child-result parser rejects every required evidence-contract violation
+  ---
+  duration_ms: 1.904375
+  type: 'test'
+  ...
+# Subtest: child-result parser rejects corpus and materialized payload digest mismatches before behavior verdict
+ok 368 - child-result parser rejects corpus and materialized payload digest mismatches before behavior verdict
+  ---
+  duration_ms: 0.610291
+  type: 'test'
+  ...
+# Subtest: child-result parser separates malformed final capture from a generic child contract failure
+ok 369 - child-result parser separates malformed final capture from a generic child contract failure
+  ---
+  duration_ms: 0.878417
+  type: 'test'
+  ...
+# Subtest: published evidence retains the normalized bounded provider route trace
+ok 370 - published evidence retains the normalized bounded provider route trace
+  ---
+  duration_ms: 3.357708
+  type: 'test'
+  ...
+# Subtest: harness returns validated child evidence and bounded diagnostics after a successful child exit
+ok 371 - harness returns validated child evidence and bounded diagnostics after a successful child exit
+  ---
+  duration_ms: 0.942708
+  type: 'test'
+  ...
+# Subtest: harness validates configured scenario and corpus digests at the process boundary
+ok 372 - harness validates configured scenario and corpus digests at the process boundary
+  ---
+  duration_ms: 0.340208
+  type: 'test'
+  ...
+# Subtest: harness routes its configured test through the canonical Node supervisor
+ok 373 - harness routes its configured test through the canonical Node supervisor
+  ---
+  duration_ms: 0.400291
+  type: 'test'
+  ...
+# Subtest: harness tolerates a canonical supervisor result without optional failure details
+ok 374 - harness tolerates a canonical supervisor result without optional failure details
+  ---
+  duration_ms: 0.210625
+  type: 'test'
+  ...
+# Subtest: harness reads child evidence through its production filesystem adapter
+ok 375 - harness reads child evidence through its production filesystem adapter
+  ---
+  duration_ms: 2.326417
+  type: 'test'
+  ...
+# Subtest: harness executes its canonical supervisor adapter for an admitted eval test
+ok 376 - harness executes its canonical supervisor adapter for an admitted eval test
+  ---
+  duration_ms: 138.923625
+  type: 'test'
+  ...
+# Subtest: harness maps child scenario evidence to a scenario-contract mismatch
+ok 377 - harness maps child scenario evidence to a scenario-contract mismatch
+  ---
+  duration_ms: 0.377083
+  type: 'test'
+  ...
+# Subtest: canonical supervisor infrastructure failure dominates recorded behavior mismatch
+ok 378 - canonical supervisor infrastructure failure dominates recorded behavior mismatch
+  ---
+  duration_ms: 0.240875
+  type: 'test'
+  ...
+# Subtest: harness distinguishes generic child failure from a scenario-contract mismatch
+ok 379 - harness distinguishes generic child failure from a scenario-contract mismatch
+  ---
+  duration_ms: 0.37175
+  type: 'test'
+  ...
+# Subtest: harness preserves a hosted turn interruption instead of reporting invalid child JSON
+ok 380 - harness preserves a hosted turn interruption instead of reporting invalid child JSON
+  ---
+  duration_ms: 0.204417
+  type: 'test'
+  ...
+# Subtest: harness reports missing or invalid child-result evidence before exit status
+ok 381 - harness reports missing or invalid child-result evidence before exit status
+  ---
+  duration_ms: 0.147541
+  type: 'test'
+  ...
+# Subtest: harness classifies canonical-supervisor spawn errors with a stable eval code
+ok 382 - harness classifies canonical-supervisor spawn errors with a stable eval code
+  ---
+  duration_ms: 0.081417
+  type: 'test'
+  ...
+# Subtest: harness maps the canonical supervisor deadline without owning another kill loop
+ok 383 - harness maps the canonical supervisor deadline without owning another kill loop
+  ---
+  duration_ms: 0.085458
+  type: 'test'
+  ...
+# Subtest: evidence publisher writes one final document outside the fixture root
+ok 384 - evidence publisher writes one final document outside the fixture root
+  ---
+  duration_ms: 3.192708
+  type: 'test'
+  ...
+# Subtest: evidence publisher rejects a destination inside the disposable fixture
+ok 385 - evidence publisher rejects a destination inside the disposable fixture
+  ---
+  duration_ms: 0.146
+  type: 'test'
+  ...
+# Subtest: evidence publisher rejects a document beyond the public evidence limit
+ok 386 - evidence publisher rejects a document beyond the public evidence limit
+  ---
+  duration_ms: 4.075917
+  type: 'test'
+  ...
+# Subtest: CLI emits a single runner-termination result when SIGTERM wins the race
+ok 387 - CLI emits a single runner-termination result when SIGTERM wins the race
+  ---
+  duration_ms: 6.567333
+  type: 'test'
+  ...
+# Subtest: CLI converts an unhandled evaluation rejection to EvalResultV1
+ok 388 - CLI converts an unhandled evaluation rejection to EvalResultV1
+  ---
+  duration_ms: 6.5375
+  type: 'test'
+  ...
+# Subtest: CLI exit code reflects every enabled eval classifier while preserving one result
+ok 389 - CLI exit code reflects every enabled eval classifier while preserving one result
+  ---
+  duration_ms: 0.6365
+  type: 'test'
+  ...
+# Subtest: runtime rejects scope before session allocation
+ok 390 - runtime rejects scope before session allocation
+  ---
+  duration_ms: 2.684208
+  type: 'test'
+  ...
+# Subtest: runtime exposes normalized init tombstone when ACP cannot spawn
+ok 391 - runtime exposes normalized init tombstone when ACP cannot spawn
+  ---
+  duration_ms: 3.226792
+  type: 'test'
+  ...
+# Subtest: runtime reports spawn failure when ACP disappears after its admitted version probe
+ok 392 - runtime reports spawn failure when ACP disappears after its admitted version probe
+  ---
+  duration_ms: 49.439916
+  type: 'test'
+  ...
+# Subtest: runtime tombstones initialization when the admitted ACP process exits before replying
+ok 393 - runtime tombstones initialization when the admitted ACP process exits before replying
+  ---
+  duration_ms: 79.384083
+  type: 'test'
+  ...
+# Subtest: adapter admission failure is an allocated init tombstone and releases capacity
+ok 394 - adapter admission failure is an allocated init tombstone and releases capacity
+  ---
+  duration_ms: 833.718041
+  type: 'test'
+  ...
+# Subtest: actual initialize deadline produces an init_timeout tombstone
+ok 395 - actual initialize deadline produces an init_timeout tombstone
+  ---
+  duration_ms: 1.856417
+  type: 'test'
+  ...
+# Subtest: adapter admission rejects incompatible and unusable Cursor probes
+ok 396 - adapter admission rejects incompatible and unusable Cursor probes
+  ---
+  duration_ms: 261.017208
+  type: 'test'
+  ...
+# Subtest: adapter admission validates session creation and ignores unrelated RPC responses
+ok 397 - adapter admission validates session creation and ignores unrelated RPC responses
+  ---
+  duration_ms: 763.331334
+  type: 'test'
+  ...
+# Subtest: adapter fixture arguments fail closed before ACP admission
+ok 398 - adapter fixture arguments fail closed before ACP admission
+  ---
+  duration_ms: 1.002458
+  type: 'test'
+  ...
+# Subtest: admitted adapter applies immutable auto-review and enabled-sandbox argv
+ok 399 - admitted adapter applies immutable auto-review and enabled-sandbox argv
+  ---
+  duration_ms: 90.017042
+  type: 'test'
+  ...
+# Subtest: runtime dispatch accepts exactly the three advertised answer tool names
+ok 400 - runtime dispatch accepts exactly the three advertised answer tool names
+  ---
+  duration_ms: 0.256625
+  type: 'test'
+  ...
+# Subtest: runtime rejects a non-object tool argument envelope
+ok 401 - runtime rejects a non-object tool argument envelope
+  ---
+  duration_ms: 0.090042
+  type: 'test'
+  ...
+# Subtest: runtime rejects an undocumented tool argument
+ok 402 - runtime rejects an undocumented tool argument
+  ---
+  duration_ms: 0.071917
+  type: 'test'
+  ...
+# Subtest: runtime rejects a missing required tool argument
+ok 403 - runtime rejects a missing required tool argument
+  ---
+  duration_ms: 0.058333
+  type: 'test'
+  ...
+# Subtest: runtime rejects a tool argument envelope that cannot be serialized
+ok 404 - runtime rejects a tool argument envelope that cannot be serialized
+  ---
+  duration_ms: 0.069667
+  type: 'test'
+  ...
+# Subtest: runtime rejects oversized and malformed UTF-8 prompts before turn allocation
+ok 405 - runtime rejects oversized and malformed UTF-8 prompts before turn allocation
+  ---
+  duration_ms: 92.729291
+  type: 'test'
+  ...
+# Subtest: runtime rejects a relative working directory
+ok 406 - runtime rejects a relative working directory
+  ---
+  duration_ms: 0.200083
+  type: 'test'
+  ...
+# Subtest: runtime rejects a working directory that resolves to a file
+ok 407 - runtime rejects a working directory that resolves to a file
+  ---
+  duration_ms: 0.892334
+  type: 'test'
+  ...
+# Subtest: runtime rejects a working directory outside its admitted roots
+ok 408 - runtime rejects a working directory outside its admitted roots
+  ---
+  duration_ms: 0.881708
+  type: 'test'
+  ...
+# Subtest: runtime rejects an unsupported session mode before start or resume
+ok 409 - runtime rejects an unsupported session mode before start or resume
+  ---
+  duration_ms: 0.194208
+  type: 'test'
+  ...
+# Subtest: runtime rejects lookup of an unknown session
+ok 410 - runtime rejects lookup of an unknown session
+  ---
+  duration_ms: 0.070459
+  type: 'test'
+  ...
+# Subtest: runtime rejects lookup of an unknown turn in a live session
+ok 411 - runtime rejects lookup of an unknown turn in a live session
+  ---
+  duration_ms: 89.673583
+  type: 'test'
+  ...
+# Subtest: runtime rejects a wait cursor beyond the published event stream
+ok 412 - runtime rejects a wait cursor beyond the published event stream
+  ---
+  duration_ms: 92.537292
+  type: 'test'
+  ...
+# Subtest: runtime rejects a wait interval outside the public range
+ok 413 - runtime rejects a wait interval outside the public range
+  ---
+  duration_ms: 87.138792
+  type: 'test'
+  ...
+# Subtest: fake ACP completes and preserves retained T1 while T2 is active
+ok 414 - fake ACP completes and preserves retained T1 while T2 is active
+  ---
+  duration_ms: 89.581208
+  type: 'test'
+  ...
+# Subtest: agent message chunks produce the result before terminal session lifecycle events
+ok 415 - agent message chunks produce the result before terminal session lifecycle events
+  ---
+  duration_ms: 90.655125
+  type: 'test'
+  ...
+# Subtest: malformed prompt result fails after bounded update aggregation
+ok 416 - malformed prompt result fails after bounded update aggregation
+  ---
+  duration_ms: 83.712375
+  type: 'test'
+  ...
+# Subtest: active turn normalizes malformed, failed and unrelated ACP responses
+ok 417 - active turn normalizes malformed, failed and unrelated ACP responses
+  ---
+  duration_ms: 441.547541
+  type: 'test'
+  ...
+# Subtest: prompt result admits exactly the pinned stopReason table
+ok 418 - prompt result admits exactly the pinned stopReason table
+  ---
+  duration_ms: 534.906333
+  type: 'test'
+  ...
+# Subtest: pending request is turn-addressed and answer restores running state
+ok 419 - pending request is turn-addressed and answer restores running state
+  ---
+  duration_ms: 88.339042
+  type: 'test'
+  ...
+# Subtest: explicit fake-ACP program mode sequences pending, effect and terminal steps
+ok 420 - explicit fake-ACP program mode sequences pending, effect and terminal steps
+  ---
+  duration_ms: 94.895875
+  type: 'test'
+  ...
+# Subtest: programmed fake-ACP holds terminality until the separate follow-up gate is released
+ok 421 - programmed fake-ACP holds terminality until the separate follow-up gate is released
+  ---
+  duration_ms: 1107.09725
+  type: 'test'
+  ...
+# Subtest: programmed event burst waits for every distinct runtime acknowledgement before terminality
+ok 422 - programmed event burst waits for every distinct runtime acknowledgement before terminality
+  ---
+  duration_ms: 102.1975
+  type: 'test'
+  ...
+# Subtest: programmed event burst records missing, mismatched and duplicate acknowledgements
+    # Subtest: missing result
+    ok 1 - missing result
+      ---
+      duration_ms: 52.815833
+      type: 'test'
+      ...
+    # Subtest: wrong id
+    ok 2 - wrong id
+      ---
+      duration_ms: 54.787125
+      type: 'test'
+      ...
+    # Subtest: duplicate id
+    ok 3 - duplicate id
+      ---
+      duration_ms: 51.07025
+      type: 'test'
+      ...
+    1..3
+ok 423 - programmed event burst records missing, mismatched and duplicate acknowledgements
+  ---
+  duration_ms: 159.349458
+  type: 'test'
+  ...
+# Subtest: fake-ACP program mode records callback failures without shared environment mutation
+    # Subtest: error
+    ok 1 - error
+      ---
+      duration_ms: 49.786375
+      type: 'test'
+      ...
+    # Subtest: missing result
+    ok 2 - missing result
+      ---
+      duration_ms: 50.354709
+      type: 'test'
+      ...
+    # Subtest: wrong callback id
+    ok 3 - wrong callback id
+      ---
+      duration_ms: 50.527333
+      type: 'test'
+      ...
+    1..3
+ok 424 - fake-ACP program mode records callback failures without shared environment mutation
+  ---
+  duration_ms: 151.192375
+  type: 'test'
+  ...
+# Subtest: fake-ACP program mode rejects malformed write success results without recording an effect
+ok 425 - fake-ACP program mode rejects malformed write success results without recording an effect
+  ---
+  duration_ms: 55.733334
+  type: 'test'
+  ...
+# Subtest: question answers reject malformed or unadvertised inputs without mutating pending state
+ok 426 - question answers reject malformed or unadvertised inputs without mutating pending state
+  ---
+  duration_ms: 89.463
+  type: 'test'
+  ...
+# Subtest: late answer to a retained terminal turn is rejected without affecting a newer turn
+ok 427 - late answer to a retained terminal turn is rejected without affecting a newer turn
+  ---
+  duration_ms: 86.447917
+  type: 'test'
+  ...
+# Subtest: duplicate pending request ID is rejected without overwriting the accepted request
+ok 428 - duplicate pending request ID is rejected without overwriting the accepted request
+  ---
+  duration_ms: 87.625125
+  type: 'test'
+  ...
+# Subtest: permission decisions map to their advertised opaque IDs, not option order
+ok 429 - permission decisions map to their advertised opaque IDs, not option order
+  ---
+  duration_ms: 86.868917
+  type: 'test'
+  ...
+# Subtest: plan decisions use adapter-owned wire encoding and close settles pending once
+ok 430 - plan decisions use adapter-owned wire encoding and close settles pending once
+  ---
+  duration_ms: 187.044583
+  type: 'test'
+  ...
+# Subtest: ambiguous permission and unknown callbacks are rejected without pending publication
+ok 431 - ambiguous permission and unknown callbacks are rejected without pending publication
+  ---
+  duration_ms: 179.512584
+  type: 'test'
+  ...
+# Subtest: malformed ACP callbacks are rejected before a pending request is published
+    # Subtest: invalid-question:missing-questions
+    ok 1 - invalid-question:missing-questions
+      ---
+      duration_ms: 91.528
+      type: 'test'
+      ...
+    # Subtest: invalid-question:null-question
+    ok 2 - invalid-question:null-question
+      ---
+      duration_ms: 90.0735
+      type: 'test'
+      ...
+    # Subtest: invalid-question:empty-question-id
+    ok 3 - invalid-question:empty-question-id
+      ---
+      duration_ms: 90.182
+      type: 'test'
+      ...
+    # Subtest: invalid-question:empty-options
+    ok 4 - invalid-question:empty-options
+      ---
+      duration_ms: 88.291292
+      type: 'test'
+      ...
+    # Subtest: invalid-question:duplicate-question
+    ok 5 - invalid-question:duplicate-question
+      ---
+      duration_ms: 90.5255
+      type: 'test'
+      ...
+    # Subtest: invalid-question:duplicate-option
+    ok 6 - invalid-question:duplicate-option
+      ---
+      duration_ms: 88.581958
+      type: 'test'
+      ...
+    # Subtest: invalid-question:empty-option-id
+    ok 7 - invalid-question:empty-option-id
+      ---
+      duration_ms: 88.843417
+      type: 'test'
+      ...
+    # Subtest: invalid-question:invalid-question-text
+    ok 8 - invalid-question:invalid-question-text
+      ---
+      duration_ms: 89.6485
+      type: 'test'
+      ...
+    # Subtest: invalid-question:invalid-option-label
+    ok 9 - invalid-question:invalid-option-label
+      ---
+      duration_ms: 89.170083
+      type: 'test'
+      ...
+    # Subtest: invalid-question:null-option
+    ok 10 - invalid-question:null-option
+      ---
+      duration_ms: 105.44775
+      type: 'test'
+      ...
+    # Subtest: invalid-question:invalid-multiplicity
+    ok 11 - invalid-question:invalid-multiplicity
+      ---
+      duration_ms: 91.078541
+      type: 'test'
+      ...
+    # Subtest: invalid-permission:session-mismatch
+    ok 12 - invalid-permission:session-mismatch
+      ---
+      duration_ms: 90.714584
+      type: 'test'
+      ...
+    # Subtest: invalid-permission:missing-tool-call
+    ok 13 - invalid-permission:missing-tool-call
+      ---
+      duration_ms: 86.425292
+      type: 'test'
+      ...
+    # Subtest: invalid-permission:empty-tool-call-id
+    ok 14 - invalid-permission:empty-tool-call-id
+      ---
+      duration_ms: 89.056958
+      type: 'test'
+      ...
+    # Subtest: invalid-permission:duplicate-semantic-option
+    ok 15 - invalid-permission:duplicate-semantic-option
+      ---
+      duration_ms: 88.729
+      type: 'test'
+      ...
+    # Subtest: invalid-permission:missing-options
+    ok 16 - invalid-permission:missing-options
+      ---
+      duration_ms: 89.433458
+      type: 'test'
+      ...
+    # Subtest: invalid-permission:empty-option-id
+    ok 17 - invalid-permission:empty-option-id
+      ---
+      duration_ms: 92.121792
+      type: 'test'
+      ...
+    # Subtest: invalid-permission:invalid-option-label
+    ok 18 - invalid-permission:invalid-option-label
+      ---
+      duration_ms: 92.224208
+      type: 'test'
+      ...
+    # Subtest: invalid-permission:missing-semantic-option
+    ok 19 - invalid-permission:missing-semantic-option
+      ---
+      duration_ms: 88.236084
+      type: 'test'
+      ...
+    # Subtest: invalid-permission:unsupported-option-kind
+    ok 20 - invalid-permission:unsupported-option-kind
+      ---
+      duration_ms: 90.690833
+      type: 'test'
+      ...
+    # Subtest: invalid-permission:invalid-locations
+    ok 21 - invalid-permission:invalid-locations
+      ---
+      duration_ms: 89.00125
+      type: 'test'
+      ...
+    # Subtest: invalid-permission:invalid-location-path
+    ok 22 - invalid-permission:invalid-location-path
+      ---
+      duration_ms: 89.045333
+      type: 'test'
+      ...
+    # Subtest: invalid-permission:invalid-location
+    ok 23 - invalid-permission:invalid-location
+      ---
+      duration_ms: 91.315709
+      type: 'test'
+      ...
+    1..23
+ok 432 - malformed ACP callbacks are rejected before a pending request is published
+  ---
+  duration_ms: 2083.001875
+  type: 'test'
+  ...
+# Subtest: programmed ACP question normalizes empty prompt and option label
+ok 433 - programmed ACP question normalizes empty prompt and option label
+  ---
+  duration_ms: 91.888708
+  type: 'test'
+  ...
+# Subtest: ACP question callbacks reject duplicates and normalize explicit multiplicity
+    # Subtest: duplicate question IDs
+    ok 1 - duplicate question IDs
+      ---
+      duration_ms: 84.808167
+      type: 'test'
+      ...
+    # Subtest: invalid multiplicity
+    ok 2 - invalid multiplicity
+      ---
+      duration_ms: 85.010083
+      type: 'test'
+      ...
+    # Subtest: explicit single selection
+    ok 3 - explicit single selection
+      ---
+      duration_ms: 83.37825
+      type: 'test'
+      ...
+    1..3
+ok 434 - ACP question callbacks reject duplicates and normalize explicit multiplicity
+  ---
+  duration_ms: 254.370959
+  type: 'test'
+  ...
+# Subtest: optional ACP callback fields are normalized into stable public pending forms
+ok 435 - optional ACP callback fields are normalized into stable public pending forms
+  ---
+  duration_ms: 271.245084
+  type: 'test'
+  ...
+# Subtest: filesystem callbacks enforce mode, containment, UTF-8, cap and ranges
+ok 436 - filesystem callbacks enforce mode, containment, UTF-8, cap and ranges
+  ---
+  duration_ms: 550.946209
+  type: 'test'
+  ...
+# Subtest: filesystem callbacks reject outside and symlink paths and return empty content after EOF
+ok 437 - filesystem callbacks reject outside and symlink paths and return empty content after EOF
+  ---
+  duration_ms: 282.908292
+  type: 'test'
+  ...
+# Subtest: filesystem callbacks normalize public failures without escaping the session root
+    # Subtest: missing read target
+    ok 1 - missing read target
+      ---
+      duration_ms: 92.451084
+      type: 'test'
+      ...
+    # Subtest: directory read target
+    ok 2 - directory read target
+      ---
+      duration_ms: 89.770042
+      type: 'test'
+      ...
+    # Subtest: relative read target
+    ok 3 - relative read target
+      ---
+      duration_ms: 96.117875
+      type: 'test'
+      ...
+    # Subtest: foreign callback session
+    ok 4 - foreign callback session
+      ---
+      duration_ms: 94.063375
+      type: 'test'
+      ...
+    # Subtest: missing callback params
+    ok 5 - missing callback params
+      ---
+      duration_ms: 117.04375
+      type: 'test'
+      ...
+    # Subtest: zero line
+    ok 6 - zero line
+      ---
+      duration_ms: 99.231625
+      type: 'test'
+      ...
+    # Subtest: negative limit
+    ok 7 - negative limit
+      ---
+      duration_ms: 94.650166
+      type: 'test'
+      ...
+    # Subtest: directory write target
+    ok 8 - directory write target
+      ---
+      duration_ms: 96.414
+      type: 'test'
+      ...
+    # Subtest: symlink write target
+    ok 9 - symlink write target
+      ---
+      duration_ms: 91.112958
+      type: 'test'
+      ...
+    # Subtest: outside write target
+    ok 10 - outside write target
+      ---
+      duration_ms: 92.188459
+      type: 'test'
+      ...
+    # Subtest: outside write parent
+    ok 11 - outside write parent
+      ---
+      duration_ms: 92.99025
+      type: 'test'
+      ...
+    # Subtest: missing write parent
+    ok 12 - missing write parent
+      ---
+      duration_ms: 102.113375
+      type: 'test'
+      ...
+    # Subtest: uninspectable write target
+    ok 13 - uninspectable write target
+      ---
+      duration_ms: 96.193334
+      type: 'test'
+      ...
+    # Subtest: invalid write text
+    ok 14 - invalid write text
+      ---
+      duration_ms: 92.290292
+      type: 'test'
+      ...
+    1..14
+ok 438 - filesystem callbacks normalize public failures without escaping the session root
+  ---
+  duration_ms: 1350.930042
+  type: 'test'
+  ...
+# Subtest: ACP callback transport handles notifications, default read ranges and a closed request channel
+    # Subtest: callback notifications do not publish pending work or responses
+    ok 1 - callback notifications do not publish pending work or responses
+      ---
+      duration_ms: 86.394291
+      type: 'test'
+      ...
+    # Subtest: omitted read range returns the complete file
+    ok 2 - omitted read range returns the complete file
+      ---
+      duration_ms: 85.810208
+      type: 'test'
+      ...
+    # Subtest: filesystem callback after turn completion is rejected
+    ok 3 - filesystem callback after turn completion is rejected
+      ---
+      duration_ms: 108.560125
+      type: 'test'
+      ...
+    # Subtest: closed ACP request channel fails an allocated turn
+    ok 4 - closed ACP request channel fails an allocated turn
+      ---
+      duration_ms: 206.942583
+      type: 'test'
+      ...
+    1..4
+ok 439 - ACP callback transport handles notifications, default read ranges and a closed request channel
+  ---
+  duration_ms: 489.55075
+  type: 'test'
+  ...
+# Subtest: oversized normalized pending context is rejected without publication
+ok 440 - oversized normalized pending context is rejected without publication
+  ---
+  duration_ms: 111.175834
+  type: 'test'
+  ...
+# Subtest: public pending and waiter capacity limits reject only excess work
+ok 441 - public pending and waiter capacity limits reject only excess work
+  ---
+  duration_ms: 198.991917
+  type: 'test'
+  ...
+# Subtest: public live-session and tombstone capacity limits retain only admitted records
+ok 442 - public live-session and tombstone capacity limits retain only admitted records
+  ---
+  duration_ms: 7106.332
+  type: 'test'
+  ...
+# Subtest: event eviction reports loss from cursor zero after public turns overflow retention
+ok 443 - event eviction reports loss from cursor zero after public turns overflow retention
+  ---
+  duration_ms: 122.06575
+  type: 'test'
+  ...
+# Subtest: bounded result text preserves UTF-8 code points
+ok 444 - bounded result text preserves UTF-8 code points
+  ---
+  duration_ms: 190.702
+  type: 'test'
+  ...
+# Subtest: full terminal result is paged without losing its Unicode tail or mutating runtime state
+ok 445 - full terminal result is paged without losing its Unicode tail or mutating runtime state
+  ---
+  duration_ms: 103.890375
+  type: 'test'
+  ...
+# Subtest: full result read handles empty, active, null, replaced and retained closed turns
+ok 446 - full result read handles empty, active, null, replaced and retained closed turns
+  ---
+  duration_ms: 384.336208
+  type: 'test'
+  ...
+# Subtest: retained result overflow fails explicitly without publishing a partial result
+ok 447 - retained result overflow fails explicitly without publishing a partial result
+  ---
+  duration_ms: 227.426375
+  type: 'test'
+  ...
+# Subtest: prompt response seals one immutable terminal before later same-batch updates
+ok 448 - prompt response seals one immutable terminal before later same-batch updates
+  ---
+  duration_ms: 201.806917
+  type: 'test'
+  ...
+# Subtest: provider error without a message seals the turn before a same-batch update
+ok 449 - provider error without a message seals the turn before a same-batch update
+  ---
+  duration_ms: 95.262458
+  type: 'test'
+  ...
+# Subtest: many small result chunks use one bounded accumulator through exact cap and overflow
+ok 450 - many small result chunks use one bounded accumulator through exact cap and overflow
+  ---
+  duration_ms: 107.604666
+  type: 'test'
+  ...
+# Subtest: child exit and malformed ACP UTF-8 fail an allocated active turn
+ok 451 - child exit and malformed ACP UTF-8 fail an allocated active turn
+  ---
+  duration_ms: 205.932125
+  type: 'test'
+  ...
+# Subtest: oversized ACP frames and invalid agent text fail the allocated active turn
+ok 452 - oversized ACP frames and invalid agent text fail the allocated active turn
+  ---
+  duration_ms: 280.341875
+  type: 'test'
+  ...
+# Subtest: ACP stdout EOF fails the allocated active turn
+ok 453 - ACP stdout EOF fails the allocated active turn
+  ---
+  duration_ms: 112.679083
+  type: 'test'
+  ...
+# Subtest: malformed and nonobject ACP frames follow init and active-turn failure lifecycles
+ok 454 - malformed and nonobject ACP frames follow init and active-turn failure lifecycles
+  ---
+  duration_ms: 1154.390583
+  type: 'test'
+  ...
+# Subtest: fixed resource limits remain the frozen v1 public values
+ok 455 - fixed resource limits remain the frozen v1 public values
+  ---
+  duration_ms: 0.181375
+  type: 'test'
+  ...
+# Subtest: warning scenarios: prompt rejection preserves allocation boundary
+ok 456 - warning scenarios: prompt rejection preserves allocation boundary
+  ---
+  duration_ms: 108.9895
+  type: 'test'
+  ...
+# Subtest: turn deadline publishes timed_out before releasing the session
+ok 457 - turn deadline publishes timed_out before releasing the session
+  ---
+  duration_ms: 90.273208
+  type: 'test'
+  ...
+# Subtest: warning scenarios: allowed roots distinguish absent, empty and malformed configuration
+ok 458 - warning scenarios: allowed roots distinguish absent, empty and malformed configuration
+  ---
+  duration_ms: 97.703958
+  type: 'test'
+  ...
+# Subtest: session rejects overlapping turns and prompts after close
+ok 459 - session rejects overlapping turns and prompts after close
+  ---
+  duration_ms: 97.858459
+  type: 'test'
+  ...
+# Subtest: late ACP result cannot rewrite a publicly cancelled turn
+ok 460 - late ACP result cannot rewrite a publicly cancelled turn
+  ---
+  duration_ms: 194.967416
+  type: 'test'
+  ...
+# Subtest: answering one of multiple pending requests keeps the turn waiting
+ok 461 - answering one of multiple pending requests keeps the turn waiting
+  ---
+  duration_ms: 102.154583
+  type: 'test'
+  ...
+# Subtest: ACP result received with a pending request fails the turn and clears public pending state
+ok 462 - ACP result received with a pending request fails the turn and clears public pending state
+  ---
+  duration_ms: 95.409709
+  type: 'test'
+  ...
+# Subtest: child exit after a completed turn tombstones the session without rewriting the turn
+ok 463 - child exit after a completed turn tombstones the session without rewriting the turn
+  ---
+  duration_ms: 104.529042
+  type: 'test'
+  ...
+# Subtest: unknown close preserves a live wrapper and valid close remains repeatable
+ok 464 - unknown close preserves a live wrapper and valid close remains repeatable
+  ---
+  duration_ms: 105.5485
+  type: 'test'
+  ...
+# Subtest: concurrent close calls publish the same retained tombstone
+ok 465 - concurrent close calls publish the same retained tombstone
+  ---
+  duration_ms: 97.611542
+  type: 'test'
+  ...
+# Subtest: MCP server settles an active turn and exits cleanly on stdin EOF, SIGINT and SIGTERM
+    # Subtest: eof
+    ok 1 - eof
+      ---
+      duration_ms: 141.142083
+      type: 'test'
+      ...
+    # Subtest: SIGINT
+    ok 2 - SIGINT
+      ---
+      duration_ms: 153.95
+      type: 'test'
+      ...
+    # Subtest: SIGTERM
+    ok 3 - SIGTERM
+      ---
+      duration_ms: 150.848625
+      type: 'test'
+      ...
+    1..3
+ok 466 - MCP server settles an active turn and exits cleanly on stdin EOF, SIGINT and SIGTERM
+  ---
+  duration_ms: 446.469375
+  type: 'test'
+  ...
+# Subtest: idle TTL tombstones an inactive live session
+ok 467 - idle TTL tombstones an inactive live session
+  ---
+  duration_ms: 97.132791
+  type: 'test'
+  ...
+# Subtest: tombstone TTL expires through the public status API
+ok 468 - tombstone TTL expires through the public status API
+  ---
+  duration_ms: 101.351334
+  type: 'test'
+  ...
+# Subtest: wait reports a true timeout only after its requested interval elapses
+ok 469 - wait reports a true timeout only after its requested interval elapses
+  ---
+  duration_ms: 1105.188
+  type: 'test'
+  ...
+# Subtest: question skipped and cancelled outcomes preserve their adapter wire forms
+ok 470 - question skipped and cancelled outcomes preserve their adapter wire forms
+  ---
+  duration_ms: 210.107667
+  type: 'test'
+  ...
+# Subtest: plan and permission rejection preserve adapter-owned wire forms
+ok 471 - plan and permission rejection preserve adapter-owned wire forms
+  ---
+  duration_ms: 205.029542
+  type: 'test'
+  ...
+# Subtest: parallel answer calls claim each pending request exactly once
+    # Subtest: question
+    ok 1 - question
+      ---
+      duration_ms: 107.629
+      type: 'test'
+      ...
+    # Subtest: plan
+    ok 2 - plan
+      ---
+      duration_ms: 103.984792
+      type: 'test'
+      ...
+    # Subtest: permission
+    ok 3 - permission
+      ---
+      duration_ms: 104.943667
+      type: 'test'
+      ...
+    1..3
+ok 472 - parallel answer calls claim each pending request exactly once
+  ---
+  duration_ms: 317.090416
+  type: 'test'
+  ...
+# Subtest: terminal receipt delivery stays per retained turn across a long live conversation
+ok 473 - terminal receipt delivery stays per retained turn across a long live conversation
+  ---
+  duration_ms: 113.24275
+  type: 'test'
+  ...
+# Subtest: default non-override launch uses the admitted production argv
+ok 474 - default non-override launch uses the admitted production argv
+  ---
+  duration_ms: 110.895542
+  type: 'test'
+  ...
+# Subtest: Cursor Agent versioned golden owns the admitted model argv contract
+ok 475 - Cursor Agent versioned golden owns the admitted model argv contract
+  ---
+  duration_ms: 1.303625
+  type: 'test'
+  ...
+# Subtest: per-session model argv stays isolated from other sessions
+ok 476 - per-session model argv stays isolated from other sessions
+  ---
+  duration_ms: 201.294
+  type: 'test'
+  ...
+# Subtest: unknown launch properties are rejected before allocation on every public entrypoint
+ok 477 - unknown launch properties are rejected before allocation on every public entrypoint
+  ---
+  duration_ms: 0.302083
+  type: 'test'
+  ...
+# Subtest: plugin directories are canonical per-session argv without ACP mutation
+ok 478 - plugin directories are canonical per-session argv without ACP mutation
+  ---
+  duration_ms: 201.578709
+  type: 'test'
+  ...
+# Subtest: adapter rejects ambiguous nested model parameters before allocation
+ok 479 - adapter rejects ambiguous nested model parameters before allocation
+  ---
+  duration_ms: 0.509166
+  type: 'test'
+  ...
+# Subtest: fake behavior provider checks prompt constraint polarity without retaining prompt text
+ok 480 - fake behavior provider checks prompt constraint polarity without retaining prompt text
+  ---
+  duration_ms: 607.745
+  type: 'test'
+  ...
+# Subtest: resume loads the retained Cursor conversation id without requiring it in the load result
+ok 481 - resume loads the retained Cursor conversation id without requiring it in the load result
+  ---
+  duration_ms: 91.651125
+  type: 'test'
+  ...
+# Subtest: resume unexpected ID, mode-shape drift and reject stay recoverable init failures
+ok 482 - resume unexpected ID, mode-shape drift and reject stay recoverable init failures
+  ---
+  duration_ms: 550.116208
+  type: 'test'
+  ...
+# Subtest: unknown pending request returns recovery IDs without ACP answer
+ok 483 - unknown pending request returns recovery IDs without ACP answer
+  ---
+  duration_ms: 301.244583
+  type: 'test'
+  ...
+# Subtest: terminal wait delivers a receipt once and later action acknowledgements omit the snapshot
+ok 484 - terminal wait delivers a receipt once and later action acknowledgements omit the snapshot
+  ---
+  duration_ms: 99.068625
+  type: 'test'
+  ...
+# Subtest: close preserves an undelivered retained terminal receipt and repeats it idempotently
+ok 485 - close preserves an undelivered retained terminal receipt and repeats it idempotently
+  ---
+  duration_ms: 104.845209
+  type: 'test'
+  ...
+# Subtest: wait delta omits unchanged snapshots and empty optional fields
+ok 486 - wait delta omits unchanged snapshots and empty optional fields
+  ---
+  duration_ms: 99.221417
+  type: 'test'
+  ...
+# Subtest: mutation acknowledgements are sparse while explicit status retains the diagnostic snapshot
+ok 487 - mutation acknowledgements are sparse while explicit status retains the diagnostic snapshot
+  ---
+  duration_ms: 99.592917
+  type: 'test'
+  ...
+# Subtest: delegate returns one bootstrap without null launch fields
+ok 488 - delegate returns one bootstrap without null launch fields
+  ---
+  duration_ms: 98.956459
+  type: 'test'
+  ...
+# Subtest: wait timeout progress excerpt advances only for accepted agent text
+ok 489 - wait timeout progress excerpt advances only for accepted agent text
+  ---
+  duration_ms: 2102.154958
+  type: 'test'
+  ...
+# Subtest: wait timeout progress excerpt truncates and reports a later accepted delta
+ok 490 - wait timeout progress excerpt truncates and reports a later accepted delta
+  ---
+  duration_ms: 2106.139083
+  type: 'test'
+  ...
+# Subtest: wait timeout without accepted agent text omits the progress excerpt
+ok 491 - wait timeout without accepted agent text omits the progress excerpt
+  ---
+  duration_ms: 1104.409542
+  type: 'test'
+  ...
+# Subtest: cursor_set_mode transitions a live idle session and rejects active or tombstone work
+ok 492 - cursor_set_mode transitions a live idle session and rejects active or tombstone work
+  ---
+  duration_ms: 506.330041
+  type: 'test'
+  ...
+# Subtest: mode transition excludes concurrent prompts and mode changes
+ok 493 - mode transition excludes concurrent prompts and mode changes
+  ---
+  duration_ms: 311.069292
+  type: 'test'
+  ...
+# Subtest: cursor_set_mode terminalizes a session when the provider never replies
+ok 494 - cursor_set_mode terminalizes a session when the provider never replies
+  ---
+  duration_ms: 99.138083
+  type: 'test'
+  ...
+# Subtest: one live session can move ask to agent while writes remain gated by current mode
+ok 495 - one live session can move ask to agent while writes remain gated by current mode
+  ---
+  duration_ms: 121.249167
+  type: 'test'
+  ...
+# Subtest: cursor_wait surfaces compact collaboration events and ignores unadmitted notifications
+ok 496 - cursor_wait surfaces compact collaboration events and ignores unadmitted notifications
+  ---
+  duration_ms: 2112.799583
+  type: 'test'
+  ...
+# Subtest: collaboration acknowledgement is best-effort after the provider transport closes
+ok 497 - collaboration acknowledgement is best-effort after the provider transport closes
+  ---
+  duration_ms: 104.836125
+  type: 'test'
+  ...
+1..497
+# tests 608
+# suites 0
+# pass 607
+# fail 0
+# cancelled 0
+# skipped 1
+# todo 0
+# duration_ms 71678.617959
+# start of coverage report
+# -----------------------------------------------------------------------------------
+# file                               | line % | branch % | funcs % | uncovered lines
+# -----------------------------------------------------------------------------------
+# scripts                            |        |          |         | 
+#  audit-node-coverage.mjs           |  99.60 |    94.35 |  100.00 | 49-50
+#  check-openspec-semantics.mjs      | 100.00 |    99.68 |  100.00 | 
+#  codex-app-server-client.mjs       | 100.00 |    98.41 |  100.00 | 
+#  cursor-eval-scenario.mjs          | 100.00 |    99.67 |  100.00 | 
+#  cursor-skill-eval.mjs             | 100.00 |   100.00 |  100.00 | 
+#  cursor-subagent-bootstrap.mjs     | 100.00 |    98.24 |  100.00 | 
+#  cursor-subagent-mcp.mjs           | 100.00 |    95.20 |  100.00 | 
+#  eval                              |        |          |         | 
+#   finalize-cursor-skill-eval.mjs   | 100.00 |    99.19 |   95.59 | 
+#   run-cursor-skill-eval-matrix.mjs |  97.55 |    94.05 |  100.00 | 142-146 235
+#   run-cursor-skill-eval-suite.mjs  | 100.00 |   100.00 |  100.00 | 
+#  node-test-reporter-v22.mjs        | 100.00 |   100.00 |  100.00 | 
+#  openspec-semantic-registry.mjs    | 100.00 |   100.00 |  100.00 | 
+#  recording-mcp-proxy.mjs           | 100.00 |    95.24 |   97.67 | 
+#  run-cursor-skill-eval.mjs         | 100.00 |   100.00 |  100.00 | 
+#  run-node-tests.mjs                | 100.00 |   100.00 |  100.00 | 
+#  run-unit-coverage.mjs             | 100.00 |   100.00 |  100.00 | 
+# -----------------------------------------------------------------------------------
+# all files                          |  99.87 |    97.90 |   99.51 | 
+# -----------------------------------------------------------------------------------
+# end of coverage report

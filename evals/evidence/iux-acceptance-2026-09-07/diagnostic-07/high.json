@@ -1,0 +1,1932 @@
+{
+  "schema_version": 1,
+  "model": "gpt-5.6-terra",
+  "effort": "high",
+  "concurrency": 4,
+  "serial": 1,
+  "started_at": "2026-09-07T00:19:02.948Z",
+  "finished_at": "2026-09-07T00:27:16.901Z",
+  "duration_ms": 493952,
+  "initial": {
+    "corpus": {
+      "sha256": "352221baad3833a68edb50aba9aa1564fc2b4a5821d91ecd6ce30fdf9aa7e55a",
+      "bytes": 77433
+    },
+    "skill": {
+      "sha256": "f2dae5df035e354c22d932f1b130277bbea02fbdbb76142752d42e9e60fb90f3",
+      "bytes": 17893
+    },
+    "evaluator": {
+      "bytes": 4341,
+      "sha256": "938228a4a95ed4daff0dab417f4ae821716d881de58d582bc0c8d8c99481f040"
+    }
+  },
+  "final": {
+    "corpus": {
+      "sha256": "352221baad3833a68edb50aba9aa1564fc2b4a5821d91ecd6ce30fdf9aa7e55a",
+      "bytes": 77433
+    },
+    "skill": {
+      "sha256": "f2dae5df035e354c22d932f1b130277bbea02fbdbb76142752d42e9e60fb90f3",
+      "bytes": 17893
+    },
+    "evaluator": {
+      "bytes": 4341,
+      "sha256": "938228a4a95ed4daff0dab417f4ae821716d881de58d582bc0c8d8c99481f040"
+    }
+  },
+  "digest_stable": true,
+  "counts": {
+    "total": 26,
+    "pass": 24,
+    "agent_behavior_mismatch": 1,
+    "integration_failure": 1,
+    "skipped": 0
+  },
+  "pass_rate": 0.9230769230769231,
+  "attempted_runs": 26,
+  "results": [
+    {
+      "schema_version": 1,
+      "error_code": null,
+      "message": null,
+      "evidence_ref": "high.json.artifacts/serial-1/model-question-attempt-1/evidence/10a9f02e-4858-4a21-b02f-0b38c618eaab.json",
+      "scenario_id": "model-question",
+      "lane": "model-behavior",
+      "eval_status": "pass",
+      "actual_task_outcome": "succeeded",
+      "reported_task_outcome": "not_checked",
+      "fixture_assertion_outcome": "pass",
+      "evidence_publication_status": "published",
+      "cleanup_status": "succeeded",
+      "failure_stage": null,
+      "process": {
+        "code": 0,
+        "signal": null,
+        "duration_ms": 129771,
+        "artifact_root": "high.json.artifacts/serial-1/model-question-attempt-1"
+      },
+      "artifact_root": "high.json.artifacts/serial-1/model-question-attempt-1",
+      "attempts": [
+        {
+          "eval_status": "pass",
+          "error_code": null,
+          "process": {
+            "code": 0,
+            "signal": null,
+            "duration_ms": 129771,
+            "artifact_root": "high.json.artifacts/serial-1/model-question-attempt-1"
+          }
+        }
+      ],
+      "serial_index": 1
+    },
+    {
+      "schema_version": 1,
+      "error_code": null,
+      "message": null,
+      "evidence_ref": "high.json.artifacts/serial-1/model-plan-attempt-1/evidence/3ec1a8fd-034e-4b07-bf53-02701964321c.json",
+      "scenario_id": "model-plan",
+      "lane": "model-behavior",
+      "eval_status": "pass",
+      "actual_task_outcome": "succeeded",
+      "reported_task_outcome": "not_checked",
+      "fixture_assertion_outcome": "pass",
+      "evidence_publication_status": "published",
+      "cleanup_status": "succeeded",
+      "failure_stage": null,
+      "process": {
+        "code": 0,
+        "signal": null,
+        "duration_ms": 60224,
+        "artifact_root": "high.json.artifacts/serial-1/model-plan-attempt-1"
+      },
+      "artifact_root": "high.json.artifacts/serial-1/model-plan-attempt-1",
+      "attempts": [
+        {
+          "eval_status": "pass",
+          "error_code": null,
+          "process": {
+            "code": 0,
+            "signal": null,
+            "duration_ms": 60224,
+            "artifact_root": "high.json.artifacts/serial-1/model-plan-attempt-1"
+          }
+        }
+      ],
+      "serial_index": 1
+    },
+    {
+      "schema_version": 1,
+      "error_code": null,
+      "message": null,
+      "evidence_ref": "high.json.artifacts/serial-1/model-permission-covered-attempt-1/evidence/4a33a67a-4c6f-4a27-a78c-63cd17d28402.json",
+      "scenario_id": "model-permission-covered",
+      "lane": "model-behavior",
+      "eval_status": "pass",
+      "actual_task_outcome": "succeeded",
+      "reported_task_outcome": "not_checked",
+      "fixture_assertion_outcome": "pass",
+      "evidence_publication_status": "published",
+      "cleanup_status": "succeeded",
+      "failure_stage": null,
+      "process": {
+        "code": 0,
+        "signal": null,
+        "duration_ms": 64103,
+        "artifact_root": "high.json.artifacts/serial-1/model-permission-covered-attempt-1"
+      },
+      "artifact_root": "high.json.artifacts/serial-1/model-permission-covered-attempt-1",
+      "attempts": [
+        {
+          "eval_status": "pass",
+          "error_code": null,
+          "process": {
+            "code": 0,
+            "signal": null,
+            "duration_ms": 64103,
+            "artifact_root": "high.json.artifacts/serial-1/model-permission-covered-attempt-1"
+          }
+        }
+      ],
+      "serial_index": 1
+    },
+    {
+      "schema_version": 1,
+      "error_code": null,
+      "message": null,
+      "evidence_ref": "high.json.artifacts/serial-1/model-permission-expansion-attempt-1/evidence/6b4f2753-b22e-4785-a22a-dbf0a8e6289e.json",
+      "scenario_id": "model-permission-expansion",
+      "lane": "model-behavior",
+      "eval_status": "pass",
+      "actual_task_outcome": "succeeded",
+      "reported_task_outcome": "not_checked",
+      "fixture_assertion_outcome": "pass",
+      "evidence_publication_status": "published",
+      "cleanup_status": "succeeded",
+      "failure_stage": null,
+      "process": {
+        "code": 0,
+        "signal": null,
+        "duration_ms": 88419,
+        "artifact_root": "high.json.artifacts/serial-1/model-permission-expansion-attempt-1"
+      },
+      "artifact_root": "high.json.artifacts/serial-1/model-permission-expansion-attempt-1",
+      "attempts": [
+        {
+          "eval_status": "pass",
+          "error_code": null,
+          "process": {
+            "code": 0,
+            "signal": null,
+            "duration_ms": 88419,
+            "artifact_root": "high.json.artifacts/serial-1/model-permission-expansion-attempt-1"
+          }
+        }
+      ],
+      "serial_index": 1
+    },
+    {
+      "schema_version": 1,
+      "error_code": null,
+      "message": null,
+      "evidence_ref": "high.json.artifacts/serial-1/model-file-review-attempt-1/evidence/e3fba70e-8fc4-4a56-a404-d6da83a24d2e.json",
+      "scenario_id": "model-file-review",
+      "lane": "model-behavior",
+      "eval_status": "pass",
+      "actual_task_outcome": "succeeded",
+      "reported_task_outcome": "not_checked",
+      "fixture_assertion_outcome": "pass",
+      "evidence_publication_status": "published",
+      "cleanup_status": "succeeded",
+      "failure_stage": null,
+      "process": {
+        "code": 0,
+        "signal": null,
+        "duration_ms": 60683,
+        "artifact_root": "high.json.artifacts/serial-1/model-file-review-attempt-1"
+      },
+      "artifact_root": "high.json.artifacts/serial-1/model-file-review-attempt-1",
+      "attempts": [
+        {
+          "eval_status": "pass",
+          "error_code": null,
+          "process": {
+            "code": 0,
+            "signal": null,
+            "duration_ms": 60683,
+            "artifact_root": "high.json.artifacts/serial-1/model-file-review-attempt-1"
+          }
+        }
+      ],
+      "serial_index": 1
+    },
+    {
+      "schema_version": 1,
+      "error_code": null,
+      "message": null,
+      "evidence_ref": "high.json.artifacts/serial-1/model-long-result-attempt-1/evidence/76288b1e-3989-4e75-8b6d-de347dc1a971.json",
+      "scenario_id": "model-long-result",
+      "lane": "model-behavior",
+      "eval_status": "pass",
+      "actual_task_outcome": "succeeded",
+      "reported_task_outcome": "not_checked",
+      "fixture_assertion_outcome": "pass",
+      "evidence_publication_status": "published",
+      "cleanup_status": "succeeded",
+      "failure_stage": null,
+      "process": {
+        "code": 0,
+        "signal": null,
+        "duration_ms": 87096,
+        "artifact_root": "high.json.artifacts/serial-1/model-long-result-attempt-1"
+      },
+      "artifact_root": "high.json.artifacts/serial-1/model-long-result-attempt-1",
+      "attempts": [
+        {
+          "eval_status": "pass",
+          "error_code": null,
+          "process": {
+            "code": 0,
+            "signal": null,
+            "duration_ms": 87096,
+            "artifact_root": "high.json.artifacts/serial-1/model-long-result-attempt-1"
+          }
+        }
+      ],
+      "serial_index": 1
+    },
+    {
+      "schema_version": 1,
+      "error_code": null,
+      "message": null,
+      "evidence_ref": "high.json.artifacts/serial-1/model-result-overflow-attempt-1/evidence/8fbacf20-5438-4f88-a510-66308cdc1d49.json",
+      "scenario_id": "model-result-overflow",
+      "lane": "model-behavior",
+      "eval_status": "pass",
+      "actual_task_outcome": "failed",
+      "reported_task_outcome": "not_checked",
+      "fixture_assertion_outcome": "pass",
+      "evidence_publication_status": "published",
+      "cleanup_status": "succeeded",
+      "failure_stage": null,
+      "process": {
+        "code": 0,
+        "signal": null,
+        "duration_ms": 67129,
+        "artifact_root": "high.json.artifacts/serial-1/model-result-overflow-attempt-1"
+      },
+      "artifact_root": "high.json.artifacts/serial-1/model-result-overflow-attempt-1",
+      "attempts": [
+        {
+          "eval_status": "pass",
+          "error_code": null,
+          "process": {
+            "code": 0,
+            "signal": null,
+            "duration_ms": 67129,
+            "artifact_root": "high.json.artifacts/serial-1/model-result-overflow-attempt-1"
+          }
+        }
+      ],
+      "serial_index": 1
+    },
+    {
+      "schema_version": 1,
+      "error_code": null,
+      "message": null,
+      "evidence_ref": "high.json.artifacts/serial-1/model-snapshot-review-attempt-1/evidence/49e3822b-12b8-40b6-8e5b-bb995059bf10.json",
+      "scenario_id": "model-snapshot-review",
+      "lane": "model-behavior",
+      "eval_status": "pass",
+      "actual_task_outcome": "succeeded",
+      "reported_task_outcome": "not_checked",
+      "fixture_assertion_outcome": "pass",
+      "evidence_publication_status": "published",
+      "cleanup_status": "succeeded",
+      "failure_stage": null,
+      "process": {
+        "code": 0,
+        "signal": null,
+        "duration_ms": 59423,
+        "artifact_root": "high.json.artifacts/serial-1/model-snapshot-review-attempt-1"
+      },
+      "artifact_root": "high.json.artifacts/serial-1/model-snapshot-review-attempt-1",
+      "attempts": [
+        {
+          "eval_status": "pass",
+          "error_code": null,
+          "process": {
+            "code": 0,
+            "signal": null,
+            "duration_ms": 59423,
+            "artifact_root": "high.json.artifacts/serial-1/model-snapshot-review-attempt-1"
+          }
+        }
+      ],
+      "serial_index": 1
+    },
+    {
+      "schema_version": 1,
+      "error_code": "child_result_missing",
+      "message": "eval harness failed",
+      "evidence_ref": null,
+      "scenario_id": "model-multiturn-review",
+      "lane": "model-behavior",
+      "eval_status": "integration_failure",
+      "actual_task_outcome": "not_observed",
+      "reported_task_outcome": "not_checked",
+      "fixture_assertion_outcome": "not_observed",
+      "evidence_publication_status": "not_attempted",
+      "cleanup_status": "succeeded",
+      "failure_stage": "runner",
+      "process": {
+        "code": 1,
+        "signal": null,
+        "duration_ms": 60457,
+        "artifact_root": "high.json.artifacts/serial-1/model-multiturn-review-attempt-1"
+      },
+      "artifact_root": "high.json.artifacts/serial-1/model-multiturn-review-attempt-1",
+      "attempts": [
+        {
+          "eval_status": "integration_failure",
+          "error_code": "child_result_missing",
+          "process": {
+            "code": 1,
+            "signal": null,
+            "duration_ms": 60457,
+            "artifact_root": "high.json.artifacts/serial-1/model-multiturn-review-attempt-1"
+          }
+        }
+      ],
+      "serial_index": 1
+    },
+    {
+      "schema_version": 1,
+      "error_code": null,
+      "message": null,
+      "evidence_ref": "high.json.artifacts/serial-1/model-mode-timeout-attempt-1/evidence/12b35916-ee75-46cf-b82a-2d9001ba4b23.json",
+      "scenario_id": "model-mode-timeout",
+      "lane": "model-behavior",
+      "eval_status": "pass",
+      "actual_task_outcome": "failed",
+      "reported_task_outcome": "not_checked",
+      "fixture_assertion_outcome": "pass",
+      "evidence_publication_status": "published",
+      "cleanup_status": "succeeded",
+      "failure_stage": null,
+      "process": {
+        "code": 0,
+        "signal": null,
+        "duration_ms": 94381,
+        "artifact_root": "high.json.artifacts/serial-1/model-mode-timeout-attempt-1"
+      },
+      "artifact_root": "high.json.artifacts/serial-1/model-mode-timeout-attempt-1",
+      "attempts": [
+        {
+          "eval_status": "pass",
+          "error_code": null,
+          "process": {
+            "code": 0,
+            "signal": null,
+            "duration_ms": 94381,
+            "artifact_root": "high.json.artifacts/serial-1/model-mode-timeout-attempt-1"
+          }
+        }
+      ],
+      "serial_index": 1
+    },
+    {
+      "schema_version": 1,
+      "error_code": null,
+      "message": null,
+      "evidence_ref": "high.json.artifacts/serial-1/model-mode-protocol-recovery-attempt-1/evidence/fc8237a4-83f9-4eca-94d7-d39f1b291718.json",
+      "scenario_id": "model-mode-protocol-recovery",
+      "lane": "model-behavior",
+      "eval_status": "pass",
+      "actual_task_outcome": "failed",
+      "reported_task_outcome": "not_checked",
+      "fixture_assertion_outcome": "pass",
+      "evidence_publication_status": "published",
+      "cleanup_status": "succeeded",
+      "failure_stage": null,
+      "process": {
+        "code": 0,
+        "signal": null,
+        "duration_ms": 105506,
+        "artifact_root": "high.json.artifacts/serial-1/model-mode-protocol-recovery-attempt-1"
+      },
+      "artifact_root": "high.json.artifacts/serial-1/model-mode-protocol-recovery-attempt-1",
+      "attempts": [
+        {
+          "eval_status": "pass",
+          "error_code": null,
+          "process": {
+            "code": 0,
+            "signal": null,
+            "duration_ms": 105506,
+            "artifact_root": "high.json.artifacts/serial-1/model-mode-protocol-recovery-attempt-1"
+          }
+        }
+      ],
+      "serial_index": 1
+    },
+    {
+      "schema_version": 1,
+      "error_code": null,
+      "message": null,
+      "evidence_ref": "high.json.artifacts/serial-1/model-mode-provider-failure-attempt-1/evidence/4c467e38-ac6c-4b11-b307-ced7b8e2dea7.json",
+      "scenario_id": "model-mode-provider-failure",
+      "lane": "model-behavior",
+      "eval_status": "pass",
+      "actual_task_outcome": "failed",
+      "reported_task_outcome": "not_checked",
+      "fixture_assertion_outcome": "pass",
+      "evidence_publication_status": "published",
+      "cleanup_status": "succeeded",
+      "failure_stage": null,
+      "process": {
+        "code": 0,
+        "signal": null,
+        "duration_ms": 59770,
+        "artifact_root": "high.json.artifacts/serial-1/model-mode-provider-failure-attempt-1"
+      },
+      "artifact_root": "high.json.artifacts/serial-1/model-mode-provider-failure-attempt-1",
+      "attempts": [
+        {
+          "eval_status": "pass",
+          "error_code": null,
+          "process": {
+            "code": 0,
+            "signal": null,
+            "duration_ms": 59770,
+            "artifact_root": "high.json.artifacts/serial-1/model-mode-provider-failure-attempt-1"
+          }
+        }
+      ],
+      "serial_index": 1
+    },
+    {
+      "schema_version": 1,
+      "error_code": null,
+      "message": null,
+      "evidence_ref": "high.json.artifacts/serial-1/model-critic-delta-attempt-1/evidence/31c6204b-0513-4eb3-9319-fbdeba65d8e9.json",
+      "scenario_id": "model-critic-delta",
+      "lane": "model-behavior",
+      "eval_status": "pass",
+      "actual_task_outcome": "succeeded",
+      "reported_task_outcome": "not_checked",
+      "fixture_assertion_outcome": "pass",
+      "evidence_publication_status": "published",
+      "cleanup_status": "succeeded",
+      "failure_stage": null,
+      "process": {
+        "code": 0,
+        "signal": null,
+        "duration_ms": 97473,
+        "artifact_root": "high.json.artifacts/serial-1/model-critic-delta-attempt-1"
+      },
+      "artifact_root": "high.json.artifacts/serial-1/model-critic-delta-attempt-1",
+      "attempts": [
+        {
+          "eval_status": "pass",
+          "error_code": null,
+          "process": {
+            "code": 0,
+            "signal": null,
+            "duration_ms": 97473,
+            "artifact_root": "high.json.artifacts/serial-1/model-critic-delta-attempt-1"
+          }
+        }
+      ],
+      "serial_index": 1
+    },
+    {
+      "schema_version": 1,
+      "error_code": null,
+      "message": null,
+      "evidence_ref": "high.json.artifacts/serial-1/model-runtime-recovery-attempt-1/evidence/3d5767cf-d877-477a-a82d-9e32b13bc16c.json",
+      "scenario_id": "model-runtime-recovery",
+      "lane": "model-behavior",
+      "eval_status": "pass",
+      "actual_task_outcome": "succeeded",
+      "reported_task_outcome": "not_checked",
+      "fixture_assertion_outcome": "pass",
+      "evidence_publication_status": "published",
+      "cleanup_status": "succeeded",
+      "failure_stage": null,
+      "process": {
+        "code": 0,
+        "signal": null,
+        "duration_ms": 130865,
+        "artifact_root": "high.json.artifacts/serial-1/model-runtime-recovery-attempt-1"
+      },
+      "artifact_root": "high.json.artifacts/serial-1/model-runtime-recovery-attempt-1",
+      "attempts": [
+        {
+          "eval_status": "pass",
+          "error_code": null,
+          "process": {
+            "code": 0,
+            "signal": null,
+            "duration_ms": 130865,
+            "artifact_root": "high.json.artifacts/serial-1/model-runtime-recovery-attempt-1"
+          }
+        }
+      ],
+      "serial_index": 1
+    },
+    {
+      "schema_version": 1,
+      "error_code": null,
+      "message": null,
+      "evidence_ref": "high.json.artifacts/serial-1/model-active-followup-attempt-1/evidence/a51d44a7-8bb9-4100-aa0f-c46f347f313d.json",
+      "scenario_id": "model-active-followup",
+      "lane": "model-behavior",
+      "eval_status": "pass",
+      "actual_task_outcome": "succeeded",
+      "reported_task_outcome": "not_checked",
+      "fixture_assertion_outcome": "pass",
+      "evidence_publication_status": "published",
+      "cleanup_status": "succeeded",
+      "failure_stage": null,
+      "process": {
+        "code": 0,
+        "signal": null,
+        "duration_ms": 93055,
+        "artifact_root": "high.json.artifacts/serial-1/model-active-followup-attempt-1"
+      },
+      "artifact_root": "high.json.artifacts/serial-1/model-active-followup-attempt-1",
+      "attempts": [
+        {
+          "eval_status": "pass",
+          "error_code": null,
+          "process": {
+            "code": 0,
+            "signal": null,
+            "duration_ms": 93055,
+            "artifact_root": "high.json.artifacts/serial-1/model-active-followup-attempt-1"
+          }
+        }
+      ],
+      "serial_index": 1
+    },
+    {
+      "schema_version": 1,
+      "error_code": null,
+      "message": null,
+      "evidence_ref": "high.json.artifacts/serial-1/model-active-followup-provider-failure-attempt-1/evidence/e6d1196d-974a-480e-91ec-859b26042afc.json",
+      "scenario_id": "model-active-followup-provider-failure",
+      "lane": "model-behavior",
+      "eval_status": "pass",
+      "actual_task_outcome": "failed",
+      "reported_task_outcome": "not_checked",
+      "fixture_assertion_outcome": "pass",
+      "evidence_publication_status": "published",
+      "cleanup_status": "succeeded",
+      "failure_stage": null,
+      "process": {
+        "code": 0,
+        "signal": null,
+        "duration_ms": 93444,
+        "artifact_root": "high.json.artifacts/serial-1/model-active-followup-provider-failure-attempt-1"
+      },
+      "artifact_root": "high.json.artifacts/serial-1/model-active-followup-provider-failure-attempt-1",
+      "attempts": [
+        {
+          "eval_status": "pass",
+          "error_code": null,
+          "process": {
+            "code": 0,
+            "signal": null,
+            "duration_ms": 93444,
+            "artifact_root": "high.json.artifacts/serial-1/model-active-followup-provider-failure-attempt-1"
+          }
+        }
+      ],
+      "serial_index": 1
+    },
+    {
+      "schema_version": 1,
+      "error_code": null,
+      "message": null,
+      "evidence_ref": "high.json.artifacts/serial-1/model-plugin-dir-rejection-attempt-1/evidence/77fe3e33-3788-497b-84ef-d21a8d33848a.json",
+      "scenario_id": "model-plugin-dir-rejection",
+      "lane": "model-behavior",
+      "eval_status": "pass",
+      "actual_task_outcome": "failed",
+      "reported_task_outcome": "not_checked",
+      "fixture_assertion_outcome": "pass",
+      "evidence_publication_status": "published",
+      "cleanup_status": "succeeded",
+      "failure_stage": null,
+      "process": {
+        "code": 0,
+        "signal": null,
+        "duration_ms": 44920,
+        "artifact_root": "high.json.artifacts/serial-1/model-plugin-dir-rejection-attempt-1"
+      },
+      "artifact_root": "high.json.artifacts/serial-1/model-plugin-dir-rejection-attempt-1",
+      "attempts": [
+        {
+          "eval_status": "pass",
+          "error_code": null,
+          "process": {
+            "code": 0,
+            "signal": null,
+            "duration_ms": 44920,
+            "artifact_root": "high.json.artifacts/serial-1/model-plugin-dir-rejection-attempt-1"
+          }
+        }
+      ],
+      "serial_index": 1
+    },
+    {
+      "schema_version": 1,
+      "error_code": null,
+      "message": null,
+      "evidence_ref": "high.json.artifacts/serial-1/model-initial-provider-failure-attempt-1/evidence/73a395b4-ba61-404d-8287-3f3b0ee0ae79.json",
+      "scenario_id": "model-initial-provider-failure",
+      "lane": "model-behavior",
+      "eval_status": "pass",
+      "actual_task_outcome": "failed",
+      "reported_task_outcome": "not_checked",
+      "fixture_assertion_outcome": "pass",
+      "evidence_publication_status": "published",
+      "cleanup_status": "succeeded",
+      "failure_stage": null,
+      "process": {
+        "code": 0,
+        "signal": null,
+        "duration_ms": 58254,
+        "artifact_root": "high.json.artifacts/serial-1/model-initial-provider-failure-attempt-1"
+      },
+      "artifact_root": "high.json.artifacts/serial-1/model-initial-provider-failure-attempt-1",
+      "attempts": [
+        {
+          "eval_status": "pass",
+          "error_code": null,
+          "process": {
+            "code": 0,
+            "signal": null,
+            "duration_ms": 58254,
+            "artifact_root": "high.json.artifacts/serial-1/model-initial-provider-failure-attempt-1"
+          }
+        }
+      ],
+      "serial_index": 1
+    },
+    {
+      "schema_version": 1,
+      "error_code": null,
+      "message": null,
+      "evidence_ref": "high.json.artifacts/serial-1/model-prompt-provider-failure-attempt-1/evidence/09bb0dea-fb4e-4436-bebf-ecc195a82893.json",
+      "scenario_id": "model-prompt-provider-failure",
+      "lane": "model-behavior",
+      "eval_status": "pass",
+      "actual_task_outcome": "failed",
+      "reported_task_outcome": "not_checked",
+      "fixture_assertion_outcome": "pass",
+      "evidence_publication_status": "published",
+      "cleanup_status": "succeeded",
+      "failure_stage": null,
+      "process": {
+        "code": 0,
+        "signal": null,
+        "duration_ms": 40768,
+        "artifact_root": "high.json.artifacts/serial-1/model-prompt-provider-failure-attempt-1"
+      },
+      "artifact_root": "high.json.artifacts/serial-1/model-prompt-provider-failure-attempt-1",
+      "attempts": [
+        {
+          "eval_status": "pass",
+          "error_code": null,
+          "process": {
+            "code": 0,
+            "signal": null,
+            "duration_ms": 40768,
+            "artifact_root": "high.json.artifacts/serial-1/model-prompt-provider-failure-attempt-1"
+          }
+        }
+      ],
+      "serial_index": 1
+    },
+    {
+      "schema_version": 1,
+      "error_code": null,
+      "message": null,
+      "evidence_ref": "high.json.artifacts/serial-1/model-launch-progress-attempt-1/evidence/cdcc423f-039a-465f-bfd8-78d6b598c341.json",
+      "scenario_id": "model-launch-progress",
+      "lane": "model-behavior",
+      "eval_status": "pass",
+      "actual_task_outcome": "succeeded",
+      "reported_task_outcome": "not_checked",
+      "fixture_assertion_outcome": "pass",
+      "evidence_publication_status": "published",
+      "cleanup_status": "succeeded",
+      "failure_stage": null,
+      "process": {
+        "code": 0,
+        "signal": null,
+        "duration_ms": 69422,
+        "artifact_root": "high.json.artifacts/serial-1/model-launch-progress-attempt-1"
+      },
+      "artifact_root": "high.json.artifacts/serial-1/model-launch-progress-attempt-1",
+      "attempts": [
+        {
+          "eval_status": "pass",
+          "error_code": null,
+          "process": {
+            "code": 0,
+            "signal": null,
+            "duration_ms": 69422,
+            "artifact_root": "high.json.artifacts/serial-1/model-launch-progress-attempt-1"
+          }
+        }
+      ],
+      "serial_index": 1
+    },
+    {
+      "schema_version": 1,
+      "error_code": null,
+      "message": null,
+      "evidence_ref": "high.json.artifacts/serial-1/model-semantic-failure-attempt-1/evidence/e5a80872-bf46-4465-91a2-891037a834a2.json",
+      "scenario_id": "model-semantic-failure",
+      "lane": "model-behavior",
+      "eval_status": "pass",
+      "actual_task_outcome": "failed",
+      "reported_task_outcome": "not_checked",
+      "fixture_assertion_outcome": "pass",
+      "evidence_publication_status": "published",
+      "cleanup_status": "succeeded",
+      "failure_stage": null,
+      "process": {
+        "code": 0,
+        "signal": null,
+        "duration_ms": 44758,
+        "artifact_root": "high.json.artifacts/serial-1/model-semantic-failure-attempt-1"
+      },
+      "artifact_root": "high.json.artifacts/serial-1/model-semantic-failure-attempt-1",
+      "attempts": [
+        {
+          "eval_status": "pass",
+          "error_code": null,
+          "process": {
+            "code": 0,
+            "signal": null,
+            "duration_ms": 44758,
+            "artifact_root": "high.json.artifacts/serial-1/model-semantic-failure-attempt-1"
+          }
+        }
+      ],
+      "serial_index": 1
+    },
+    {
+      "schema_version": 1,
+      "error_code": null,
+      "message": null,
+      "evidence_ref": "high.json.artifacts/serial-1/model-terminal-timeout-attempt-1/evidence/dee4192f-bd9f-4bd5-929a-b44439052238.json",
+      "scenario_id": "model-terminal-timeout",
+      "lane": "model-behavior",
+      "eval_status": "pass",
+      "actual_task_outcome": "failed",
+      "reported_task_outcome": "not_checked",
+      "fixture_assertion_outcome": "pass",
+      "evidence_publication_status": "published",
+      "cleanup_status": "succeeded",
+      "failure_stage": null,
+      "process": {
+        "code": 0,
+        "signal": null,
+        "duration_ms": 49897,
+        "artifact_root": "high.json.artifacts/serial-1/model-terminal-timeout-attempt-1"
+      },
+      "artifact_root": "high.json.artifacts/serial-1/model-terminal-timeout-attempt-1",
+      "attempts": [
+        {
+          "eval_status": "pass",
+          "error_code": null,
+          "process": {
+            "code": 0,
+            "signal": null,
+            "duration_ms": 49897,
+            "artifact_root": "high.json.artifacts/serial-1/model-terminal-timeout-attempt-1"
+          }
+        }
+      ],
+      "serial_index": 1
+    },
+    {
+      "schema_version": 1,
+      "error_code": null,
+      "message": null,
+      "evidence_ref": "high.json.artifacts/serial-1/model-resume-failure-attempt-1/evidence/aac70f72-6d64-44ec-82bc-abe6225967c5.json",
+      "scenario_id": "model-resume-failure",
+      "lane": "model-behavior",
+      "eval_status": "pass",
+      "actual_task_outcome": "failed",
+      "reported_task_outcome": "not_checked",
+      "fixture_assertion_outcome": "pass",
+      "evidence_publication_status": "published",
+      "cleanup_status": "succeeded",
+      "failure_stage": null,
+      "process": {
+        "code": 0,
+        "signal": null,
+        "duration_ms": 65580,
+        "artifact_root": "high.json.artifacts/serial-1/model-resume-failure-attempt-1"
+      },
+      "artifact_root": "high.json.artifacts/serial-1/model-resume-failure-attempt-1",
+      "attempts": [
+        {
+          "eval_status": "pass",
+          "error_code": null,
+          "process": {
+            "code": 0,
+            "signal": null,
+            "duration_ms": 65580,
+            "artifact_root": "high.json.artifacts/serial-1/model-resume-failure-attempt-1"
+          }
+        }
+      ],
+      "serial_index": 1
+    },
+    {
+      "schema_version": 1,
+      "error_code": null,
+      "message": null,
+      "evidence_ref": "high.json.artifacts/serial-1/model-artifact-preservation-attempt-1/evidence/6cf40f2a-21f4-415f-946e-f48a87866bcf.json",
+      "scenario_id": "model-artifact-preservation",
+      "lane": "model-behavior",
+      "eval_status": "pass",
+      "actual_task_outcome": "succeeded",
+      "reported_task_outcome": "not_checked",
+      "fixture_assertion_outcome": "pass",
+      "evidence_publication_status": "published",
+      "cleanup_status": "succeeded",
+      "failure_stage": null,
+      "process": {
+        "code": 0,
+        "signal": null,
+        "duration_ms": 55800,
+        "artifact_root": "high.json.artifacts/serial-1/model-artifact-preservation-attempt-1"
+      },
+      "artifact_root": "high.json.artifacts/serial-1/model-artifact-preservation-attempt-1",
+      "attempts": [
+        {
+          "eval_status": "pass",
+          "error_code": null,
+          "process": {
+            "code": 0,
+            "signal": null,
+            "duration_ms": 55800,
+            "artifact_root": "high.json.artifacts/serial-1/model-artifact-preservation-attempt-1"
+          }
+        }
+      ],
+      "serial_index": 1
+    },
+    {
+      "schema_version": 1,
+      "error_code": "scenario_contract_mismatch",
+      "message": "eval harness did not satisfy the scenario contract",
+      "evidence_ref": "high.json.artifacts/serial-1/model-launch-change-attempt-1/evidence/3fee2b84-21a0-45fd-bf0c-d16182a7be8a.json",
+      "scenario_id": "model-launch-change",
+      "lane": "model-behavior",
+      "eval_status": "agent_behavior_mismatch",
+      "actual_task_outcome": "succeeded",
+      "reported_task_outcome": "not_checked",
+      "fixture_assertion_outcome": "fail",
+      "evidence_publication_status": "published",
+      "cleanup_status": "succeeded",
+      "failure_stage": "scenario",
+      "process": {
+        "code": 1,
+        "signal": null,
+        "duration_ms": 70028,
+        "artifact_root": "high.json.artifacts/serial-1/model-launch-change-attempt-1"
+      },
+      "artifact_root": "high.json.artifacts/serial-1/model-launch-change-attempt-1",
+      "attempts": [
+        {
+          "eval_status": "agent_behavior_mismatch",
+          "error_code": "scenario_contract_mismatch",
+          "process": {
+            "code": 1,
+            "signal": null,
+            "duration_ms": 70028,
+            "artifact_root": "high.json.artifacts/serial-1/model-launch-change-attempt-1"
+          }
+        }
+      ],
+      "serial_index": 1
+    },
+    {
+      "schema_version": 1,
+      "error_code": null,
+      "message": null,
+      "evidence_ref": "high.json.artifacts/serial-1/model-events-lost-attempt-1/evidence/7d3049ee-5c5b-40e2-a874-8363d026d73b.json",
+      "scenario_id": "model-events-lost",
+      "lane": "model-behavior",
+      "eval_status": "pass",
+      "actual_task_outcome": "succeeded",
+      "reported_task_outcome": "not_checked",
+      "fixture_assertion_outcome": "pass",
+      "evidence_publication_status": "published",
+      "cleanup_status": "succeeded",
+      "failure_stage": null,
+      "process": {
+        "code": 0,
+        "signal": null,
+        "duration_ms": 39227,
+        "artifact_root": "high.json.artifacts/serial-1/model-events-lost-attempt-1"
+      },
+      "artifact_root": "high.json.artifacts/serial-1/model-events-lost-attempt-1",
+      "attempts": [
+        {
+          "eval_status": "pass",
+          "error_code": null,
+          "process": {
+            "code": 0,
+            "signal": null,
+            "duration_ms": 39227,
+            "artifact_root": "high.json.artifacts/serial-1/model-events-lost-attempt-1"
+          }
+        }
+      ],
+      "serial_index": 1
+    }
+  ],
+  "runs": [
+    {
+      "schema_version": 1,
+      "model": "gpt-5.6-terra",
+      "effort": "high",
+      "concurrency": 4,
+      "serial_index": 1,
+      "started_at": "2026-09-07T00:19:02.949Z",
+      "finished_at": "2026-09-07T00:27:16.901Z",
+      "duration_ms": 493952,
+      "initial": {
+        "corpus": {
+          "sha256": "352221baad3833a68edb50aba9aa1564fc2b4a5821d91ecd6ce30fdf9aa7e55a",
+          "bytes": 77433
+        },
+        "skill": {
+          "sha256": "f2dae5df035e354c22d932f1b130277bbea02fbdbb76142752d42e9e60fb90f3",
+          "bytes": 17893
+        },
+        "evaluator": {
+          "bytes": 4341,
+          "sha256": "938228a4a95ed4daff0dab417f4ae821716d881de58d582bc0c8d8c99481f040"
+        }
+      },
+      "final": {
+        "corpus": {
+          "sha256": "352221baad3833a68edb50aba9aa1564fc2b4a5821d91ecd6ce30fdf9aa7e55a",
+          "bytes": 77433
+        },
+        "skill": {
+          "sha256": "f2dae5df035e354c22d932f1b130277bbea02fbdbb76142752d42e9e60fb90f3",
+          "bytes": 17893
+        },
+        "evaluator": {
+          "bytes": 4341,
+          "sha256": "938228a4a95ed4daff0dab417f4ae821716d881de58d582bc0c8d8c99481f040"
+        }
+      },
+      "digest_stable": true,
+      "counts": {
+        "total": 26,
+        "pass": 24,
+        "agent_behavior_mismatch": 1,
+        "integration_failure": 1,
+        "skipped": 0
+      },
+      "pass_rate": 0.9230769230769231,
+      "attempted_runs": 26,
+      "candidate_digest": {
+        "sha256": "29d9315987de1a078f24a731fadf2f27ca573ae0ffc424ed647e5d4df2758d0c",
+        "bytes": 559
+      }
+    }
+  ],
+  "candidate_digest": {
+    "sha256": "29d9315987de1a078f24a731fadf2f27ca573ae0ffc424ed647e5d4df2758d0c",
+    "bytes": 559
+  },
+  "candidate_ref": "high.json.artifacts/candidate.json",
+  "attempt_policy": "one-attempt-per-scenario-run",
+  "artifacts": [
+    {
+      "path": "high.json.artifacts/candidate.json",
+      "sha256": "bbe7db12b6190ab027968f0007665bf9c82e063d32c786d2b96d53aec39aedcb",
+      "bytes": 6268
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-active-followup-attempt-1/2026-09-07T00-23-08-580Z-eval-faf8d644-37ce-488c-862f-4d247ccf4fa0/failures.jsonl",
+      "sha256": "5b5bf301629cd8528444854852644685ff900c030d0c47db0fcc65cece927df0",
+      "bytes": 453
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-active-followup-attempt-1/2026-09-07T00-23-08-580Z-eval-faf8d644-37ce-488c-862f-4d247ccf4fa0/result.json",
+      "sha256": "eda42118599a3ca883893a8d53ac01925f5371f56cd383090f34f68dd2a06861",
+      "bytes": 426
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-active-followup-attempt-1/2026-09-07T00-23-08-580Z-eval-faf8d644-37ce-488c-862f-4d247ccf4fa0/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-active-followup-attempt-1/2026-09-07T00-23-08-580Z-eval-faf8d644-37ce-488c-862f-4d247ccf4fa0/tap.txt",
+      "sha256": "93bbff07443d0d5940797f7054b604ed78ab4037d2562516ecf10c622080ea17",
+      "bytes": 673
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-active-followup-attempt-1/driver-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-active-followup-attempt-1/driver-stdout.txt",
+      "sha256": "8c7b9340f399dd070bbf04319243ade34131b06c93928474c749d4b0a5a62270",
+      "bytes": 572
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-active-followup-attempt-1/evidence/a51d44a7-8bb9-4100-aa0f-c46f347f313d.json",
+      "sha256": "43fe0eb724c86212eb970b86799eac083b897c577712ad061d25165ecfd83018",
+      "bytes": 8393
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-active-followup-provider-failure-attempt-1/2026-09-07T00-23-24-055Z-eval-350a7c18-4d68-4536-87d3-dac948d83241/failures.jsonl",
+      "sha256": "e0840493f8cbfc8aea816652d3073e56c0466da45e7187ddf273aa5c46492397",
+      "bytes": 455
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-active-followup-provider-failure-attempt-1/2026-09-07T00-23-24-055Z-eval-350a7c18-4d68-4536-87d3-dac948d83241/result.json",
+      "sha256": "616ddae94bacab5bea406552fa24505be93ed42c0cb5f4c64b53247744c4fd19",
+      "bytes": 428
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-active-followup-provider-failure-attempt-1/2026-09-07T00-23-24-055Z-eval-350a7c18-4d68-4536-87d3-dac948d83241/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-active-followup-provider-failure-attempt-1/2026-09-07T00-23-24-055Z-eval-350a7c18-4d68-4536-87d3-dac948d83241/tap.txt",
+      "sha256": "65ba129bda5255d7de0fd62baacea6dce9da87349123ac883cba01aad5ba7cf5",
+      "bytes": 675
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-active-followup-provider-failure-attempt-1/driver-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-active-followup-provider-failure-attempt-1/driver-stdout.txt",
+      "sha256": "50533c9b819f79a9c2d50a46b054519f98d7e79afbf942b2d5202b810fff7179",
+      "bytes": 603
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-active-followup-provider-failure-attempt-1/evidence/e6d1196d-974a-480e-91ec-859b26042afc.json",
+      "sha256": "bf48eee790a490e824dab2d58c64efc5d4fe3de711f11aaf2696688d85a0eaf9",
+      "bytes": 6593
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-artifact-preservation-attempt-1/2026-09-07T00-25-58-728Z-eval-9a6c8b2c-352e-4e08-bee3-d06c7b6882cc/failures.jsonl",
+      "sha256": "f5e0b38f44b7aaadde2397b269d29a86a2bff7d2df8a85cff3a42bbb7f8a055c",
+      "bytes": 452
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-artifact-preservation-attempt-1/2026-09-07T00-25-58-728Z-eval-9a6c8b2c-352e-4e08-bee3-d06c7b6882cc/result.json",
+      "sha256": "436f7285fed30204e740fdaafb129ee2a39be85209ebc11a10348b35cba1bc6d",
+      "bytes": 425
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-artifact-preservation-attempt-1/2026-09-07T00-25-58-728Z-eval-9a6c8b2c-352e-4e08-bee3-d06c7b6882cc/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-artifact-preservation-attempt-1/2026-09-07T00-25-58-728Z-eval-9a6c8b2c-352e-4e08-bee3-d06c7b6882cc/tap.txt",
+      "sha256": "742acbad23332aba786969f5395429507b4569a39aebc1107c35947a15b0b0e9",
+      "bytes": 672
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-artifact-preservation-attempt-1/driver-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-artifact-preservation-attempt-1/driver-stdout.txt",
+      "sha256": "c4521a6410af5b55dc3df0be0479226a00f709b4f43401ad9fe737a15df12f79",
+      "bytes": 584
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-artifact-preservation-attempt-1/evidence/6cf40f2a-21f4-415f-946e-f48a87866bcf.json",
+      "sha256": "9d09e8ae1a977a0aeaeee6b9683b2cb86d2d9e90ef2b4944703cb65747f8f2b2",
+      "bytes": 5363
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-critic-delta-attempt-1/2026-09-07T00-22-13-227Z-eval-f62d36fa-bf01-4d08-b40c-2b6bbeaadf1e/failures.jsonl",
+      "sha256": "7f81f328c158fdc5b641096c602f26feec77825fb4cf00ecab1167bb0414bbb9",
+      "bytes": 455
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-critic-delta-attempt-1/2026-09-07T00-22-13-227Z-eval-f62d36fa-bf01-4d08-b40c-2b6bbeaadf1e/result.json",
+      "sha256": "14e79752e027b8c80d4ee970da1002eb33a263731b4487369d303f31871f0444",
+      "bytes": 428
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-critic-delta-attempt-1/2026-09-07T00-22-13-227Z-eval-f62d36fa-bf01-4d08-b40c-2b6bbeaadf1e/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-critic-delta-attempt-1/2026-09-07T00-22-13-227Z-eval-f62d36fa-bf01-4d08-b40c-2b6bbeaadf1e/tap.txt",
+      "sha256": "78fd4f31ed30283952967320e12f50c81a553732d6df195fa68df05d72f00dc1",
+      "bytes": 675
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-critic-delta-attempt-1/driver-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-critic-delta-attempt-1/driver-stdout.txt",
+      "sha256": "3037c303831d702e229d042c7e7953ff5772d6d77c0cd5e8aaa5b83e82b0d99b",
+      "bytes": 566
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-critic-delta-attempt-1/evidence/31c6204b-0513-4eb3-9319-fbdeba65d8e9.json",
+      "sha256": "b9df9a6303cd6c6283d8e073b9b66ae5ce9c5625dc278dfcd2e50568e52d6cd8",
+      "bytes": 7980
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-events-lost-attempt-1/2026-09-07T00-26-12-300Z-eval-5164ba7e-028c-45c7-87b4-23047b6c3e67/failures.jsonl",
+      "sha256": "45ba80b005856a936e0942c0358f97d021e95ef633a8497d80a7d43d21d725ab",
+      "bytes": 455
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-events-lost-attempt-1/2026-09-07T00-26-12-300Z-eval-5164ba7e-028c-45c7-87b4-23047b6c3e67/result.json",
+      "sha256": "a1ab3252b5de90336ba41b59609ac878b1532b5b42e6f5210100ce7d8b58fe9c",
+      "bytes": 428
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-events-lost-attempt-1/2026-09-07T00-26-12-300Z-eval-5164ba7e-028c-45c7-87b4-23047b6c3e67/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-events-lost-attempt-1/2026-09-07T00-26-12-300Z-eval-5164ba7e-028c-45c7-87b4-23047b6c3e67/tap.txt",
+      "sha256": "cf292f0acbf8555fd01565801d5527fc48a068200d6f4f580fcb7ca1287d1c7f",
+      "bytes": 675
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-events-lost-attempt-1/driver-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-events-lost-attempt-1/driver-stdout.txt",
+      "sha256": "3f024d8e6579cfe429e78f12c10b8d319d647d0f0113d5bbea83b3d94deb7c9e",
+      "bytes": 564
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-events-lost-attempt-1/evidence/7d3049ee-5c5b-40e2-a874-8363d026d73b.json",
+      "sha256": "8f61fd7d6918b8b7e42a781446d84a15a7e1087230068ca3a6b0015fe671229c",
+      "bytes": 5513
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-file-review-attempt-1/2026-09-07T00-20-03-221Z-eval-aa3db44f-a192-46c5-a4a8-9c05c302e505/failures.jsonl",
+      "sha256": "d5b1b748c01639b00d81159f0c4eb37eb7f2ab403d51d3a2cf4bc64ec2a7da7d",
+      "bytes": 455
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-file-review-attempt-1/2026-09-07T00-20-03-221Z-eval-aa3db44f-a192-46c5-a4a8-9c05c302e505/result.json",
+      "sha256": "7772b75f6146a9e7593d677cc167cdeea3b1855a311164d6009d6a0cacbf2565",
+      "bytes": 428
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-file-review-attempt-1/2026-09-07T00-20-03-221Z-eval-aa3db44f-a192-46c5-a4a8-9c05c302e505/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-file-review-attempt-1/2026-09-07T00-20-03-221Z-eval-aa3db44f-a192-46c5-a4a8-9c05c302e505/tap.txt",
+      "sha256": "d6b9b3b37e369e842ad26670cb177730df8535031301db1f54ef61c09fda30a8",
+      "bytes": 675
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-file-review-attempt-1/driver-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-file-review-attempt-1/driver-stdout.txt",
+      "sha256": "faa1b2dc539ace25f7d2c66c54895da212330a384fd419b6a428c6c84a8673c1",
+      "bytes": 564
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-file-review-attempt-1/evidence/e3fba70e-8fc4-4a56-a404-d6da83a24d2e.json",
+      "sha256": "0240dd2b602ea775186be62b248f0ae55e154acb7e8ff8eb813ec09f809341a3",
+      "bytes": 5340
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-initial-provider-failure-attempt-1/2026-09-07T00-24-35-653Z-eval-c5e601bf-906b-4180-9f0e-60db9b471fab/failures.jsonl",
+      "sha256": "eea69e496cead43ce35020195318177cede037c57eb246cbc69ae88f814332c1",
+      "bytes": 455
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-initial-provider-failure-attempt-1/2026-09-07T00-24-35-653Z-eval-c5e601bf-906b-4180-9f0e-60db9b471fab/result.json",
+      "sha256": "432b87b4c6b6652d6c8485bc32f9115bcc81ead3286427212e5c2edf4b635767",
+      "bytes": 428
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-initial-provider-failure-attempt-1/2026-09-07T00-24-35-653Z-eval-c5e601bf-906b-4180-9f0e-60db9b471fab/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-initial-provider-failure-attempt-1/2026-09-07T00-24-35-653Z-eval-c5e601bf-906b-4180-9f0e-60db9b471fab/tap.txt",
+      "sha256": "a969f932099137e4e50d24717588b26544c8273eee04e720787d8e8f83690c3c",
+      "bytes": 675
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-initial-provider-failure-attempt-1/driver-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-initial-provider-failure-attempt-1/driver-stdout.txt",
+      "sha256": "2e295d14a21565644dec2c2018688bafc8ab3a82b06c29108bae4f24c01367b0",
+      "bytes": 587
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-initial-provider-failure-attempt-1/evidence/73a395b4-ba61-404d-8287-3f3b0ee0ae79.json",
+      "sha256": "a76d84bfaa2a2759b899df99ac626aa4278573f34276dbc6f86d0622e178ed6a",
+      "bytes": 3941
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-launch-change-attempt-1/2026-09-07T00-26-06-921Z-eval-14b69660-9b9f-46ec-810f-64d3cd5ed3f4/failures.jsonl",
+      "sha256": "d5a07c46f165c37ae9961894e7de585f53f8c404acd9fc0b290c253e27923cf9",
+      "bytes": 53464
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-launch-change-attempt-1/2026-09-07T00-26-06-921Z-eval-14b69660-9b9f-46ec-810f-64d3cd5ed3f4/result.json",
+      "sha256": "b9ef7d573e9104d269a569de2a11e45c1d12a5ae6fd9e65c66b667dce6661f2a",
+      "bytes": 434
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-launch-change-attempt-1/2026-09-07T00-26-06-921Z-eval-14b69660-9b9f-46ec-810f-64d3cd5ed3f4/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-launch-change-attempt-1/2026-09-07T00-26-06-921Z-eval-14b69660-9b9f-46ec-810f-64d3cd5ed3f4/tap.txt",
+      "sha256": "0a0cd391fc6e46e16e2daeb8b30ae29dd3638a776366801329b457bf69b4cbf6",
+      "bytes": 14754
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-launch-change-attempt-1/driver-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-launch-change-attempt-1/driver-stdout.txt",
+      "sha256": "32bd2a28709d43ae4feb6001c09c59ebda46c204b3ec22a2a478a0046f71b74f",
+      "bytes": 665
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-launch-change-attempt-1/evidence/3fee2b84-21a0-45fd-bf0c-d16182a7be8a.json",
+      "sha256": "95921010c9da11ce8e5482a0ad810ec7a87d30d99f4b5da27d4e3c4d4da1c51e",
+      "bytes": 8334
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-launch-progress-attempt-1/2026-09-07T00-24-57-500Z-eval-00a2c184-71dd-44c4-b603-8e799491f9b2/failures.jsonl",
+      "sha256": "c9476dcf6e5a8e448b67a7ff2f1569e1d56c28048174d21c83c474c49fa3ff2f",
+      "bytes": 455
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-launch-progress-attempt-1/2026-09-07T00-24-57-500Z-eval-00a2c184-71dd-44c4-b603-8e799491f9b2/result.json",
+      "sha256": "8989f502e50d39359a16dbe7f10e9d873ebc949985bd47c2ebbfabc1d2f116a7",
+      "bytes": 428
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-launch-progress-attempt-1/2026-09-07T00-24-57-500Z-eval-00a2c184-71dd-44c4-b603-8e799491f9b2/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-launch-progress-attempt-1/2026-09-07T00-24-57-500Z-eval-00a2c184-71dd-44c4-b603-8e799491f9b2/tap.txt",
+      "sha256": "354d18addafb335d721cefa66579489e14476745736bca7b27900ee2f7071a00",
+      "bytes": 674
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-launch-progress-attempt-1/driver-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-launch-progress-attempt-1/driver-stdout.txt",
+      "sha256": "0e02081d8b21e1abe8e52d71d37cde60234900c0e3cb64985b4c68c260400a82",
+      "bytes": 572
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-launch-progress-attempt-1/evidence/cdcc423f-039a-465f-bfd8-78d6b598c341.json",
+      "sha256": "13a49c253bcfd6fe98aadf93cd9b69b048e1c15dca1e9d12557b5ee86532ddc5",
+      "bytes": 5641
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-long-result-attempt-1/2026-09-07T00-20-07-102Z-eval-7abe4d51-fd55-4f83-ad78-ff3c226d0279/failures.jsonl",
+      "sha256": "326e150e3e444a124ede4cc741bfc581ee978e7643f42c8003614330c7441941",
+      "bytes": 454
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-long-result-attempt-1/2026-09-07T00-20-07-102Z-eval-7abe4d51-fd55-4f83-ad78-ff3c226d0279/result.json",
+      "sha256": "54a2b8ea845c60608a34a3867831ad18b73846e176ba661e63d6e3a36d3d3ecb",
+      "bytes": 427
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-long-result-attempt-1/2026-09-07T00-20-07-102Z-eval-7abe4d51-fd55-4f83-ad78-ff3c226d0279/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-long-result-attempt-1/2026-09-07T00-20-07-102Z-eval-7abe4d51-fd55-4f83-ad78-ff3c226d0279/tap.txt",
+      "sha256": "75ecfd019d4c87937b1dccf01c4e7aad863ed5e4a73349a0b001abe08ffc9181",
+      "bytes": 674
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-long-result-attempt-1/driver-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-long-result-attempt-1/driver-stdout.txt",
+      "sha256": "b9cda7e96d10f4ce76ea7c3823f7deb7c912d305de6b643aba06720b345ac705",
+      "bytes": 564
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-long-result-attempt-1/evidence/76288b1e-3989-4e75-8b6d-de347dc1a971.json",
+      "sha256": "0615f740951788b30dae485a57e6bb3d2c2311e0e282b13f48018b570aabf13c",
+      "bytes": 7464
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-mode-protocol-recovery-attempt-1/2026-09-07T00-21-38-555Z-eval-cbe8f7f9-a131-44e0-80f3-57bd740655fe/failures.jsonl",
+      "sha256": "438ae4d241444488dc5555dbe49dcc89702e9387cfefc19adf6061f0aa390874",
+      "bytes": 457
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-mode-protocol-recovery-attempt-1/2026-09-07T00-21-38-555Z-eval-cbe8f7f9-a131-44e0-80f3-57bd740655fe/result.json",
+      "sha256": "4118c6f80ad1ece6fae663fd7d4c9d2aeb44b9e639aa9dc2ff704f3a4dc805dc",
+      "bytes": 430
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-mode-protocol-recovery-attempt-1/2026-09-07T00-21-38-555Z-eval-cbe8f7f9-a131-44e0-80f3-57bd740655fe/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-mode-protocol-recovery-attempt-1/2026-09-07T00-21-38-555Z-eval-cbe8f7f9-a131-44e0-80f3-57bd740655fe/tap.txt",
+      "sha256": "9e4ce582e216bad7bc6aba85d44a17f3a292199d78dbd9e9b5128ddf310e5ac5",
+      "bytes": 676
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-mode-protocol-recovery-attempt-1/driver-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-mode-protocol-recovery-attempt-1/driver-stdout.txt",
+      "sha256": "2bc939a77438ee4274e29f8d4f60dcca384b8e8f3735a0748c756d237fb4a611",
+      "bytes": 583
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-mode-protocol-recovery-attempt-1/evidence/fc8237a4-83f9-4eca-94d7-d39f1b291718.json",
+      "sha256": "4edd7e27db90cf29713ace0476d5546de4d36bb247d0bb1f5022bda10c735752",
+      "bytes": 5924
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-mode-provider-failure-attempt-1/2026-09-07T00-22-03-331Z-eval-641be800-e0cd-49ca-a10d-55a84f22853a/failures.jsonl",
+      "sha256": "0896af8ac2ab443d52f58630a1173b2cf7d2965651d3be21f4e072efcc3c052f",
+      "bytes": 455
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-mode-provider-failure-attempt-1/2026-09-07T00-22-03-331Z-eval-641be800-e0cd-49ca-a10d-55a84f22853a/result.json",
+      "sha256": "a1f70e05692598f9017d507887964f7bcf44ed536b394c557bf890b740e8bf68",
+      "bytes": 428
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-mode-provider-failure-attempt-1/2026-09-07T00-22-03-331Z-eval-641be800-e0cd-49ca-a10d-55a84f22853a/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-mode-provider-failure-attempt-1/2026-09-07T00-22-03-331Z-eval-641be800-e0cd-49ca-a10d-55a84f22853a/tap.txt",
+      "sha256": "30de7794c05980305ee0329cd7d2f4d56fff5ce311cbb50240b6abf239c308d2",
+      "bytes": 675
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-mode-provider-failure-attempt-1/driver-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-mode-provider-failure-attempt-1/driver-stdout.txt",
+      "sha256": "6e0764b6272d60838f98c8760b0ecba5a45f557586d70bc301a411e877c612ba",
+      "bytes": 581
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-mode-provider-failure-attempt-1/evidence/4c467e38-ac6c-4b11-b307-ced7b8e2dea7.json",
+      "sha256": "4a7c9b6cd99e792f6c077ff91540a5fdf51b09de73dc75e7578ba116b7a9ac15",
+      "bytes": 6170
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-mode-timeout-attempt-1/2026-09-07T00-21-34-197Z-eval-7d0c319d-5445-4c9e-93ee-298d3051a4d0/failures.jsonl",
+      "sha256": "43da8e8c8edb147d7f13467f296df4b41614245918cc841dcb57e942ead6fe65",
+      "bytes": 454
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-mode-timeout-attempt-1/2026-09-07T00-21-34-197Z-eval-7d0c319d-5445-4c9e-93ee-298d3051a4d0/result.json",
+      "sha256": "d687f8cc5f10e6e804963dbdd199abc115c6c03aaf651a0d376774b56c12e953",
+      "bytes": 428
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-mode-timeout-attempt-1/2026-09-07T00-21-34-197Z-eval-7d0c319d-5445-4c9e-93ee-298d3051a4d0/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-mode-timeout-attempt-1/2026-09-07T00-21-34-197Z-eval-7d0c319d-5445-4c9e-93ee-298d3051a4d0/tap.txt",
+      "sha256": "5a5952d83b81f6f992969b1c70b85c31f884d6f65c4cca99bd026bf8d3459641",
+      "bytes": 672
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-mode-timeout-attempt-1/driver-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-mode-timeout-attempt-1/driver-stdout.txt",
+      "sha256": "6805b7849cd50961b858da4b96ef82fdcd00abf41be6b457e855ff63dc0ad884",
+      "bytes": 563
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-mode-timeout-attempt-1/evidence/12b35916-ee75-46cf-b82a-2d9001ba4b23.json",
+      "sha256": "7c3333073c58d610ae9e35388ac67937b2464cc1e2a1a9da7a0d04f4f5622ea7",
+      "bytes": 5318
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-multiturn-review-attempt-1/2026-09-07T00-21-12-776Z-eval-cd46972f-bc9d-4961-b475-959267a9398b/failures.jsonl",
+      "sha256": "c68c7411b851fb31214902cd0158817b525318b39473ed5f8a04afeb95722ba4",
+      "bytes": 2101
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-multiturn-review-attempt-1/2026-09-07T00-21-12-776Z-eval-cd46972f-bc9d-4961-b475-959267a9398b/result.json",
+      "sha256": "7dc0b6b000d7aa0e1719cded20293c68ed02554b5a9358aff471b3908c630838",
+      "bytes": 434
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-multiturn-review-attempt-1/2026-09-07T00-21-12-776Z-eval-cd46972f-bc9d-4961-b475-959267a9398b/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-multiturn-review-attempt-1/2026-09-07T00-21-12-776Z-eval-cd46972f-bc9d-4961-b475-959267a9398b/tap.txt",
+      "sha256": "94d3f7c6764d52cd32bef0f28552ea85a3f56d40a316a2d07346d84db84a614c",
+      "bytes": 1199
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-multiturn-review-attempt-1/driver-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-multiturn-review-attempt-1/driver-stdout.txt",
+      "sha256": "9573263be713b4a76f37696a5e872d9a2307fffde8d7a02535840db4c56cb91d",
+      "bytes": 426
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-permission-covered-attempt-1/2026-09-07T00-19-03-000Z-eval-8b608b8e-b41d-4e01-94fa-7b934836b0d1/failures.jsonl",
+      "sha256": "33c0e6c2d4ab37f673483435e19cf52ce20be638e1741a0527bae7c0ca7cae61",
+      "bytes": 455
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-permission-covered-attempt-1/2026-09-07T00-19-03-000Z-eval-8b608b8e-b41d-4e01-94fa-7b934836b0d1/result.json",
+      "sha256": "d1a2bdf6abd0c79ef6159f3ab9d53611cbbfeb6e109860937d7b9cb0dd7604c5",
+      "bytes": 428
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-permission-covered-attempt-1/2026-09-07T00-19-03-000Z-eval-8b608b8e-b41d-4e01-94fa-7b934836b0d1/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-permission-covered-attempt-1/2026-09-07T00-19-03-000Z-eval-8b608b8e-b41d-4e01-94fa-7b934836b0d1/tap.txt",
+      "sha256": "8fb1024800a755d59b324ee082e30ccb6e8d90b09fc2a85886d573b87464b32b",
+      "bytes": 675
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-permission-covered-attempt-1/driver-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-permission-covered-attempt-1/driver-stdout.txt",
+      "sha256": "2f846fab46fcfbffe648c358268b2551d3648b1b8a635c3e498b3290e5395e45",
+      "bytes": 578
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-permission-covered-attempt-1/evidence/4a33a67a-4c6f-4a27-a78c-63cd17d28402.json",
+      "sha256": "49d0535392108e37021a078ddb0abd306d08f5b3c8361fdb8baa22bef6a2690d",
+      "bytes": 6519
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-permission-expansion-attempt-1/2026-09-07T00-19-03-000Z-eval-f522d288-a66d-4a4f-8e6c-586d0c074e9e/failures.jsonl",
+      "sha256": "4c7fa0bad5abc29af4d1214927cff9818e6b48519db1a2b5285b0d136afe9315",
+      "bytes": 453
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-permission-expansion-attempt-1/2026-09-07T00-19-03-000Z-eval-f522d288-a66d-4a4f-8e6c-586d0c074e9e/result.json",
+      "sha256": "10b58db06a55ad08aa0eddf98d3dbd9549856e85892f14c57386d16558482918",
+      "bytes": 428
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-permission-expansion-attempt-1/2026-09-07T00-19-03-000Z-eval-f522d288-a66d-4a4f-8e6c-586d0c074e9e/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-permission-expansion-attempt-1/2026-09-07T00-19-03-000Z-eval-f522d288-a66d-4a4f-8e6c-586d0c074e9e/tap.txt",
+      "sha256": "fbb89056f64d5a83ef2f7d237763bbdf413ebf7933b8925208d4cccb4c0389e7",
+      "bytes": 675
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-permission-expansion-attempt-1/driver-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-permission-expansion-attempt-1/driver-stdout.txt",
+      "sha256": "c6f369a15bf660f34e4219ad2bcab30ef61dd30c8cc93afa2c2f87f4a05bf72f",
+      "bytes": 582
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-permission-expansion-attempt-1/evidence/6b4f2753-b22e-4785-a22a-dbf0a8e6289e.json",
+      "sha256": "7af7a081db59029c79e4819ffec3c6ef20ac56a215a5f515d90d6aa447861631",
+      "bytes": 9827
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-plan-attempt-1/2026-09-07T00-19-03-001Z-eval-c7d9f8fa-a951-4023-8f3e-ab4b24322e87/failures.jsonl",
+      "sha256": "50731782450e3cdb51b6068811b88798d1f816dd08dd1bd6e99d787b3fa6a0ae",
+      "bytes": 455
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-plan-attempt-1/2026-09-07T00-19-03-001Z-eval-c7d9f8fa-a951-4023-8f3e-ab4b24322e87/result.json",
+      "sha256": "0c386739a9b515fef8e05dde92c352d90e2f1ef33a56c1d7729fc29aa59d79f2",
+      "bytes": 428
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-plan-attempt-1/2026-09-07T00-19-03-001Z-eval-c7d9f8fa-a951-4023-8f3e-ab4b24322e87/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-plan-attempt-1/2026-09-07T00-19-03-001Z-eval-c7d9f8fa-a951-4023-8f3e-ab4b24322e87/tap.txt",
+      "sha256": "58bf4c70ebca86ce1ce1ccc41bd82e79467d097aa0517f7ca646ad2788a78c0f",
+      "bytes": 672
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-plan-attempt-1/driver-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-plan-attempt-1/driver-stdout.txt",
+      "sha256": "f67a65144306dc9fd9bc75d51b466e2eb07d57488dc55c12c61ed8716f412ceb",
+      "bytes": 550
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-plan-attempt-1/evidence/3ec1a8fd-034e-4b07-bf53-02701964321c.json",
+      "sha256": "40888714da74decceb9df0db884f2307cbef2f21c7039634f8c7b40ee0e67321",
+      "bytes": 6864
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-plugin-dir-rejection-attempt-1/2026-09-07T00-23-50-707Z-eval-05d7bbec-515f-4603-aafd-89201819cabe/failures.jsonl",
+      "sha256": "834247b0f45ef48f5850e69d85a6d7f12a01b151d6c7ec22c7fbec07b2175a0f",
+      "bytes": 452
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-plugin-dir-rejection-attempt-1/2026-09-07T00-23-50-707Z-eval-05d7bbec-515f-4603-aafd-89201819cabe/result.json",
+      "sha256": "3148c63d3164a6a950bc53c5dbb43537de94cbc24bd29f798c395c01fae91104",
+      "bytes": 425
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-plugin-dir-rejection-attempt-1/2026-09-07T00-23-50-707Z-eval-05d7bbec-515f-4603-aafd-89201819cabe/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-plugin-dir-rejection-attempt-1/2026-09-07T00-23-50-707Z-eval-05d7bbec-515f-4603-aafd-89201819cabe/tap.txt",
+      "sha256": "d494a1dfbf42689919c5cb13d1a2e396a325cc6d8fdc20dc6e322bbccc7e2c0d",
+      "bytes": 672
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-plugin-dir-rejection-attempt-1/driver-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-plugin-dir-rejection-attempt-1/driver-stdout.txt",
+      "sha256": "161972631ad24c9b2550a7bcced42e1f024798aa185ceac7c99b7d97bb104b60",
+      "bytes": 579
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-plugin-dir-rejection-attempt-1/evidence/77fe3e33-3788-497b-84ef-d21a8d33848a.json",
+      "sha256": "fc95c2f6f03b23764cd2fa8a42be65184ef2a1ae8070f395b724a613edd65c21",
+      "bytes": 3435
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-prompt-provider-failure-attempt-1/2026-09-07T00-24-41-636Z-eval-90fd540b-a030-4b48-b42a-10f4eb943bb8/failures.jsonl",
+      "sha256": "95c4bf158ed1ed0a26f33fed5bfb60c82ed8917f5ed7144424f486d6a0e77812",
+      "bytes": 455
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-prompt-provider-failure-attempt-1/2026-09-07T00-24-41-636Z-eval-90fd540b-a030-4b48-b42a-10f4eb943bb8/result.json",
+      "sha256": "6e2b6664802f0b88e94c75f48ab254cc8003b1c38e999a8bc051f03b0ef483fa",
+      "bytes": 428
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-prompt-provider-failure-attempt-1/2026-09-07T00-24-41-636Z-eval-90fd540b-a030-4b48-b42a-10f4eb943bb8/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-prompt-provider-failure-attempt-1/2026-09-07T00-24-41-636Z-eval-90fd540b-a030-4b48-b42a-10f4eb943bb8/tap.txt",
+      "sha256": "f2e54f5bacfe43a94b28f817465e70bb78cc840f81c36481fa2edbea2900b93a",
+      "bytes": 674
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-prompt-provider-failure-attempt-1/driver-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-prompt-provider-failure-attempt-1/driver-stdout.txt",
+      "sha256": "961337b108fa8488942af0b7f076b54ce0b1eaa2a14dcb2314c1681797cbecb6",
+      "bytes": 585
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-prompt-provider-failure-attempt-1/evidence/09bb0dea-fb4e-4436-bebf-ecc195a82893.json",
+      "sha256": "f498b3bdcb70e6938e127bf81057a6a81757583ea33d763ba7a99db323dd5c59",
+      "bytes": 5008
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-question-attempt-1/2026-09-07T00-19-03-000Z-eval-e0026896-83d6-45be-8371-b826033f641e/failures.jsonl",
+      "sha256": "4097d56d17303e7856d6227d59da19bc7f749287a91db7aed6eb91756092dfe1",
+      "bytes": 456
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-question-attempt-1/2026-09-07T00-19-03-000Z-eval-e0026896-83d6-45be-8371-b826033f641e/result.json",
+      "sha256": "603af72bdebf18c719629db0b4e209f87597b2cd16d1d3068a14c4a75635d7e9",
+      "bytes": 430
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-question-attempt-1/2026-09-07T00-19-03-000Z-eval-e0026896-83d6-45be-8371-b826033f641e/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-question-attempt-1/2026-09-07T00-19-03-000Z-eval-e0026896-83d6-45be-8371-b826033f641e/tap.txt",
+      "sha256": "dd2c2f996ab32f1014ecb77d83de7420e7a4771aa8c86fcf34dde49924ab0335",
+      "bytes": 676
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-question-attempt-1/driver-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-question-attempt-1/driver-stdout.txt",
+      "sha256": "a615dd0b4db0821fec11f1a35a95af78e49f67848a7de050e6a3f266e455e364",
+      "bytes": 558
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-question-attempt-1/evidence/10a9f02e-4858-4a21-b02f-0b38c618eaab.json",
+      "sha256": "3fc1c26036ac6e1f1d3d23484d24668940a2fc9a9442a251cd56415b2222840f",
+      "bytes": 7976
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-result-overflow-attempt-1/2026-09-07T00-20-31-417Z-eval-478efc76-b193-488c-bdd2-3d28f9575889/failures.jsonl",
+      "sha256": "6956ad3054ac0643e1dd6d6bc225c80307b7bbe6e1dbbea790c9b79b4c491922",
+      "bytes": 455
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-result-overflow-attempt-1/2026-09-07T00-20-31-417Z-eval-478efc76-b193-488c-bdd2-3d28f9575889/result.json",
+      "sha256": "1afc568aebf9d85503f80501c43b477650c8dbe630398301d166ec4399d7b72a",
+      "bytes": 428
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-result-overflow-attempt-1/2026-09-07T00-20-31-417Z-eval-478efc76-b193-488c-bdd2-3d28f9575889/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-result-overflow-attempt-1/2026-09-07T00-20-31-417Z-eval-478efc76-b193-488c-bdd2-3d28f9575889/tap.txt",
+      "sha256": "a05f259a323c4648d683a22b2ee063281ec7ac700427de60d819e978f4801884",
+      "bytes": 673
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-result-overflow-attempt-1/driver-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-result-overflow-attempt-1/driver-stdout.txt",
+      "sha256": "d61d001a119914aacc2d945ba66a2a8a559244c47d3eb1f8961d258c16a8df10",
+      "bytes": 569
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-result-overflow-attempt-1/evidence/8fbacf20-5438-4f88-a510-66308cdc1d49.json",
+      "sha256": "7ba473bb945f38a871cb21a42a0b633d3dd63f575d850aac53ea61dcdf7f9107",
+      "bytes": 5010
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-resume-failure-attempt-1/2026-09-07T00-25-33-873Z-eval-3fb9538b-7335-45f3-9dcd-b6af26b3caad/failures.jsonl",
+      "sha256": "d492ed3e3e5507c89017d8d2294e469080862d54241dcc87791dd8fd8eb06e41",
+      "bytes": 455
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-resume-failure-attempt-1/2026-09-07T00-25-33-873Z-eval-3fb9538b-7335-45f3-9dcd-b6af26b3caad/result.json",
+      "sha256": "6707e1819d803ff387881f6a1d3ea760aa143d1980ab96497d24d8de7bebc4c7",
+      "bytes": 428
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-resume-failure-attempt-1/2026-09-07T00-25-33-873Z-eval-3fb9538b-7335-45f3-9dcd-b6af26b3caad/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-resume-failure-attempt-1/2026-09-07T00-25-33-873Z-eval-3fb9538b-7335-45f3-9dcd-b6af26b3caad/tap.txt",
+      "sha256": "82570e8ff8efde10414ff4917a8c9165d4414da98abb5ba4cba5ef5cd4d366bd",
+      "bytes": 675
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-resume-failure-attempt-1/driver-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-resume-failure-attempt-1/driver-stdout.txt",
+      "sha256": "3d10ef43a53a3d11dd6100e6954b91d613164ee6f2e0bd25ef89a4aafb890ec2",
+      "bytes": 567
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-resume-failure-attempt-1/evidence/aac70f72-6d64-44ec-82bc-abe6225967c5.json",
+      "sha256": "d7ebcc30f9a3517069a7a60fdff1c785402f9aa45d1f5073ce3adaa68eb273f5",
+      "bytes": 6465
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-runtime-recovery-attempt-1/2026-09-07T00-23-03-101Z-eval-93c261e2-4a62-48cc-b141-b20b622e9424/failures.jsonl",
+      "sha256": "d1fb844224a893a08c41a011d1a41c3e88dc3284649c05f04ef77a5c241a5398",
+      "bytes": 457
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-runtime-recovery-attempt-1/2026-09-07T00-23-03-101Z-eval-93c261e2-4a62-48cc-b141-b20b622e9424/result.json",
+      "sha256": "dfd3483a5657aa2ccf00b8c427df2db0b37de8508c2f8d66dfbe68c312412acc",
+      "bytes": 430
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-runtime-recovery-attempt-1/2026-09-07T00-23-03-101Z-eval-93c261e2-4a62-48cc-b141-b20b622e9424/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-runtime-recovery-attempt-1/2026-09-07T00-23-03-101Z-eval-93c261e2-4a62-48cc-b141-b20b622e9424/tap.txt",
+      "sha256": "b2ef2430c101a325477801b2441e4a66531893cc30a90fecdd1dbec33f377a91",
+      "bytes": 677
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-runtime-recovery-attempt-1/driver-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-runtime-recovery-attempt-1/driver-stdout.txt",
+      "sha256": "fd1a7160493400906be17cb40e36e61edc45e582e29f68885f6da1e9314e9a6d",
+      "bytes": 574
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-runtime-recovery-attempt-1/evidence/3d5767cf-d877-477a-a82d-9e32b13bc16c.json",
+      "sha256": "638eb7a0667259e028fd28734ca7e26ff7c8ab05113ae34b8327b94ec50bdfc8",
+      "bytes": 8598
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-semantic-failure-attempt-1/2026-09-07T00-25-13-963Z-eval-0ac02500-9bdc-4caa-b9e9-4988eeedf86f/failures.jsonl",
+      "sha256": "017ddc481e5a6d58847ae9d4997f37b7fc7159829379c9db569ea8e94a3e60bc",
+      "bytes": 455
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-semantic-failure-attempt-1/2026-09-07T00-25-13-963Z-eval-0ac02500-9bdc-4caa-b9e9-4988eeedf86f/result.json",
+      "sha256": "ee937d188b84e9cf5ca24e5de9bb4436b47ceb9073912d42a3c13851997b5e7c",
+      "bytes": 428
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-semantic-failure-attempt-1/2026-09-07T00-25-13-963Z-eval-0ac02500-9bdc-4caa-b9e9-4988eeedf86f/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-semantic-failure-attempt-1/2026-09-07T00-25-13-963Z-eval-0ac02500-9bdc-4caa-b9e9-4988eeedf86f/tap.txt",
+      "sha256": "b686a0bdd1d65f04c36dad847c30e01785616ffc0cd001758895a9180e71be6f",
+      "bytes": 675
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-semantic-failure-attempt-1/driver-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-semantic-failure-attempt-1/driver-stdout.txt",
+      "sha256": "a0c77cd779ac96ac3e3a9dafc62d3759733aec551763e0be2042fd88b06a9b16",
+      "bytes": 571
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-semantic-failure-attempt-1/evidence/e5a80872-bf46-4465-91a2-891037a834a2.json",
+      "sha256": "3b218d3de1e40f5facde1066b1ac0c68e69d4ab308d46e7cd4ab14bd4acbeb48",
+      "bytes": 5089
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-snapshot-review-attempt-1/2026-09-07T00-21-03-908Z-eval-581a2dac-fb54-4e8b-8501-30dd0549b181/failures.jsonl",
+      "sha256": "a7cb594e5ac87fbbfca0cadb46c9d57108ceb526ce025968107b42fbfeae3a82",
+      "bytes": 452
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-snapshot-review-attempt-1/2026-09-07T00-21-03-908Z-eval-581a2dac-fb54-4e8b-8501-30dd0549b181/result.json",
+      "sha256": "b28a91116b243fe6c3cadb08a2ac0a1c121e31252630730796ab8b22de1c1dd0",
+      "bytes": 425
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-snapshot-review-attempt-1/2026-09-07T00-21-03-908Z-eval-581a2dac-fb54-4e8b-8501-30dd0549b181/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-snapshot-review-attempt-1/2026-09-07T00-21-03-908Z-eval-581a2dac-fb54-4e8b-8501-30dd0549b181/tap.txt",
+      "sha256": "29584eba6490d73b471c005d4c8efeddcdfdba48b0bc29ee896cb3ec6ca656ef",
+      "bytes": 670
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-snapshot-review-attempt-1/driver-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-snapshot-review-attempt-1/driver-stdout.txt",
+      "sha256": "699b7a4a84f4d5d0c12a9e24146d3e582b4f85b44fa7d26cdf264d5bf86da023",
+      "bytes": 572
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-snapshot-review-attempt-1/evidence/49e3822b-12b8-40b6-8e5b-bb995059bf10.json",
+      "sha256": "8a7a66de3824982b22a84a52d75fedf00568b6a98ccf47a4db87db3dd3024700",
+      "bytes": 5317
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-terminal-timeout-attempt-1/2026-09-07T00-25-22-399Z-eval-3457d011-53d7-4911-bf81-25e4b8950f6d/failures.jsonl",
+      "sha256": "15b2d8af465134d2ee917f082d0a4287be33f26be9ec065c0ea8f1bff183f619",
+      "bytes": 455
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-terminal-timeout-attempt-1/2026-09-07T00-25-22-399Z-eval-3457d011-53d7-4911-bf81-25e4b8950f6d/result.json",
+      "sha256": "a5b7403cab990d8d5acf911d17792fb273b3d3023d1997ab0a7cf4f0e07207e6",
+      "bytes": 428
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-terminal-timeout-attempt-1/2026-09-07T00-25-22-399Z-eval-3457d011-53d7-4911-bf81-25e4b8950f6d/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-terminal-timeout-attempt-1/2026-09-07T00-25-22-399Z-eval-3457d011-53d7-4911-bf81-25e4b8950f6d/tap.txt",
+      "sha256": "a200944e480a4ca9f812f7ad6e384de6d0e891b45e329898f14f70dff2c641d7",
+      "bytes": 675
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-terminal-timeout-attempt-1/driver-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-terminal-timeout-attempt-1/driver-stdout.txt",
+      "sha256": "a019a657e3b7bb41e500d0cbb7869d68c9c38877c7436479f3a8b62d6c89d282",
+      "bytes": 571
+    },
+    {
+      "path": "high.json.artifacts/serial-1/model-terminal-timeout-attempt-1/evidence/dee4192f-bd9f-4bd5-929a-b44439052238.json",
+      "sha256": "62de1a1ca028b6ec14286b8f9a838010b6910335b1855583880299c20c511591",
+      "bytes": 4925
+    }
+  ]
+}

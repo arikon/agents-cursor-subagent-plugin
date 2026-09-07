@@ -1,0 +1,70 @@
+TAP version 13
+# Subtest: closeout validates all gates, preserves history, and checks only tasks 5.8 through 5.11
+ok 1 - closeout validates all gates, preserves history, and checks only tasks 5.8 through 5.11
+  ---
+  duration_ms: 672.804542
+  type: 'test'
+  ...
+# Subtest: closeout CLI accepts only explicit paths and publishes its proof
+ok 2 - closeout CLI accepts only explicit paths and publishes its proof
+  ---
+  duration_ms: 789.608958
+  type: 'test'
+  ...
+# Subtest: closeout validation rejects malformed paths and evidence without mutating destinations
+ok 3 - closeout validation rejects malformed paths and evidence without mutating destinations
+  ---
+  duration_ms: 708.056375
+  type: 'test'
+  ...
+# Subtest: closeout rejects traversal, hash drift, incomplete finals, dropped calls, and incomplete coverage
+ok 4 - closeout rejects traversal, hash drift, incomplete finals, dropped calls, and incomplete coverage
+  ---
+  duration_ms: 555.251375
+  type: 'test'
+  ...
+# Subtest: closeout rejects symlinked bundle roots and matrix artifact parents
+ok 5 - closeout rejects symlinked bundle roots and matrix artifact parents
+  ---
+  duration_ms: 633.954208
+  type: 'test'
+  ...
+# Subtest: closeout rejects each CLI, bundle, JSON, and artifact boundary before publication
+ok 6 - closeout rejects each CLI, bundle, JSON, and artifact boundary before publication
+  ---
+  duration_ms: 373.87525
+  type: 'test'
+  ...
+# Subtest: closeout reaches matrix index, evidence, supervisor, capture, set, and summary guards
+ok 7 - closeout reaches matrix index, evidence, supervisor, capture, set, and summary guards
+  ---
+  duration_ms: 839.986125
+  type: 'test'
+  ...
+# Subtest: closeout reconstructs coverage evidence and rejects each inconsistent boundary
+ok 8 - closeout reconstructs coverage evidence and rejects each inconsistent boundary
+  ---
+  duration_ms: 352.419167
+  type: 'test'
+  ...
+# Subtest: closeout validates freeze, documents, local refs, snapshots, and publication destinations
+ok 9 - closeout validates freeze, documents, local refs, snapshots, and publication destinations
+  ---
+  duration_ms: 3643.949542
+  type: 'test'
+  ...
+# Subtest: per-file publisher leaves a recoverable prefix and an idempotent rerun repairs it
+ok 10 - per-file publisher leaves a recoverable prefix and an idempotent rerun repairs it
+  ---
+  duration_ms: 1305.734375
+  type: 'test'
+  ...
+1..10
+# tests 10
+# suites 0
+# pass 10
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 9953.9685

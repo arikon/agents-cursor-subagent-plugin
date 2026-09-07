@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "subject": "evals/evidence/iux-acceptance-2026-09-07/diagnostic-15/high.json",
+  "verdict": "passed",
+  "acceptance_verdict": "24/26 diagnostic only; two agent_behavior_mismatch results remain intentionally retained",
+  "candidate_digest": {
+    "sha256": "6de16788e2ee83dc14f1345b3686516f17bfa7513fa29c27bc51e2acb82ec3c3",
+    "bytes": 559
+  },
+  "summary": {
+    "sha256": "0dfe211676f8e1d5799927fa5b72094b39722f12b4925dd271ce31835007cfa5",
+    "bytes": 80892,
+    "model": "gpt-5.6-terra",
+    "effort": "high",
+    "concurrency": 4,
+    "serial": 1,
+    "duration_ms": 515792,
+    "counts": {
+      "total": 26,
+      "pass": 24,
+      "agent_behavior_mismatch": 2,
+      "integration_failure": 0,
+      "skipped": 0
+    },
+    "digest_stable": true,
+    "attempted_runs": 26,
+    "attempt_policy": "one-attempt-per-scenario-run"
+  },
+  "checks": {
+    "authoritative_references_relative": true,
+    "artifact_index_complete": true,
+    "artifact_hashes_match": true,
+    "candidate_payload_digest_matches": true,
+    "candidate_manifest_consistent_across_all_results": true,
+    "unique_scenarios": 26,
+    "one_attempt_results": 26,
+    "published_evidence_results": 26,
+    "succeeded_cleanup_results": 26,
+    "complete_captured_finals": 40,
+    "incomplete_captured_finals": 0,
+    "supervisor_bundles": 26,
+    "full_mismatch_bundles": 2
+  },
+  "inventory": {
+    "candidate_input_digests": 31,
+    "indexed_artifacts": 183,
+    "indexed_artifact_bytes": 350380,
+    "filesystem_artifacts": 183
+  },
+  "diagnostic_payload_paths": {
+    "absolute_driver_stdout_evidence_refs": 26,
+    "absolute_tap_source_file_fields": 28,
+    "disposition": "raw immutable child/TAP diagnostics retain origin paths; authoritative aggregate, evidence, candidate, process and artifact index references are relative and survive relocation"
+  },
+  "mismatch_bundles": [
+    {
+      "scenario_id": "model-question",
+      "artifact_root": "high.json.artifacts/serial-1/model-question-attempt-1",
+      "supervisor_verdict": "failed",
+      "artifact_count": 7,
+      "evidence_ref": "high.json.artifacts/serial-1/model-question-attempt-1/evidence/7ea5cc90-1f2f-4e78-8324-8c1a6cfa295f.json"
+    },
+    {
+      "scenario_id": "model-runtime-recovery",
+      "artifact_root": "high.json.artifacts/serial-1/model-runtime-recovery-attempt-1",
+      "supervisor_verdict": "failed",
+      "artifact_count": 7,
+      "evidence_ref": "high.json.artifacts/serial-1/model-runtime-recovery-attempt-1/evidence/6f872dbe-5d2b-4e11-b626-fb97df930778.json"
+    }
+  ],
+  "errors": []
+}

@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "scope": "Recovery-aware eval change, user-approved 2026-09-07",
+  "critic": {
+    "agent": "astra_critic",
+    "model": "gpt-5.6-sol",
+    "verdict": "OKAY",
+    "findings": [],
+    "basis": "Independent read-only source review; parent focused and complete deterministic evidence referenced separately."
+  },
+  "architect": {
+    "agent": "baseline_scope",
+    "verdict": "CLEAR",
+    "findings": [
+      {
+        "classification": "baseline_violation",
+        "finding": "Runtime normative owner does not state pre-action lookup rejection premise used by eval.",
+        "repair": "Document existing unknown_session/unknown_turn behavior at Public MCP contract owner; eval references it. No runtime API/code expansion.",
+        "resolution": "Verified: runtime owns guarantee, eval references owner, registry digests synchronized; no API/code changes."
+      }
+    ]
+  },
+  "historical_results": "Acceptance03 remains immutable 25/26,24/26,26/26; no retrospective relabelling."
+}

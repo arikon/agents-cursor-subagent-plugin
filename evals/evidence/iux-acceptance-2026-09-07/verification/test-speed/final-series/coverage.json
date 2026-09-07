@@ -1,0 +1,710 @@
+{
+  "group": "coverage",
+  "command": [
+    "node",
+    "scripts/run-node-tests.mjs",
+    "coverage"
+  ],
+  "source_inventory": [
+    {
+      "path": ".codex-plugin/plugin.json",
+      "mode": 33188,
+      "bytes": 715,
+      "sha256": "a46b9e12e4a1e0cd11040f0c60edd4f9da99c021c5ae2d8d2cf5bf48053cf994"
+    },
+    {
+      "path": "README.md",
+      "mode": 33188,
+      "bytes": 14142,
+      "sha256": "44fe5ba342a009fc984438f6ff974ebd61fd1d0121d06bf41009a5941b3d516b"
+    },
+    {
+      "path": "evals/cursor-subagent-scenarios.v1.json",
+      "mode": 33188,
+      "bytes": 80558,
+      "sha256": "4c177c44faccf7b38545aac49a425056f0531cce243b3d8cb502b5dad23da267"
+    },
+    {
+      "path": "scripts/check-openspec-semantics.mjs",
+      "mode": 33188,
+      "bytes": 27928,
+      "sha256": "0c7c04d0fa8adda37086e316dcae685e87a235352b9bdd80a2257e9f94e80a53"
+    },
+    {
+      "path": "scripts/codex-app-server-client.mjs",
+      "mode": 33188,
+      "bytes": 14060,
+      "sha256": "f5fa4850c7228aa9ed4b4a0661f2d1dbabae2ffe95ec86b98e3e0ffc36cf4200"
+    },
+    {
+      "path": "scripts/cursor-eval-scenario.mjs",
+      "mode": 33188,
+      "bytes": 64752,
+      "sha256": "592b7de640615e4e61d15985cc48396fc85556d3a8d95914c513f5a8aa11f0b6"
+    },
+    {
+      "path": "scripts/cursor-skill-eval.mjs",
+      "mode": 33188,
+      "bytes": 10926,
+      "sha256": "39a71bca27a8d9b6a2cfedb2a5772cdd673f2e6f04ea2a88564d2a2f81bda200"
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "mode": 33188,
+      "bytes": 52347,
+      "sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1"
+    },
+    {
+      "path": "scripts/cursor-subagent-mcp.mjs",
+      "mode": 33188,
+      "bytes": 65677,
+      "sha256": "90b1e0517012a1993d3b0b7a27e8015559abfcacca32c7a42dea641ecdf22181"
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+      "mode": 33188,
+      "bytes": 14829,
+      "sha256": "10c4c607579e9ba272da10f6b63f429e550ee9be991177e9912fc0ff109b259a"
+    },
+    {
+      "path": "scripts/eval/run-cursor-skill-eval-suite.mjs",
+      "mode": 33188,
+      "bytes": 5041,
+      "sha256": "9c7369d89ad636e59d554e3e684d1923b045cc33ea2d2d2ff572049deff3fbcf"
+    },
+    {
+      "path": "scripts/node-test-reporter-v22.mjs",
+      "mode": 33188,
+      "bytes": 834,
+      "sha256": "51ac5c6e8a019c83e4deb101b209146c3e953069e42a593d862a45b1ade4834f"
+    },
+    {
+      "path": "scripts/openspec-semantic-registry.mjs",
+      "mode": 33188,
+      "bytes": 13369,
+      "sha256": "bb1039b4e2b53d8281609fbcaac05500132d8463c0e9109953e5beac4463ba3e"
+    },
+    {
+      "path": "scripts/recording-mcp-proxy.mjs",
+      "mode": 33188,
+      "bytes": 16155,
+      "sha256": "96adcd918892da9295ee1c5cf860460dbbf168b5413f4a0a2c99a4370c12c28a"
+    },
+    {
+      "path": "scripts/run-cursor-skill-eval.mjs",
+      "mode": 33188,
+      "bytes": 28834,
+      "sha256": "5c1868db76a2f187371dfb945a3853fd93197c40157c14ae3d0f68bf893f47a5"
+    },
+    {
+      "path": "scripts/run-node-tests.mjs",
+      "mode": 33188,
+      "bytes": 18871,
+      "sha256": "bd2a536556ce0c224da10824184e540170f992faab84bdb71a4d6ab20540716d"
+    },
+    {
+      "path": "scripts/run-unit-coverage.mjs",
+      "mode": 33188,
+      "bytes": 712,
+      "sha256": "24c50d0b2f517da01e8fb1288d38d267577b48bf2f4e8a3530153e3e1cbad30b"
+    },
+    {
+      "path": "skills/cursor-subagent/SKILL.md",
+      "mode": 33188,
+      "bytes": 18194,
+      "sha256": "e44bea901628d99b9e5be52ea8f1405068697ba9d04560b1d3d022e1609b9277"
+    },
+    {
+      "path": "skills/cursor-subagent/agents/openai.yaml",
+      "mode": 33188,
+      "bytes": 251,
+      "sha256": "7e2b2b72bb12d9f72c780db5b31fc7b0d5d0a320f67da4a2701af079453e322e"
+    },
+    {
+      "path": "tests/bootstrap.test.mjs",
+      "mode": 33188,
+      "bytes": 105410,
+      "sha256": "2f81043adf1218152d62dd5ae9128d9e7b07a3db7a9e4e9aeb7010429e61ec84"
+    },
+    {
+      "path": "tests/check-openspec-semantics.test.mjs",
+      "mode": 33188,
+      "bytes": 47392,
+      "sha256": "ef60c23000d8e337a038d842d220a82bcd3e73d93eeea3ffb71008bf83b35a9e"
+    },
+    {
+      "path": "tests/claude-marketplace-canary.test.mjs",
+      "mode": 33188,
+      "bytes": 3573,
+      "sha256": "232030d969ee38c63bb91b78903594d78d47cb339a039167f2c82b55a08b4d6a"
+    },
+    {
+      "path": "tests/codex-app-server-client.test.mjs",
+      "mode": 33188,
+      "bytes": 28435,
+      "sha256": "3003b47af986b4f463ee9cef5b6fd3bdd5ef26dd0b70c0ba07bd0af4981e688a"
+    },
+    {
+      "path": "tests/codex-client-integration.test.mjs",
+      "mode": 33188,
+      "bytes": 108037,
+      "sha256": "549c6d35b38d8d98415690ba800e9b6aee3c28b2895746ab43fed1f057d872d0"
+    },
+    {
+      "path": "tests/cursor-skill-eval.test.mjs",
+      "mode": 33188,
+      "bytes": 51600,
+      "sha256": "dd0e5144e45eeed3b389de27175391d0d555aceac444b2fdcbccebd99570e427"
+    },
+    {
+      "path": "tests/eval-matrix.test.mjs",
+      "mode": 33188,
+      "bytes": 18116,
+      "sha256": "6907624c774c35aa551a0f2a8de452ad5ab5c8962eb87f51f187ed99dbe5966d"
+    },
+    {
+      "path": "tests/facade.test.mjs",
+      "mode": 33188,
+      "bytes": 4476,
+      "sha256": "e7d3e41b42b7b4c9f16c0cf20c946c3d5eb1218becd3f002a629153a71da6212"
+    },
+    {
+      "path": "tests/fixtures/accelerate-turn-timeout.mjs",
+      "mode": 33188,
+      "bytes": 406,
+      "sha256": "adee8e3aa892c545d209c1eefdf9bd6be02a875bec20a031c590fdd5391f06ee"
+    },
+    {
+      "path": "tests/fixtures/codex-app-server-v01521.golden.json",
+      "mode": 33188,
+      "bytes": 1574,
+      "sha256": "79a22cf5b9ae694ce0c5103251ae3e5ae9886717ef850d5318bf864998c3cb33"
+    },
+    {
+      "path": "tests/fixtures/codex-app-server-v01534.golden.json",
+      "mode": 33188,
+      "bytes": 1987,
+      "sha256": "860abe7af9a1823190ccbb6f0d738f34224a3c8395efc2a997396bf5f4cf5594"
+    },
+    {
+      "path": "tests/fixtures/codex-v01521-adapter.golden.json",
+      "mode": 33188,
+      "bytes": 1700,
+      "sha256": "889583631514e1755706a7916ad8e4d82b928118d4d6a10592b33fa010f81ac8"
+    },
+    {
+      "path": "tests/fixtures/codex-v01521-adapter.mjs",
+      "mode": 33188,
+      "bytes": 10182,
+      "sha256": "b73bde0dec555e4ce88ff9a95a9a46379c874e0300a73a74f37880f3232b19d9"
+    },
+    {
+      "path": "tests/fixtures/codex-v01534-adapter.golden.json",
+      "mode": 33188,
+      "bytes": 1594,
+      "sha256": "e881a7e0a7ec08ed3919bf22e54c225640effb533e5384e01a832ee9e6264f38"
+    },
+    {
+      "path": "tests/fixtures/codex-v01534-adapter.mjs",
+      "mode": 33188,
+      "bytes": 125,
+      "sha256": "5ad4cb1117c27ae112e4fe610d4fe155f121c05a77fb0458a6a27c36fc4c2e5e"
+    },
+    {
+      "path": "tests/fixtures/cursor-agent-v20260825.golden.json",
+      "mode": 33188,
+      "bytes": 4630,
+      "sha256": "476241fb75a582eba3c38b79f9111fe3fc3570d31bcfa9be71a84de769217eb9"
+    },
+    {
+      "path": "tests/fixtures/fake-acp.mjs",
+      "mode": 33261,
+      "bytes": 32574,
+      "sha256": "4e152fb5bad738d7fd6bdccd00747c6842742c2f9a726bf64134c3001d2840b3"
+    },
+    {
+      "path": "tests/fixtures/fake-app-server.mjs",
+      "mode": 33188,
+      "bytes": 9046,
+      "sha256": "e1297a3e9817e3ed453b22de4a39d7b1fd00286e877fb902305eb5e591cfdb65"
+    },
+    {
+      "path": "tests/fixtures/fake-codex-adapter-core.mjs",
+      "mode": 33188,
+      "bytes": 9879,
+      "sha256": "5d4275b817a199a0e137306bce68473a433b285deb59455cef7e5ede129c1a06"
+    },
+    {
+      "path": "tests/fixtures/fake-codex-adapter.mjs",
+      "mode": 33188,
+      "bytes": 616,
+      "sha256": "cbf0d2161be737265f4ff2928b3c4922fc57fdae3ba0d7cba6d813218d9f258e"
+    },
+    {
+      "path": "tests/fixtures/fake-codex-cli-v01521.mjs",
+      "mode": 33188,
+      "bytes": 2351,
+      "sha256": "305b7b2caeb3e9bdce7e45a5ebadca99bf8295d13ff15f1e64f4392e172835f1"
+    },
+    {
+      "path": "tests/fixtures/fake-cursor-agent-status.mjs",
+      "mode": 33261,
+      "bytes": 1623,
+      "sha256": "a70f48be3f083b7bc52b39f7a631ab055aa31ee8513cf1652635b6a538a8ae5d"
+    },
+    {
+      "path": "tests/fixtures/fake-eval-matrix-child.mjs",
+      "mode": 33188,
+      "bytes": 4401,
+      "sha256": "824f3cfa164f1526096719dbaac7ff1669fcb18577262e3d1b1c5ab9d28534a9"
+    },
+    {
+      "path": "tests/fixtures/fake-mcp-version.mjs",
+      "mode": 33188,
+      "bytes": 669,
+      "sha256": "44fa5a1b1acc368845b279844602cb2a078315d52ac65a34b1b91ea3b19b1310"
+    },
+    {
+      "path": "tests/fixtures/fake-ollama-responses.mjs",
+      "mode": 33188,
+      "bytes": 12859,
+      "sha256": "d7c6aaa17cae68ec93fbdbf522abd72c19f7b1889d2eddf6e165fd6641422433"
+    },
+    {
+      "path": "tests/fixtures/kill-wait-command.mjs",
+      "mode": 33188,
+      "bytes": 277,
+      "sha256": "abb55a9b35474073fba560853f0712cf946eaa7c055eefa2ea248a68778a9fe5"
+    },
+    {
+      "path": "tests/fixtures/node-test-reporter-v22.23.1.golden.json",
+      "mode": 33188,
+      "bytes": 3437,
+      "sha256": "6d2c0e0ba90c0f74a91f4cf7d9f0705f8d649f9ad874765ada6539ac1e12b02c"
+    },
+    {
+      "path": "tests/fixtures/release-fake-acp.mjs",
+      "mode": 33188,
+      "bytes": 264,
+      "sha256": "98cd6d4735d9a764e2eb74c307f0fc48a87c015b29637a83bc04e6dee2157644"
+    },
+    {
+      "path": "tests/fixtures/release-plan-fixture.txt",
+      "mode": 33188,
+      "bytes": 20,
+      "sha256": "bf9a0a0f53b7050fcc90fe3cfd415811b5358bace2ed11c652e913eb3a8ea4e5"
+    },
+    {
+      "path": "tests/fixtures/run-unit-coverage-loader.mjs",
+      "mode": 33188,
+      "bytes": 414,
+      "sha256": "8075aefc547c5810373b7400dbfb6e120a6c0b5f1c4fa33add37606a33fd516c"
+    },
+    {
+      "path": "tests/fixtures/supervisor-process-tree.mjs",
+      "mode": 33188,
+      "bytes": 1392,
+      "sha256": "b858c585a3a667676a73087fd514d43915c2baf2c2163c489e1c0ce6b907d6fe"
+    },
+    {
+      "path": "tests/mcp-smoke.test.mjs",
+      "mode": 33188,
+      "bytes": 2740,
+      "sha256": "6772303b77e7d3d104b8505f5542bbeaa0a805eb39b8739c858f900f27099935"
+    },
+    {
+      "path": "tests/mcp-transport.test.mjs",
+      "mode": 33188,
+      "bytes": 15948,
+      "sha256": "07aac46cc89020ddac70f11903ac9cf01b193653e32cb177ab3eee6c2e5fe215"
+    },
+    {
+      "path": "tests/node-test-reporter-v22.test.mjs",
+      "mode": 33188,
+      "bytes": 2202,
+      "sha256": "f2c395131cf6fa66de0324544d8991b1de943a8c19e6fc59def9cd56da7b4073"
+    },
+    {
+      "path": "tests/node-test-supervisor.test.mjs",
+      "mode": 33188,
+      "bytes": 49639,
+      "sha256": "5dbaf12566d39905cacd06259f711aff9a59dcf6ef2550b75c3f5640cd0cc5ba"
+    },
+    {
+      "path": "tests/release-e2e.test.mjs",
+      "mode": 33188,
+      "bytes": 36260,
+      "sha256": "294dc2053a2919acd199195574f4c5951c0f4911fae246a431f333d84097c544"
+    },
+    {
+      "path": "tests/run-cursor-skill-eval.test.mjs",
+      "mode": 33188,
+      "bytes": 128925,
+      "sha256": "89c660d2b6c96f06b6526d66afd9f5628359ff4e04b176b7e4634b3b0f46e945"
+    },
+    {
+      "path": "tests/runtime.test.mjs",
+      "mode": 33188,
+      "bytes": 174156,
+      "sha256": "8248fab7016ec26c419c4e87dbd071be6c04f842ea8ae09a8614fc38e6adf2c0"
+    }
+  ],
+  "controlled_load": null,
+  "median_ms": 65714,
+  "maximum_ms": 74676,
+  "gates": {
+    "series_complete": true,
+    "all_passed": true,
+    "source_unchanged": true
+  },
+  "runs": [
+    {
+      "index": 1,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS coverage: 63664ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-45-20-363Z-coverage-88b5e4de-6328-45a7-985e-d24d035bb3a8\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-45-20-363Z-coverage-88b5e4de-6328-45a7-985e-d24d035bb3a8",
+      "result": {
+        "schema_version": 1,
+        "lane": "coverage",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 63664,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 556,
+            "failed": 0,
+            "passed": 555,
+            "cancelled": 0,
+            "skipped": 1,
+            "todo": 0,
+            "topLevel": 481,
+            "suites": 0
+          },
+          "duration_ms": 60191.912958
+        },
+        "coverage": {
+          "enabled": true,
+          "manifest": [
+            "scripts/check-openspec-semantics.mjs",
+            "scripts/codex-app-server-client.mjs",
+            "scripts/cursor-eval-scenario.mjs",
+            "scripts/cursor-skill-eval.mjs",
+            "scripts/openspec-semantic-registry.mjs",
+            "scripts/cursor-subagent-bootstrap.mjs",
+            "scripts/cursor-subagent-mcp.mjs",
+            "scripts/node-test-reporter-v22.mjs",
+            "scripts/recording-mcp-proxy.mjs",
+            "scripts/run-cursor-skill-eval.mjs",
+            "scripts/run-node-tests.mjs",
+            "scripts/run-unit-coverage.mjs",
+            "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+            "scripts/eval/run-cursor-skill-eval-suite.mjs"
+          ],
+          "reported": [
+            "scripts/check-openspec-semantics.mjs",
+            "scripts/codex-app-server-client.mjs",
+            "scripts/cursor-eval-scenario.mjs",
+            "scripts/cursor-skill-eval.mjs",
+            "scripts/cursor-subagent-bootstrap.mjs",
+            "scripts/cursor-subagent-mcp.mjs",
+            "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+            "scripts/eval/run-cursor-skill-eval-suite.mjs",
+            "scripts/node-test-reporter-v22.mjs",
+            "scripts/openspec-semantic-registry.mjs",
+            "scripts/recording-mcp-proxy.mjs",
+            "scripts/run-cursor-skill-eval.mjs",
+            "scripts/run-node-tests.mjs",
+            "scripts/run-unit-coverage.mjs"
+          ],
+          "metrics": {
+            "lines": 99.88097599682602,
+            "branches": 97.8061224489796,
+            "functions": 99.8546511627907
+          },
+          "thresholds": {
+            "lines": 90,
+            "branches": 90,
+            "functions": 90
+          },
+          "diagnostics": [],
+          "denominator_classifications": [
+            {
+              "source": "scripts/openspec-semantic-registry.mjs",
+              "metric": "functions",
+              "classification": "zero_total"
+            }
+          ]
+        },
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "coverage/run-01/result.json",
+          "bytes": 1822,
+          "sha256": "0794e0861e6ecf5d1f3c0fe39e69a9c06c83356f47126acde2e674f9e4ad7658"
+        },
+        {
+          "path": "coverage/run-01/tap.txt",
+          "bytes": 117859,
+          "sha256": "28faf8d09a9cbda047c14d3046bcdb1f31b92b474b06f87d1b5f02415ea2af6e"
+        },
+        {
+          "path": "coverage/run-01/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "coverage/run-01/failures.jsonl",
+          "bytes": 251171,
+          "sha256": "dca966e040044ea8c642d883e92c9df4d9338c243f8a67dd7b6e97aeeeb80e7f"
+        }
+      ],
+      "durable_artifact_dir": "coverage/run-01"
+    },
+    {
+      "index": 2,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS coverage: 65714ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-46-24-086Z-coverage-8bb9cc3e-b682-4886-ad6e-f441ebe3ed66\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-46-24-086Z-coverage-8bb9cc3e-b682-4886-ad6e-f441ebe3ed66",
+      "result": {
+        "schema_version": 1,
+        "lane": "coverage",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 65714,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 556,
+            "failed": 0,
+            "passed": 555,
+            "cancelled": 0,
+            "skipped": 1,
+            "todo": 0,
+            "topLevel": 481,
+            "suites": 0
+          },
+          "duration_ms": 62066.634042
+        },
+        "coverage": {
+          "enabled": true,
+          "manifest": [
+            "scripts/check-openspec-semantics.mjs",
+            "scripts/codex-app-server-client.mjs",
+            "scripts/cursor-eval-scenario.mjs",
+            "scripts/cursor-skill-eval.mjs",
+            "scripts/openspec-semantic-registry.mjs",
+            "scripts/cursor-subagent-bootstrap.mjs",
+            "scripts/cursor-subagent-mcp.mjs",
+            "scripts/node-test-reporter-v22.mjs",
+            "scripts/recording-mcp-proxy.mjs",
+            "scripts/run-cursor-skill-eval.mjs",
+            "scripts/run-node-tests.mjs",
+            "scripts/run-unit-coverage.mjs",
+            "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+            "scripts/eval/run-cursor-skill-eval-suite.mjs"
+          ],
+          "reported": [
+            "scripts/check-openspec-semantics.mjs",
+            "scripts/codex-app-server-client.mjs",
+            "scripts/cursor-eval-scenario.mjs",
+            "scripts/cursor-skill-eval.mjs",
+            "scripts/cursor-subagent-bootstrap.mjs",
+            "scripts/cursor-subagent-mcp.mjs",
+            "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+            "scripts/eval/run-cursor-skill-eval-suite.mjs",
+            "scripts/node-test-reporter-v22.mjs",
+            "scripts/openspec-semantic-registry.mjs",
+            "scripts/recording-mcp-proxy.mjs",
+            "scripts/run-cursor-skill-eval.mjs",
+            "scripts/run-node-tests.mjs",
+            "scripts/run-unit-coverage.mjs"
+          ],
+          "metrics": {
+            "lines": 99.88097599682602,
+            "branches": 97.80668196888548,
+            "functions": 99.8546511627907
+          },
+          "thresholds": {
+            "lines": 90,
+            "branches": 90,
+            "functions": 90
+          },
+          "diagnostics": [],
+          "denominator_classifications": [
+            {
+              "source": "scripts/openspec-semantic-registry.mjs",
+              "metric": "functions",
+              "classification": "zero_total"
+            }
+          ]
+        },
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "coverage/run-02/result.json",
+          "bytes": 1823,
+          "sha256": "4cd991461a786037c2ec2ecb3482484688a8d6f7b90fac10c0d4daa58fe1cb77"
+        },
+        {
+          "path": "coverage/run-02/tap.txt",
+          "bytes": 117896,
+          "sha256": "993274c266382931ec8c37cc5cac1b7a47dd4231e2b83885bbd5d7af9d75ac13"
+        },
+        {
+          "path": "coverage/run-02/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "coverage/run-02/failures.jsonl",
+          "bytes": 251214,
+          "sha256": "fb2bb5c9a9b95a312d109e102dfad8ff66afa28472850cfcea14faad2b0027a9"
+        }
+      ],
+      "durable_artifact_dir": "coverage/run-02"
+    },
+    {
+      "index": 3,
+      "exit_code": 0,
+      "source_digest": "f496d1e32b7786352ecf4df5a5463d5a29a3ea94114c5728bba89a7a13711827",
+      "source_unchanged": true,
+      "output": "PASS coverage: 74676ms; artifacts: /var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-47-29-851Z-coverage-e24838cf-c2f3-4d3c-ab5a-529d9a16ce45\n",
+      "artifact_dir": "/var/folders/v3/dh1xwm491q99px47z44n4psm0000gn/T/codex-node-test-artifacts/2026-09-06T22-47-29-851Z-coverage-e24838cf-c2f3-4d3c-ab5a-529d9a16ce45",
+      "result": {
+        "schema_version": 1,
+        "lane": "coverage",
+        "verdict": "passed",
+        "terminal_cause": "close_0",
+        "child": {
+          "code": 0,
+          "signal": null
+        },
+        "duration_ms": 74676,
+        "tests": {
+          "success": true,
+          "counts": {
+            "tests": 556,
+            "failed": 0,
+            "passed": 555,
+            "cancelled": 0,
+            "skipped": 1,
+            "todo": 0,
+            "topLevel": 481,
+            "suites": 0
+          },
+          "duration_ms": 70103.262083
+        },
+        "coverage": {
+          "enabled": true,
+          "manifest": [
+            "scripts/check-openspec-semantics.mjs",
+            "scripts/codex-app-server-client.mjs",
+            "scripts/cursor-eval-scenario.mjs",
+            "scripts/cursor-skill-eval.mjs",
+            "scripts/openspec-semantic-registry.mjs",
+            "scripts/cursor-subagent-bootstrap.mjs",
+            "scripts/cursor-subagent-mcp.mjs",
+            "scripts/node-test-reporter-v22.mjs",
+            "scripts/recording-mcp-proxy.mjs",
+            "scripts/run-cursor-skill-eval.mjs",
+            "scripts/run-node-tests.mjs",
+            "scripts/run-unit-coverage.mjs",
+            "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+            "scripts/eval/run-cursor-skill-eval-suite.mjs"
+          ],
+          "reported": [
+            "scripts/check-openspec-semantics.mjs",
+            "scripts/codex-app-server-client.mjs",
+            "scripts/cursor-eval-scenario.mjs",
+            "scripts/cursor-skill-eval.mjs",
+            "scripts/cursor-subagent-bootstrap.mjs",
+            "scripts/cursor-subagent-mcp.mjs",
+            "scripts/eval/run-cursor-skill-eval-matrix.mjs",
+            "scripts/eval/run-cursor-skill-eval-suite.mjs",
+            "scripts/node-test-reporter-v22.mjs",
+            "scripts/openspec-semantic-registry.mjs",
+            "scripts/recording-mcp-proxy.mjs",
+            "scripts/run-cursor-skill-eval.mjs",
+            "scripts/run-node-tests.mjs",
+            "scripts/run-unit-coverage.mjs"
+          ],
+          "metrics": {
+            "lines": 99.88097599682602,
+            "branches": 97.88103140158285,
+            "functions": 99.8546511627907
+          },
+          "thresholds": {
+            "lines": 90,
+            "branches": 90,
+            "functions": 90
+          },
+          "diagnostics": [],
+          "denominator_classifications": [
+            {
+              "source": "scripts/openspec-semantic-registry.mjs",
+              "metric": "functions",
+              "classification": "zero_total"
+            }
+          ]
+        },
+        "artifacts": {
+          "tap": "tap.txt",
+          "stderr": "stderr.txt",
+          "failures": "failures.jsonl",
+          "result": "result.json"
+        },
+        "infrastructure": null
+      },
+      "artifact_files": [
+        {
+          "path": "coverage/run-03/result.json",
+          "bytes": 1823,
+          "sha256": "1ffb4e896f4847251e853a4529dc507306cf56cf7e69fc5028e61fca75941af6"
+        },
+        {
+          "path": "coverage/run-03/tap.txt",
+          "bytes": 117979,
+          "sha256": "9df027fdf43188cc14884006336c2e2e8512c5d664224d98754df72b46bf1cf1"
+        },
+        {
+          "path": "coverage/run-03/stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "coverage/run-03/failures.jsonl",
+          "bytes": 251122,
+          "sha256": "28aa1a0220a8dbb9d0e28a4cc2e2eed3ab213cfcda51de02a4dbdc8c97604da6"
+        }
+      ],
+      "durable_artifact_dir": "coverage/run-03"
+    }
+  ]
+}

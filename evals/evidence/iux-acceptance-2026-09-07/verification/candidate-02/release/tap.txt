@@ -1,0 +1,83 @@
+TAP version 13
+# Subtest: credential-free release gate installs, discovers and starts the published MCP payload
+ok 1 - credential-free release gate installs, discovers and starts the published MCP payload
+  ---
+  duration_ms: 707.854041
+  type: 'test'
+  ...
+# Subtest: release discovery accepts unrelated marketplaces while requiring one exact managed tuple
+ok 2 - release discovery accepts unrelated marketplaces while requiring one exact managed tuple
+  ---
+  duration_ms: 663.272375
+  type: 'test'
+  ...
+# Subtest: release adapter calls enforce timeout and aggregate output cap
+ok 3 - release adapter calls enforce timeout and aggregate output cap
+  ---
+  duration_ms: 65.5065
+  type: 'test'
+  ...
+# Subtest: MCP transport close rejects a nonzero child exit
+ok 4 - MCP transport close rejects a nonzero child exit
+  ---
+  duration_ms: 37.330541
+  type: 'test'
+  ...
+# Subtest: canary finally closes transport even when cursor_close_session fails
+ok 5 - canary finally closes transport even when cursor_close_session fails
+  ---
+  duration_ms: 0.488042
+  type: 'test'
+  ...
+# Subtest: release discovery rejects a server version different from the installed manifest and closes the client
+ok 6 - release discovery rejects a server version different from the installed manifest and closes the client
+  ---
+  duration_ms: 601.306625
+  type: 'test'
+  ...
+# Subtest: live canary admits at most one exact-path permission
+ok 7 - live canary admits at most one exact-path permission
+  ---
+  duration_ms: 0.456959
+  type: 'test'
+  ...
+# Subtest: live result classifier covers every terminal outcome deterministically
+ok 8 - live result classifier covers every terminal outcome deterministically
+  ---
+  duration_ms: 0.246333
+  type: 'test'
+  ...
+# Subtest: release handoff consumes only the exact outer package canary reference and digests
+ok 9 - release handoff consumes only the exact outer package canary reference and digests
+  ---
+  duration_ms: 1.035375
+  type: 'test'
+  ...
+# Subtest: release child finalizer cleans package layout before writing outer-owned evidence
+ok 10 - release child finalizer cleans package layout before writing outer-owned evidence
+  ---
+  duration_ms: 3.982458
+  type: 'test'
+  ...
+# Subtest: enabled live canary rejects missing explicit adapter configuration before side effects
+ok 11 - enabled live canary rejects missing explicit adapter configuration before side effects
+  ---
+  duration_ms: 0.30775
+  type: 'test'
+  ...
+# Subtest: live release canary is opt-in and classified without hidden retry
+ok 12 - live release canary is opt-in and classified without hidden retry
+  ---
+  duration_ms: 0.074625
+  type: 'test'
+  ...
+# live release result: skipped
+1..12
+# tests 12
+# suites 0
+# pass 12
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2178.437

@@ -1,0 +1,3 @@
+{"type":"test:summary","data":{"success":true,"counts":{"tests":42,"failed":0,"passed":42,"cancelled":0,"skipped":0,"todo":0,"topLevel":42,"suites":0},"duration_ms":3651.225417,"file":"/Users/arikon/projects/codex-cursor-subagent-plugin/tests/cursor-skill-eval.test.mjs"}}
+{"type":"test:summary","data":{"success":true,"counts":{"tests":57,"failed":0,"passed":57,"cancelled":0,"skipped":0,"todo":0,"topLevel":57,"suites":0},"duration_ms":796.41825,"file":"/Users/arikon/projects/codex-cursor-subagent-plugin/tests/run-cursor-skill-eval.test.mjs"}}
+{"type":"test:summary","data":{"success":true,"counts":{"tests":99,"failed":0,"passed":99,"cancelled":0,"skipped":0,"todo":0,"topLevel":99,"suites":0},"duration_ms":3718.232}}

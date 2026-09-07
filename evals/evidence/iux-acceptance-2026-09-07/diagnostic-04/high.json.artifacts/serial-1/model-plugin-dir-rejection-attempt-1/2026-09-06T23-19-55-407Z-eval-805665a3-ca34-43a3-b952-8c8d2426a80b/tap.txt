@@ -1,0 +1,43 @@
+TAP version 13
+# [hosted-eval] scenario-loaded
+# [hosted-eval] auth-resolved
+# [hosted-eval] package-installed
+# [hosted-eval] app-server-initialize
+# [hosted-eval] app-server-initialized
+# [hosted-eval] skill-loaded
+# [hosted-eval] thread-started
+# [hosted-eval] turn-started
+# [hosted-eval] terminal-observed
+# [hosted-eval] child-result-built
+# hosted behavior mismatch: {"oracle":{"assertion_outcome":"fail","actual_task_outcome":"failed","reported_task_outcome":"not_reported","eval_status":"agent_behavior_mismatch","mismatches":["missing-outcome-report","reported-outcome-mismatch"],"components":{"evidence_admission":"pass","execution_trace":"pass","continuation_handoff":"not_applicable","outcome_report":"fail","interaction_report":"not_applicable","safety_disclosure":"not_applicable"},"report_checks":[{"turn_index":1,"category":"outcome","matched":false,"missing_final":false,"required_assertions":[{"alternatives":["scope_rejected"],"matched":false}],"forbidden_matches":[]}]},"trace":[{"kind":"session.start-rejected","error_code":"scope_rejected","call_outcome":"failed"}],"capturedFinals":[{"turn_index":1,"text":"Cursor delegation could not start: the selected plugin bundle path was rejected because it does not exist.\\n\\nNo README review was performed. Please provide a valid plugin bundle path to proceed.","turn_id":"01a07905-e0f4-7f50-acfd-ff983debed6f","turn_status":"completed","phase":"final_answer","source":"thread/items/list","completeness":"complete","error_code":null}]}
+# [hosted-eval] cleanup-started
+# Subtest: hosted Codex actually calls the installed Cursor MCP tools
+not ok 1 - hosted Codex actually calls the installed Cursor MCP tools
+  ---
+  duration_ms: 60696.1075
+  type: 'test'
+  location: '/Users/arikon/projects/codex-cursor-subagent-plugin/tests/codex-client-integration.test.mjs:1312:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"oracle":{"assertion_outcome":"fail","actual_task_outcome":"failed","reported_task_outcome":"not_reported","eval_status":"agent_behavior_mismatch","mismatches":["missing-outcome-report","reported-outcome-mismatch"],"components":{"evidence_admission":"pass","execution_trace":"pass","continuation_handoff":"not_applicable","outcome_report":"fail","interaction_report":"not_applicable","safety_disclosure":"not_applicable"},"report_checks":[{"turn_index":1,"category":"outcome","matched":false,"missing_final":false,"required_assertions":[{"alternatives":["scope_rejected"],"matched":false}],"forbidden_matches":[]}]},"trace":[{"kind":"session.start-rejected","error_code":"scope_rejected","call_outcome":"failed"}],"capturedFinals":[{"turn_index":1,"text":"Cursor delegation could not start: the selected plugin bundle path was rejected because it does not exist.\n\nNo README review was performed. Please provide a valid plugin bundle path to proceed.","turn_id":"01a07905-e0f4-7f50-acfd-ff983debed6f","turn_status":"completed","phase":"final_answer","source":"thread/items/list","completeness":"complete","error_code":null}]}
+    + actual - expected
+    
+    + 'agent_behavior_mismatch'
+    - 'pass'
+    ; hosted_diagnostics={"turn":{"id":"01a07905-e0f4-7f50-acfd-ff983debed6f","status":"completed","error":null},"thread_read_error":null,"notification_methods":["item/agentMessage/delta","item/agentMessage/delta","item/agentMessage/delta","item/agentMessage/delta","item/agentMessage/delta","item/agentMessage/delta","item/agentMessage/delta","item/agentMessage/delta","item/agentMessage/delta","item/agentMessage/delta","item/agentMessage/delta","item/agentMessage/delta","item/agentMessage/delta","item/completed","thread/tokenUsage/updated","account/rateLimits/updated","thread/status/changed","turn/completed","deprecationNotice","deprecationNotice"],"lifecycle_notifications":[{"method":"thread/status/changed","at_ms":1788736823554,"thread_id":"01a07905-e0d1-7c81-a387-9a57745c6a2f","turn_id":null,"turn_status":{"type":"active","activeFlags":[]}},{"method":"turn/started","at_ms":1788736823554,"thread_id":"01a07905-e0d1-7c81-a387-9a57745c6a2f","turn_id":"01a07905-e0f4-7f50-acfd-ff983debed6f","turn_status":"inProgress"},{"method":"account/rateLimits/updated","at_ms":1788736834886,"thread_id":null,"turn_id":null,"turn_status":null},{"method":"account/rateLimits/updated","at_ms":1788736840376,"thread_id":null,"turn_id":null,"turn_status":null},{"method":"account/rateLimits/updated","at_ms":1788736843988,"thread_id":null,"turn_id":null,"turn_status":null},{"method":"thread/status/changed","at_ms":1788736852042,"thread_id":"01a07905-e0d1-7c81-a387-9a57745c6a2f","turn_id":null,"turn_status":{"type":"active","activeFlags":["waitingOnApproval"]}},{"method":"thread/status/changed","at_ms":1788736852042,"thread_id":"01a07905-e0d1-7c81-a387-9a57745c6a2f","turn_id":null,"turn_status":{"type":"active","activeFlags":[]}},{"method":"account/rateLimits/updated","at_ms":1788736852168,"thread_id":null,"turn_id":null,"turn_status":null},{"method":"account/rateLimits/updated","at_ms":1788736855981,"thread_id":null,"turn_id":null,"turn_status":null},{"method":"thread/status/changed","at_ms":1788736855983,"thread_id":"01a07905-e0d1-7c81-a387-9a57745c6a2f","turn_id":null,"turn_status":{"type":"idle"}},{"method":"turn/completed","at_ms":1788736855983,"thread_id":"01a07905-e0d1-7c81-a387-9a57745c6a2f","turn_id":"01a07905-e0f4-7f50-acfd-ff983debed6f","turn_status":"completed"}],"client_requests":[{"id":"client-3","method":"thread/start","at_ms":1788736823502,"thread_id":null},{"id":"client-4","method":"turn/start","at_ms":1788736823539,"thread_id":"01a07905-e0d1-7c81-a387-9a57745c6a2f"},{"id":"client-5","method":"thread/read","at_ms":1788736852050,"thread_id":"01a07905-e0d1-7c81-a387-9a57745c6a2f"},{"id":"client-6","method":"thread/read","at_ms":1788736853053,"thread_id":"01a07905-e0d1-7c81-a387-9a57745c6a2f"},{"id":"client-7","method":"thread/read","at_ms":1788736854056,"thread_id":"01a07905-e0d1-7c81-a387-9a57745c6a2f"},{"id":"client-8","method":"thread/read","at_ms":1788736855061,"thread_id":"01a07905-e0d1-7c81-a387-9a57745c6a2f"},{"id":"client-9","method":"thread/read","at_ms":1788736856064,"thread_id":"01a07905-e0d1-7c81-a387-9a57745c6a2f"},{"id":"client-12","method":"thread/read","at_ms":1788736856175,"thread_id":"01a07905-e0d1-7c81-a387-9a57745c6a2f"}],"stderr_tail":""}
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/arikon/projects/codex-cursor-subagent-plugin/tests/codex-client-integration.test.mjs:1478:15)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 60776.171959

@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: observer separates preview receipt proof from complete full-result paging proof
+ok 1 - observer separates preview receipt proof from complete full-result paging proof
+  ---
+  duration_ms: 8.217959
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 116.086334

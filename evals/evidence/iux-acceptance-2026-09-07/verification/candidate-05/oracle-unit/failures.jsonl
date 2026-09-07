@@ -1,0 +1,2 @@
+{"type":"test:summary","data":{"success":true,"counts":{"tests":35,"failed":0,"passed":35,"cancelled":0,"skipped":0,"todo":0,"topLevel":35,"suites":0},"duration_ms":5428.83675,"file":"/Users/arikon/projects/codex-cursor-subagent-plugin/tests/cursor-skill-eval.test.mjs"}}
+{"type":"test:summary","data":{"success":true,"counts":{"tests":35,"failed":0,"passed":35,"cancelled":0,"skipped":0,"todo":0,"topLevel":35,"suites":0},"duration_ms":5506.194584}}

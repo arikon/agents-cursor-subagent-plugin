@@ -1,0 +1,2 @@
+{"type":"test:summary","data":{"success":true,"counts":{"tests":12,"failed":0,"passed":12,"cancelled":0,"skipped":0,"todo":0,"topLevel":12,"suites":0},"duration_ms":2697.133792,"file":"/Users/arikon/projects/codex-cursor-subagent-plugin/tests/release-e2e.test.mjs"}}
+{"type":"test:summary","data":{"success":true,"counts":{"tests":12,"failed":0,"passed":12,"cancelled":0,"skipped":0,"todo":0,"topLevel":12,"suites":0},"duration_ms":2807.340084}}

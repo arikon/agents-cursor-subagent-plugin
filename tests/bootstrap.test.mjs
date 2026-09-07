@@ -9,12 +9,15 @@ import { fileURLToPath } from 'node:url';
 import {
   MARKER_NAME, canonicalJson, normalizeManifestBytes, parseArgs, runBootstrap, runPackageCommand, treeHashV1, validateTopology,
 } from '../scripts/cursor-subagent-bootstrap.mjs';
+import { runFakeCodexAdapterCommand } from './fixtures/fake-codex-adapter-core.mjs';
 
 const repository = fileURLToPath(new URL('..', import.meta.url));
 const bootstrapScript = fileURLToPath(new URL('../scripts/cursor-subagent-bootstrap.mjs', import.meta.url));
 const adapter = fileURLToPath(new URL('./fixtures/fake-codex-adapter.mjs', import.meta.url));
 const versionedAdapter = fileURLToPath(new URL('./fixtures/codex-v01521-adapter.mjs', import.meta.url));
 const adapterGolden = fileURLToPath(new URL('./fixtures/codex-v01521-adapter.golden.json', import.meta.url));
+const currentVersionedAdapter = fileURLToPath(new URL('./fixtures/codex-v01534-adapter.mjs', import.meta.url));
+const currentAdapterGolden = fileURLToPath(new URL('./fixtures/codex-v01534-adapter.golden.json', import.meta.url));
 const fakeCodexCli = fileURLToPath(new URL('./fixtures/fake-codex-cli-v01521.mjs', import.meta.url));
 const fakeCursorAgentStatus = fileURLToPath(new URL('./fixtures/fake-cursor-agent-status.mjs', import.meta.url));
 const killWaitCommand = fileURLToPath(new URL('./fixtures/kill-wait-command.mjs', import.meta.url));
@@ -30,6 +33,11 @@ async function adapterFixtureResult(executable, operation, request, env, adapter
   const code = await new Promise((resolveExit) => child.once('close', resolveExit));
   return { code, stdout: Buffer.concat(output).toString('utf8'), stderr: Buffer.concat(errors).toString('utf8') };
 }
+
+const runInProcessFakeAdapter = (command, args, options) => runFakeCodexAdapterCommand(command, args, options);
+const runInProcessBootstrap = (args, context, overrides = {}) => runBootstrap(args, {
+  env: context.env, runCommand: runInProcessFakeAdapter, ...overrides,
+});
 
 async function bootstrapCli(args, env = process.env) {
   const child = spawn(process.execPath, [bootstrapScript, ...args], { env, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -58,6 +66,37 @@ async function fixture(t) {
   return { root, source, workspace, managed, executable, state, env, common };
 }
 
+test('fake adapter CLI and in-process runner have normalized outcome parity', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'cursor-bootstrap-adapter-parity-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const cases = [
+    { name: 'success', operation: 'admit', request: {} },
+    { name: 'negative', operation: 'admit', request: {}, fault: { FAKE_CODEX_NEGATIVE_OPERATION: 'admit' } },
+    { name: 'partial', operation: 'marketplace-add', request: { id: 'm', path: '/managed' }, fault: { FAKE_CODEX_PARTIAL_OPERATION: 'marketplace-add' } },
+    { name: 'timeout', operation: 'admit', request: {}, fault: { FAKE_CODEX_BLOCK_OPERATION: 'admit' } },
+    { name: 'overflow', operation: 'admit', request: {}, fault: { FAKE_CODEX_READ_OVERFLOW_OPERATION: 'admit' } },
+    { name: 'reread failure', operation: 'marketplace-list', request: {}, state: { marketplaces: [], plugins: [], mutations: [], fail_next_list: true } },
+  ];
+  for (const scenario of cases) {
+    const cliState = join(root, `${scenario.name}-cli.json`); const coreState = join(root, `${scenario.name}-core.json`);
+    if (scenario.state) {
+      await writeFile(cliState, JSON.stringify(scenario.state));
+      await writeFile(coreState, JSON.stringify(scenario.state));
+    }
+    const cliEnv = { ...process.env, FAKE_CODEX_STATE: cliState, ...scenario.fault };
+    const coreEnv = { ...process.env, FAKE_CODEX_STATE: coreState, ...scenario.fault };
+    const args = [adapter, scenario.operation, JSON.stringify(scenario.request)];
+    const cli = await runPackageCommand(process.execPath, args, {
+      env: cliEnv, timeoutMs: scenario.name === 'timeout' ? 100 : 2_000, outputBytes: 1_000,
+    });
+    const core = await runInProcessFakeAdapter(process.execPath, args, { env: coreEnv });
+    assert.deepEqual({ code: cli.code, output: cli.output, timeout: cli.timeout, overflow: cli.overflow }, core, scenario.name);
+    const cliSaved = await readFile(cliState, 'utf8').catch(() => null);
+    const coreSaved = await readFile(coreState, 'utf8').catch(() => null);
+    assert.equal(cliSaved, coreSaved, `${scenario.name} state`);
+  }
+});
+
 test('CLI returns one machine-readable invalid-invocation envelope', async () => {
   const result = await bootstrapCli(['install']);
   assert.equal(result.code, 2);
@@ -65,6 +104,12 @@ test('CLI returns one machine-readable invalid-invocation envelope', async () =>
   assert.deepEqual({ ok: result.envelope.ok, operation: result.envelope.operation, state: result.envelope.state,
     errorCode: result.envelope.error_code },
   { ok: false, operation: 'install', state: 'failed', errorCode: 'invalid_invocation' });
+
+  const absentOperation = await bootstrapCli([]);
+  assert.equal(absentOperation.code, 2);
+  assert.equal(absentOperation.stderr, '');
+  assert.deepEqual({ operation: absentOperation.envelope.operation, errorCode: absentOperation.envelope.error_code },
+    { operation: null, errorCode: 'invalid_invocation' });
 });
 
 test('CLI bounds diagnostics in its machine-readable failure envelope', async () => {
@@ -272,6 +317,19 @@ test('CLI preflight reports an absent managed installation without creating it',
   assert.equal(result.envelope.checks.find(({ name }) => name === 'marketplace_registration').code, 'absent');
   assert.equal(result.envelope.checks.find(({ name }) => name === 'plugin_registration').code, 'absent');
   await assert.rejects(lstat(context.managed), { code: 'ENOENT' });
+
+  const missingCodexContext = await fixture(t);
+  const missingCodex = join(missingCodexContext.root, 'missing-codex');
+  const missingCodexResult = await bootstrapCli(['preflight', '--managed-marketplace-root', missingCodexContext.managed,
+    '--node-executable', missingCodexContext.executable, '--codex-executable', missingCodex,
+    '--agent-executable', missingCodexContext.executable], missingCodexContext.env);
+  assert.deepEqual(missingCodexResult.envelope.checks.find(({ name }) => name === 'codex_cli'), {
+    name: 'codex_cli', status: 'fail', code: 'missing_dependency', message: 'codex_cli must be a canonical regular executable',
+  });
+  assert.equal(missingCodexResult.envelope.checks.find(({ name }) => name === 'marketplace_registration').status, 'not_checked');
+  assert.equal(missingCodexResult.envelope.checks.find(({ name }) => name === 'plugin_registration').status, 'not_checked');
+  assert.equal(missingCodexResult.envelope.checks.find(({ name }) => name === 'node').status, 'pass');
+  assert.equal(missingCodexResult.envelope.checks.find(({ name }) => name === 'agent_status').status, 'pass');
 });
 
 test('CLI reports an unavailable adapter executable without publishing artifacts', async (t) => {
@@ -377,6 +435,7 @@ test('canonical manifest normalization sorts objects recursively and preserves a
 
 test('versioned Codex adapter admission and help match its checked-in golden surface', async (t) => {
   const context = await fixture(t); const golden = JSON.parse(await readFile(adapterGolden, 'utf8'));
+  const currentGolden = JSON.parse(await readFile(currentAdapterGolden, 'utf8'));
   const codex = join(context.root, 'codex'); await cp(fakeCodexCli, codex); await chmod(codex, 0o755);
   const agent = join(context.root, 'agent'); await cp(fakeCursorAgentStatus, agent); await chmod(agent, 0o755);
   const log = join(context.root, 'codex-argv.log'); const agentLog = join(context.root, 'agent-argv.log');
@@ -394,6 +453,7 @@ test('versioned Codex adapter admission and help match its checked-in golden sur
     implementation_bytes: implementation.length,
   };
   assert.deepEqual({ implementation_sha256: golden.implementation_sha256, implementation_bytes: golden.implementation_bytes }, implementationProof);
+  assert.deepEqual({ implementation_sha256: currentGolden.implementation_sha256, implementation_bytes: currentGolden.implementation_bytes }, implementationProof);
   const admission = await adapterFixtureCall(context.executable, 'admit', { codex_executable: codex }, env, versionedAdapter);
   assert.deepEqual(admission, {
     admitted: true,
@@ -413,7 +473,7 @@ test('versioned Codex adapter admission and help match its checked-in golden sur
     codex_executable: codex, node_executable: context.executable, agent_executable: agent,
     install_root: join(context.managed, 'plugins/codex-cursor-subagent-plugin'), allowed_workspace_roots: [context.workspace],
   }, { ...env, CURSOR_EVAL_TIMEOUT_PRELOAD: timeoutPreload, FAKE_ACP_ACCELERATE_TURN_TIMEOUT: '1',
-    FAKE_ACP_ACCELERATE_MODE_TIMEOUT: '1', FAKE_ACP_ACCELERATE_WAIT_TIMEOUT: '1' }, versionedAdapter);
+    FAKE_ACP_ACCELERATE_WAIT_TIMEOUT: '1' }, versionedAdapter);
   const mcpFile = timeoutRendered.files.find(({ path }) => path.endsWith('/.mcp.json'));
   const mcpDocument = JSON.parse(Buffer.from(mcpFile.content_base64, 'base64').toString('utf8'));
   assert.deepEqual(mcpDocument.mcpServers['cursor-subagent'].env, {
@@ -422,7 +482,6 @@ test('versioned Codex adapter admission and help match its checked-in golden sur
     CURSOR_SUBAGENT_ALLOWED_ROOTS: JSON.stringify([context.workspace]),
     NODE_OPTIONS: `--import=${timeoutPreload}`,
     FAKE_ACP_ACCELERATE_TURN_TIMEOUT: '1',
-    FAKE_ACP_ACCELERATE_MODE_TIMEOUT: '1',
     FAKE_ACP_ACCELERATE_WAIT_TIMEOUT: '1',
   });
   assert.deepEqual(golden.covered_outcomes, ['success', 'nonzero', 'partial', 'timeout', 'output_overflow', 'reread_failure']);
@@ -493,6 +552,17 @@ test('versioned Codex adapter admission and help match its checked-in golden sur
   ]) {
     assert.equal(invocations.some((actual) => JSON.stringify(actual) === JSON.stringify(expected)), true, JSON.stringify(expected));
   }
+  const beforeCurrentPluginList = invocations.length;
+  const currentPlugins = await adapterFixtureCall(context.executable, 'plugin-list', { codex_executable: codex },
+    { ...env, FAKE_CODEX_CLI_VERSION: 'codex-cli 0.153.4' }, currentVersionedAdapter);
+  assert.deepEqual(currentPlugins, { registrations: [] });
+  const currentPluginListInvocations = (await readFile(log, 'utf8')).trim().split('\n').map(JSON.parse).slice(beforeCurrentPluginList);
+  assert.deepEqual(currentPluginListInvocations, [
+    ['--version'],
+    ['plugin', 'list', '--marketplace', 'codex-cursor-subagent-plugin', '--json'],
+  ]);
+  assert.deepEqual(currentGolden.cli_forms.plugin_list,
+    ['plugin', 'list', '--marketplace', 'codex-cursor-subagent-plugin', '--json']);
   const unknown = await adapterFixtureCall(context.executable, 'admit', { codex_executable: codex }, { ...env, FAKE_CODEX_CLI_VERSION: 'codex-cli 0.152.2' }, versionedAdapter);
   assert.equal(unknown.admitted, false);
   const beforeUnknown = (await readFile(log, 'utf8')).trim().split('\n').length;
@@ -503,7 +573,7 @@ test('versioned Codex adapter admission and help match its checked-in golden sur
 });
 
 test('versioned adapter bounds nested Cursor commands and waits for killed child close', async (t) => {
-  const context = await fixture(t); const agent = join(context.root, 'agent'); await cp(fakeCursorAgentStatus, agent); await chmod(agent, 0o755);
+  const context = await fixture(t); const agent = join(context.root, 'agent'); await symlink(fakeCursorAgentStatus, agent);
   const pidPath = join(context.root, 'nested-agent.pid'); const timeoutMs = 2_000; const started = Date.now();
   let result = await adapterFixtureResult(context.executable, 'agent-status', { agent_executable: agent }, {
     ...process.env,
@@ -556,7 +626,7 @@ test('package command keeps the first kill reason when overflow precedes its tim
     'setInterval(() => {}, 1_000);',
   ].join(' ');
   const result = await runPackageCommand(process.execPath, ['-e', descendantScript], {
-    timeoutMs: 150,
+    timeoutMs: 2_000,
     outputBytes: 1,
     closeWaitMs: 300,
   });
@@ -742,6 +812,10 @@ test('fake adapter drives portable install, identical no-op, update, preflight a
   assert.deepEqual(registrations.plugins.map(({ version }) => version), [updatedMarker.manifest_version],
     'the adapter-visible installed cache must reference the updated payload version');
 
+  result = await runBootstrap(['update', ...context.common], { env: context.env });
+  assert.deepEqual({ exitCode: result.exitCode, state: result.envelope.state }, { exitCode: 0, state: 'installed' });
+  await assert.rejects(lstat(`${context.managed}.codex-cursor-subagent-plugin.staging`), { code: 'ENOENT' });
+
   result = await runBootstrap(['preflight', '--managed-marketplace-root', context.managed,
     '--node-executable', context.executable, '--codex-executable', context.executable,
     '--agent-executable', context.executable], { env: context.env });
@@ -781,17 +855,16 @@ test('each backup cleanup deletion boundary is fail-closed as cleanup_required',
   ];
   for (const step of steps) {
     const context = await fixture(t);
-    let result = await runBootstrap(['install', ...context.common], { env: context.env });
+    let result = await runInProcessBootstrap(['install', ...context.common], context);
     assert.equal(result.envelope.state, 'installed', step);
     await writeFile(join(context.source, 'README.md'), `changed for ${step}\n`);
-    result = await runBootstrap(['update', ...context.common], {
-      env: context.env,
+    result = await runInProcessBootstrap(['update', ...context.common], context, {
       fault: async (observed) => { if (observed === step) throw new Error(`injected ${step}`); },
     });
     assert.deepEqual({ exitCode: result.exitCode, state: result.envelope.state }, { exitCode: 1, state: 'cleanup_required' }, step);
     assert.equal(result.envelope.backup_path, `${context.managed}.codex-cursor-subagent-plugin.backup`, step);
     const before = JSON.parse(await readFile(context.state, 'utf8')).mutations.length;
-    result = await runBootstrap(['update', ...context.common], { env: context.env });
+    result = await runInProcessBootstrap(['update', ...context.common], context);
     assert.equal(result.envelope.state, 'cleanup_required', step);
     assert.equal(JSON.parse(await readFile(context.state, 'utf8')).mutations.length, before, step);
   }
@@ -815,20 +888,20 @@ test('failed compensation preserves observed state and returns recovery_required
 test('update and uninstall also return recovery_required when compensation cannot restore registrations', async (t) => {
   for (const operation of ['update', 'uninstall']) {
     const context = await fixture(t);
-    let result = await runBootstrap(['install', ...context.common], { env: context.env });
+    let result = await runInProcessBootstrap(['install', ...context.common], context);
     assert.equal(result.envelope.state, 'installed', operation);
     if (operation === 'update') {
       await writeFile(join(context.source, 'README.md'), 'update requiring compensation\n');
       context.env.FAKE_CODEX_FAIL_OPERATIONS = 'plugin-add';
-      result = await runBootstrap(['update', ...context.common], { env: context.env });
+      result = await runInProcessBootstrap(['update', ...context.common], context);
     } else {
       context.env.FAKE_CODEX_FAIL_OPERATIONS = 'marketplace-remove,plugin-add';
-      result = await runBootstrap(['uninstall', '--managed-marketplace-root', context.managed,
-        '--codex-executable', context.executable], { env: context.env });
+      result = await runInProcessBootstrap(['uninstall', '--managed-marketplace-root', context.managed,
+        '--codex-executable', context.executable], context);
     }
     assert.deepEqual({ exitCode: result.exitCode, state: result.envelope.state }, { exitCode: 1, state: 'recovery_required' }, operation);
     delete context.env.FAKE_CODEX_FAIL_OPERATIONS;
-    result = await runBootstrap(['install', ...context.common], { env: context.env });
+    result = await runInProcessBootstrap(['install', ...context.common], context);
     assert.equal(result.envelope.state, 'recovery_required', operation);
   }
 });
@@ -875,7 +948,7 @@ test('strict marker and registration tuples reject extra marker fields and dupli
 
 test('strict marker validation rejects every malformed owned identity before mutation', async (t) => {
   const context = await fixture(t);
-  let result = await runBootstrap(['install', ...context.common], { env: context.env });
+  let result = await runInProcessBootstrap(['install', ...context.common], context);
   assert.equal(result.exitCode, 0, JSON.stringify(result));
   const markerPath = join(context.managed, MARKER_NAME);
   const marker = JSON.parse(await readFile(markerPath, 'utf8'));
@@ -894,7 +967,7 @@ test('strict marker validation rejects every malformed owned identity before mut
   const mutationCount = JSON.parse(await readFile(context.state, 'utf8')).mutations.length;
   for (const [name, patch] of variants) {
     await writeFile(markerPath, JSON.stringify({ ...marker, ...patch }));
-    result = await runBootstrap(['install', ...context.common], { env: context.env });
+    result = await runInProcessBootstrap(['install', ...context.common], context);
     assert.deepEqual({ exitCode: result.exitCode, state: result.envelope.state, errorCode: result.envelope.error_code },
       { exitCode: 1, state: 'failed', errorCode: 'state_drift' }, name);
     assert.equal(JSON.parse(await readFile(context.state, 'utf8')).mutations.length, mutationCount, name);
@@ -1032,6 +1105,15 @@ test('backup and registration recovery classification distinguishes owned deltas
   assert.equal(result.envelope.state, 'recovery_required');
   assert.equal(result.envelope.backup_path, `${backupContext.managed}.codex-cursor-subagent-plugin.backup`);
 
+  const partialContext = await fixture(t);
+  await writeFile(partialContext.state, JSON.stringify({
+    marketplaces: [{ id: 'codex-cursor-subagent-plugin', path: partialContext.managed }], plugins: [], mutations: [],
+  }));
+  result = await runBootstrap(['install', ...partialContext.common], { env: partialContext.env });
+  assert.deepEqual({ exitCode: result.exitCode, state: result.envelope.state, errorCode: result.envelope.error_code },
+    { exitCode: 1, state: 'recovery_required', errorCode: 'recovery_required' });
+  assert.deepEqual(JSON.parse(await readFile(partialContext.state, 'utf8')).mutations, []);
+
   const foreignContext = await fixture(t);
   await writeFile(foreignContext.state, JSON.stringify({ marketplaces: [{ id: 'codex-cursor-subagent-plugin', path: join(foreignContext.root, 'foreign') }], plugins: [], mutations: [] }));
   result = await runBootstrap(['install', ...foreignContext.common], { env: foreignContext.env });
@@ -1105,7 +1187,7 @@ test('negative, nonzero, partial and output-overflow mutators compensate only th
   ];
   for (const [name, operation] of cases) {
     const context = await fixture(t); context.env[name] = operation;
-    const result = await runBootstrap(['install', ...context.common], { env: context.env });
+    const result = await runInProcessBootstrap(['install', ...context.common], context);
     assert.equal(result.envelope.state, 'failed', name);
     const state = JSON.parse(await readFile(context.state, 'utf8').catch(() => '{"marketplaces":[],"plugins":[],"mutations":[]}'));
     assert.deepEqual(state.marketplaces, [], name); assert.deepEqual(state.plugins, [], name);
@@ -1134,23 +1216,23 @@ test('registration reread failure during compensation requires recovery without 
   const installContext = await fixture(t);
   installContext.env.FAKE_CODEX_PARTIAL_OPERATION = 'marketplace-add';
   installContext.env.FAKE_CODEX_LIST_FAILURE_AFTER_MUTATION = 'marketplace-remove';
-  let result = await runBootstrap(['install', ...installContext.common], { env: installContext.env });
+  let result = await runInProcessBootstrap(['install', ...installContext.common], installContext);
   assert.equal(result.envelope.state, 'recovery_required');
   assert.deepEqual(JSON.parse(await readFile(installContext.state, 'utf8')).marketplaces, []);
   assert.ok(await realpath(installContext.managed));
 
   for (const lifecycle of ['update', 'uninstall']) {
     const context = await fixture(t);
-    result = await runBootstrap(['install', ...context.common], { env: context.env });
+    result = await runInProcessBootstrap(['install', ...context.common], context);
     assert.equal(result.envelope.state, 'installed', lifecycle);
     const marker = JSON.parse(await readFile(join(context.managed, MARKER_NAME), 'utf8'));
     if (lifecycle === 'update') await writeFile(join(context.source, 'README.md'), 'compensation reread failure\n');
     context.env.FAKE_CODEX_PARTIAL_OPERATION = 'plugin-remove';
     context.env.FAKE_CODEX_LIST_FAILURE_AFTER_MUTATION = 'plugin-add';
     result = lifecycle === 'update'
-      ? await runBootstrap(['update', ...context.common], { env: context.env })
-      : await runBootstrap(['uninstall', '--managed-marketplace-root', context.managed,
-        '--codex-executable', context.executable], { env: context.env });
+      ? await runInProcessBootstrap(['update', ...context.common], context)
+      : await runInProcessBootstrap(['uninstall', '--managed-marketplace-root', context.managed,
+        '--codex-executable', context.executable], context);
     assert.equal(result.envelope.state, 'recovery_required', lifecycle);
     const registrations = JSON.parse(await readFile(context.state, 'utf8'));
     assert.equal(registrations.marketplaces[0].path, context.managed, lifecycle);
@@ -1230,7 +1312,7 @@ test('rejected and timed-out compensation commands classify install, update and 
       const context = await fixture(t);
       let before = null;
       if (scenario.lifecycle !== 'install') {
-        const installed = await runBootstrap(['install', ...context.common], { env: context.env });
+        const installed = await runInProcessBootstrap(['install', ...context.common], context);
         assert.equal(installed.envelope.state, 'installed', `${scenario.lifecycle}:${scenario.forward}:${outcome}`);
         before = JSON.parse(await readFile(join(context.managed, MARKER_NAME), 'utf8'));
       }
@@ -1241,12 +1323,7 @@ test('rejected and timed-out compensation commands classify install, update and 
         ? repeatedCompensation ? 'FAKE_CODEX_NEGATIVE_OPERATION_AFTER_PRIOR_MUTATION' : 'FAKE_CODEX_NEGATIVE_OPERATION'
         : repeatedCompensation ? 'FAKE_CODEX_TIMEOUT_OPERATION_AFTER_PRIOR_MUTATION' : 'FAKE_CODEX_TIMEOUT_OPERATION';
       context.env[faultName] = scenario.compensation;
-      const overrides = { env: context.env, ...(outcome === 'timed_out' ? {
-        // Coverage instrumentation can make an otherwise immediate adapter
-        // process exceed 100 ms. Keep the injected hung operation bounded
-        // without allowing startup overhead to masquerade as another timeout.
-        runCommand: (command, args, options) => runPackageCommand(command, args, { ...options, timeoutMs: 500 }),
-      } : {}) };
+      const overrides = { env: context.env, runCommand: runInProcessFakeAdapter };
       const result = scenario.lifecycle === 'install'
         ? await runBootstrap(['install', ...context.common], overrides)
         : scenario.lifecycle === 'update'
@@ -1295,7 +1372,7 @@ test('reread failures preserve every recoverable artifact and expose the observe
     const context = await fixture(t);
     let installedMarker = null;
     if (scenario.lifecycle !== 'install') {
-      const installed = await runBootstrap(['install', ...context.common], { env: context.env });
+      const installed = await runInProcessBootstrap(['install', ...context.common], context);
       assert.equal(installed.exitCode, 0, scenario.name);
       installedMarker = JSON.parse(await readFile(join(context.managed, MARKER_NAME), 'utf8'));
     }
@@ -1310,11 +1387,11 @@ test('reread failures preserve every recoverable artifact and expose the observe
       throw new Error(scenario.name);
     } : undefined;
     const result = scenario.lifecycle === 'install'
-      ? await runBootstrap(['install', ...context.common], { env: context.env, fault })
+      ? await runInProcessBootstrap(['install', ...context.common], context, { fault })
       : scenario.lifecycle === 'update'
-        ? await runBootstrap(['update', ...context.common], { env: context.env, fault })
-        : await runBootstrap(['uninstall', '--managed-marketplace-root', context.managed,
-          '--codex-executable', context.executable], { env: context.env, fault });
+        ? await runInProcessBootstrap(['update', ...context.common], context, { fault })
+        : await runInProcessBootstrap(['uninstall', '--managed-marketplace-root', context.managed,
+          '--codex-executable', context.executable], context, { fault });
     assert.deepEqual({ exitCode: result.exitCode, state: result.envelope.state },
       { exitCode: 1, state: 'recovery_required' }, scenario.name);
 
@@ -1360,13 +1437,13 @@ test('uncertain remove outcomes compensate their observed delta and never advanc
     ['uninstall', 'plugin-remove', 'FAKE_CODEX_FAIL_OPERATION'],
   ]) {
     const context = await fixture(t);
-    let result = await runBootstrap(['install', ...context.common], { env: context.env }); assert.equal(result.exitCode, 0);
+    let result = await runInProcessBootstrap(['install', ...context.common], context); assert.equal(result.exitCode, 0);
     const before = JSON.parse(await readFile(join(context.managed, MARKER_NAME), 'utf8'));
     if (lifecycle === 'update') await writeFile(join(context.source, 'README.md'), 'uncertain update payload\n');
     context.env[fault] = uncertainOperation;
     result = lifecycle === 'update'
-      ? await runBootstrap(['update', ...context.common], { env: context.env })
-      : await runBootstrap(['uninstall', '--managed-marketplace-root', context.managed, '--codex-executable', context.executable], { env: context.env });
+      ? await runInProcessBootstrap(['update', ...context.common], context)
+      : await runInProcessBootstrap(['uninstall', '--managed-marketplace-root', context.managed, '--codex-executable', context.executable], context);
     const registrations = JSON.parse(await readFile(context.state, 'utf8'));
     if (uncertainOperation === 'marketplace-remove') {
       assert.equal(result.envelope.state, 'recovery_required');
@@ -1387,7 +1464,7 @@ test('uncertain remove outcomes compensate their observed delta and never advanc
 test('reported successful no-op mutations do not advance their lifecycle', async (t) => {
   for (const operation of ['marketplace-add', 'plugin-add']) {
     const context = await fixture(t); context.env.FAKE_CODEX_NOOP_OPERATION = operation;
-    const result = await runBootstrap(['install', ...context.common], { env: context.env });
+    const result = await runInProcessBootstrap(['install', ...context.common], context);
     assert.deepEqual({ exitCode: result.exitCode, state: result.envelope.state, errorCode: result.envelope.error_code },
       { exitCode: 1, state: 'failed', errorCode: 'install_failed' }, operation);
     const registrations = JSON.parse(await readFile(context.state, 'utf8'));
@@ -1398,15 +1475,15 @@ test('reported successful no-op mutations do not advance their lifecycle', async
 
   for (const lifecycle of ['update', 'uninstall']) {
     const context = await fixture(t);
-    let result = await runBootstrap(['install', ...context.common], { env: context.env });
+    let result = await runInProcessBootstrap(['install', ...context.common], context);
     assert.equal(result.envelope.state, 'installed', lifecycle);
     const marker = JSON.parse(await readFile(join(context.managed, MARKER_NAME), 'utf8'));
     if (lifecycle === 'update') await writeFile(join(context.source, 'README.md'), 'confirmed no-op plugin removal\n');
     context.env.FAKE_CODEX_NOOP_OPERATION = 'plugin-remove';
     result = lifecycle === 'update'
-      ? await runBootstrap(['update', ...context.common], { env: context.env })
-      : await runBootstrap(['uninstall', '--managed-marketplace-root', context.managed,
-        '--codex-executable', context.executable], { env: context.env });
+      ? await runInProcessBootstrap(['update', ...context.common], context)
+      : await runInProcessBootstrap(['uninstall', '--managed-marketplace-root', context.managed,
+        '--codex-executable', context.executable], context);
     assert.deepEqual({ exitCode: result.exitCode, state: result.envelope.state, errorCode: result.envelope.error_code },
       { exitCode: 1, state: 'failed', errorCode: `${lifecycle}_failed` }, lifecycle);
     const registrations = JSON.parse(await readFile(context.state, 'utf8'));
@@ -1418,12 +1495,12 @@ test('reported successful no-op mutations do not advance their lifecycle', async
   }
 
   const context = await fixture(t);
-  let result = await runBootstrap(['install', ...context.common], { env: context.env });
+  let result = await runInProcessBootstrap(['install', ...context.common], context);
   assert.equal(result.envelope.state, 'installed');
   const marker = JSON.parse(await readFile(join(context.managed, MARKER_NAME), 'utf8'));
   context.env.FAKE_CODEX_NOOP_OPERATION = 'marketplace-remove';
-  result = await runBootstrap(['uninstall', '--managed-marketplace-root', context.managed,
-    '--codex-executable', context.executable], { env: context.env });
+  result = await runInProcessBootstrap(['uninstall', '--managed-marketplace-root', context.managed,
+    '--codex-executable', context.executable], context);
   assert.deepEqual({ exitCode: result.exitCode, state: result.envelope.state, errorCode: result.envelope.error_code },
     { exitCode: 1, state: 'failed', errorCode: 'uninstall_failed' });
   const registrations = JSON.parse(await readFile(context.state, 'utf8'));
@@ -1443,14 +1520,14 @@ test('update and uninstall never add compensation over foreign, duplicate or cou
     ['update', 'plugin-remove', 'duplicate-marketplace', false],
     ['uninstall', 'plugin-remove', 'coupled', false],
   ]) {
-    const context = await fixture(t); let result = await runBootstrap(['install', ...context.common], { env: context.env }); assert.equal(result.exitCode, 0);
+    const context = await fixture(t); let result = await runInProcessBootstrap(['install', ...context.common], context); assert.equal(result.exitCode, 0);
     if (lifecycle === 'update') await writeFile(join(context.source, 'README.md'), `${drift}\n`);
     if (uncertain) context.env.FAKE_CODEX_PARTIAL_OPERATION = operation;
     context.env.FAKE_CODEX_OBSERVED_DRIFT_OPERATION = operation;
     context.env.FAKE_CODEX_OBSERVED_DRIFT_KIND = drift;
     result = lifecycle === 'update'
-      ? await runBootstrap(['update', ...context.common], { env: context.env })
-      : await runBootstrap(['uninstall', '--managed-marketplace-root', context.managed, '--codex-executable', context.executable], { env: context.env });
+      ? await runInProcessBootstrap(['update', ...context.common], context)
+      : await runInProcessBootstrap(['uninstall', '--managed-marketplace-root', context.managed, '--codex-executable', context.executable], context);
     assert.equal(result.envelope.state, 'recovery_required', `${lifecycle}:${operation}:${drift}:${uncertain}`);
     const mutations = JSON.parse(await readFile(context.state, 'utf8')).mutations;
     const uncertainIndex = mutations.lastIndexOf(operation);
@@ -1461,7 +1538,7 @@ test('update and uninstall never add compensation over foreign, duplicate or cou
 test('pre-commit publication rename faults compensate install and update while uninstall commit fault is cleanup_required', async (t) => {
   for (const step of ['publication:before-install-stage-to-active', 'publication:after-install-stage-to-active']) {
     const context = await fixture(t);
-    const result = await runBootstrap(['install', ...context.common], { env: context.env,
+    const result = await runInProcessBootstrap(['install', ...context.common], context, {
       fault: async (observed) => { if (observed === step) throw new Error(step); } });
     assert.equal(result.envelope.state, 'failed', step);
     await assert.rejects(realpath(context.managed), { code: 'ENOENT' });
@@ -1469,21 +1546,35 @@ test('pre-commit publication rename faults compensate install and update while u
   }
   for (const step of ['publication:before-update-active-to-backup', 'publication:after-update-active-to-backup',
     'publication:before-update-stage-to-active', 'publication:after-update-stage-to-active']) {
-    const context = await fixture(t); let result = await runBootstrap(['install', ...context.common], { env: context.env });
+    const context = await fixture(t); let result = await runInProcessBootstrap(['install', ...context.common], context);
     const original = JSON.parse(await readFile(join(context.managed, MARKER_NAME), 'utf8')); await writeFile(join(context.source, 'README.md'), `${step}\n`);
-    result = await runBootstrap(['update', ...context.common], { env: context.env,
+    result = await runInProcessBootstrap(['update', ...context.common], context, {
       fault: async (observed) => { if (observed === step) throw new Error(step); } });
     assert.equal(result.envelope.state, 'failed', step);
     assert.equal(JSON.parse(await readFile(join(context.managed, MARKER_NAME), 'utf8')).artifact_hash, original.artifact_hash, step);
   }
-  const beforeUninstall = await fixture(t); let result = await runBootstrap(['install', ...beforeUninstall.common], { env: beforeUninstall.env }); assert.equal(result.exitCode, 0);
-  result = await runBootstrap(['uninstall', '--managed-marketplace-root', beforeUninstall.managed, '--codex-executable', beforeUninstall.executable],
-    { env: beforeUninstall.env, fault: async (step) => { if (step === 'publication:before-uninstall-active-to-backup') throw new Error(step); } });
+  const cleanupOwnership = await fixture(t);
+  let result = await runInProcessBootstrap(['install', ...cleanupOwnership.common], cleanupOwnership);
+  assert.equal(result.exitCode, 0);
+  await writeFile(join(cleanupOwnership.source, 'README.md'), 'cleanup ownership recheck\n');
+  const backupPath = `${cleanupOwnership.managed}.codex-cursor-subagent-plugin.backup`;
+  result = await runInProcessBootstrap(['update', ...cleanupOwnership.common], cleanupOwnership, {
+    fault: async (step) => {
+      if (step === 'publication:after-update-stage-to-active') await rm(join(backupPath, MARKER_NAME));
+    } });
+  assert.deepEqual({ exitCode: result.exitCode, state: result.envelope.state, backupPath: result.envelope.backup_path },
+    { exitCode: 1, state: 'cleanup_required', backupPath });
+  assert.equal((await lstat(backupPath)).isDirectory(), true);
+  await assert.rejects(lstat(join(backupPath, MARKER_NAME)), { code: 'ENOENT' });
+
+  const beforeUninstall = await fixture(t); result = await runInProcessBootstrap(['install', ...beforeUninstall.common], beforeUninstall); assert.equal(result.exitCode, 0);
+  result = await runInProcessBootstrap(['uninstall', '--managed-marketplace-root', beforeUninstall.managed, '--codex-executable', beforeUninstall.executable],
+    beforeUninstall, { fault: async (step) => { if (step === 'publication:before-uninstall-active-to-backup') throw new Error(step); } });
   assert.equal(result.envelope.state, 'failed'); assert.ok(await realpath(beforeUninstall.managed));
 
-  const uninstallContext = await fixture(t); result = await runBootstrap(['install', ...uninstallContext.common], { env: uninstallContext.env }); assert.equal(result.exitCode, 0);
-  result = await runBootstrap(['uninstall', '--managed-marketplace-root', uninstallContext.managed, '--codex-executable', uninstallContext.executable],
-    { env: uninstallContext.env, fault: async (step) => { if (step === 'publication:after-uninstall-active-to-backup') throw new Error(step); } });
+  const uninstallContext = await fixture(t); result = await runInProcessBootstrap(['install', ...uninstallContext.common], uninstallContext); assert.equal(result.exitCode, 0);
+  result = await runInProcessBootstrap(['uninstall', '--managed-marketplace-root', uninstallContext.managed, '--codex-executable', uninstallContext.executable],
+    uninstallContext, { fault: async (step) => { if (step === 'publication:after-uninstall-active-to-backup') throw new Error(step); } });
   assert.equal(result.envelope.state, 'cleanup_required'); assert.equal(result.envelope.backup_path, `${uninstallContext.managed}.codex-cursor-subagent-plugin.backup`);
 });
 

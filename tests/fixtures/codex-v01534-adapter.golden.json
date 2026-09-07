@@ -1,0 +1,45 @@
+{
+  "adapter_version": "codex-cli-0.153.4-fixture-v1",
+  "codex_version": "codex-cli 0.153.4",
+  "implementation_sha256": "e04a4a4b48457191c8374e86e6e1eb93923759319b08eb2a165ea2f3b9cff71d",
+  "implementation_bytes": 10187,
+  "wrapper_sha256": "5ad4cb1117c27ae112e4fe610d4fe155f121c05a77fb0458a6a27c36fc4c2e5e",
+  "wrapper_bytes": 125,
+  "shared_implementation": "codex-v01521-adapter.mjs",
+  "installed_executable_sha256": "a30ec314bbd0e3721632234d07db7c99855db3b9f1e32dbe8c791947f07e7629",
+  "installed_executable_bytes": 220585024,
+  "operations": [
+    "admit",
+    "help",
+    "marketplace-list",
+    "plugin-list",
+    "render",
+    "mcp-check",
+    "agent-status",
+    "canary-prompt",
+    "marketplace-add",
+    "marketplace-remove",
+    "plugin-add",
+    "plugin-remove"
+  ],
+  "cli_forms": {
+    "version": ["--version"],
+    "help": ["plugin", "--help"],
+    "marketplace_list": ["plugin", "marketplace", "list", "--json"],
+    "plugin_list": ["plugin", "list", "--marketplace", "codex-cursor-subagent-plugin", "--json"],
+    "marketplace_add": ["plugin", "marketplace", "add", "<SOURCE>", "--json"],
+    "marketplace_remove": ["plugin", "marketplace", "remove", "<MARKETPLACE>", "--json"],
+    "plugin_add": ["plugin", "add", "<PLUGIN>@<MARKETPLACE>", "--json"],
+    "plugin_remove": ["plugin", "remove", "<PLUGIN>@<MARKETPLACE>", "--json"]
+  },
+  "primary_help_verification": [
+    "plugin --help",
+    "plugin marketplace --help",
+    "plugin marketplace list --help",
+    "plugin marketplace add --help",
+    "plugin marketplace remove --help",
+    "plugin list --help",
+    "plugin add --help",
+    "plugin remove --help"
+  ]
+}
