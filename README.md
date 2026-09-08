@@ -72,7 +72,7 @@ Install the plugin through a Git marketplace, using the standard Codex CLI
 workflow:
 
 ```sh
-codex plugin marketplace add arikon/codex-cursor-subagent-plugin --ref main
+codex plugin marketplace add arikon/agents-cursor-subagent-plugin --ref main
 codex plugin add codex-cursor-subagent-plugin@codex-cursor-subagent-plugin
 ```
 
@@ -105,7 +105,7 @@ an authenticated Cursor Agent available as `agent` in `PATH`; set
 a non-standard location.
 
 ```sh
-claude plugin marketplace add arikon/codex-cursor-subagent-plugin
+claude plugin marketplace add arikon/agents-cursor-subagent-plugin
 claude plugin install cursor-acp-subagent@codex-cursor-subagent-plugin
 ```
 

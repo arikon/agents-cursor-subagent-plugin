@@ -40,6 +40,12 @@
 - Do not cap a reviewer's time, number of findings, or verdict size: the review MUST list every discovered blocker and material risk, not only the highest-priority ones.
 - Do not interrupt or restart a reviewer before its verdict. This is allowed only for a proven hang or deadlock: the reviewer is explicitly unable to provide the expected result after its actual state has been checked. A timeout observation or transient network errors alone are not such proof. If network errors repeat several times over a meaningful period (minutes), the problem may be considered proven.
 
+## Release notes
+
+- Write release notes in English: start with a short paragraph explaining the release, then use `Features` and `Bug fixes` sections with concise bullets for included changes. Omit empty sections; avoid an unstructured wall of bullets.
+- For the first public release, describe the tool's purpose, available features, and practical user benefits instead of only the latest incremental changes.
+- Omit verification descriptions and results, test counts, coverage metrics, audit reports, and internal completion bookkeeping.
+
 ## Running tests and coverage
 
 - Do not reduce product-code coverage with tests. Keep it at approximately 90% or higher for lines, branches, and functions in a complete fail-closed manifest of the agreed product scope: source must not disappear from the denominator merely because tests no longer load it. Every test MUST verify observable behavior, a public contract, or a realistic failure path. Do not lock in internal structure, specific lines, private helpers, implementation details, or configuration details unless they are a documented external contract. Coverage alone is not a reason to add a test. Follow DRY, SSOT, and SRP in tests: every observable scenario and contract has one test owner at the appropriate layer. Do not repeat one semantic assertion in unit, transport, smoke, facade, or e2e tests; an upper-layer test adds only its own integration responsibility. Before adding a test and when reviewing a test suite, check existing scenarios, remove semantic duplicates, and move a shared fixture/helper to its single owner without creating a test-only API in product code. Do not add artificial tests for insignificant branches merely for the metric: an exclusion is permitted only for genuinely unreachable defensive code and must be justified locally next to the exclusion or in the review.

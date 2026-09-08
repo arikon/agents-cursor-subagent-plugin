@@ -9,7 +9,7 @@
       "name": "cursor-acp-subagent",
       "source": {
         "source": "github",
-        "repo": "arikon/codex-cursor-subagent-plugin"
+        "repo": "arikon/agents-cursor-subagent-plugin"
       },
       "description": "Delegate tasks to Cursor Agent through an interactive ACP session.",
       "strict": true
