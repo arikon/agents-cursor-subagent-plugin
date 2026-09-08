@@ -36,18 +36,49 @@ pending until explicitly answered.
 ## Requirements
 
 - runtime and portable installation: Node.js 18+;
-- Cursor Agent (`agent`) installed and authenticated in the file-backed store
-  used by the plugin:
-
-  ```sh
-  AGENT_CLI_CREDENTIAL_STORE=file agent login
-  AGENT_CLI_CREDENTIAL_STORE=file agent status --format json
-  ```
-
+- Cursor Agent (`agent`) installed and authenticated before using the plugin
+  (see [Cursor Agent setup](#cursor-agent-setup) below);
   The admitted adapter is pinned to `agent --version` =
   `2026.08.25-3e8eec8`; for a
   non-standard path, set `CURSOR_AGENT_COMMAND` in the MCP server environment;
 - Codex with local plugin/MCP support.
+
+### Cursor Agent setup
+
+The plugin does not install Cursor Agent or sign you in. Install and authenticate
+it under the same OS user and in the environment where Codex or Claude Code runs.
+Follow the official [Cursor CLI installation guide](https://cursor.com/docs/cli/installation).
+On macOS, Linux, or WSL:
+
+```sh
+curl https://cursor.com/install -fsS | bash
+export PATH="$HOME/.local/bin:$PATH"
+agent --version
+```
+
+Keep `~/.local/bin` on the host application's `PATH`, or set
+`CURSOR_AGENT_COMMAND` to the absolute Agent executable path. The installer
+provides the current CLI; this plugin currently admits only version
+`2026.08.25-3e8eec8`, so check the version before use. A newer CLI requires an
+adapter update as described under [adapter migration](#migrating-to-a-new-codex-version).
+
+Sign in through the browser using the file-backed credential store:
+
+```sh
+AGENT_CLI_CREDENTIAL_STORE=file agent login
+AGENT_CLI_CREDENTIAL_STORE=file agent status --format json
+```
+
+Complete the browser login and confirm that the status command reports you as
+authenticated before starting a delegated task. Both plugin configurations set
+`AGENT_CLI_CREDENTIAL_STORE=file`, so use that same setting for login and status.
+On macOS this selects file storage instead of Keychain. If you previously signed
+in using Keychain, run the file-backed login above as well.
+
+The official [Cursor authentication guide](https://cursor.com/docs/cli/reference/authentication)
+explains browser login and status checks. The file-store environment variable is
+an option of the supported Cursor Agent version used by this plugin; it is not
+documented on that page.
 
 The development verification lanes are pinned to Node.js 22.23.1. Run them with
 that exact version:
