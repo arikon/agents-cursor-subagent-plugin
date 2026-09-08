@@ -189,8 +189,7 @@ export const ADAPTER = Object.freeze({
       ...(path !== undefined ? { path: bounded(path) } : {}),
     };
   },
-  admitInitialize: (result, installedVersion) => result?.protocolVersion === 1
-    && installedVersion === CURSOR_ADAPTER_VERSION
+  admitInitialize: (result) => result?.protocolVersion === 1
     && Array.isArray(result.authMethods)
     && result.authMethods.some((method) => method?.id === 'cursor_login')
     && result.agentCapabilities?.loadSession === true,
@@ -384,7 +383,7 @@ class SessionRecord {
         else if (code !== 0) reject(new DomainError('init', 'Cursor version probe failed'));
         else {
           let version; try { version = decoder.decode(Buffer.concat(chunks)).trim(); } catch { reject(new DomainError('init', 'Cursor version is not UTF-8')); return; }
-          if (version !== ADAPTER.cursorVersion) reject(new DomainError('init', 'Cursor version is not admitted')); else resolveVersion(version);
+          resolveVersion(version);
         }
       });
     }).finally(() => { this.child = null; this.childExited = false; });
@@ -411,7 +410,7 @@ class SessionRecord {
   }
   async initialize() {
     const initialized = await this.request('initialize', ADAPTER.initialize(this.mode));
-    if (!ADAPTER.admitInitialize(initialized, this.installedCursorVersion)) fail('protocol_error', 'ACP adapter admission failed');
+    if (!ADAPTER.admitInitialize(initialized)) fail('protocol_error', 'ACP adapter admission failed');
     await this.request(ADAPTER.methods.auth, { methodId: 'cursor_login' });
     if (this.resumeCursorSessionId) {
       const loaded = await this.request(ADAPTER.methods.sessionLoad, ADAPTER.loadParams(this.resumeCursorSessionId, this.cwd));

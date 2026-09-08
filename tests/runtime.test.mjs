@@ -210,9 +210,17 @@ test('actual initialize deadline produces an init_timeout tombstone', async (t) 
   assert.deepEqual(failed.terminal_reason, { text: 'init_timeout', truncated: false });
 });
 
+test('runtime accepts other Cursor versions when the ACP interface is compatible', async (t) => {
+  for (const version of ['2026.08.24-old', '2026.09.02-new']) {
+    const runtime = withFake(t, { env: { FAKE_ACP_VERSION: version } });
+    const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
+    assert.equal(session.session_state, 'live', version);
+    await runtime.call('cursor_close_session', { session_id: session.session_id });
+  }
+});
+
 test('adapter admission rejects incompatible and unusable Cursor probes', async (t) => {
   const scenarios = [
-    { FAKE_ACP_VERSION: '2026.08.24-old' },
     { FAKE_ACP_BAD_CAPABILITIES: '1' },
     { FAKE_ACP_VERSION_MODE: 'overflow' },
     { FAKE_ACP_VERSION_MODE: 'nonzero' },
