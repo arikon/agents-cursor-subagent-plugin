@@ -8,6 +8,19 @@ import { once } from 'node:events';
 
 const serverPath = new URL('../scripts/cursor-subagent-mcp.mjs', import.meta.url);
 
+test('Codex repository marketplace discovers the root plugin', () => {
+  const root = new URL('../', import.meta.url);
+  const marketplace = JSON.parse(readFileSync(new URL('.agents/plugins/marketplace.json', root), 'utf8'));
+  const plugin = JSON.parse(readFileSync(new URL('.codex-plugin/plugin.json', root), 'utf8'));
+  assert.equal(marketplace.name, plugin.name);
+  assert.equal(marketplace.plugins.length, 1);
+  const entry = marketplace.plugins[0];
+  assert.equal(entry.name, plugin.name);
+  assert.equal(entry.source.source, 'local');
+  assert.equal(new URL(entry.source.path, root).href, root.href);
+  assert.equal(entry.policy.installation, 'AVAILABLE');
+});
+
 test('source MCP manifest uses only portable runtime paths', () => {
   const manifest = JSON.parse(readFileSync(new URL('../.mcp.json', import.meta.url), 'utf8'));
   const server = manifest.mcpServers['cursor-subagent'];
