@@ -50,7 +50,7 @@ function isolatedFakeEnvironment(overrides = {}) {
 
 function withDefaultFake(t) {
   const root = mkdtempSync(join(tmpdir(), 'cursor-default-argv-'));
-  const executable = join(root, 'agent');
+  const executable = join(root, 'cursor-agent');
   symlinkSync(fake, executable);
   const env = isolatedFakeEnvironment({ PATH: `${root}:${process.env.PATH || ''}`, FAKE_ACP_REQUIRE_POLICY: '1', FAKE_ACP_EXPECT_DEFAULT_ARGV: '1' });
   delete env.CURSOR_AGENT_COMMAND;

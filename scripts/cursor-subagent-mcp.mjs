@@ -73,7 +73,7 @@ function readRoots(env) {
     return canonical;
   }))];
 }
-const cursorCommand = (env) => env.CURSOR_AGENT_COMMAND || 'agent';
+const cursorCommand = (env) => env.CURSOR_AGENT_COMMAND || 'cursor-agent';
 function cursorArgs(env, launch = DEFAULT_LAUNCH) {
   const modelArgv = ADAPTER.modelArgv(launch);
   const pluginArgv = ADAPTER.pluginArgv(launch.plugin_dirs);
