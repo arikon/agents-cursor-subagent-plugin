@@ -1,4 +1,4 @@
-# Codex Cursor Subagent Plugin
+# Codex and Claude Code Cursor Subagent Plugin
 
 Use Cursor Agent as an interactive subagent from Codex or Claude Code. Delegate
 code investigation, reviews, planning, and implementation without manually
