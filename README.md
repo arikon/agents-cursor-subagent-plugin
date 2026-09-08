@@ -78,10 +78,7 @@ codex plugin add codex-cursor-subagent-plugin@codex-cursor-subagent-plugin
 ```
 
 The first command registers a GitHub repository as a marketplace; the second
-installs the plugin from its marketplace snapshot. The repository address is
-`arikon/agents-cursor-subagent-plugin`; the plugin and marketplace identifiers
-remain `codex-cursor-subagent-plugin`, so keep the selector above unchanged.
-Check the configured
+installs the plugin from its marketplace snapshot. Check the configured
 marketplaces and installed plugins with:
 
 ```bash
