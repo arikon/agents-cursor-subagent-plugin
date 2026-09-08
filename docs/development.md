@@ -207,9 +207,10 @@ To migrate to version `X.Y.Z`:
    remove the currently cached installation, and add the plugin again using
    the [Codex update sequence](../README.md#update-the-codex-plugin).
 
-Cursor Agent adapter migration is separate and fail-closed. Before changing
+Cursor Agent adapter maintenance is separate from Codex adapter migration. Before changing
 `CURSOR_ADAPTER_VERSION` or argument encoding, capture `cursor-agent --version` and
 `cursor-agent --help`, update the versioned Agent golden fixture, and run the focused
-runtime/release tests. The version-specific adapter owns the admitted encoding;
-a different installed Agent version terminates initialization rather than being
-treated as implicitly compatible.
+runtime/release tests. The version-specific adapter owns the tested encoding;
+the recorded Cursor version is a verification baseline, not a runtime version
+allowlist. Startup validates the required ACP protocol and capabilities, and
+rejects incompatible interfaces rather than a different version string.

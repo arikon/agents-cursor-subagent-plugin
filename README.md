@@ -43,10 +43,9 @@ cursor-agent --version
 Keep `~/.local/bin` on the host application's `PATH`, or set
 `CURSOR_AGENT_COMMAND` to the absolute Agent executable path. The installer
 provides the current CLI. The plugin has been tested with Cursor Agent
-`2026.08.25-3e8eec8`. Compatibility with newer versions has not yet been verified;
-the current startup check requires that exact version. See
-[adapter migration](docs/development.md#migrating-to-a-new-codex-version)
-for updating version support.
+`2026.08.25-3e8eec8`. Newer versions are expected to work if they preserve the
+required ACP interface, but have not yet been verified. The plugin checks ACP
+compatibility at startup without requiring an exact Cursor version.
 
 ### Sign in with file-backed credentials
 
