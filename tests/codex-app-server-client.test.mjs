@@ -86,9 +86,9 @@ test('app-server client normalizes positive installed-skill evidence', async () 
   });
   try {
     assert.equal((await client.initialize()).userAgent, 'fake');
-    assert.deepEqual(await client.skillLoadEvidence('/fixture', 'codex-cursor-subagent-plugin:cursor-subagent'), {
-      name: 'codex-cursor-subagent-plugin:cursor-subagent', path: '/installed/skills/cursor-subagent/SKILL.md',
-      plugin_id: 'codex-cursor-subagent-plugin@personal', enabled: true,
+    assert.deepEqual(await client.skillLoadEvidence('/fixture', 'agents-cursor-subagent-plugin:cursor-subagent'), {
+      name: 'agents-cursor-subagent-plugin:cursor-subagent', path: '/installed/skills/cursor-subagent/SKILL.md',
+      plugin_id: 'agents-cursor-subagent-plugin@personal', enabled: true,
       content_sha256: createHash('sha256').update(installedBytes).digest('hex'),
       content_bytes: installedBytes.length,
     });
@@ -101,7 +101,7 @@ test('app-server client accepts text content when collecting installed-skill evi
   });
   try {
     await client.initialize();
-    const evidence = await client.skillLoadEvidence('/fixture', 'codex-cursor-subagent-plugin:cursor-subagent');
+    const evidence = await client.skillLoadEvidence('/fixture', 'agents-cursor-subagent-plugin:cursor-subagent');
     assert.equal(evidence.content_bytes, Buffer.byteLength('installed text'));
     assert.equal(evidence.content_sha256, createHash('sha256').update('installed text').digest('hex'));
   } finally { await client.close(); }
@@ -426,7 +426,7 @@ test('app-server client rejects catalog evidence when installed skill bytes are 
   });
   try {
     await client.initialize();
-    await assert.rejects(client.skillLoadEvidence('/fixture', 'codex-cursor-subagent-plugin:cursor-subagent'), /loaded skill content is unreadable/);
+    await assert.rejects(client.skillLoadEvidence('/fixture', 'agents-cursor-subagent-plugin:cursor-subagent'), /loaded skill content is unreadable/);
   } finally { await client.close(); }
 });
 

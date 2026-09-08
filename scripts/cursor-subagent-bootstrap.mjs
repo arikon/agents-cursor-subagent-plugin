@@ -10,8 +10,8 @@ import { dirname, isAbsolute, join, normalize, relative, resolve, sep } from 'no
 import { fileURLToPath } from 'node:url';
 
 export const PACKAGE_LIMITS = Object.freeze({ timeoutMs: 10_000, outputBytes: 1_048_576, messageBytes: 8_000 });
-export const PACKAGE_IDS = Object.freeze({ marketplace: 'codex-cursor-subagent-plugin', plugin: 'codex-cursor-subagent-plugin' });
-export const MARKER_NAME = '.codex-cursor-subagent-plugin.install.json';
+export const PACKAGE_IDS = Object.freeze({ marketplace: 'agents-cursor-subagent-plugin', plugin: 'agents-cursor-subagent-plugin' });
+export const MARKER_NAME = '.agents-cursor-subagent-plugin.install.json';
 const PLUGIN_RELATIVE = join('plugins', PACKAGE_IDS.plugin);
 const CHECK_NAMES = ['node', 'codex_cli', 'managed_root', 'marketplace_registration', 'plugin_registration', 'mcp_config', 'agent_executable', 'agent_status'];
 const ADAPTER_OPERATIONS = ['admit', 'help', 'marketplace-list', 'plugin-list', 'render', 'mcp-check', 'agent-status', 'canary-prompt', 'marketplace-add', 'marketplace-remove', 'plugin-add', 'plugin-remove'];
@@ -148,8 +148,8 @@ export async function validateTopology(options, { requireSource = false, require
   const parent = dirname(options.managedRoot);
   await canonicalDirectory(parent, 'managed marketplace parent');
   const managedRoot = options.managedRoot;
-  const stagingPath = `${managedRoot}.codex-cursor-subagent-plugin.staging`;
-  const backupPath = `${managedRoot}.codex-cursor-subagent-plugin.backup`;
+  const stagingPath = `${managedRoot}.agents-cursor-subagent-plugin.staging`;
+  const backupPath = `${managedRoot}.agents-cursor-subagent-plugin.backup`;
   const protectedRoots = [managedRoot, stagingPath, backupPath];
   const sourceRoot = requireSource ? await canonicalDirectory(options.sourceRoot, 'source root') : null;
   const allowedWorkspaceRoots = requireSource ? await Promise.all(options.allowedWorkspaceRoots.map((path) => canonicalDirectory(path, 'allowed workspace root'))) : [];
@@ -385,8 +385,8 @@ async function preflightTopology(managedRoot) {
   const kind = await pathKind(managedRoot);
   if (kind === 'foreign') fail('topology_invalid', 'managed root must be absent or a canonical directory');
   if (kind === 'directory' && await realpath(managedRoot) !== managedRoot) fail('topology_invalid', 'managed root must be canonical');
-  return { managedRoot, stagingPath: `${managedRoot}.codex-cursor-subagent-plugin.staging`,
-    backupPath: `${managedRoot}.codex-cursor-subagent-plugin.backup`, installRoot: join(managedRoot, PLUGIN_RELATIVE) };
+  return { managedRoot, stagingPath: `${managedRoot}.agents-cursor-subagent-plugin.staging`,
+    backupPath: `${managedRoot}.agents-cursor-subagent-plugin.backup`, installRoot: join(managedRoot, PLUGIN_RELATIVE) };
 }
 
 async function preflightExecutable(name, path, topology) {
@@ -399,7 +399,7 @@ export async function preflight(options, deps) {
   const checks = new Map(); let topology;
   try { topology = await preflightTopology(options.managedRoot); checks.set('managed_root', check('managed_root', 'pass', 'ok', 'managed topology is valid')); }
   catch (error) { checks.set('managed_root', check('managed_root', 'fail', error.code || 'topology_invalid', error.message)); }
-  const fallbackTopology = topology || { managedRoot: options.managedRoot, stagingPath: `${options.managedRoot}.codex-cursor-subagent-plugin.staging`, backupPath: `${options.managedRoot}.codex-cursor-subagent-plugin.backup` };
+  const fallbackTopology = topology || { managedRoot: options.managedRoot, stagingPath: `${options.managedRoot}.agents-cursor-subagent-plugin.staging`, backupPath: `${options.managedRoot}.agents-cursor-subagent-plugin.backup` };
   const nodeBase = await preflightExecutable('node', options.nodeExecutable, fallbackTopology);
   if (nodeBase.status === 'pass') {
     const version = await deps.runCommand(options.nodeExecutable, ['--version'], { env: deps.env });

@@ -75,7 +75,7 @@ available on `PATH`:
 
 ```bash
 codex plugin marketplace add arikon/agents-cursor-subagent-plugin --ref main
-codex plugin add codex-cursor-subagent-plugin@codex-cursor-subagent-plugin
+codex plugin add agents-cursor-subagent-plugin@agents-cursor-subagent-plugin
 ```
 
 The first command registers a GitHub repository as a marketplace; the second
@@ -96,9 +96,9 @@ configured marketplace and installed plugin.
 Refresh the marketplace snapshot, then reinstall the cached plugin:
 
 ```bash
-codex plugin marketplace upgrade codex-cursor-subagent-plugin
-codex plugin remove codex-cursor-subagent-plugin@codex-cursor-subagent-plugin
-codex plugin add codex-cursor-subagent-plugin@codex-cursor-subagent-plugin
+codex plugin marketplace upgrade agents-cursor-subagent-plugin
+codex plugin remove agents-cursor-subagent-plugin@agents-cursor-subagent-plugin
+codex plugin add agents-cursor-subagent-plugin@agents-cursor-subagent-plugin
 ```
 
 Start a new Codex task only after the final `plugin add` succeeds.
@@ -114,14 +114,14 @@ a non-standard location.
 
 ```bash
 claude plugin marketplace add arikon/agents-cursor-subagent-plugin
-claude plugin install cursor-acp-subagent@codex-cursor-subagent-plugin --scope user
+claude plugin install agents-cursor-subagent-plugin@agents-cursor-subagent-plugin --scope user
 claude plugin list --json
 ```
 
 Run these commands in your terminal. `--scope user` makes the plugin available
 to you across projects; use `--scope project` to share the plugin declaration
-with a repository instead. The Claude Code plugin is named `cursor-acp-subagent`,
-and its marketplace is named `codex-cursor-subagent-plugin`.
+with a repository instead. The Claude Code plugin is named `agents-cursor-subagent-plugin`,
+and its marketplace is named `agents-cursor-subagent-plugin`.
 
 Restart Claude Code after installation to load the plugin. In an existing
 session, `/reload-plugins` also applies plugin changes; use `/plugin` to inspect
@@ -133,8 +133,8 @@ Refresh the marketplace and installed plugin after a new Git revision, then
 restart Claude Code to load the updated MCP server:
 
 ```bash
-claude plugin marketplace update codex-cursor-subagent-plugin
-claude plugin update cursor-acp-subagent@codex-cursor-subagent-plugin
+claude plugin marketplace update agents-cursor-subagent-plugin
+claude plugin update agents-cursor-subagent-plugin@agents-cursor-subagent-plugin
 ```
 
 Installing the plugin only makes the existing `cursor_*` MCP tools and
@@ -172,39 +172,47 @@ assistant through delegation, permissions, follow-ups, and cleanup.
 
 ### Follow-ups and resume
 
-`cursor_resume_session` attempts to resume a
-provider conversation after a terminal close or idle expiry tombstones a live
-wrapper. Provider acceptance of the retained ID does not prove that semantic
-history was restored. When the next turn depends on earlier semantic context,
-repeat its minimal bounded context and constraints; for critic/review work,
-repeat the bounded baseline or snapshot with the new delta, or report the
-result as unverifiable. The public runtime exposes no
-active-turn steering tool, so an already supplied follow-up waits until the
-current turn is terminal and uses `cursor_send_prompt` only after
-`turn_status:"completed"` with `session_state:"live"`; other terminal states
-require a new post-failure user decision.
+Continue a completed turn with `cursor_send_prompt` while its session is live.
+A follow-up supplied during an active turn waits for that turn to finish;
+the plugin cannot steer a running turn. Any outcome other than a completed turn
+requires a new user decision before continuing.
+
+Use `cursor_resume_session` to attempt to reopen a retained Cursor conversation
+after its local session has closed or expired.
+
+A successful resume does not prove that earlier context was restored. Include
+the context and constraints needed for the next task. For a review, supply the
+baseline or snapshot together with the new changes; if that evidence is missing,
+report the review as unverifiable.
 
 ### Reading complete results
 
-Terminal snapshots retain an 8 KB result preview. When `result.truncated:true`,
-read `cursor_read_result` from offset zero through `next_offset` until `eof`
-before reporting, sending a follow-up, or closing. The runtime retains the full
-result up to 1 MiB; overflow fails explicitly with `terminal_result_limit`.
+Completed turns include an 8 KB result preview. The runtime retains the full
+result up to 1 MiB; larger results fail with `terminal_result_limit`.
+
+When `result.truncated:true`, use `cursor_read_result` from offset zero, following
+each `next_offset` until `eof`. Read the complete result before reporting it,
+sending a follow-up, or closing the session.
 
 ### Workspace and session settings
 
 Prefer the `cwd` of a separate verified worktree for tasks that may change files
 or run concurrently. A canonical checkout is allowed when the user authorized
-the changes and accepts the coordination risk. For a read-only task, explicitly
-select `ask` and limit file review to the exact or bounded read/search scope the
-user authorized; use checkout-wide scope only when it was already granted.
-Before changing files, explicitly select `agent`. Keep a live
-session across terminal turns with `cursor_send_prompt`, and use
-`cursor_set_mode` only between turns. A change to launch-only
-`model`/`effort`/`fast`/`plugin_dirs` instead closes the idle wrapper and
-immediately calls explicit resume with the retained provider ID. Otherwise,
-close when the delegated workflow is finished, abandoned, or irrecoverably
-failed.
+the changes and accepts the coordination risk.
+
+For read-only work, select `ask` and restrict reads and searches to the
+authorized scope. Select `agent` before making authorized changes. Switch modes
+with `cursor_set_mode` only between turns.
+
+To change `model`, `effort`, `fast`, or `plugin_dirs`, close the idle session and
+immediately resume it with the retained Cursor conversation ID and new settings.
+These launch settings cannot change in place.
+
+Use a nonempty base-model name without `[` or `]`. The optional `effort` value
+must be a nonempty token matching `[A-Za-z0-9._-]+`.
+
+Close the session when the delegated workflow finishes, is abandoned, or fails
+irrecoverably.
 
 ## Permissions and scope
 
@@ -213,25 +221,24 @@ The local transport is Codex or Claude Code → MCP plugin → Cursor ACP
 
 By default the plugin launches Cursor with sandboxing enabled and Smart Auto
 (`--auto-review`), so Cursor may automatically run tool calls that it classifies
-as safe. The repository/Git-marketplace MCP configuration sets Codex-side calls
-not to prompt; the portable release canary instead uses the admitted adapter's
-default elicitation path. Neither transport setting approves Cursor actions or
-expands user authority. The plugin does not use file-based IPC or expose
-unlisted raw Cursor CLI controls; exact exclusions remain version-specific
-adapter/golden evidence. Agent mode can
-create or replace regular UTF-8 files anywhere inside the selected `cwd`; this
-is not an exact per-action policy engine or an OS sandbox.
-Every write-capable delegation, and every file review narrower than the full
-checkout, therefore carries the caller-held bounded authority in its Cursor
-prompt as `AUTHORIZED_ACTIONS` plus an exact
-`NO_SCOPE_EXPANSION` stop/report clause; this is coordination evidence, not
-additional runtime enforcement.
-An explicit per-session `model` is a nonempty base-model value without `[` or
-`]`; bracketed Cursor parameter syntax is not accepted through this MCP
-surface. `effort`, when supplied, is a nonempty `[A-Za-z0-9._-]+` token.
-The primary workflow is
-`cursor_delegate → cursor_wait`; questions, plans, and approval requests remain
-pending until explicitly answered.
+as safe. Questions, plans, and approval requests remain pending until answered.
+
+The Git-marketplace configuration suppresses Codex-side MCP prompts. The
+portable release canary uses the adapter's default elicitation path. These
+transport settings do not expand the authority granted by the user.
+
+In `agent` mode, Cursor can create or replace regular UTF-8 files anywhere inside
+the selected `cwd`. The plugin's scope checks are not an OS sandbox or an exact
+per-action policy engine.
+
+For write-capable tasks and reviews narrower than the checkout, the host
+assistant includes `AUTHORIZED_ACTIONS` and `NO_SCOPE_EXPANSION` in the delegated
+prompt. These clauses communicate the task boundary; they do not add runtime
+enforcement. The bundled skill provides the exact prompt format.
+
+The plugin uses no file-based IPC and exposes only its documented MCP controls.
+Version-specific adapters and golden fixtures define the underlying CLI and
+protocol details.
 
 ## Development
 

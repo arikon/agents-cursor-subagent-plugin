@@ -20,10 +20,10 @@ checkout MUST не требоваться после установки.
 
 ### Requirement: Managed marketplace lifecycle
 Bootstrap SHALL publish the whole `managed_marketplace_root` as one artifact:
-`M`, `M.codex-cursor-subagent-plugin.staging`, and
-`M.codex-cursor-subagent-plugin.backup`. A complete prepared or published owned
+`M`, `M.agents-cursor-subagent-plugin.staging`, and
+`M.agents-cursor-subagent-plugin.backup`. A complete prepared or published owned
 root contains marketplace metadata, plugin tree and one atomically replaced marker
-`.codex-cursor-subagent-plugin.install.json`. The marker moves with the root on
+`.agents-cursor-subagent-plugin.install.json`. The marker moves with the root on
 rename; cleanup and recovery remnants are classified only by the commit predicate
 below. Перед первой мутацией bootstrap собирает complete managed root в staging.
 Marker хранит format, IDs, manifest version и разные
@@ -129,9 +129,9 @@ and each allowed workspace root MUST be existing canonical directories;
 executables; managed marketplace root MUST be an absolute normalized path with
 an existing canonical parent. Source root and managed root must be path-component
 disjoint. The derived install root is
-`<managed-root>/plugins/codex-cursor-subagent-plugin`; staging and backup are the
-deterministic siblings `<managed-root>.codex-cursor-subagent-plugin.staging` and
-`<managed-root>.codex-cursor-subagent-plugin.backup` in the managed-root parent. Their
+`<managed-root>/plugins/agents-cursor-subagent-plugin`; staging and backup are the
+deterministic siblings `<managed-root>.agents-cursor-subagent-plugin.staging` and
+`<managed-root>.agents-cursor-subagent-plugin.backup` in the managed-root parent. Their
 publish/restore use rename only within this parent filesystem. `source_root` and
 each allowed workspace root MUST be component-disjoint from `M`, staging and backup;
 source and allowed roots may equal/overlap each other, and executable files are not

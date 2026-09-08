@@ -47,9 +47,9 @@ test('Claude marketplace installs a cache-local Cursor ACP plugin', { skip: !can
   await writeFile(marketplacePath, `${JSON.stringify(marketplace, null, 2)}\n`);
   const env = { ...process.env, CLAUDE_CODE_PLUGIN_CACHE_DIR: cache };
   await checked('claude', ['plugin', 'marketplace', 'add', checkout, '--scope', 'local'], { cwd: checkout, env });
-  await checked('claude', ['plugin', 'install', 'cursor-acp-subagent@codex-cursor-subagent-plugin', '--scope', 'local'], { cwd: checkout, env });
+  await checked('claude', ['plugin', 'install', 'agents-cursor-subagent-plugin@agents-cursor-subagent-plugin', '--scope', 'local'], { cwd: checkout, env });
   const installed = JSON.parse(await checked('claude', ['plugin', 'list', '--json'], { cwd: checkout, env }));
-  assert.equal(JSON.stringify(installed).includes('cursor-acp-subagent'), true);
+  assert.equal(JSON.stringify(installed).includes('agents-cursor-subagent-plugin'), true);
   await rename(checkout, hidden);
   const pluginManifest = await findFile(cache, '/.claude-plugin/plugin.json');
   const runtime = await findFile(cache, '/scripts/cursor-subagent-mcp.mjs');
@@ -58,5 +58,5 @@ test('Claude marketplace installs a cache-local Cursor ACP plugin', { skip: !can
   assert.equal(pluginManifest.startsWith(hidden), false);
   assert.equal(runtime.startsWith(hidden), false);
   assert.equal(skill.startsWith(hidden), false);
-  assert.equal(JSON.parse(await readFile(pluginManifest, 'utf8')).name, 'cursor-acp-subagent');
+  assert.equal(JSON.parse(await readFile(pluginManifest, 'utf8')).name, 'agents-cursor-subagent-plugin');
 });

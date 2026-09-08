@@ -151,7 +151,7 @@ test('CLI install rejects a malformed package manifest without publishing artifa
   assert.deepEqual({ ok: result.envelope.ok, state: result.envelope.state, errorCode: result.envelope.error_code },
     { ok: false, state: 'failed', errorCode: 'invalid_manifest' });
   await assert.rejects(lstat(context.managed), { code: 'ENOENT' });
-  await assert.rejects(lstat(`${context.managed}.codex-cursor-subagent-plugin.staging`), { code: 'ENOENT' });
+  await assert.rejects(lstat(`${context.managed}.agents-cursor-subagent-plugin.staging`), { code: 'ENOENT' });
 });
 
 test('CLI install rejects a non-object package manifest without publishing artifacts', async (t) => {
@@ -170,7 +170,7 @@ test('CLI install rejects an incomplete package payload without publishing artif
   assert.equal(result.code, 1);
   assert.equal(result.envelope.error_code, 'invalid_payload');
   await assert.rejects(lstat(context.managed), { code: 'ENOENT' });
-  await assert.rejects(lstat(`${context.managed}.codex-cursor-subagent-plugin.staging`), { code: 'ENOENT' });
+  await assert.rejects(lstat(`${context.managed}.agents-cursor-subagent-plugin.staging`), { code: 'ENOENT' });
 });
 
 test('CLI install requires the recording proxy as a managed payload owner entry', async (t) => {
@@ -283,7 +283,7 @@ test('CLI install exposes interrupted owned staging as recovery_required', async
   const context = await fixture(t);
   let result = await bootstrapCli(['install', ...context.common], context.env);
   assert.equal(result.code, 0, result.stdout);
-  const staging = `${context.managed}.codex-cursor-subagent-plugin.staging`;
+  const staging = `${context.managed}.agents-cursor-subagent-plugin.staging`;
   await rename(context.managed, staging);
   result = await bootstrapCli(['install', ...context.common], context.env);
   assert.equal(result.code, 1);
@@ -366,7 +366,7 @@ test('CLI install publishes a self-contained managed package', async (t) => {
   assert.equal(result.code, 0, result.stdout);
   assert.deepEqual({ ok: result.envelope.ok, operation: result.envelope.operation, state: result.envelope.state },
     { ok: true, operation: 'install', state: 'installed' });
-  const pluginRoot = join(context.managed, 'plugins/codex-cursor-subagent-plugin');
+  const pluginRoot = join(context.managed, 'plugins/agents-cursor-subagent-plugin');
   const marker = JSON.parse(await readFile(join(context.managed, MARKER_NAME), 'utf8'));
   const manifest = JSON.parse(await readFile(join(pluginRoot, '.codex-plugin/plugin.json'), 'utf8'));
   assert.equal(manifest.version, marker.manifest_version);
@@ -383,10 +383,10 @@ test('CLI update replaces the published package with the requested payload', asy
   assert.equal(result.code, 0, result.stdout);
   assert.deepEqual({ ok: result.envelope.ok, operation: result.envelope.operation, state: result.envelope.state },
     { ok: true, operation: 'update', state: 'installed' });
-  assert.equal(await readFile(join(context.managed, 'plugins/codex-cursor-subagent-plugin/README.md'), 'utf8'),
+  assert.equal(await readFile(join(context.managed, 'plugins/agents-cursor-subagent-plugin/README.md'), 'utf8'),
     'updated through the public CLI\n');
-  await assert.rejects(lstat(`${context.managed}.codex-cursor-subagent-plugin.staging`), { code: 'ENOENT' });
-  await assert.rejects(lstat(`${context.managed}.codex-cursor-subagent-plugin.backup`), { code: 'ENOENT' });
+  await assert.rejects(lstat(`${context.managed}.agents-cursor-subagent-plugin.staging`), { code: 'ENOENT' });
+  await assert.rejects(lstat(`${context.managed}.agents-cursor-subagent-plugin.backup`), { code: 'ENOENT' });
 });
 
 test('CLI preflight reports a completed installation ready for use', async (t) => {
@@ -465,13 +465,13 @@ test('versioned Codex adapter admission and help match its checked-in golden sur
   assert.deepEqual(help, { adapter_version: golden.adapter_version, codex_version: golden.codex_version, operations: golden.operations });
   const rendered = await adapterFixtureCall(context.executable, 'render', {
     codex_executable: codex, node_executable: context.executable, agent_executable: agent,
-    install_root: join(context.managed, 'plugins/codex-cursor-subagent-plugin'), allowed_workspace_roots: [context.workspace],
+    install_root: join(context.managed, 'plugins/agents-cursor-subagent-plugin'), allowed_workspace_roots: [context.workspace],
   }, env, versionedAdapter);
-  assert.deepEqual(rendered.files.map(({ path }) => path), ['.agents/plugins/marketplace.json', 'plugins/codex-cursor-subagent-plugin/.mcp.json']);
+  assert.deepEqual(rendered.files.map(({ path }) => path), ['.agents/plugins/marketplace.json', 'plugins/agents-cursor-subagent-plugin/.mcp.json']);
   const timeoutPreload = join(context.root, 'accelerate-turn-timeout.mjs');
   const timeoutRendered = await adapterFixtureCall(context.executable, 'render', {
     codex_executable: codex, node_executable: context.executable, agent_executable: agent,
-    install_root: join(context.managed, 'plugins/codex-cursor-subagent-plugin'), allowed_workspace_roots: [context.workspace],
+    install_root: join(context.managed, 'plugins/agents-cursor-subagent-plugin'), allowed_workspace_roots: [context.workspace],
   }, { ...env, CURSOR_EVAL_TIMEOUT_PRELOAD: timeoutPreload, FAKE_ACP_ACCELERATE_TURN_TIMEOUT: '1',
     FAKE_ACP_ACCELERATE_WAIT_TIMEOUT: '1' }, versionedAdapter);
   const mcpFile = timeoutRendered.files.find(({ path }) => path.endsWith('/.mcp.json'));
@@ -546,9 +546,9 @@ test('versioned Codex adapter admission and help match its checked-in golden sur
   }
   for (const expected of [
     ['plugin', 'marketplace', 'add', context.managed, '--json'],
-    ['plugin', 'add', 'codex-cursor-subagent-plugin@codex-cursor-subagent-plugin', '--json'],
-    ['plugin', 'remove', 'codex-cursor-subagent-plugin@codex-cursor-subagent-plugin', '--json'],
-    ['plugin', 'marketplace', 'remove', 'codex-cursor-subagent-plugin', '--json'],
+    ['plugin', 'add', 'agents-cursor-subagent-plugin@agents-cursor-subagent-plugin', '--json'],
+    ['plugin', 'remove', 'agents-cursor-subagent-plugin@agents-cursor-subagent-plugin', '--json'],
+    ['plugin', 'marketplace', 'remove', 'agents-cursor-subagent-plugin', '--json'],
   ]) {
     assert.equal(invocations.some((actual) => JSON.stringify(actual) === JSON.stringify(expected)), true, JSON.stringify(expected));
   }
@@ -559,10 +559,10 @@ test('versioned Codex adapter admission and help match its checked-in golden sur
   const currentPluginListInvocations = (await readFile(log, 'utf8')).trim().split('\n').map(JSON.parse).slice(beforeCurrentPluginList);
   assert.deepEqual(currentPluginListInvocations, [
     ['--version'],
-    ['plugin', 'list', '--marketplace', 'codex-cursor-subagent-plugin', '--json'],
+    ['plugin', 'list', '--marketplace', 'agents-cursor-subagent-plugin', '--json'],
   ]);
   assert.deepEqual(currentGolden.cli_forms.plugin_list,
-    ['plugin', 'list', '--marketplace', 'codex-cursor-subagent-plugin', '--json']);
+    ['plugin', 'list', '--marketplace', 'agents-cursor-subagent-plugin', '--json']);
   const unknown = await adapterFixtureCall(context.executable, 'admit', { codex_executable: codex }, { ...env, FAKE_CODEX_CLI_VERSION: 'codex-cli 0.152.2' }, versionedAdapter);
   assert.equal(unknown.admitted, false);
   const beforeUnknown = (await readFile(log, 'utf8')).trim().split('\n').length;
@@ -788,7 +788,7 @@ test('fake adapter drives portable install, identical no-op, update, preflight a
   const context = await fixture(t);
   let result = await runBootstrap(['install', ...context.common], { env: context.env });
   assert.deepEqual({ exitCode: result.exitCode, ok: result.envelope.ok, state: result.envelope.state }, { exitCode: 0, ok: true, state: 'installed' }, JSON.stringify(result));
-  const pluginRoot = join(context.managed, 'plugins/codex-cursor-subagent-plugin');
+  const pluginRoot = join(context.managed, 'plugins/agents-cursor-subagent-plugin');
   const config = JSON.parse(await readFile(join(pluginRoot, '.mcp.json'), 'utf8'));
   assert.equal(config.args[0], join(pluginRoot, 'scripts/cursor-subagent-mcp.mjs'));
   assert.equal(config.args[0].startsWith(context.source), false);
@@ -814,7 +814,7 @@ test('fake adapter drives portable install, identical no-op, update, preflight a
 
   result = await runBootstrap(['update', ...context.common], { env: context.env });
   assert.deepEqual({ exitCode: result.exitCode, state: result.envelope.state }, { exitCode: 0, state: 'installed' });
-  await assert.rejects(lstat(`${context.managed}.codex-cursor-subagent-plugin.staging`), { code: 'ENOENT' });
+  await assert.rejects(lstat(`${context.managed}.agents-cursor-subagent-plugin.staging`), { code: 'ENOENT' });
 
   result = await runBootstrap(['preflight', '--managed-marketplace-root', context.managed,
     '--node-executable', context.executable, '--codex-executable', context.executable,
@@ -829,11 +829,12 @@ test('fake adapter drives portable install, identical no-op, update, preflight a
 test('README documents the verified Codex cache refresh and reinstall sequence', async () => {
   const readme = await readFile(join(repository, 'README.md'), 'utf8');
   const commands = [
-    'codex plugin marketplace upgrade codex-cursor-subagent-plugin',
-    'codex plugin remove codex-cursor-subagent-plugin@codex-cursor-subagent-plugin',
-    'codex plugin add codex-cursor-subagent-plugin@codex-cursor-subagent-plugin',
+    'codex plugin marketplace upgrade agents-cursor-subagent-plugin',
+    'codex plugin remove agents-cursor-subagent-plugin@agents-cursor-subagent-plugin',
+    'codex plugin add agents-cursor-subagent-plugin@agents-cursor-subagent-plugin',
   ];
-  const positions = commands.map((command) => readme.indexOf(command, readme.indexOf('Updating an existing installation')));
+  const updateStart = readme.indexOf(commands[0]);
+  const positions = commands.map((command) => readme.indexOf(command, updateStart));
   assert.ok(positions.every((position) => position >= 0), 'README must include every verified update command');
   assert.ok(positions[0] < positions[1] && positions[1] < positions[2], 'README update commands must preserve the verified order');
   assert.match(readme, /Start a new Codex task only after the final `plugin add` succeeds\./);
@@ -862,7 +863,7 @@ test('each backup cleanup deletion boundary is fail-closed as cleanup_required',
       fault: async (observed) => { if (observed === step) throw new Error(`injected ${step}`); },
     });
     assert.deepEqual({ exitCode: result.exitCode, state: result.envelope.state }, { exitCode: 1, state: 'cleanup_required' }, step);
-    assert.equal(result.envelope.backup_path, `${context.managed}.codex-cursor-subagent-plugin.backup`, step);
+    assert.equal(result.envelope.backup_path, `${context.managed}.agents-cursor-subagent-plugin.backup`, step);
     const before = JSON.parse(await readFile(context.state, 'utf8')).mutations.length;
     result = await runInProcessBootstrap(['update', ...context.common], context);
     assert.equal(result.envelope.state, 'cleanup_required', step);
@@ -915,7 +916,7 @@ test('config-only update changes artifact hash without changing payload cachebus
   const after = JSON.parse(await readFile(markerPath, 'utf8'));
   assert.equal(after.payload_hash, before.payload_hash); assert.equal(after.manifest_version, before.manifest_version);
   assert.notEqual(after.artifact_hash, before.artifact_hash);
-  const config = JSON.parse(await readFile(join(context.managed, 'plugins/codex-cursor-subagent-plugin/.mcp.json'), 'utf8'));
+  const config = JSON.parse(await readFile(join(context.managed, 'plugins/agents-cursor-subagent-plugin/.mcp.json'), 'utf8'));
   assert.equal(config.env.FAKE_CODEX_CONFIG_VARIANT, 'second');
 });
 
@@ -925,7 +926,7 @@ test('install no-op compares the desired generated artifact hash as well as payl
   context.env.FAKE_CODEX_CONFIG_VARIANT = 'different-install-config';
   result = await runBootstrap(['install', ...context.common], { env: context.env });
   assert.deepEqual({ exitCode: result.exitCode, code: result.envelope.error_code }, { exitCode: 1, code: 'update_required' });
-  assert.equal(await lstat(`${context.managed}.codex-cursor-subagent-plugin.staging`).then(() => true).catch(() => false), false);
+  assert.equal(await lstat(`${context.managed}.agents-cursor-subagent-plugin.staging`).then(() => true).catch(() => false), false);
 });
 
 test('strict marker and registration tuples reject extra marker fields and duplicate owned IDs', async (t) => {
@@ -979,7 +980,7 @@ test('owned marker rejects post-publication payload drift before mutation', asyn
   let result = await runBootstrap(['install', ...context.common], { env: context.env });
   assert.equal(result.exitCode, 0, JSON.stringify(result));
   const mutationCount = JSON.parse(await readFile(context.state, 'utf8')).mutations.length;
-  await writeFile(join(context.managed, 'plugins/codex-cursor-subagent-plugin/README.md'), 'foreign managed edit\n');
+  await writeFile(join(context.managed, 'plugins/agents-cursor-subagent-plugin/README.md'), 'foreign managed edit\n');
   result = await runBootstrap(['install', ...context.common], { env: context.env });
   assert.deepEqual({ exitCode: result.exitCode, state: result.envelope.state, errorCode: result.envelope.error_code },
     { exitCode: 1, state: 'failed', errorCode: 'state_drift' });
@@ -989,8 +990,8 @@ test('owned marker rejects post-publication payload drift before mutation', asyn
 test('publication remnant classification rejects conflicting, foreign and invalid paths', async (t) => {
   for (const kind of ['stage-and-backup', 'foreign-stage', 'invalid-stage', 'foreign-active']) {
     const context = await fixture(t);
-    const staging = `${context.managed}.codex-cursor-subagent-plugin.staging`;
-    const backup = `${context.managed}.codex-cursor-subagent-plugin.backup`;
+    const staging = `${context.managed}.agents-cursor-subagent-plugin.staging`;
+    const backup = `${context.managed}.agents-cursor-subagent-plugin.backup`;
     if (kind === 'stage-and-backup') {
       await mkdir(staging); await mkdir(backup);
     } else if (kind === 'foreign-stage') {
@@ -1011,13 +1012,13 @@ test('publication remnant classification rejects conflicting, foreign and invali
 test('preflight classifies foreign and duplicate owned registrations independently', async (t) => {
   const context = await fixture(t);
   const plugin = {
-    id: 'codex-cursor-subagent-plugin',
-    marketplace_id: 'codex-cursor-subagent-plugin',
-    source: join(context.managed, 'plugins/codex-cursor-subagent-plugin'),
+    id: 'agents-cursor-subagent-plugin',
+    marketplace_id: 'agents-cursor-subagent-plugin',
+    source: join(context.managed, 'plugins/agents-cursor-subagent-plugin'),
     version: '0.1.0+codex.foreign',
   };
   await writeFile(context.state, JSON.stringify({
-    marketplaces: [{ id: 'codex-cursor-subagent-plugin', path: join(context.root, 'foreign-marketplace') }],
+    marketplaces: [{ id: 'agents-cursor-subagent-plugin', path: join(context.root, 'foreign-marketplace') }],
     plugins: [plugin, { ...plugin }],
     mutations: [],
   }));
@@ -1066,7 +1067,7 @@ test('preflight requires authenticated status and a version-bound admitted adapt
 
 test('preflight reports marketplace and plugin registrations independently', async (t) => {
   const context = await fixture(t);
-  await writeFile(context.state, JSON.stringify({ marketplaces: [{ id: 'codex-cursor-subagent-plugin', path: context.managed }], plugins: [], mutations: [] }));
+  await writeFile(context.state, JSON.stringify({ marketplaces: [{ id: 'agents-cursor-subagent-plugin', path: context.managed }], plugins: [], mutations: [] }));
   const result = await runBootstrap(['preflight', '--managed-marketplace-root', context.managed,
     '--node-executable', context.executable, '--codex-executable', context.executable], { env: context.env });
   assert.equal(result.envelope.checks.find(({ name }) => name === 'marketplace_registration').status, 'pass');
@@ -1099,15 +1100,15 @@ test('preflight isolates adapter-backed check failures and remains read-only', a
 test('backup and registration recovery classification distinguishes owned deltas from foreign drift', async (t) => {
   const backupContext = await fixture(t);
   let result = await runBootstrap(['install', ...backupContext.common], { env: backupContext.env }); assert.equal(result.exitCode, 0);
-  await rename(backupContext.managed, `${backupContext.managed}.codex-cursor-subagent-plugin.backup`);
+  await rename(backupContext.managed, `${backupContext.managed}.agents-cursor-subagent-plugin.backup`);
   result = await runBootstrap(['uninstall', '--managed-marketplace-root', backupContext.managed,
     '--codex-executable', backupContext.executable], { env: backupContext.env });
   assert.equal(result.envelope.state, 'recovery_required');
-  assert.equal(result.envelope.backup_path, `${backupContext.managed}.codex-cursor-subagent-plugin.backup`);
+  assert.equal(result.envelope.backup_path, `${backupContext.managed}.agents-cursor-subagent-plugin.backup`);
 
   const partialContext = await fixture(t);
   await writeFile(partialContext.state, JSON.stringify({
-    marketplaces: [{ id: 'codex-cursor-subagent-plugin', path: partialContext.managed }], plugins: [], mutations: [],
+    marketplaces: [{ id: 'agents-cursor-subagent-plugin', path: partialContext.managed }], plugins: [], mutations: [],
   }));
   result = await runBootstrap(['install', ...partialContext.common], { env: partialContext.env });
   assert.deepEqual({ exitCode: result.exitCode, state: result.envelope.state, errorCode: result.envelope.error_code },
@@ -1115,17 +1116,17 @@ test('backup and registration recovery classification distinguishes owned deltas
   assert.deepEqual(JSON.parse(await readFile(partialContext.state, 'utf8')).mutations, []);
 
   const foreignContext = await fixture(t);
-  await writeFile(foreignContext.state, JSON.stringify({ marketplaces: [{ id: 'codex-cursor-subagent-plugin', path: join(foreignContext.root, 'foreign') }], plugins: [], mutations: [] }));
+  await writeFile(foreignContext.state, JSON.stringify({ marketplaces: [{ id: 'agents-cursor-subagent-plugin', path: join(foreignContext.root, 'foreign') }], plugins: [], mutations: [] }));
   result = await runBootstrap(['install', ...foreignContext.common], { env: foreignContext.env });
   assert.equal(result.envelope.state, 'failed'); assert.equal(result.envelope.error_code, 'state_drift');
 
   const independentContext = await fixture(t);
-  await writeFile(independentContext.state, JSON.stringify({ marketplaces: [], plugins: [{ id: 'codex-cursor-subagent-plugin', marketplace_id: 'personal', source: join(independentContext.root, 'personal-plugin'), version: '0.1.0+codex.legacy' }], mutations: [] }));
+  await writeFile(independentContext.state, JSON.stringify({ marketplaces: [], plugins: [{ id: 'agents-cursor-subagent-plugin', marketplace_id: 'personal', source: join(independentContext.root, 'personal-plugin'), version: '0.1.0+codex.legacy' }], mutations: [] }));
   result = await runBootstrap(['install', ...independentContext.common], { env: independentContext.env });
   assert.equal(result.exitCode, 0, JSON.stringify(result));
   const independentRegistrations = JSON.parse(await readFile(independentContext.state, 'utf8')).plugins;
   assert.equal(independentRegistrations.some((item) => item.marketplace_id === 'personal'), true);
-  assert.equal(independentRegistrations.some((item) => item.marketplace_id === 'codex-cursor-subagent-plugin'), true);
+  assert.equal(independentRegistrations.some((item) => item.marketplace_id === 'agents-cursor-subagent-plugin'), true);
 });
 
 test('interrupted uninstall cleanup is classified as cleanup_required on the next invocation', async (t) => {
@@ -1145,7 +1146,7 @@ test('versioned adapter help drift fails before mutation without staging remnant
   const result = await runBootstrap(['install', ...context.common], { env: context.env });
   assert.equal(result.envelope.state, 'failed');
   assert.equal(JSON.parse(await readFile(context.state, 'utf8').catch(() => '{"mutations":[]}')).mutations.length, 0);
-  await assert.rejects(realpath(`${context.managed}.codex-cursor-subagent-plugin.staging`), { code: 'ENOENT' });
+  await assert.rejects(realpath(`${context.managed}.agents-cursor-subagent-plugin.staging`), { code: 'ENOENT' });
 });
 
 test('incompatible adapter render payload fails before mutation without staging remnants', async (t) => {
@@ -1163,7 +1164,7 @@ test('incompatible adapter render payload fails before mutation without staging 
     const result = await runBootstrap(['install', ...context.common], { env: context.env });
     assert.equal(result.envelope.state, 'failed', value);
     assert.equal(JSON.parse(await readFile(context.state, 'utf8').catch(() => '{"mutations":[]}')).mutations.length, 0, value);
-    await assert.rejects(realpath(`${context.managed}.codex-cursor-subagent-plugin.staging`), { code: 'ENOENT' });
+    await assert.rejects(realpath(`${context.managed}.agents-cursor-subagent-plugin.staging`), { code: 'ENOENT' });
   }
 });
 
@@ -1174,7 +1175,7 @@ test('incompatible adapter registration entries fail before publication', async 
     assert.deepEqual({ exitCode: result.exitCode, state: result.envelope.state, errorCode: result.envelope.error_code },
       { exitCode: 1, state: 'failed', errorCode: 'adapter_drift' }, variant);
     await assert.rejects(realpath(context.managed), { code: 'ENOENT' });
-    await assert.rejects(realpath(`${context.managed}.codex-cursor-subagent-plugin.staging`), { code: 'ENOENT' });
+    await assert.rejects(realpath(`${context.managed}.agents-cursor-subagent-plugin.staging`), { code: 'ENOENT' });
   }
 });
 
@@ -1238,8 +1239,8 @@ test('registration reread failure during compensation requires recovery without 
     assert.equal(registrations.marketplaces[0].path, context.managed, lifecycle);
     assert.equal(registrations.plugins[0].version, marker.manifest_version, lifecycle);
     assert.equal(JSON.parse(await readFile(join(context.managed, MARKER_NAME), 'utf8')).artifact_hash, marker.artifact_hash, lifecycle);
-    await assert.rejects(realpath(`${context.managed}.codex-cursor-subagent-plugin.staging`), { code: 'ENOENT' });
-    await assert.rejects(realpath(`${context.managed}.codex-cursor-subagent-plugin.backup`), { code: 'ENOENT' });
+    await assert.rejects(realpath(`${context.managed}.agents-cursor-subagent-plugin.staging`), { code: 'ENOENT' });
+    await assert.rejects(realpath(`${context.managed}.agents-cursor-subagent-plugin.backup`), { code: 'ENOENT' });
   }
 });
 
@@ -1270,7 +1271,7 @@ test('uninstall preserves recovery evidence when publication plugin compensation
     { exitCode: 1, state: 'recovery_required', lastCompletedStep: 'plugin-add' });
   const registrations = JSON.parse(await readFile(context.state, 'utf8'));
   assert.equal(registrations.marketplaces[0].path, context.managed);
-  assert.equal(registrations.plugins[0].source, join(context.managed, 'plugins/codex-cursor-subagent-plugin'));
+  assert.equal(registrations.plugins[0].source, join(context.managed, 'plugins/agents-cursor-subagent-plugin'));
 });
 
 test('update reports recovery when publication rollback cannot rename the owned backup into place', async (t) => {
@@ -1283,7 +1284,7 @@ test('update reports recovery when publication rollback cannot rename the owned 
     env: context.env,
     fault: async (step) => {
       if (step !== 'publication:after-update-active-to-backup') return;
-      await rm(`${context.managed}.codex-cursor-subagent-plugin.staging`, { recursive: true });
+      await rm(`${context.managed}.agents-cursor-subagent-plugin.staging`, { recursive: true });
       await chmod(context.root, 0o555);
       restored = new Promise((resolveRestore) => setTimeout(async () => {
         await chmod(context.root, 0o755);
@@ -1295,7 +1296,7 @@ test('update reports recovery when publication rollback cannot rename the owned 
   await restored;
   assert.deepEqual({ exitCode: result.exitCode, state: result.envelope.state, backupPath: result.envelope.backup_path },
     { exitCode: 1, state: 'recovery_required', backupPath: null });
-  assert.equal(await lstat(`${context.managed}.codex-cursor-subagent-plugin.backup`).then(() => true).catch(() => false), true);
+  assert.equal(await lstat(`${context.managed}.agents-cursor-subagent-plugin.backup`).then(() => true).catch(() => false), true);
 });
 
 test('rejected and timed-out compensation commands classify install, update and uninstall by observed state', async (t) => {
@@ -1344,7 +1345,7 @@ test('rejected and timed-out compensation commands classify install, update and 
 
 test('failed stage preparation reports recovery_required when its owned staging cannot be removed', async (t) => {
   const context = await fixture(t);
-  const staging = `${context.managed}.codex-cursor-subagent-plugin.staging`;
+  const staging = `${context.managed}.agents-cursor-subagent-plugin.staging`;
   context.env.FAKE_CODEX_LOCK_FAILED_STAGE = '1';
   const result = await runBootstrap(['install', ...context.common], { env: context.env });
   assert.deepEqual({ exitCode: result.exitCode, state: result.envelope.state, code: result.envelope.error_code,
@@ -1395,8 +1396,8 @@ test('reread failures preserve every recoverable artifact and expose the observe
     assert.deepEqual({ exitCode: result.exitCode, state: result.envelope.state },
       { exitCode: 1, state: 'recovery_required' }, scenario.name);
 
-    const staging = `${context.managed}.codex-cursor-subagent-plugin.staging`;
-    const backup = `${context.managed}.codex-cursor-subagent-plugin.backup`;
+    const staging = `${context.managed}.agents-cursor-subagent-plugin.staging`;
+    const backup = `${context.managed}.agents-cursor-subagent-plugin.backup`;
     assert.deepEqual({ active: await exists(context.managed), backup: await exists(backup), staging: await exists(staging) },
       { active: true, backup: scenario.backup === true, staging: false }, scenario.name);
     const registrations = JSON.parse(await readFile(context.state, 'utf8'));
@@ -1417,7 +1418,7 @@ test('reread failures preserve every recoverable artifact and expose the observe
   let result = await runBootstrap(['install', ...context.common], { env: context.env });
   assert.equal(result.exitCode, 0);
   const before = JSON.parse(await readFile(context.state, 'utf8'));
-  await symlink(join(context.root, 'foreign'), join(context.managed, 'plugins/codex-cursor-subagent-plugin/foreign-link'));
+  await symlink(join(context.root, 'foreign'), join(context.managed, 'plugins/agents-cursor-subagent-plugin/foreign-link'));
   result = await runBootstrap(['preflight', '--managed-marketplace-root', context.managed,
     '--node-executable', context.executable, '--codex-executable', context.executable,
     '--agent-executable', context.executable], { env: context.env });
@@ -1451,13 +1452,13 @@ test('uncertain remove outcomes compensate their observed delta and never advanc
       assert.deepEqual(registrations.mutations.slice(-2), ['plugin-remove', 'marketplace-remove'], 'coupled delta must not run add compensation');
     } else {
       assert.deepEqual({ exitCode: result.exitCode, state: result.envelope.state }, { exitCode: 1, state: 'failed' }, `${lifecycle}:${uncertainOperation}`);
-      assert.deepEqual(registrations.marketplaces, [{ id: 'codex-cursor-subagent-plugin', path: context.managed }]);
-      assert.deepEqual(registrations.plugins, [{ id: 'codex-cursor-subagent-plugin', marketplace_id: 'codex-cursor-subagent-plugin',
-        source: join(context.managed, 'plugins/codex-cursor-subagent-plugin'), version: before.manifest_version }]);
+      assert.deepEqual(registrations.marketplaces, [{ id: 'agents-cursor-subagent-plugin', path: context.managed }]);
+      assert.deepEqual(registrations.plugins, [{ id: 'agents-cursor-subagent-plugin', marketplace_id: 'agents-cursor-subagent-plugin',
+        source: join(context.managed, 'plugins/agents-cursor-subagent-plugin'), version: before.manifest_version }]);
     }
     assert.equal(JSON.parse(await readFile(join(context.managed, MARKER_NAME), 'utf8')).artifact_hash, before.artifact_hash);
-    await assert.rejects(realpath(`${context.managed}.codex-cursor-subagent-plugin.backup`), { code: 'ENOENT' });
-    await assert.rejects(realpath(`${context.managed}.codex-cursor-subagent-plugin.staging`), { code: 'ENOENT' });
+    await assert.rejects(realpath(`${context.managed}.agents-cursor-subagent-plugin.backup`), { code: 'ENOENT' });
+    await assert.rejects(realpath(`${context.managed}.agents-cursor-subagent-plugin.staging`), { code: 'ENOENT' });
   }
 });
 
@@ -1490,8 +1491,8 @@ test('reported successful no-op mutations do not advance their lifecycle', async
     assert.equal(registrations.marketplaces[0].path, context.managed, lifecycle);
     assert.equal(registrations.plugins[0].version, marker.manifest_version, lifecycle);
     assert.equal(JSON.parse(await readFile(join(context.managed, MARKER_NAME), 'utf8')).artifact_hash, marker.artifact_hash, lifecycle);
-    await assert.rejects(realpath(`${context.managed}.codex-cursor-subagent-plugin.backup`), { code: 'ENOENT' });
-    await assert.rejects(realpath(`${context.managed}.codex-cursor-subagent-plugin.staging`), { code: 'ENOENT' });
+    await assert.rejects(realpath(`${context.managed}.agents-cursor-subagent-plugin.backup`), { code: 'ENOENT' });
+    await assert.rejects(realpath(`${context.managed}.agents-cursor-subagent-plugin.staging`), { code: 'ENOENT' });
   }
 
   const context = await fixture(t);
@@ -1504,12 +1505,12 @@ test('reported successful no-op mutations do not advance their lifecycle', async
   assert.deepEqual({ exitCode: result.exitCode, state: result.envelope.state, errorCode: result.envelope.error_code },
     { exitCode: 1, state: 'failed', errorCode: 'uninstall_failed' });
   const registrations = JSON.parse(await readFile(context.state, 'utf8'));
-  assert.deepEqual(registrations.marketplaces, [{ id: 'codex-cursor-subagent-plugin', path: context.managed }]);
-  assert.deepEqual(registrations.plugins, [{ id: 'codex-cursor-subagent-plugin', marketplace_id: 'codex-cursor-subagent-plugin',
-    source: join(context.managed, 'plugins/codex-cursor-subagent-plugin'), version: marker.manifest_version }]);
+  assert.deepEqual(registrations.marketplaces, [{ id: 'agents-cursor-subagent-plugin', path: context.managed }]);
+  assert.deepEqual(registrations.plugins, [{ id: 'agents-cursor-subagent-plugin', marketplace_id: 'agents-cursor-subagent-plugin',
+    source: join(context.managed, 'plugins/agents-cursor-subagent-plugin'), version: marker.manifest_version }]);
   assert.deepEqual(registrations.mutations.slice(-3), ['plugin-remove', 'marketplace-remove', 'plugin-add']);
   assert.equal(JSON.parse(await readFile(join(context.managed, MARKER_NAME), 'utf8')).artifact_hash, marker.artifact_hash);
-  await assert.rejects(realpath(`${context.managed}.codex-cursor-subagent-plugin.backup`), { code: 'ENOENT' });
+  await assert.rejects(realpath(`${context.managed}.agents-cursor-subagent-plugin.backup`), { code: 'ENOENT' });
 });
 
 test('update and uninstall never add compensation over foreign, duplicate or coupled observed tuples', async (t) => {
@@ -1542,7 +1543,7 @@ test('pre-commit publication rename faults compensate install and update while u
       fault: async (observed) => { if (observed === step) throw new Error(step); } });
     assert.equal(result.envelope.state, 'failed', step);
     await assert.rejects(realpath(context.managed), { code: 'ENOENT' });
-    await assert.rejects(realpath(`${context.managed}.codex-cursor-subagent-plugin.staging`), { code: 'ENOENT' });
+    await assert.rejects(realpath(`${context.managed}.agents-cursor-subagent-plugin.staging`), { code: 'ENOENT' });
   }
   for (const step of ['publication:before-update-active-to-backup', 'publication:after-update-active-to-backup',
     'publication:before-update-stage-to-active', 'publication:after-update-stage-to-active']) {
@@ -1557,7 +1558,7 @@ test('pre-commit publication rename faults compensate install and update while u
   let result = await runInProcessBootstrap(['install', ...cleanupOwnership.common], cleanupOwnership);
   assert.equal(result.exitCode, 0);
   await writeFile(join(cleanupOwnership.source, 'README.md'), 'cleanup ownership recheck\n');
-  const backupPath = `${cleanupOwnership.managed}.codex-cursor-subagent-plugin.backup`;
+  const backupPath = `${cleanupOwnership.managed}.agents-cursor-subagent-plugin.backup`;
   result = await runInProcessBootstrap(['update', ...cleanupOwnership.common], cleanupOwnership, {
     fault: async (step) => {
       if (step === 'publication:after-update-stage-to-active') await rm(join(backupPath, MARKER_NAME));
@@ -1575,7 +1576,7 @@ test('pre-commit publication rename faults compensate install and update while u
   const uninstallContext = await fixture(t); result = await runInProcessBootstrap(['install', ...uninstallContext.common], uninstallContext); assert.equal(result.exitCode, 0);
   result = await runInProcessBootstrap(['uninstall', '--managed-marketplace-root', uninstallContext.managed, '--codex-executable', uninstallContext.executable],
     uninstallContext, { fault: async (step) => { if (step === 'publication:after-uninstall-active-to-backup') throw new Error(step); } });
-  assert.equal(result.envelope.state, 'cleanup_required'); assert.equal(result.envelope.backup_path, `${uninstallContext.managed}.codex-cursor-subagent-plugin.backup`);
+  assert.equal(result.envelope.state, 'cleanup_required'); assert.equal(result.envelope.backup_path, `${uninstallContext.managed}.agents-cursor-subagent-plugin.backup`);
 });
 
 test('plugin registration version must equal the installed cachebuster', async (t) => {

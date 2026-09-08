@@ -22,7 +22,7 @@ const EXPECTED_TOOLS = [
 ];
 const MARKER_BYTES = 'CURSOR_AGENT_E2E_OK\n';
 const RELEASE_PROCESS_LIMITS = Object.freeze({ timeoutMs: 10_000, outputBytes: 1_048_576 });
-const MANAGED_PLUGIN_ID = 'codex-cursor-subagent-plugin';
+const MANAGED_PLUGIN_ID = 'agents-cursor-subagent-plugin';
 const SHA256 = /^[0-9a-f]{64}$/;
 const releaseCorpus = parseScenarioCorpus(await readFile(join(repository, 'evals/cursor-subagent-scenarios.v1.json'), 'utf8'));
 const packageCanaryScenario = releaseCorpus.scenarios.find(({ scenario_kind: kind }) => kind === 'package-canary-reference');
@@ -177,16 +177,16 @@ async function installAndDiscover(layout, executables, adapterCommand, env, runt
   const adapterRequest = { codex_executable: executables.codex };
   const marketplaces = await invokeReleaseAdapter(adapterCommand, 'marketplace-list', adapterRequest, bootstrapEnv);
   const plugins = await invokeReleaseAdapter(adapterCommand, 'plugin-list', adapterRequest, bootstrapEnv);
-  const manifestPath = join(layout.managed, 'plugins/codex-cursor-subagent-plugin/.codex-plugin/plugin.json');
+  const manifestPath = join(layout.managed, 'plugins/agents-cursor-subagent-plugin/.codex-plugin/plugin.json');
   const installedManifest = JSON.parse(await readFile(manifestPath, 'utf8'));
   assert.deepEqual(marketplaces.registrations.filter(({ id }) => id === MANAGED_PLUGIN_ID),
     [{ id: MANAGED_PLUGIN_ID, path: layout.managed }], 'managed marketplace registration differs');
   assert.deepEqual(plugins.registrations.filter(({ id }) => id === MANAGED_PLUGIN_ID),
     [{ id: MANAGED_PLUGIN_ID, marketplace_id: MANAGED_PLUGIN_ID,
-      source: join(layout.managed, 'plugins/codex-cursor-subagent-plugin'), version: installedManifest.version }],
+      source: join(layout.managed, 'plugins/agents-cursor-subagent-plugin'), version: installedManifest.version }],
     'managed plugin registration differs');
 
-  const configPath = join(layout.managed, 'plugins/codex-cursor-subagent-plugin/.mcp.json');
+  const configPath = join(layout.managed, 'plugins/agents-cursor-subagent-plugin/.mcp.json');
   const manifest = normalizeManifestBytes(JSON.stringify(installedManifest));
   const document = JSON.parse(await readFile(configPath, 'utf8'));
   const config = document.mcpServers?.['cursor-subagent'] || document;
@@ -254,7 +254,7 @@ async function captureReleaseProof(layout, configuration, executables, childEnv)
     '--agent-executable', executables.agent], { env: childEnv });
   if (preflight.exitCode !== 0 || preflight.envelope.state !== 'ready') throw new Error(`bootstrap preflight failed: ${JSON.stringify(preflight.envelope)}`);
   const [skillBytes, marker, adapter] = await Promise.all([
-    readFile(join(layout.managed, 'plugins/codex-cursor-subagent-plugin/skills/cursor-subagent/SKILL.md')),
+    readFile(join(layout.managed, 'plugins/agents-cursor-subagent-plugin/skills/cursor-subagent/SKILL.md')),
     readFile(join(layout.managed, MARKER_NAME), 'utf8').then(JSON.parse),
     invokeReleaseAdapter(configuration.adapterCommand, 'admit', { codex_executable: executables.codex }, childEnv),
   ]);

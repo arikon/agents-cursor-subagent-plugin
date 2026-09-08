@@ -1,5 +1,5 @@
 {
-  "name": "codex-cursor-subagent-plugin",
+  "name": "agents-cursor-subagent-plugin",
   "version": "0.1.0+codex.20260908111926",
   "description": "Interactive Cursor ACP subagent for Codex.",
   "author": {
@@ -7,7 +7,7 @@
   },
   "skills": "./skills/",
   "interface": {
-    "displayName": "Codex Cursor Subagent Plugin",
+    "displayName": "Codex and Claude Code Cursor Subagent Plugin",
     "shortDescription": "Launches Cursor Agent through ACP.",
     "longDescription": "Gives Codex tools for an interactive Cursor Agent session through native Cursor ACP.",
     "developerName": "Local developer",
