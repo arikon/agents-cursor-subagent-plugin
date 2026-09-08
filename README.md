@@ -10,6 +10,7 @@ review plans, and continue with follow-up tasks.
 
 ## Contents
 
+- [Demo](#demo)
 - [Requirements](#requirements)
 - [Cursor Agent setup](#cursor-agent-setup)
 - [Install in Codex](#install-in-codex)
@@ -17,6 +18,13 @@ review plans, and continue with follow-up tasks.
 - [Usage](#usage)
 - [Permissions and scope](#permissions-and-scope)
 - [Development](#development)
+
+## Demo
+
+Delegating a task to Cursor from Codex, then resuming the ACP session for a
+follow-up request:
+
+![Codex delegates a Pupa and Lupa joke to Cursor, then resumes the session to request another attempt.](assets/cursor-acp-demo.png)
 
 ## Requirements
 
