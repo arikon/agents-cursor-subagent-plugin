@@ -68,8 +68,9 @@ documented on that page.
 
 ## Install in Codex
 
-Install the plugin through a Git marketplace, using the standard Codex CLI
-workflow:
+See the official [Codex plugin installation guide](https://learn.chatgpt.com/docs/plugins#plugin-browser-in-codex-cli).
+For this repository, run these commands in your terminal with the Codex CLI
+available on `PATH`:
 
 ```bash
 codex plugin marketplace add arikon/agents-cursor-subagent-plugin --ref main
@@ -77,7 +78,10 @@ codex plugin add codex-cursor-subagent-plugin@codex-cursor-subagent-plugin
 ```
 
 The first command registers a GitHub repository as a marketplace; the second
-installs the plugin from its marketplace snapshot. Check the configured
+installs the plugin from its marketplace snapshot. The repository address is
+`arikon/agents-cursor-subagent-plugin`; the plugin and marketplace identifiers
+remain `codex-cursor-subagent-plugin`, so keep the selector above unchanged.
+Check the configured
 marketplaces and installed plugins with:
 
 ```bash
@@ -86,7 +90,8 @@ codex plugin list --json
 ```
 
 Start a new Codex task after installing the plugin so Codex loads its skills
-and MCP server.
+and MCP server. You can also open `/plugins` inside Codex CLI to inspect the
+configured marketplace and installed plugin.
 
 ### Update the Codex plugin
 
@@ -102,6 +107,8 @@ Start a new Codex task only after the final `plugin add` succeeds.
 
 ## Install in Claude Code
 
+See the official [Claude Code plugin installation guide](https://code.claude.com/docs/en/discover-plugins)
+and [CLI command reference](https://code.claude.com/docs/en/plugins-reference#cli-commands-reference).
 The same GitHub repository is a Claude Code marketplace. It requires `node` and
 an authenticated Cursor Agent available as `cursor-agent` in `PATH`; set
 `CURSOR_AGENT_COMMAND` in the Claude Code environment only when the command has
@@ -109,10 +116,18 @@ a non-standard location.
 
 ```bash
 claude plugin marketplace add arikon/agents-cursor-subagent-plugin
-claude plugin install cursor-acp-subagent@codex-cursor-subagent-plugin
+claude plugin install cursor-acp-subagent@codex-cursor-subagent-plugin --scope user
+claude plugin list --json
 ```
 
-Restart Claude Code after installation to load the plugin.
+Run these commands in your terminal. `--scope user` makes the plugin available
+to you across projects; use `--scope project` to share the plugin declaration
+with a repository instead. The Claude Code plugin is named `cursor-acp-subagent`,
+and its marketplace is named `codex-cursor-subagent-plugin`.
+
+Restart Claude Code after installation to load the plugin. In an existing
+session, `/reload-plugins` also applies plugin changes; use `/plugin` to inspect
+installed plugins.
 
 ### Update the Claude Code plugin
 
