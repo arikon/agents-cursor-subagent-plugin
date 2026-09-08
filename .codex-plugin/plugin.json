@@ -1,6 +1,6 @@
 {
   "name": "agents-cursor-subagent-plugin",
-  "version": "0.1.0+codex.20260908114130",
+  "version": "0.1.0+codex.20260908115024",
   "description": "Interactive Cursor ACP subagent for Codex.",
   "author": {
     "name": "Local developer"
@@ -12,6 +12,8 @@
     "longDescription": "Gives Codex tools for an interactive Cursor Agent session through native Cursor ACP.",
     "developerName": "Local developer",
     "category": "Productivity",
+    "composerIcon": "./assets/cursor.png",
+    "logo": "./assets/cursor.png",
     "capabilities": [
       "mcp"
     ],
