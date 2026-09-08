@@ -96,7 +96,7 @@ createInterface({ input: process.stdin }).on('line', (line) => {
   }
   if (request.method === 'skills/list') {
     if (mode === 'invalid-skills-list') return process.stdout.write(`${JSON.stringify({ id: request.id, result: { data: null } })}\n`);
-    return process.stdout.write(`${JSON.stringify({ id: request.id, result: { data: [{ cwd: request.params.cwds[0], skills: [{ name: 'codex-cursor-subagent-plugin:cursor-subagent', path: '/installed/skills/cursor-subagent/SKILL.md', enabled: true, pluginId: 'codex-cursor-subagent-plugin@personal' }] }] } })}\n`);
+    return process.stdout.write(`${JSON.stringify({ id: request.id, result: { data: [{ cwd: request.params.cwds[0], skills: [{ name: 'agents-cursor-subagent-plugin:cursor-subagent', path: '/installed/skills/cursor-subagent/SKILL.md', enabled: true, pluginId: 'agents-cursor-subagent-plugin@personal' }] }] } })}\n`);
   }
   if (request.method === 'turn/start' && (mode === 'elicitation' || mode === 'elicitation-handler-error')) {
     pendingTurn = { id: request.id, mode };

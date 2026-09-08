@@ -1,12 +1,12 @@
 {
-  "name": "codex-cursor-subagent-plugin",
+  "name": "agents-cursor-subagent-plugin",
   "description": "Interactive Cursor ACP subagent plugin for Codex and Claude Code.",
   "owner": {
     "name": "Local developer"
   },
   "plugins": [
     {
-      "name": "cursor-acp-subagent",
+      "name": "agents-cursor-subagent-plugin",
       "source": {
         "source": "github",
         "repo": "arikon/agents-cursor-subagent-plugin"

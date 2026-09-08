@@ -159,6 +159,20 @@ export const PROJECT_SEMANTIC_REGISTRY = Object.freeze({
       ]),
       modified: Object.freeze([]),
     }),
+    Object.freeze({
+      id: "align-plugin-distribution-identifiers",
+      capability: "cursor-plugin-distribution",
+      specDirectory: "cursor-plugin-distribution",
+      ownerClaim: "`cursor-plugin-distribution` owns managed package identity; `claude-code-plugin-distribution` owns Claude catalog identity.",
+      invariantIds: Object.freeze(["ID-1", "ID-2", "ID-3", "ID-4"]),
+      ownedRequirements: Object.freeze([]),
+      modified: Object.freeze([
+        Object.freeze({"capability": "cursor-plugin-distribution", "requirement": "Bootstrap paths and publication topology", "sourceChange": "package-cursor-subagent-plugin", "replacementReason": "Align only derived managed paths with the user-approved package identifier.", "sourceDigest": "86ce449622731ffb2614e58d74e72cb3b88ee26eab6cc09c3db529aa65be4173", "replacementDigest": "245cb50d85deadad4ab1db73e249aa9688ae8f962647c77b2c0fb21d71866cc9"}),
+        Object.freeze({"capability": "cursor-plugin-distribution", "requirement": "Managed marketplace lifecycle", "sourceChange": "improve-interactive-acp-ux", "replacementReason": "Align public package identifiers and the documented executable with the user-approved release naming.", "sourceDigest": "c8eb936407f47c09c28fc3060b71472aeeb7f46d7e640556dad106c311023593", "replacementDigest": "5857c1bb0ed774130df9759743a839dba72ef8a6f8b5a7c1c52d6edc8faead5a"}),
+        Object.freeze({"capability": "claude-code-plugin-distribution", "requirement": "Git marketplace публикует Claude Code plugin", "sourceChange": "add-claude-code-marketplace-plugin", "replacementReason": "Align public package identifiers and the documented executable with the user-approved release naming.", "sourceDigest": "fad501154cd376354a551dbbf81fb51cfce187673c4777c111485f3a6dd55bc9", "replacementDigest": "a7d083fb2d3b9fee43ea204d2655120bec77cb2cbaeb4abce37491ce14bb0311"}),
+        Object.freeze({"capability": "claude-code-plugin-distribution", "requirement": "Claude Code plugin предоставляет существующий interactive workflow", "sourceChange": "add-claude-code-marketplace-plugin", "replacementReason": "Align public package identifiers and the documented executable with the user-approved release naming.", "sourceDigest": "f7e91cf4dafe5292ac677d590d3d48f4f35345a6d73f33c85521b38b43ca005d", "replacementDigest": "95627a14977c7676856ce9e8b966a12c2dee52950706d260c5f4b496a90aa03f"}),
+      ]),
+    }),
   ]),
   roles: changeIds,
 });

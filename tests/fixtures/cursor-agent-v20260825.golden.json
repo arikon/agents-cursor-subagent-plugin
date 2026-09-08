@@ -18,7 +18,7 @@
   "acp_contract": {
     "initialize": {
       "protocolVersion": 1,
-      "clientInfo": { "name": "codex-cursor-subagent-plugin", "version": "0.1.0" },
+      "clientInfo": { "name": "agents-cursor-subagent-plugin", "version": "0.1.0" },
       "authMethodIds": ["cursor_login"],
       "loadSession": true,
       "steeringAdvertised": false

@@ -20,7 +20,7 @@ const adapter = fileURLToPath(new URL('./fixtures/codex-v01534-adapter.mjs', imp
 const fakeAcp = fileURLToPath(new URL('./fixtures/release-fake-acp.mjs', import.meta.url));
 const fakeProvider = fileURLToPath(new URL('./fixtures/fake-ollama-responses.mjs', import.meta.url));
 const turnTimeoutPreload = fileURLToPath(new URL('./fixtures/accelerate-turn-timeout.mjs', import.meta.url));
-const skill = 'codex-cursor-subagent-plugin:cursor-subagent';
+const skill = 'agents-cursor-subagent-plugin:cursor-subagent';
 const HOSTED_APP_SERVER_OUTPUT_LIMIT = 16 * 1_048_576;
 const HOSTED_OBSERVATION_TIMEOUT_MS = 300_000;
 const HOSTED_FAILURE_SOURCE_LIMIT = 1_048_576;
@@ -130,7 +130,7 @@ async function packageProof(fixture, node, env, skillEvidence) {
     runCommand: (command, args, options) => runPackageCommand(command, args, { ...options, timeoutMs: 70_000 }) });
   assert.equal(preflight.exitCode, 0, JSON.stringify(preflight.envelope));
   const marker = JSON.parse(await readFile(join(fixture.managed, MARKER_NAME), 'utf8'));
-  const managedBytes = await readFile(join(fixture.managed, 'plugins/codex-cursor-subagent-plugin/skills/cursor-subagent/SKILL.md'));
+  const managedBytes = await readFile(join(fixture.managed, 'plugins/agents-cursor-subagent-plugin/skills/cursor-subagent/SKILL.md'));
   const managedInstalledSkill = { sha256: sha256(managedBytes), bytes: managedBytes.length };
   const cacheLoadedSkill = { sha256: skillEvidence.content_sha256, bytes: skillEvidence.content_bytes };
   assert.deepEqual(cacheLoadedSkill, managedInstalledSkill, 'cache-loaded skill differs from managed installed skill');
@@ -1922,8 +1922,8 @@ test('credential-free client integration completes the installed-skill MCP loop 
     '--codex-executable', codex, '--agent-executable', fixture.fakeAgent,
     '--allowed-workspace-root', fixture.allowedWorkspace], { env });
   assert.equal(installed.exitCode, 0, JSON.stringify(installed.envelope));
-  const mcpConfig = JSON.parse(await readFile(join(fixture.managed, 'plugins/codex-cursor-subagent-plugin/.mcp.json'), 'utf8'));
-  assert.equal(mcpConfig.mcpServers['cursor-subagent'].args[0], join(fixture.managed, 'plugins/codex-cursor-subagent-plugin/scripts/recording-mcp-proxy.mjs'));
+  const mcpConfig = JSON.parse(await readFile(join(fixture.managed, 'plugins/agents-cursor-subagent-plugin/.mcp.json'), 'utf8'));
+  assert.equal(mcpConfig.mcpServers['cursor-subagent'].args[0], join(fixture.managed, 'plugins/agents-cursor-subagent-plugin/scripts/recording-mcp-proxy.mjs'));
   assert.equal(mcpConfig.mcpServers['cursor-subagent'].env.CURSOR_EVAL_MCP_EVIDENCE, join(evidenceRoot, 'mcp.json'));
   await rename(fixture.source, fixture.hidden);
   const provider = await startProvider(env);
@@ -1944,7 +1944,7 @@ test('credential-free client integration completes the installed-skill MCP loop 
       && skillEvidence.content_bytes === fixture.skillBytes;
     const proof = await packageProof(fixture, node, clientEnv, skillEvidence);
     const cachedMcpConfig = JSON.parse(await readFile(join(skillEvidence.path, '..', '..', '..', '.mcp.json'), 'utf8'));
-    assert.equal(cachedMcpConfig.mcpServers['cursor-subagent'].args[0], join(fixture.managed, 'plugins/codex-cursor-subagent-plugin/scripts/recording-mcp-proxy.mjs'));
+    assert.equal(cachedMcpConfig.mcpServers['cursor-subagent'].args[0], join(fixture.managed, 'plugins/agents-cursor-subagent-plugin/scripts/recording-mcp-proxy.mjs'));
     const thread = await runner.startThread({ cwd: fixture.workspace });
     await runner.startTurn({ threadId: thread.thread.id, text: 'Warm up the explicitly selected plugin MCP and return no tools.', skill: { name: skill, path: skillEvidence.path }, pluginName: skillEvidence.plugin_id });
     await waitForProviderEvidence(providerEvidence, 1);

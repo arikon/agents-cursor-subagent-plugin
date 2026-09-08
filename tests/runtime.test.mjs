@@ -2103,7 +2103,7 @@ test('Cursor Agent versioned golden owns the admitted model argv contract', () =
   assert.equal(cursorAgentGolden.help_contract.standalone_fast_option, false);
   assert.match(cursorAgentGolden.help_contract.force_option, /not admitted/);
   assert.deepEqual(cursorAgentGolden.acp_contract.initialize, {
-    protocolVersion: 1, clientInfo: { name: 'codex-cursor-subagent-plugin', version: '0.1.0' },
+    protocolVersion: 1, clientInfo: { name: 'agents-cursor-subagent-plugin', version: '0.1.0' },
     authMethodIds: ['cursor_login'], loadSession: true, steeringAdvertised: false,
   });
   assert.equal(MANIFEST_VERSION, cursorAgentGolden.acp_contract.initialize.clientInfo.version);

@@ -1,5 +1,5 @@
 {
-  "name": "cursor-acp-subagent",
+  "name": "agents-cursor-subagent-plugin",
   "description": "Delegate tasks to Cursor Agent through an interactive ACP session.",
   "author": {
     "name": "Local developer"

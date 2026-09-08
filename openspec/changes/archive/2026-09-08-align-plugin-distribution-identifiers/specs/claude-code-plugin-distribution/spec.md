@@ -1,10 +1,4 @@
-# claude-code-plugin-distribution Specification
-
-## Purpose
-Определяет распространение существующего Cursor ACP-субагента как автономного
-Claude Code plugin из marketplace этого же Git-репозитория.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Git marketplace публикует Claude Code plugin
 Репозиторий SHALL содержать Claude Code marketplace catalog и один plugin с
@@ -34,14 +28,3 @@ default `cursor-agent`.
 - **WHEN** Claude Code запускает MCP server после установки plugin
 - **THEN** runtime path разрешается внутри cache-копии plugin, а Cursor command
   берётся из user environment либо default `cursor-agent`
-
-### Requirement: Упаковка не расширяет authority boundary
-Claude Code packaging MUST NOT изменять Cursor ACP runtime API, state machine
-или правила permission answer. Установка или включение plugin MUST NOT означать
-автоматическое одобрение действий Cursor; существующий skill сохраняет
-interactive ответы на вопрос, план и permission согласно текущей user authority.
-
-#### Scenario: Cursor запрашивает permission
-- **WHEN** запущенный из Claude Code Cursor runtime публикует pending permission
-- **THEN** plugin возвращает существующий pending workflow и не посылает
-  automatic approval только из-за факта marketplace installation

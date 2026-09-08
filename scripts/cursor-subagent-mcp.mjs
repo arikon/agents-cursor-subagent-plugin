@@ -123,7 +123,7 @@ export const ADAPTER = Object.freeze({
   },
   pluginArgv: (roots) => roots.flatMap((root) => ['--plugin-dir', root]),
   sessionArgv: (modelArgv, pluginArgv = []) => ['--auto-review', '--sandbox', 'enabled', ...modelArgv, ...pluginArgv, 'acp'],
-  initialize: () => ({ protocolVersion: 1, clientCapabilities: { fs: { readTextFile: true, writeTextFile: true }, terminal: false }, clientInfo: { name: 'codex-cursor-subagent-plugin', version: MANIFEST_VERSION } }),
+  initialize: () => ({ protocolVersion: 1, clientCapabilities: { fs: { readTextFile: true, writeTextFile: true }, terminal: false }, clientInfo: { name: 'agents-cursor-subagent-plugin', version: MANIFEST_VERSION } }),
   methods: { auth: 'authenticate', sessionNew: 'session/new', sessionLoad: 'session/load', setMode: 'session/set_mode', prompt: 'session/prompt', cancel: 'session/cancel', todos: 'cursor/update_todos', task: 'cursor/task', image: 'cursor/generate_image', read: 'fs/read_text_file', write: 'fs/write_text_file' },
   loadParams: (sessionId, cwd) => ({ sessionId, cwd, mcpServers: [] }),
   admitModeState: admittedModeState,

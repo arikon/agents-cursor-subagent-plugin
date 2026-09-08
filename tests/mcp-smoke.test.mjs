@@ -20,7 +20,7 @@ test('Claude marketplace plugin uses the cached plugin root without changing aut
   const plugin = JSON.parse(readFileSync(new URL('../.claude-plugin/plugin.json', import.meta.url), 'utf8'));
   const marketplace = JSON.parse(readFileSync(new URL('../.claude-plugin/marketplace.json', import.meta.url), 'utf8'));
   const server = plugin.mcpServers['cursor-subagent'];
-  assert.equal(plugin.name, 'cursor-acp-subagent');
+  assert.equal(plugin.name, 'agents-cursor-subagent-plugin');
   assert.equal(plugin.skills, './skills');
   assert.equal(server.command, 'node');
   assert.deepEqual(server.args, ['${CLAUDE_PLUGIN_ROOT}/scripts/cursor-subagent-mcp.mjs']);
@@ -28,10 +28,10 @@ test('Claude marketplace plugin uses the cached plugin root without changing aut
   assert.equal('approval_mode' in server, false);
   assert.equal('CURSOR_AGENT_COMMAND' in server.env, false);
   assert.equal(JSON.stringify(plugin).includes('/Users/'), false);
-  assert.equal(marketplace.name, 'codex-cursor-subagent-plugin');
+  assert.equal(marketplace.name, 'agents-cursor-subagent-plugin');
   assert.deepEqual(marketplace.plugins, [{
-    name: 'cursor-acp-subagent',
-    source: { source: 'github', repo: 'arikon/codex-cursor-subagent-plugin' },
+    name: 'agents-cursor-subagent-plugin',
+    source: { source: 'github', repo: 'arikon/agents-cursor-subagent-plugin' },
     description: 'Delegate tasks to Cursor Agent through an interactive ACP session.',
     strict: true,
   }]);

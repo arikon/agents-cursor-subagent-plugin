@@ -39,7 +39,7 @@ export async function runFakeCodexAdapter(operation, request, env = process.env)
       const kind = env.FAKE_CODEX_OBSERVED_DRIFT_KIND;
       if (kind === 'coupled') state.marketplaces = [];
       if (kind === 'duplicate-marketplace' && state.marketplaces[0]) state.marketplaces.push({ ...state.marketplaces[0] });
-      if (kind === 'target-plugin') state.plugins.push({ id: 'codex-cursor-subagent-plugin', marketplace_id: 'codex-cursor-subagent-plugin', source: '/foreign', version: '9.9.9' });
+      if (kind === 'target-plugin') state.plugins.push({ id: 'agents-cursor-subagent-plugin', marketplace_id: 'agents-cursor-subagent-plugin', source: '/foreign', version: '9.9.9' });
     }
     const failAfter = env.FAKE_CODEX_LIST_FAILURE_AFTER_MUTATION;
     const [countedOperation, rawCount] = (env.FAKE_CODEX_LIST_FAILURE_AFTER_MUTATION_COUNT || '').split(':');
@@ -77,15 +77,15 @@ export async function runFakeCodexAdapter(operation, request, env = process.env)
   }
   if (operation === 'render') {
     if (env.FAKE_CODEX_LOCK_FAILED_STAGE === '1') {
-      await chmod(`${request.managed_root}.codex-cursor-subagent-plugin.staging`, 0o555);
+      await chmod(`${request.managed_root}.agents-cursor-subagent-plugin.staging`, 0o555);
       return normalized(7, 'injected render failure with locked staging\n', 'stderr');
     }
     if (env.FAKE_CODEX_RENDER_VARIANT === 'files-not-array') return json({ files: {} });
     const mcpCommand = env.FAKE_CODEX_MCP_COMMAND || request.node_executable;
     const mcpArgs = env.FAKE_CODEX_MCP_ARGS ? JSON.parse(env.FAKE_CODEX_MCP_ARGS) : [join(request.install_root, 'scripts/cursor-subagent-mcp.mjs')];
     const files = [
-      { path: '.agents/plugins/marketplace.json', content_base64: Buffer.from(JSON.stringify({ name: 'codex-cursor-subagent-plugin', plugins: [{ name: 'codex-cursor-subagent-plugin', source: { source: 'local', path: './plugins/codex-cursor-subagent-plugin' } }] })).toString('base64') },
-      { path: env.FAKE_CODEX_RENDER_OVERRIDE === '1' ? 'plugins/codex-cursor-subagent-plugin/README.md' : 'plugins/codex-cursor-subagent-plugin/.mcp.json', content_base64: Buffer.from(JSON.stringify({
+      { path: '.agents/plugins/marketplace.json', content_base64: Buffer.from(JSON.stringify({ name: 'agents-cursor-subagent-plugin', plugins: [{ name: 'agents-cursor-subagent-plugin', source: { source: 'local', path: './plugins/agents-cursor-subagent-plugin' } }] })).toString('base64') },
+      { path: env.FAKE_CODEX_RENDER_OVERRIDE === '1' ? 'plugins/agents-cursor-subagent-plugin/README.md' : 'plugins/agents-cursor-subagent-plugin/.mcp.json', content_base64: Buffer.from(JSON.stringify({
         command: mcpCommand,
         args: mcpArgs,
         env: { CURSOR_AGENT_COMMAND: request.agent_executable, AGENT_CLI_CREDENTIAL_STORE: 'file', CURSOR_SUBAGENT_ALLOWED_ROOTS: JSON.stringify(request.allowed_workspace_roots),
@@ -100,7 +100,7 @@ export async function runFakeCodexAdapter(operation, request, env = process.env)
     return json({ files });
   }
   if (operation === 'mcp-check') {
-    const path = join(request.managed_root, 'plugins/codex-cursor-subagent-plugin/.mcp.json');
+    const path = join(request.managed_root, 'plugins/agents-cursor-subagent-plugin/.mcp.json');
     const regular = await stat(path).then((value) => value.isFile()).catch(() => false);
     return json({ ok: regular, message: regular ? 'fixture config found' : 'fixture config missing' });
   }
