@@ -8,6 +8,32 @@ test('runtime rejects scope before session allocation', async () => {
   await assert.rejects(runtime.call('cursor_start_session', { cwd: '/definitely-missing', mode: 'ask' }), { error_code: 'scope_rejected' });
 });
 
+for (const phase of ['credentials', 'version']) test(`successful ${phase} completion after shutdown cannot revive or spawn a session`, async (t) => {
+  const runtime = withInjectedFake(t);
+  let release;
+  const gate = new Promise((resolve) => { release = resolve; });
+  let entered;
+  const ready = new Promise((resolve) => { entered = resolve; });
+  const childEnvironment = runtime.childEnvironment.bind(runtime);
+  runtime.childEnvironment = async (signal) => {
+    const env = await childEnvironment(signal);
+    const record = [...runtime.sessions.values()][0];
+    if (phase === 'version') record.probeCursorVersion = async () => { entered(); await gate; return CURSOR_ADAPTER_VERSION; };
+    else { entered(); await gate; }
+    return env;
+  };
+  const pending = runtime.call('cursor_start_session', { cwd, mode: 'ask' });
+  await ready;
+  await runtime.shutdown();
+  release();
+  const result = await pending;
+  assert.equal(result.session_state, 'tombstone');
+  assert.equal(result.failure_kind, null);
+  assert.equal(runtime.live.size, 0);
+  assert.equal([...runtime.sessions.values()][0].child, null);
+  assert.equal((await runtime.call('cursor_session_status', { session_id: result.session_id })).session_state, 'tombstone');
+});
+
 test('runtime exposes normalized init tombstone when ACP cannot spawn', async () => {
   const old = process.env.CURSOR_AGENT_COMMAND; process.env.CURSOR_AGENT_COMMAND = '/definitely-missing-agent';
   try {
@@ -139,10 +165,15 @@ test('startup warnings allow live sessions and do not leak into later terminal d
   assert.equal(session.session_state, 'live');
   assert.equal(session.failure_kind, null);
   assert.equal(session.terminal_reason, null);
-  await runtime.call('cursor_close_session', { session_id: session.session_id });
+  const record = runtime.sessions.get(session.session_id);
+  record.child.stderr.emit('data', Buffer.from('late live warning'));
+  const closing = runtime.call('cursor_close_session', { session_id: session.session_id });
+  record.child.stderr.emit('data', Buffer.from('late closing warning'));
+  await closing;
   const closed = await runtime.call('cursor_session_status', { session_id: session.session_id });
   assert.equal(closed.session_state, 'tombstone');
   assert.doesNotMatch(closed.terminal_reason?.text || '', /nonfatal startup warning/);
+  assert.doesNotMatch(closed.terminal_reason?.text || '', /late (live|closing) warning/);
 
   delete runtime.env.FAKE_ACP_STARTUP_WARNING;
   runtime.env.FAKE_ACP_STARTUP_STDERR = 'new startup failure';
@@ -432,4 +463,3 @@ test('runtime rejects a wait interval outside the public range', async (t) => {
   }
   await runtime.call('cursor_close_session', { session_id: session.session_id });
 });
-

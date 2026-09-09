@@ -80,6 +80,11 @@ Cursor.
    report that work remains in progress and end the Codex turn while leaving
    the Cursor turn active.
 
+   If a wait response is unavailable, repeat `cursor_wait` with the retained
+   session/turn IDs to observe the same turn. A repeated terminal snapshot is
+   not another execution; do not send a prompt, resume, or redelegate to recover
+   a missing response.
+
    If `cursor_wait` is locally rejected with `unknown_session`, `unknown_turn`,
    `invalid_args`, or `invalid_text_encoding`, compare its `session_id` and
    `turn_id` with the latest retained public state. Correct only missing or

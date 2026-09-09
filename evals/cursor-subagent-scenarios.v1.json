@@ -636,7 +636,7 @@
       ],
       "initial_input": "Начни у Cursor длительный первый этап проверки и потребуй, чтобы Cursor включил точный маркер ACTIVE_FIRST_OK в свой результат. Подожди только один обычный интервал; если результат ещё не готов, сообщи промежуточное состояние с данными для продолжения и оставь задачу выполняться. Затем я пришлю дополнение отдельным сообщением.",
       "prior_authority": { "kind": "none" },
-      "harness_faults": ["accelerate-wait-timeout", "hold-terminal-until-followup", "lose-terminal-wait-response-once"],
+      "harness_faults": ["accelerate-wait-timeout", "hold-terminal-until-followup"],
       "program": {
         "kind": "fake-acp",
         "steps": [
@@ -667,6 +667,33 @@
         { "turn_index": 2, "category": "interaction", "required_fragments": ["ACTIVE_SECOND_OK"], "forbidden_fragments": [] }
       ],
       "fixture_predicate": { "kind": "terminal-token", "token": "ACTIVE_SECOND_OK" },
+      "expected_actual_task_outcome": "succeeded",
+      "expected_enabled_eval_status": "pass"
+    },
+    {
+      "scenario_kind": "programmed",
+      "scenario_id": "model-terminal-wait-response-loss",
+      "lane": "model-behavior",
+      "owner_requirements": [
+        { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" }
+      ],
+      "initial_input": "Попроси Cursor выполнить проверку и вернуть точный маркер WAIT_RECOVERED_OK. Дождись результата и сообщи его.",
+      "prior_authority": { "kind": "none" },
+      "harness_faults": ["lose-terminal-wait-response-once"],
+      "program": { "kind": "fake-acp", "steps": [
+        { "type": "terminal", "step_id": "terminal-1", "turn_status": "completed", "result_text": "WAIT_RECOVERED_OK" }
+      ] },
+      "followups": [],
+      "expected_trace": [
+        { "kind": "session.allocated", "mode": "ask" },
+        { "kind": "turn.started" },
+        { "kind": "turn.wait-response-recovered", "step_id": "terminal-1", "matched": true },
+        { "kind": "turn.completed", "step_id": "terminal-1" },
+        { "kind": "turn.receipt", "step_id": "terminal-1", "matched": true, "result_truncated": false },
+        { "kind": "session.close-attempted" }
+      ],
+      "report_checks": [{ "turn_index": 1, "category": "interaction", "required_fragments": ["WAIT_RECOVERED_OK"], "forbidden_fragments": [] }],
+      "fixture_predicate": { "kind": "terminal-token", "token": "WAIT_RECOVERED_OK" },
       "expected_actual_task_outcome": "succeeded",
       "expected_enabled_eval_status": "pass"
     },

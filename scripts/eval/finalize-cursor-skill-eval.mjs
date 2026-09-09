@@ -155,8 +155,8 @@ async function validateMatrix(path, expected, corpus, freeze, bundleRoot, fs) {
       || result.attempts[0].error_code !== null || result.artifact_root !== result.process?.artifact_root
       || !same(result.attempts[0].process, result.process) || !bySerial.has(result.serial_index)) fail(`non-passing matrix result: ${result.scenario_id}`);
     bySerial.get(result.serial_index).push(result.scenario_id);
-    if (!entries.has(result.evidence_ref) || !entries.has(result.artifact_root ? `${result.artifact_root}/driver-stdout.txt` : '')
-      || !entries.has(result.artifact_root ? `${result.artifact_root}/driver-stderr.txt` : '')
+    if (!entries.has(result.evidence_ref) || !entries.has(`${result.artifact_root}/driver-stdout.txt`)
+      || !entries.has(`${result.artifact_root}/driver-stderr.txt`)
       || !contained(resolve(base, result.evidence_ref), resolve(base, result.artifact_root))) fail(`unindexed result evidence: ${result.scenario_id}`);
     const supervisorRoots = [...entries.keys()].filter((ref) => ref.startsWith(`${result.artifact_root}/`) && ref.endsWith('/result.json'))
       .map((ref) => dirname(ref)).filter((ref) => relative(result.artifact_root, ref).split('/').length === 1

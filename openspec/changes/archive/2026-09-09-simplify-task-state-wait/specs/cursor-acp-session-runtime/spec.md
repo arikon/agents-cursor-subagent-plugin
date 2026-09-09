@@ -488,3 +488,136 @@ fixture-local.
 #### Scenario: Истёк tombstone-retention TTL
 - **WHEN** клиент обращается к записи после удаления tombstone
 - **THEN** сервер возвращает unknown session и не запускает новый процесс
+
+### Requirement: Нормативные limits runtime
+Этот requirement — единственный владелец численных bounds. Все значения
+inclusive; overflow/вне диапазона public arg даёт MCP error без mutation.
+Runtime MUST применять следующую таблицу.
+
+| Name | Value / range | Overflow action |
+|---|---|---|
+| model discovery slots | 1 per MCP runtime | resource_limit без очереди |
+| model discovery total timeout | 15 000 ms | model_discovery_failed, abort HTTP/stream |
+| model discovery response payload | 1 048 576 bytes | resource_limit, abort HTTP/stream; separate from public input bound |
+| init timeout | fixed 15 000 ms | terminal init timeout |
+| turn timeout | fixed 3 600 000 ms | terminal turn timeout |
+| idle TTL | fixed 900 000 ms | shared shutdown |
+| wait timeout | default 30 000 ms, 1 000..180 000 | MCP error |
+| progress excerpt | fixed 512 UTF-8 bytes | retain newest bounded excerpt |
+| live slots / pending / waiters | 8 / 8 per turn / 8 per session | pre-allocation MCP error / resource_limit |
+| tombstones | 64 | evict expired, then lowest `(tombstoned_at, session_id)` |
+| events | 256 | FIFO: lowest `event_id` |
+| shutdown grace / tombstone retention | 5 000 / 300 000 ms | shared shutdown / unknown after retention |
+| public input / derived text / FS file | 64 000 / 8 000 / 1 048 576 UTF-8 bytes | reject input / BoundedText truncation / resource_limit |
+| retained result per turn / result page | 1 048 576 / 8 000 UTF-8 bytes | explicit terminal failure / Unicode-safe page |
+| ACP NDJSON frame / normalized pending context | 1 048 576 / 64 000 UTF-8 bytes | protocol_error / resource_limit before publication |
+
+These are internal constants, not operator configuration. Idle TTL starts after init success and terminal completion, stops while active
+turn exists, and status/wait/read do not reset it. Tombstone retention starts once at
+`tombstoned_at` and close/read never reset it. Event IDs never wrap; exhaustion is
+unreachable under the bounded local-session contract and has no public failure kind.
+
+#### Scenario: Deterministic eviction
+- **WHEN** a new tombstone exceeds cap
+- **THEN** runtime evicts expired records first, otherwise lowest `(tombstoned_at, session_id)`
+
+These values are not operator settings.
+
+#### Scenario: Three-minute wait cap
+- **WHEN** caller supplies integer `timeout_ms` in 1 000..180 000
+- **THEN** runtime admits it, while a value above 180 000 is rejected without
+  allocation or state mutation
+
+### Requirement: Режимы Cursor и ACP callbacks
+Runtime SHALL expose the normalized `mode=ask|plan|agent` and immutable process
+policy metadata `run_mode=auto_review`, `sandbox=enabled`. A version-specific
+Cursor adapter fixture admits a process only when it proves the required mode and
+callback capabilities; admission failure is init failure. Exact argv, ACP methods,
+payload encoding and version belong only to that fixture.
+
+До handshake runtime MUST применить fixed process capabilities
+read=true/write=true/terminal=false, потому что admitted mode может меняться
+между turns без перезапуска ACP process. Handler всё равно MUST допускать write
+только при current `mode=agent`; тот же callback в `ask|plan` возвращает
+`scope_rejected`. Handlers use admitted adapter callbacks, canonical containment,
+regular-file and strict UTF-8 checks, and the shared byte cap. Write is full
+create-or-replace UTF-8: it requires matching session/capability/current mode, an
+absolute path, existing regular non-symlink target inside `cwd` or an existing
+canonical parent inside `cwd` for a new target; directory, symlink, outside-cwd
+and oversized values reject. It returns the admitted adapter success or error
+outcome; no atomic/no-partial promise is made. Cursor-specific wire normalization
+is adapter-owned and covered by fixtures. Эти callbacks не являются OS sandbox;
+Cursor Auto-Review может самостоятельно не эскалировать safe action. Caller
+наблюдает normalized pending question/plan/permission requests через wait;
+collaboration evidence определяется «Role-neutral mode and collaboration surface».
+Filesystem callbacks выполняются и
+получают response только через runtime mode/cwd/text/limit checks. Unsupported
+callbacks получают bounded provider error, а malformed/unadmitted collaboration
+requests отклоняются или acknowledged-and-ignored согласно их owner contract,
+но не объявляются caller-visible requests.
+
+#### Scenario: Plan читает fixture
+- **WHEN** Cursor в `plan` запрашивает text file внутри session `cwd`
+- **THEN** runtime возвращает bounded content через ACP callback, но отклоняет write и terminal callback
+
+#### Scenario: Agent пишет в workspace
+- **WHEN** Cursor после перехода в `agent` запрашивает write внутри session `cwd`
+- **THEN** runtime выполняет bounded write callback без нового ACP process; write в `ask|plan` либо путь вне/symlink за `cwd` отклоняется
+
+#### Scenario: Cap и текстовый range
+- **WHEN** read-файл больше `FS file` limit, даже если adapter запрашивает малый range
+- **THEN** runtime возвращает `resource_limit` до decode; malformed UTF-8 меньшего файла возвращает `invalid_text_encoding`, а `line` за EOF — пустой content
+
+#### Scenario: Auto-review с sandbox
+- **WHEN** delegate запускает v1 session through an admitted Cursor adapter
+- **THEN** runtime возвращает оба immutable metadata, exposes only admitted
+  normalized pending evidence and handles collaboration according to
+  «Role-neutral mode and collaboration surface», and does not claim that every
+  provider callback becomes a caller-visible permission request
+
+### Requirement: Полное чтение terminal result
+Runtime MUST retain the exact concatenated normalized ACP agent-message text
+up to the retained-result bound, rather than truncating the accumulator to
+preview size. Thinking, tools and private archives are not result sources.
+This is the existing public agent-text stream, not a claim of provider-side
+final-phase separation. The bounded preview and its immutable terminal receipt
+remain compatible: receipt hash describes preview bytes, `ResultPage.sha256`
+describes the full retained result. Empty completed text is a valid full result.
+
+`cursor_read_result` MUST synchronously read only the addressed retained last
+terminal turn with a non-null result. It MUST NOT call the provider, create a
+turn/event, or refresh idle/retention timers. It
+returns the largest whole-code-point prefix from `offset` within the page
+bound, with exact next offset; concatenating sequential pages from zero to EOF
+reproduces the result and its full digest without omission or duplication.
+At `offset = total_bytes` return empty text and EOF. A negative, noninteger,
+out-of-range or non-code-point-boundary offset returns `invalid_args`.
+Unknown session/turn uses existing errors; an active turn or null result uses
+`protocol_error`. Repeating a read is idempotent. A retained previous terminal
+result remains readable while a newer turn runs, until that newer turn becomes
+the retained last terminal. Close preserves reads only within existing
+tombstone retention/eviction; expired or replaced data is not reconstructed.
+No disk spool, persistent registry, separate result lifecycle or archive API is
+introduced: storage belongs to the existing active and last-terminal turns.
+
+If accepted text would exceed the retained-result limit, runtime MUST stop that
+turn through the existing failed-turn shutdown path with bounded reason
+`terminal_result_limit`, null result and no full-result digest. Partial text
+MUST NOT be published as a complete result or silently clipped to success.
+A prefix is not recovered by asking the provider to regenerate the answer.
+
+#### Scenario: Long review remains completely readable
+- **WHEN** a completed review exceeds the preview bound within the retained limit
+- **THEN** terminal wait exposes the bounded preview according to «Публичный MCP tool contract»; sequential explicit
+  reads recover every finding including the tail, with a matching full digest
+
+#### Scenario: UTF-8 page and retention boundaries
+- **WHEN** pages cross multibyte characters, a page is repeated, or the caller
+  reads after close while the terminal turn remains retained
+- **THEN** exact text and stable offsets/digest are preserved without provider
+  calls, events or timer extension; replaced/evicted IDs use existing errors
+
+#### Scenario: Result exceeds the storage limit
+- **WHEN** agent text crosses the retained-result cap
+- **THEN** the turn fails with `terminal_result_limit` and null result; caller
+  cannot mistake a partial preview or digest for complete review evidence

@@ -28,31 +28,22 @@ test('observed MCP transcript drives oracle order, IDs, call outcomes and droppe
   const observe = (calls, safeEvidence = safe, droppedCalls = 0) => observationsFromEvidence(scenario, { calls, dropped_calls: droppedCalls }, safeEvidence, outcomes);
   assert.equal(scoreWithCapturedFinals(scenario, observe([delegate, pending, answer, terminal, close])).eval_status, 'pass');
 
-  const watermarkedPending = structuredClone(pending); watermarkedPending.response.last_event_id = 4;
-  const watermarkedAnswer = structuredClone(answer); watermarkedAnswer.response.last_event_id = 6;
-  for (const afterEventId of [4, 6, 0, undefined]) {
-    const nextWait = structuredClone(terminal);
-    if (afterEventId === undefined) delete nextWait.request.after_event_id;
-    else nextWait.request.after_event_id = afterEventId;
-    assert.equal(scoreWithCapturedFinals(scenario,
-      observe([delegate, watermarkedPending, watermarkedAnswer, nextWait, close])).eval_status, 'pass');
-  }
-  const repeatedCursorScenario = structuredClone(scenario);
-  repeatedCursorScenario.expected_trace.splice(4, 0,
-    { kind: 'turn.wait-timeout', timeout_ms: 1000, timeout_omitted: false, progress_revision_matched: true },
-    { kind: 'turn.wait-recovered', timeout_ms: 2000, timeout_omitted: false, progress_revision_matched: true });
-  const repeatedCursorWait = structuredClone(terminal);
-  repeatedCursorWait.request = { ...repeatedCursorWait.request, after_event_id: 4, timeout_ms: 1000 };
-  repeatedCursorWait.response = { ok: true, session_id: 'session-1', turn_id: 'turn-1', turn_status: 'running', wait_timeout: true };
-  const repeatedCursorTerminal = structuredClone(terminal);
-  repeatedCursorTerminal.request = { ...repeatedCursorTerminal.request, after_event_id: 4, timeout_ms: 2000 };
-  const repeatedCursorObservations = observationsFromEvidence(repeatedCursorScenario,
-    { calls: [delegate, watermarkedPending, watermarkedAnswer, repeatedCursorWait, repeatedCursorTerminal, close], dropped_calls: 0 }, safe, outcomes);
-  assert.equal(scoreWithCapturedFinals(repeatedCursorScenario, repeatedCursorObservations).eval_status, 'pass');
-  const futureWait = structuredClone(terminal); futureWait.request.after_event_id = 7;
-  futureWait.response = { ok: false, error_code: 'invalid_args' };
+  const timeoutScenario = structuredClone(scenario);
+  timeoutScenario.expected_trace.splice(4, 0,
+    { kind: 'turn.wait-timeout', timeout_ms: 1000, timeout_omitted: false },
+    { kind: 'turn.wait-recovered', timeout_ms: 2000, timeout_omitted: false });
+  const runningWait = structuredClone(terminal);
+  runningWait.request.timeout_ms = 1000;
+  runningWait.response = { ok: true, session_id: 'session-1', turn_id: 'turn-1', turn_status: 'running', wait_timeout: true };
+  const terminalWait = structuredClone(terminal);
+  terminalWait.request.timeout_ms = 2000;
+  const timeoutObservations = observationsFromEvidence(timeoutScenario,
+    { calls: [delegate, pending, answer, runningWait, terminalWait, close], dropped_calls: 0 }, safe, outcomes);
+  assert.equal(scoreWithCapturedFinals(timeoutScenario, timeoutObservations).eval_status, 'pass');
+  const rejectedWait = structuredClone(terminal); rejectedWait.request.after_event_id = 7;
+  rejectedWait.response = { ok: false, error_code: 'invalid_args' };
   assert.equal(scoreWithCapturedFinals(scenario,
-    observe([delegate, watermarkedPending, watermarkedAnswer, futureWait, close])).eval_status, 'agent_behavior_mismatch');
+    observe([delegate, pending, answer, rejectedWait, close])).eval_status, 'agent_behavior_mismatch');
 
   const answerBeforePending = scoreWithCapturedFinals(scenario, observe([delegate, answer, pending, terminal, close]));
   assert.ok(answerBeforePending.mismatches.includes('answer-before-pending'));
@@ -197,4 +188,3 @@ test('runtime recovery trace proves the old wrapper tombstone without duplicatin
     ['turn.completed', 'turn.receipt', 'session.tombstoned']);
   assert.equal(scoreWithCapturedFinals(scenario, closeTombstone).eval_status, 'pass');
 });
-

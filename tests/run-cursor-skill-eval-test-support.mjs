@@ -48,7 +48,7 @@ const observedTraceFor = (scenario, sessionId = 'S') => {
     if (['session.resumed', 'session.resume-failed'].includes(entry.kind)) currentSessionId = `${sessionId}-resumed`;
     if (entry.kind === 'turn.started') turnIndex += 1;
     const codexTurnIndex = authorityTurn(entry);
-    return { ...entry, ...(entry.kind === 'session.start-rejected' ? {} : { session_id: currentSessionId }), ...(!entry.kind.startsWith('session.') ? { turn_id: `T${turnIndex || 1}` } : {}),
+    return { ...entry, ...(entry.kind === 'turn.wait-response-recovered' ? { lost_call_index: 2, repeated_call_index: 3 } : {}), ...(entry.kind === 'session.start-rejected' ? {} : { session_id: currentSessionId }), ...(!entry.kind.startsWith('session.') ? { turn_id: `T${turnIndex || 1}` } : {}),
       ...(codexTurnIndex === null ? {} : { codex_turn_index: codexTurnIndex }),
       ...(entry.kind.startsWith('pending.') || entry.kind.startsWith('answer.') ? { request_id: scenario.program.steps.find(({ step_id: stepId }) => stepId === entry.step_id)?.callback_id } : {}) };
   });
@@ -60,10 +60,16 @@ const observedCallbacksFor = (scenario) => scenario.program.steps.flatMap((step)
 const transcriptFor = (scenario) => !scenario.harness_faults?.includes('lose-terminal-wait-response-once') ? transcript : {
   calls: [
     { tool: 'cursor_delegate', response: { ok: true, session_id: 'S', turn_id: 'T' } },
-    { tool: 'cursor_wait', request: { session_id: 'S', turn_id: 'T', timeout_ms: 60_000 }, response: { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'completed' }, withheld_terminal_response: true, caller_error_code: 'transport_error' },
-    { tool: 'cursor_wait', request: { session_id: 'S', turn_id: 'T', timeout_ms: 60_000 }, response: { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'completed' } },
-  ], dropped_calls: 0, unexpected_input_requests: 0, turn_call_ranges: [{ start: 0, end: 1 }, { start: 1, end: 3 }],
+    { tool: 'cursor_wait', request: lossWaitRequest, response: { ok: false, error_code: 'eval_wait_response_lost', message: 'cursor_wait response unavailable' }, withheld_response: lossWaitResponse },
+    { tool: 'cursor_wait', request: lossWaitRequest, response: lossWaitResponse },
+  ], dropped_calls: 0, unexpected_input_requests: 0, turn_call_ranges: [{ start: 0, end: 3 }],
 };
+const lossWaitRequest = { session_id: 'S', turn_id: 'T', arguments_without_session_turn_sha256: createHash('sha256').update('{}').digest('hex') };
+const lossResultDigest = createHash('sha256').update('WAIT_RECOVERED_OK').digest('hex');
+const lossWaitResponse = { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'completed',
+  wait_timeout: false, pending: [], session_state: 'live',
+  result: { text_bytes: 17, text_sha256: lossResultDigest, truncated: false },
+  terminal_receipt: { session_id: 'S', turn_id: 'T', turn_status: 'completed', last_event_id: 1, result_sha256: lossResultDigest, result_truncated: false } };
 const reportChecksFor = (scenario) => scenario.report_checks || [];
 const capturedFinalsFor = (scenario) => {
   if (scenario.scenario_kind !== 'programmed') return [];

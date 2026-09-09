@@ -1,10 +1,11 @@
 import { access } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { evaluateScenario, findRecoveredCalls } from '../scripts/cursor-eval-scenario.mjs';
+import { evaluateScenario, findRecoveredCalls, findTerminalWaitLossRecovery } from '../scripts/cursor-eval-scenario.mjs';
 
 function observationsFromEvidence(scenario, transcriptEvidence, safeEvidence, outcomes) {
   const calls = transcriptEvidence.calls;
+  const waitLossRecovery = findTerminalWaitLossRecovery(scenario, transcriptEvidence);
   const recoveredProjectionIndices = new Set(findRecoveredCalls(
     transcriptEvidence, (scenario.followups?.length || 0) + 1,
   ).flatMap(({ failed_call_index: start, successful_call_index: end }) =>
@@ -17,7 +18,6 @@ function observationsFromEvidence(scenario, transcriptEvidence, safeEvidence, ou
     .filter(({ entry: { event, step_id: stepId } }) => event === 'terminal_armed' && typeof stepId === 'string');
   const promptContractEvidence = safeEvidence.map((entry, index) => ({ entry, index }))
     .filter(({ entry: { kind, step_id: stepId } }) => kind === 'prompt.contract' && typeof stepId === 'string');
-  const progressEvidence = safeEvidence.filter(({ kind, step_id: stepId }) => kind?.startsWith('progress.') && typeof stepId === 'string');
   const activeFollowupEvidence = safeEvidence.find(({ event, step_id: stepId }) => event === 'followup_received_active' && typeof stepId === 'string');
   let terminalIndex = 0;
   let terminalProgramIndex = 0;
@@ -25,7 +25,6 @@ function observationsFromEvidence(scenario, transcriptEvidence, safeEvidence, ou
   let sessionId;
   let turnId;
   let cursorSessionId;
-  let expectedProgressRevision = 0;
   let sawWaitTimeout = false;
   let activeFollowupObserved = false;
   let previousTerminalEvidenceIndex = -1;
@@ -49,6 +48,7 @@ function observationsFromEvidence(scenario, transcriptEvidence, safeEvidence, ou
   const promptContractForTurn = (codexTurnIndex) => promptContractEvidence
     .find(({ index }) => codexTurnIndexForSafeEvidence(index, codexTurnIndex) === codexTurnIndex)?.entry;
   for (const [callIndex, call] of calls.entries()) {
+    if (waitLossRecovery?.lost_call_index === callIndex + 1) continue;
     if (recoveredProjectionIndices.has(callIndex + 1)) {
       continue;
     }
@@ -95,7 +95,6 @@ function observationsFromEvidence(scenario, transcriptEvidence, safeEvidence, ou
     } else if (call.tool === 'cursor_resume_session' && callOutcome === 'succeeded') {
       sessionId = call.response?.session_id;
       turnId = undefined;
-      expectedProgressRevision = 0;
       trace.push({ kind: 'session.resumed', matched: call.request?.cursor_session_id === cursorSessionId
         && call.response?.cursor_session_id === cursorSessionId,
       ...(call.request?.model !== undefined ? { model: call.request.model } : {}),
@@ -104,7 +103,6 @@ function observationsFromEvidence(scenario, transcriptEvidence, safeEvidence, ou
       session_id: sessionId, call_outcome: callOutcome });
     } else if (call.tool === 'cursor_send_prompt' && callOutcome === 'succeeded') {
       turnId = call.response?.turn_id;
-      expectedProgressRevision = 0;
       if (turnId) {
         trace.push({ kind: 'turn.started', session_id: sessionId, turn_id: turnId, call_outcome: callOutcome });
         const contract = promptContractForTurn(codexTurnIndex);
@@ -125,27 +123,21 @@ function observationsFromEvidence(scenario, transcriptEvidence, safeEvidence, ou
     } else if (call.tool === 'cursor_wait') {
       const timeoutOmitted = call.request?.timeout_ms === undefined;
       const effectiveTimeoutMs = timeoutOmitted ? 30_000 : call.request.timeout_ms;
-      const progressRevisionMatched = expectedProgressRevision === 0
-        ? call.request?.after_progress_revision === undefined || call.request?.after_progress_revision === 0
-        : call.request?.after_progress_revision === expectedProgressRevision;
       if (call.response?.wait_timeout === true) {
         trace.push({ kind: 'turn.wait-timeout', timeout_ms: effectiveTimeoutMs, timeout_omitted: timeoutOmitted,
-          progress_revision_matched: progressRevisionMatched, ...ids, call_outcome: callOutcome });
+          ...ids, call_outcome: callOutcome });
         if (activeFollowupEvidence && !activeFollowupObserved) {
           trace.push({ kind: 'turn.followup-received-active', ...ids, call_outcome: 'succeeded' });
           activeFollowupObserved = true;
         }
         sawWaitTimeout = true;
       }
-      if (call.response?.events_lost === true) {
-        trace.push({ kind: 'turn.events-lost', events_lost: true, ...ids, call_outcome: callOutcome });
-      }
       const terminalStatus = call.response?.turn_status;
       const terminal = ['completed', 'failed', 'timed_out'].includes(terminalStatus);
       terminalAlreadyObserved = terminal && ids.turn_id && completedTurnIds.has(ids.turn_id);
       if (terminal && sawWaitTimeout) {
         trace.push({ kind: 'turn.wait-recovered', timeout_ms: effectiveTimeoutMs, timeout_omitted: timeoutOmitted,
-          progress_revision_matched: progressRevisionMatched, ...ids, call_outcome: callOutcome });
+          ...ids, call_outcome: callOutcome });
         sawWaitTimeout = false;
       }
       // A terminal wait can observe either a transient closing wrapper or its
@@ -154,12 +146,6 @@ function observationsFromEvidence(scenario, transcriptEvidence, safeEvidence, ou
         && (!terminal || (ids.turn_id && completedTurnIds.has(ids.turn_id)))) {
         trace.push({ kind: 'session.tombstoned', session_state: call.response.session_state,
           session_id: ids.session_id, call_outcome: callOutcome });
-      }
-      if (Number.isSafeInteger(call.response?.progress_revision)) expectedProgressRevision = call.response.progress_revision;
-      for (const event of call.response?.events || []) {
-        const evidence = progressEvidence.find(({ kind, step_id: stepId }) => kind === `progress.${event.kind}`
-          && !trace.some((entry) => entry.step_id === stepId));
-        if (evidence) trace.push({ kind: evidence.kind, step_id: evidence.step_id, ...ids, call_outcome: callOutcome });
       }
       for (const pending of call.response?.pending || []) {
         const observedCallback = callbackById.get(String(pending.request_id));
@@ -184,6 +170,10 @@ function observationsFromEvidence(scenario, transcriptEvidence, safeEvidence, ou
         const terminalProof = completedEvidenceRecord?.entry;
         const armedProof = terminalStatus === 'completed' ? null : armedEvidenceRecord?.entry;
         const terminalStepId = terminalProof?.step_id || armedProof?.step_id || 'unobserved:terminal';
+        if (waitLossRecovery?.repeated_call_index === callIndex + 1) trace.push({
+          kind: 'turn.wait-response-recovered', step_id: terminalStepId, matched: true,
+          ...waitLossRecovery, ...ids, call_outcome: callOutcome,
+        });
         if (ids.turn_id && typeof terminalProof?.result_sha256 === 'string') {
           fullResultDigestByTurn.set(ids.turn_id, { sha256: terminalProof.result_sha256, step_id: terminalStepId });
         }
@@ -195,7 +185,11 @@ function observationsFromEvidence(scenario, transcriptEvidence, safeEvidence, ou
           const receipt = call.response?.terminal_receipt;
           const expectedDigest = call.response?.result?.text_sha256 ?? terminalProof?.result_sha256 ?? null;
           trace.push({ kind: 'turn.receipt', step_id: terminalStepId,
-            matched: receipt?.result_sha256 === expectedDigest,
+            matched: receipt?.result_sha256 === expectedDigest
+              && (waitLossRecovery?.repeated_call_index !== callIndex + 1
+                || /^[a-f0-9]{64}$/.test(terminalProof?.result_sha256 ?? ''))
+              && (call.response?.result?.truncated !== false || !terminalProof?.result_sha256
+                || call.response.result.text_sha256 === terminalProof.result_sha256),
             result_truncated: receipt?.result_truncated === true,
             ...ids, call_outcome: callOutcome });
         }

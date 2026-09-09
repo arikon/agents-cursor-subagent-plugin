@@ -3,6 +3,17 @@ import * as support from './runtime-test-support.mjs';
 
 const { assert, spawn, createHash, chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync, tmpdir, join, fileURLToPath, ADAPTER, CURSOR_ADAPTER_VERSION, LIMITS, MANIFEST_VERSION, Runtime, fake, server, cursorAgentGolden, cwd, fakeEnvNames, offlineModelDependencies, withFake, withInjectedFake, isolatedFakeEnvironment, withDefaultFake, fireInitBudgetDeadline, waitTerminal, waitSessionState, readJsonLines, lastLogged, waitForExit, waitForLine } = support;
 
+async function assertRepeatableTerminal(runtime, session_id, turn_id) {
+  const args = { session_id, turn_id, timeout_ms: 1_000 };
+  const first = await runtime.call('cursor_wait', args);
+  assert.equal(Object.hasOwn(first, 'result'), true);
+  assert.equal(Object.hasOwn(first, 'terminal_reason'), true);
+  assert.equal(first.wait_timeout, false);
+  assert.deepEqual(first.pending, []);
+  assert.deepEqual(await runtime.call('cursor_wait', args), first);
+  return first;
+}
+
 test('fixed resource limits remain the frozen v1 public values', () => {
   assert.deepEqual(LIMITS, {
     discoveryMs: 15_000, discoveryBytes: 1_048_576, initMs: 15_000, turnMs: 3_600_000, idleMs: 900_000, waitDefaultMs: 30_000,
@@ -32,6 +43,7 @@ test('warning scenarios: prompt rejection preserves allocation boundary', async 
   assert.ok(Buffer.byteLength(terminal.provider_error.message.text, 'utf8') <= LIMITS.textBytes);
   await waitSessionState(runtime, session.session_id, 'tombstone');
   assert.equal((await runtime.call('cursor_session_status', { session_id: session.session_id })).session_state, 'tombstone');
+  assert.equal((await assertRepeatableTerminal(runtime, session.session_id, allocated.turn_id)).result, null);
 });
 
 test('turn deadline publishes timed_out before releasing the session', async (t) => {
@@ -52,6 +64,8 @@ test('turn deadline publishes timed_out before releasing the session', async (t)
   const terminal = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 });
   assert.equal(terminal.turn_status, 'timed_out');
   assert.equal(terminal.terminal_reason.text, 'turn deadline exceeded');
+  await waitSessionState(runtime, session.session_id, 'tombstone');
+  assert.equal((await assertRepeatableTerminal(runtime, session.session_id, turn.turn_id)).result, null);
 });
 
 test('warning scenarios: allowed roots distinguish absent, empty and malformed configuration', async (t) => {
@@ -105,6 +119,7 @@ test('late ACP result cannot rewrite a publicly cancelled turn', async (t) => {
   const retained = await runtime.call('cursor_session_status', { session_id: session.session_id });
   assert.equal(retained.last_terminal_turn.turn_status, 'cancelled');
   assert.equal(retained.last_terminal_turn.result, null);
+  assert.equal((await assertRepeatableTerminal(runtime, session.session_id, turn.turn_id)).result, null);
 });
 
 test('answering one of multiple pending requests keeps the turn waiting', async (t) => {
@@ -148,6 +163,91 @@ test('answering one of multiple pending requests keeps the turn waiting', async 
   assert.equal(resumed.turn_status, 'running');
   assert.equal((await waitTerminal(runtime, session.session_id, turn.turn_id)).turn_status, 'completed');
   await runtime.call('cursor_close_session', { session_id: session.session_id });
+});
+
+test('remaining permission is immediately observable without another event or clock advance', async (t) => {
+  const runtime = withInjectedFake(t, { env: { FAKE_ACP_HOLD_PROMPT: '1' } });
+  const started = await runtime.call('cursor_start_session', { cwd, mode: 'agent' });
+  const turn = await runtime.call('cursor_send_prompt', { session_id: started.session_id, prompt: 'two permissions' });
+  const record = runtime.sessions.get(started.session_id);
+  // Drive the admitted callback boundary synchronously: no provider scheduling
+  // can insert an event between answering the first and observing the second.
+  for (const id of ['first', 'second']) record.callback({
+    id, method: 'session/request_permission', params: {
+      sessionId: record.cursorSessionId,
+      toolCall: { toolCallId: id, title: `Execute ${id}?`, kind: 'execute', locations: [{ path: cwd, line: 1 }] },
+      options: [{ optionId: `${id}-allow`, kind: 'allow_once', name: 'Yes' }, { optionId: `${id}-reject`, kind: 'reject_once', name: 'No' }],
+    },
+  });
+  const args = { session_id: started.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 };
+  const before = await runtime.call('cursor_wait', args);
+  assert.deepEqual(before.pending.map(({ request_id }) => request_id), ['first', 'second']);
+  const sendConfirmed = record.sendConfirmed;
+  const responses = [];
+  record.sendConfirmed = async (frame) => { responses.push(frame); };
+  const originalNow = Date.now;
+  const originalSetTimeout = globalThis.setTimeout;
+  const now = originalNow();
+  try {
+    Date.now = () => now;
+    await runtime.call('cursor_answer_permission', {
+      session_id: started.session_id, turn_id: turn.turn_id, request_id: 'first', decision: 'allow-once',
+    });
+    const eventId = record.nextEvent;
+    globalThis.setTimeout = () => assert.fail('actionable pending must not register a timeout');
+    const remaining = await runtime.call('cursor_wait', args);
+    assert.equal(remaining.wait_timeout, false);
+    assert.equal(remaining.turn_status, 'waiting_for_input');
+    assert.deepEqual(remaining.pending, [before.pending[1]]);
+    assert.equal(record.nextEvent, eventId, 'observation creates no new event');
+    assert.equal(Date.now(), now);
+    assert.deepEqual(responses, [{ jsonrpc: '2.0', id: 'first', result: ADAPTER.permissionResponse('first-allow') }]);
+  } finally {
+    Date.now = originalNow;
+    globalThis.setTimeout = originalSetTimeout;
+    record.sendConfirmed = sendConfirmed;
+  }
+  await runtime.call('cursor_close_session', { session_id: started.session_id });
+});
+
+test('wait rechecks registration and timeout races before returning its target snapshot', async (t) => {
+  for (const boundary of ['registration', 'timeout']) {
+    const runtime = withInjectedFake(t, { env: { FAKE_ACP_HOLD_PROMPT: '1' } });
+    const started = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
+    const turn = await runtime.call('cursor_send_prompt', { session_id: started.session_id, prompt: boundary });
+    const record = runtime.sessions.get(started.session_id);
+    const originalSetTimeout = globalThis.setTimeout;
+    const originalNow = Date.now;
+    let now = originalNow();
+    let expire;
+    try {
+      Date.now = () => now;
+      globalThis.setTimeout = (callback, delay, ...args) => {
+        if (delay !== 1_000) return originalSetTimeout(callback, delay, ...args);
+        expire = () => callback(...args);
+        if (boundary === 'registration') record.complete(record.active, { stopReason: 'end_turn' });
+        return { controlledWait: true };
+      };
+      const waiting = runtime.call('cursor_wait', { session_id: started.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 });
+      assert.equal(typeof expire, 'function');
+      if (boundary === 'timeout') {
+        assert.equal(record.waiters.size, 1);
+        now += 1_000;
+        expire();
+        // Deadline fires first; completion wins before the waiting continuation.
+        record.complete(record.active, { stopReason: 'end_turn' });
+      }
+      const result = await waiting;
+      assert.equal(result.turn_id, turn.turn_id);
+      assert.equal(result.turn_status, 'completed');
+      assert.equal(result.wait_timeout, false);
+      assert.equal(record.waiters.size, 0);
+    } finally {
+      globalThis.setTimeout = originalSetTimeout;
+      Date.now = originalNow;
+    }
+    await runtime.call('cursor_close_session', { session_id: started.session_id });
+  }
 });
 
 test('ACP result received with a pending request fails the turn and clears public pending state', async (t) => {
@@ -388,6 +488,7 @@ test('Cursor Agent versioned golden owns the admitted model argv contract', () =
   } }), true);
   assert.equal(ADAPTER.admitSetModeResult(cursorAgentGolden.acp_contract.sessionSetModeResult), true);
   assert.equal(cursorAgentGolden.acp_contract.sessionLoadAfterTerminal.sessionIdOmitted, true);
+  assert.equal(ADAPTER.admitLoadResult(null), false);
   assert.equal(ADAPTER.admitLoadResult({ modes: {
     currentModeId: cursorAgentGolden.acp_contract.sessionLoadAfterTerminal.currentModeId,
     availableModes: cursorAgentGolden.acp_contract.sessionLoadAfterTerminal.availableModeIds.map((id) => ({ id })),
@@ -428,6 +529,29 @@ test('Cursor Agent versioned golden owns the admitted model argv contract', () =
       assert.equal(projectionByMethod[notification.method](nestedExtra), null);
       assert.equal(projectionByMethod[notification.method]({ ...notification.input, todos: [] }), null);
     }
+  }
+  for (const project of Object.values(projectionByMethod)) {
+    for (const root of [null, [], 'invalid', 1]) assert.equal(project(root), null);
+  }
+  const todos = cursorAgentGolden.collaboration_requests.find(({ method }) => method === ADAPTER.methods.todos).input;
+  for (const item of [null, [], 'invalid', { ...todos.todos[0], id: '' },
+    { ...todos.todos[0], content: 1 }, { ...todos.todos[0], content: '\ud800' },
+    { ...todos.todos[0], status: 'unknown' }]) {
+    assert.equal(ADAPTER.admitTodos({ ...todos, todos: [item] }), null);
+  }
+  assert.equal(ADAPTER.admitTodos({ ...todos, todos: [todos.todos[0], todos.todos[0]] }), null);
+  const task = { ...taskTemplate, subagentType: 'explore' };
+  for (const patch of [{ subagentType: { custom: '' } }, { subagentType: { custom: 1 } },
+    { subagentType: [] }, { description: 1 }, { prompt: 1 }, { model: 1 },
+    { model: '\ud800' }, { agentId: 1 }, { agentId: '\ud800' }, { durationMs: -1 }, { durationMs: '10' }]) {
+    assert.equal(ADAPTER.admitTask({ ...task, ...patch }), null);
+  }
+  const image = { toolCallId: 'image', description: 'Preview' };
+  assert.deepEqual(ADAPTER.admitImage(image), { description: { text: 'Preview', truncated: false } });
+  for (const patch of [{ description: '' }, { description: 1 }, { filePath: '' },
+    { filePath: 1 }, { filePath: '\ud800' }, { referenceImagePaths: 'image.png' },
+    { referenceImagePaths: [1] }, { referenceImagePaths: ['\ud800'] }]) {
+    assert.equal(ADAPTER.admitImage({ ...image, ...patch }), null);
   }
   for (const unconfirmedAlias of [
     () => ADAPTER.admitTask({ title: 'Subreview' }),
@@ -636,6 +760,23 @@ test('resume loads the retained Cursor conversation id without requiring it in t
 });
 
 test('resume unexpected ID, mode-shape drift and reject stay recoverable init failures', async (t) => {
+  const nullRuntime = withInjectedFake(t);
+  const resuming = nullRuntime.call('cursor_resume_session', { cwd, cursor_session_id: 'null-load', mode: 'ask' });
+  await Promise.resolve();
+  const allocated = [...nullRuntime.sessions.values()][0];
+  assert.ok(allocated, 'wrapper is allocated before provider initialization');
+  const request = allocated.request;
+  const methods = [];
+  allocated.request = function (method, ...args) {
+    methods.push(method);
+    return method === ADAPTER.methods.sessionLoad ? Promise.resolve(null) : request.call(this, method, ...args);
+  };
+  const nullLoad = await resuming;
+  assert.equal(nullLoad.session_state, 'tombstone');
+  assert.equal(nullLoad.failure_kind, 'init');
+  assert.equal(nullLoad.cursor_session_id, 'null-load');
+  assert.equal(methods.includes(ADAPTER.methods.sessionNew), false, 'failed load must not replace the conversation');
+  assert.equal(nullRuntime.sessions.size, 1);
   for (const variant of ['unexpected-session-id', 'missing-modes', 'incomplete-modes', 'invalid-current-mode', 'reject']) {
     const runtime = withInjectedFake(t, { env: { FAKE_ACP_LOAD_VARIANT: variant } });
     const failed = await runtime.call('cursor_resume_session', { cwd, cursor_session_id: 'missing-cursor', mode: 'ask' });
@@ -693,6 +834,7 @@ test('terminal wait is repeatable while later action acknowledgements omit the s
   assert.equal(completed.terminal_receipt.turn_id, turn.turn_id);
   assert.equal(completed.terminal_receipt.result_truncated, false);
   assert.equal(completed.terminal_receipt.result_sha256, createHash('sha256').update('done', 'utf8').digest('hex'));
+  assert.equal((await assertRepeatableTerminal(runtime, session.session_id, turn.turn_id)).terminal_reason, null);
   const next = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'two' });
   assert.equal(Object.hasOwn(next, 'last_terminal_turn'), false);
   assert.equal(Object.hasOwn(next, 'terminal_receipt'), false);
@@ -1013,4 +1155,94 @@ test('collaboration acknowledgement is best-effort after the provider transport 
   session.child = child;
   assert.equal((await runtime.call('cursor_session_status', { session_id: started.session_id })).active_turn.turn_id, turn.turn_id);
   await runtime.call('cursor_close_session', { session_id: started.session_id });
+});
+
+test('nonblocking collaboration notifications and idle callbacks do not publish work', async (t) => {
+  const runtime = withInjectedFake(t, { env: { FAKE_ACP_HOLD_PROMPT: '1' } });
+  const started = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
+  const record = runtime.sessions.get(started.session_id);
+  const originalWrite = record.child.stdin.write;
+  const replies = [];
+  record.child.stdin.write = (frame, callback) => { replies.push(JSON.parse(frame)); callback?.(); return true; };
+  try {
+    const input = cursorAgentGolden.collaboration_requests.find(({ method }) => method === ADAPTER.methods.todos).input;
+    const eventId = record.nextEvent;
+    record.receive(JSON.stringify({ jsonrpc: '2.0', id: 'idle', method: ADAPTER.methods.todos, params: input }));
+    assert.equal(record.nextEvent, eventId);
+    assert.deepEqual(replies, [{ jsonrpc: '2.0', id: 'idle', result: {} }]);
+    record.child.stdin.write = originalWrite;
+    await runtime.call('cursor_send_prompt', { session_id: started.session_id, prompt: 'active' });
+    record.child.stdin.write = (frame, callback) => { replies.push(JSON.parse(frame)); callback?.(); return true; };
+    const activeEvent = record.nextEvent;
+    record.receive(JSON.stringify({ jsonrpc: '2.0', method: ADAPTER.methods.todos, params: input }));
+    assert.equal(record.nextEvent, activeEvent);
+    assert.equal(replies.length, 1, 'idless notification has no acknowledgement');
+    record.child.stdin.destroy();
+    assert.doesNotThrow(() => record.receive(JSON.stringify({ jsonrpc: '2.0', id: 'invalid', method: 'unsupported' })));
+    assert.equal(replies.length, 1, 'closed response pipe is abandoned without a write');
+  } finally { record.child.stdin.write = originalWrite; }
+  await runtime.call('cursor_close_session', { session_id: started.session_id });
+});
+
+test('allocated prompt dispatch failures terminalize once without retrying transport', async (t) => {
+  for (const failure of ['closed-pipe', 'asynchronous-EPIPE']) {
+    const runtime = withInjectedFake(t, { env: { FAKE_ACP_HOLD_PROMPT: '1' } });
+    const started = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
+    const record = runtime.sessions.get(started.session_id);
+    const originalWrite = record.child.stdin.write;
+    let attempts = 0;
+    record.child.stdin.write = function (frame, callback) {
+      if (JSON.parse(frame).method !== ADAPTER.methods.prompt) return originalWrite.call(this, frame, callback);
+      attempts++;
+      queueMicrotask(() => callback(new Error('EPIPE')));
+      return true;
+    };
+    try {
+      if (failure === 'closed-pipe') record.child.stdin.destroy();
+      const turn = await runtime.call('cursor_send_prompt', { session_id: started.session_id, prompt: failure });
+      assert.ok(turn.turn_id);
+      await waitSessionState(runtime, started.session_id, 'tombstone');
+      const terminal = await runtime.call('cursor_wait', { session_id: started.session_id, turn_id: turn.turn_id });
+      assert.equal(terminal.turn_status, 'failed');
+      assert.match(terminal.terminal_reason.text, /stdin is closed|stdin EPIPE/);
+      assert.equal(attempts, failure === 'closed-pipe' ? 0 : 1);
+    } finally { record.child.stdin.write = originalWrite; }
+  }
+});
+
+test('answer write failure and cancellation race retain the established terminal outcome', async (t) => {
+  for (const failure of ['closed-pipe', 'asynchronous-EPIPE', 'cancel-before-write-settles']) {
+    const runtime = withInjectedFake(t, { pending: 'question' });
+    const started = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
+    const turn = await runtime.call('cursor_send_prompt', { session_id: started.session_id, prompt: failure });
+    await runtime.call('cursor_wait', { session_id: started.session_id, turn_id: turn.turn_id });
+    const record = runtime.sessions.get(started.session_id);
+    const originalWrite = record.child.stdin.write;
+    let attempts = 0;
+    let settleWrite;
+    record.child.stdin.write = function (frame, callback) {
+      if (JSON.parse(frame).id !== 'q1') return originalWrite.call(this, frame, callback);
+      attempts++;
+      if (failure === 'asynchronous-EPIPE') queueMicrotask(() => callback(new Error('EPIPE')));
+      else settleWrite = callback;
+      return true;
+    };
+    try {
+      if (failure === 'closed-pipe') record.child.stdin.destroy();
+      const answering = runtime.call('cursor_answer_question', { session_id: started.session_id, turn_id: turn.turn_id,
+        request_id: 'q1', outcome: 'skipped' });
+      if (failure === 'cancel-before-write-settles') {
+        assert.equal(typeof settleWrite, 'function', 'answer is in flight before cancellation');
+        await runtime.call('cursor_cancel', { session_id: started.session_id, turn_id: turn.turn_id });
+        settleWrite();
+      }
+      const answered = await answering;
+      await waitSessionState(runtime, started.session_id, 'tombstone');
+      const terminal = await runtime.call('cursor_wait', { session_id: started.session_id, turn_id: turn.turn_id });
+      assert.equal(terminal.turn_status, failure === 'cancel-before-write-settles' ? 'cancelled' : 'failed');
+      assert.equal(answered.turn_status, terminal.turn_status);
+      assert.deepEqual(terminal.pending, []);
+      assert.equal(attempts, failure === 'closed-pipe' ? 0 : 1);
+    } finally { record.child.stdin.write = originalWrite; }
+  }
 });

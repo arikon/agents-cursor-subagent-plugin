@@ -38,9 +38,8 @@ function boundedId(value) {
 }
 function callKey(value) { return `${typeof value}:${String(value)}`; }
 function isPlainObject(value) {
-  if (!value || Array.isArray(value) || typeof value !== 'object') return false;
-  const prototype = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
+  // Requests come from JSON.parse; non-array objects have the JSON object prototype.
+  return Boolean(value) && !Array.isArray(value) && typeof value === 'object';
 }
 function compactIds(value) {
   if (!value || Array.isArray(value) || typeof value !== 'object') return {};
@@ -49,7 +48,6 @@ function compactIds(value) {
   }));
 }
 function compactPending(value) {
-  if (!Array.isArray(value)) return [];
   return value.slice(0, MAX_LIST_ITEMS).map((pending) => ({
     ...compactIds(pending),
     ...(boundedId(pending?.kind) === null ? {} : { kind: pending.kind }),
@@ -57,7 +55,8 @@ function compactPending(value) {
 }
 function compactResult(value) {
   const bytes = Buffer.byteLength(value.text, 'utf8');
-  return { text_bytes: bytes, text_sha256: createHash('sha256').update(value.text).digest('hex'), truncated: value.truncated === true };
+  return { text_bytes: bytes, text_sha256: createHash('sha256').update(value.text).digest('hex'),
+    ...(typeof value.truncated === 'boolean' ? { truncated: value.truncated } : {}) };
 }
 function compactBoundedText(value) {
   if (!value || Array.isArray(value) || typeof value !== 'object'
@@ -141,6 +140,7 @@ function compactResponse(message, entry) {
     if (boundedId(payload.effort) !== null) response.effort = payload.effort;
     if (typeof payload.fast === 'boolean') response.fast = payload.fast;
     for (const key of ['session_state', 'turn_status', 'error_code', 'failure_kind']) if (boundedId(payload[key]) !== null) response[key] = payload[key];
+    if (payload.error_code === 'eval_wait_response_lost' && payload.message === 'cursor_wait response unavailable') response.message = payload.message;
     const providerMessage = compactBoundedText(payload.provider_error?.message);
     if (Number.isSafeInteger(payload.provider_error?.code) && providerMessage) {
       response.provider_error = { code: payload.provider_error.code, message: providerMessage };
@@ -289,18 +289,18 @@ function withholdTerminalWaitResponse(frame) {
   const entry = pendingCalls.get(callKey(message?.id));
   const payload = toolPayload(message);
   if (entry?.tool !== 'cursor_wait' || !payload
-    || !['completed', 'failed', 'timed_out', 'cancelled'].includes(payload.turn_status)) return null;
+    || message.result?.isError !== false || payload.turn_status !== 'completed'
+    || typeof payload.result?.text !== 'string' || payload.result.text.length === 0) return null;
   terminalWaitResponseWithheld = true;
-  entry.withheld_terminal_response = true;
-  entry.caller_error_code = 'transport_error';
+  entry.withheld_response = compactResponse(message, entry);
   return { jsonrpc: '2.0', id: message.id, result: { isError: true, content: [{ type: 'text', text: JSON.stringify({
-    error_code: 'transport_error', message: 'terminal cursor_wait response was withheld by the eval fault',
+    error_code: 'eval_wait_response_lost', message: 'cursor_wait response unavailable',
   }) }] } };
 }
 function forwardOutputFrame(frame, terminated) {
   const withheld = withholdTerminalWaitResponse(frame);
-  observeOutputFrame(frame);
   const outputFrame = withheld === null ? frame : Buffer.from(JSON.stringify(withheld));
+  observeOutputFrame(outputFrame);
   forwardOutputBytes(terminated ? Buffer.concat([outputFrame, Buffer.from('\n')]) : outputFrame);
 }
 process.stdin.on('data', (chunk) => {

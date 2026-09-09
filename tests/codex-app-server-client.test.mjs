@@ -238,6 +238,25 @@ test('app-server client applies one deadline to slow pages and caps the page ove
     await assert.rejects(slow.captureTurnFinal('thread', 'evaluated-turn', { timeoutMs: -1 }), /invalid turn capture limits/);
     await assert.rejects(slow.captureTurnFinal('thread', 'evaluated-turn', { pollIntervalMs: -1 }), /invalid turn capture limits/);
     await assert.rejects(slow.captureTurnFinal('thread', 'evaluated-turn', { pageLimit: 0 }), /invalid turn capture limits/);
+    for (const [mode, readings, source, error, status, methods] of [
+      ['capture-turn-absent', [0, 0, 1_000], 'thread/turns/list', 'turn_not_found', null, ['thread/turns/list']],
+      ['capture-turn-page-limit', [0, 0, 1_000], 'thread/turns/list', 'capture_timeout', null, ['thread/turns/list']],
+      ['capture-item-page-limit', [0, 0, 0, 1_000], 'thread/items/list', 'capture_timeout', 'completed', ['thread/turns/list', 'thread/items/list']],
+    ]) {
+      const client = new CodexAppServerClient(process.execPath, [fake],
+        { ...process.env, FAKE_APP_SERVER_MODE: mode }, positionedCaptureTimeoutClock(...readings));
+      try {
+        await client.initialize();
+        const requests = [];
+        const request = client.request.bind(client);
+        client.request = (method, ...args) => { requests.push(method); return request(method, ...args); };
+        assert.deepEqual(await client.captureTurnFinal('thread', 'evaluated-turn', { timeoutMs: 1_000 }), {
+          text: null, turn_id: 'evaluated-turn', turn_status: status, phase: null,
+          source, completeness: 'incomplete', error_code: error,
+        }, mode);
+        assert.deepEqual(requests, methods, 'expired capture must not request another page or poll');
+      } finally { await client.close(); }
+    }
   } finally { await Promise.all([slow.close(), slowItems.close()]); }
 });
 

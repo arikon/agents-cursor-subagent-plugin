@@ -1,6 +1,6 @@
 {
   "name": "agents-cursor-subagent-plugin",
-  "version": "0.1.0+codex.20260909160555",
+  "version": "0.1.0+codex.20260909214543",
   "description": "Interactive Cursor ACP subagent for Codex.",
   "author": {
     "name": "Local developer"

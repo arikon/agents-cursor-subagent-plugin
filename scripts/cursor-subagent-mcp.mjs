@@ -26,7 +26,7 @@ const validText = (value) => typeof value === 'string' && Buffer.from(value, 'ut
 const exactKeys = (value, allowed) => Object.keys(value).every((key) => allowed.includes(key));
 const decoder = new TextDecoder('utf-8', { fatal: true });
 function bounded(value, limit = LIMITS.textBytes) {
-  const source = Buffer.from(String(value ?? ''), 'utf8').toString('utf8');
+  const source = Buffer.from(String(value), 'utf8').toString('utf8');
   if (bytes(source) <= limit) return { text: source, truncated: false };
   const suffix = '…';
   const contentLimit = limit - bytes(suffix);
@@ -165,7 +165,7 @@ export const ADAPTER = Object.freeze({
     if (duration !== undefined && (!Number.isFinite(duration) || duration < 0)) return null;
     return {
       description: bounded(description),
-      ...(type !== undefined ? { type: bounded(type) } : {}),
+      type: bounded(type),
       ...(model !== undefined ? { model: bounded(model) } : {}),
       ...(duration !== undefined ? { duration } : {}),
     };
@@ -324,8 +324,8 @@ class SessionRecord {
       pending: [...turn.pending.values()].map(({ request_id, kind, context }) => ({ request_id, kind, context })),
     };
     if (terminal) {
-      if (turn.result) envelope.result = turn.result;
-      if (turn.terminal_reason) envelope.terminal_reason = turn.terminal_reason;
+      envelope.result = turn.result;
+      envelope.terminal_reason = turn.terminal_reason;
       envelope.terminal_receipt = terminalReceipt(this, turn);
       if (this.provider_error) envelope.provider_error = this.provider_error;
     }
@@ -623,7 +623,7 @@ class SessionRecord {
     clearTimeout(turn.timer); turn.full_result = turn.agent_text_parts.join('');
     turn.agent_text_parts = null; turn.agent_text_bytes = null;
     turn.full_result_sha256 = createHash('sha256').update(turn.full_result, 'utf8').digest('hex');
-    turn.result = bounded(turn.full_result); turn.turn_status = 'completed'; this.emit('result', turn.turn_id, { turn_status: 'completed' }); captureTerminalReceipt(this, turn); this.active = null; this.last = turn; this.terminalWaitDelivered = false; this.armIdle();
+    turn.result = bounded(turn.full_result); turn.turn_status = 'completed'; this.emit('result', turn.turn_id, { turn_status: 'completed' }); captureTerminalReceipt(this, turn); this.active = null; this.last = turn; this.armIdle();
   }
   async answer(turn, requestId, response) {
     const pending = turn.pending.get(requestId); if (!pending) fail('unknown_request', 'unknown pending request');

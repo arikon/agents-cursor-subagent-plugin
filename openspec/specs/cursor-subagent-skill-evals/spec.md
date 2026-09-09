@@ -199,7 +199,7 @@ Optional `harness_faults` MUST быть непустым unique array, соде�
 `mode-timeout`, `accelerate-turn-timeout`,
 `accelerate-wait-timeout`, `exit-after-result`,
 `hold-terminal-until-followup`, `inject-mode-protocol-error-once`,
-`inject-stale-question-once`,
+`inject-stale-question-once`, `lose-terminal-wait-response-once`,
 `reject-initialize`, `reject-mode`, `reject-prompt`, `result-overflow` и `reject-resume`. Это единственный scenario-level
 selector для programmed fault injection: runner, proxy и provider fixture MUST
 NOT выбирать fault по `scenario_id`. Proxy MUST activate a selected fault only
@@ -256,6 +256,23 @@ variant MUST preserve bounded `provider_error`, tombstone the wrapper and MUST
 NOT retry, send a prompt, resume or create a replacement before a new user
 decision. Expected default `turn.wait-timeout` with `timeout_omitted:true` —
 ровно с `accelerate-wait-timeout`.
+`lose-terminal-wait-response-once` допускается только при одном terminal step
+`completed` с непустым result и expected `turn.wait-response-recovered`.
+Он взаимоисключающ с остальными `harness_faults`: это проверка одной потери
+response, а не комбинации независимых отказов. Прокси получает первый успешный
+terminal `cursor_wait` response от runtime, сохраняет его через существующую
+bounded response projection как `withheld_response` того же captured call и
+передаёт caller вместо него `CallToolResult{isError:true,content:[{type:"text",
+text:JSON.stringify({error_code:"eval_wait_response_lost",message:"cursor_wait response unavailable"})}]}`.
+Это test-only marker, сохранённый в обычной error projection; production runtime
+не получает нового error code. Это fault на границе доставки,
+не runtime domain error; он не меняет runtime state и не пересылает новый prompt.
+Caller-visible error остаётся обычным `response` этого call; raw result text
+не добавляется в evidence. Fault действует ровно один раз, все следующие
+responses доставляются неизменёнными. Отсутствие фактического trigger либо
+неполная запись любой стороны доставки MUST NOT считаться успешной инъекцией.
+Expected `turn.wait-response-recovered` допускается ровно с этим fault.
+
 Intentional launch-setting resume после explicit close остаётся normal workflow
 и не требует provider-exit fault.
 
@@ -362,22 +379,13 @@ unrecovered. Дополнительных user inputs быть не может. 
 normalized error сохраняются; corrected success всё равно MUST пройти обычные
 trace, ordering, authority, callback, effect и exact-delivery checks.
 
-Finite recovery taxonomy допускает ровно три класса:
+Finite recovery taxonomy допускает ровно два класса:
 
 - `address`: у existing-session tool изменяется непустое подмножество только
   `session_id`/`turn_id`, включая missing, malformed или несколько неверных IDs;
   success использует current causal public IDs, non-address arguments digests
   exact equal, а rejected error равен применимому
   `invalid_args | invalid_text_encoding | unknown_session | unknown_turn`;
-- `wait_state`: у `cursor_wait` изменяется непустое подмножество
-  `session_id`, `turn_id`, `after_event_id`, `after_progress_revision`; success
-  использует current IDs и exact latest public event/progress cursors, timeout
-  остаётся identical. Digest каждого call MUST совпасть с canonical
-  reconstruction его captured wait non-ID arguments; hidden/invalid extras
-  запрещены. Rejected error равен применимому
-  `invalid_args | invalid_text_encoding | unknown_session | unknown_turn`.
-  Переход от captured `{}` к current IDs плюс latest `after_event_id` является
-  допустимым вариантом;
 - `set_mode`: rejected `cursor_set_mode` имеет `invalid_args`, success использует
   current session ID, а отсутствующий/non-enum mode исправлен на admitted enum;
   address MAY быть исправлен одновременно. Обычный expected trace MUST доказать
@@ -392,7 +400,7 @@ typed класса MUST оставаться mismatch. Без full four-key proo
 Oracle MUST recompute `recovered_calls` как массив closed records
 `{failed_call_index,successful_call_index,codex_turn_index,tool,error_code,correction_kind}`
 с one-based indexes и `correction_kind` exactly
-`address | wait_state | set_mode`; отдельный count или corrected-fields list не
+`address | set_mode`; отдельный count или corrected-fields list не
 хранится, authoritative delta выводится из indexed raw calls. Observer MAY
 пропустить semantic trace projection failed call только для verified pair;
 каждый иной raw lookup/validation failure остаётся mismatch, даже если
@@ -407,8 +415,8 @@ close-or-proven-natural-tombstone rule, определённый выше.
 Exact complete full-result reread с теми же session/turn IDs, page chain, total
 и digest MAY быть схлопнут как idempotent trace variation даже после close, пока
 result retained. Invalid/partial reread и первый complete read только после
-close MUST оставаться mismatch. После natural tombstone сохраняется один
-required idempotent close observation; repeated closes являются mismatch.
+close MUST оставаться mismatch. После natural tombstone применяется
+существующий close-or-proven-natural-tombstone rule; repeated closes являются mismatch.
 
 `fixture_predicate` MUST быть одним closed variant:
 `{ "kind":"none" }`, `{ "kind":"terminal-token", "token":string }`,
@@ -511,11 +519,9 @@ incomplete capture является `integration_failure`.
 Continuation within the same Codex task MUST be checked from actual MCP
 dataflow under the existing trace/ID invariants: next calls consume the
 previously returned active IDs and pending request in their causal order.
-Successful waits MAY omit `after_event_id` or use any earlier/repeated
-runtime-valid value; latest `resume_after_event_id` is a recommended sparse
-default, not read acknowledgement evidence. A new wrapper supersedes the old
-segment; future or invalid values are
-not valid candidates. Missing IDs in final prose alone are not a failure.
+Successful waits MUST использовать state-oriented runtime contract SW-1/SW-2;
+eval проверяет causal IDs, а не event/progress cursor dataflow. Новый wrapper
+заменяет старый segment; неподтверждённые IDs не допускаются. Missing IDs in final prose alone are not a failure.
 No final-only external consumer or new handoff protocol is admitted here.
 
 Evidence integrity reuses existing runtime/provider observations, including
@@ -617,12 +623,6 @@ The exact step variants additionally admit:
 - `prompt-check`: exact keys `type`, `step_id`, `required_fragments` and
   `forbidden_fragments`; the required list contains 1–12 unique 1–256-byte
   strings and the forbidden list 0–12 such strings;
-- `notification`: exact keys `type`, `step_id`, `notification_kind`, where
-  kind is exactly `todos | task | image`;
-- `event-burst`: exact keys `type`, `step_id`, `count`, where `count` is a safe
-  integer from 257 through 512. The fixture MUST emit that many admitted
-  collaboration requests with distinct provider request IDs and acknowledge
-  every request; ordinary agent-message chunks do not satisfy this step;
 - `terminal` MAY additionally carry `delay_ms`, a safe integer 1–5000, and
   `progress_text`, a 1–512-byte string.
 
@@ -650,11 +650,28 @@ The closed trace grammar admits:
 - `session.tombstoned` after an observed old-wrapper response with exact
   `session_state:"tombstone"`;
 - `turn.wait-timeout` and `turn.wait-recovered` with exact `timeout_ms` in
-  1000–180000, boolean `timeout_omitted` and
-  `progress_revision_matched:true`; `timeout_omitted:true` is valid only with
+  1000–180000, boolean `timeout_omitted`; `timeout_omitted:true` is valid only with
   effective `timeout_ms:30000`, while explicit retries use `false`;
-- `turn.events-lost` with `events_lost:true`, derived
-  from the actual sparse wait response rather than expected scenario prose;
+- `turn.wait-response-recovered` с terminal `step_id`, `matched:true` и
+  one-based `lost_call_index`, `repeated_call_index`. Observation допустим
+  только после фактического повторного `cursor_wait`: оба call имеют одинаковые
+  causal session/turn IDs и проходят runtime-owned admission SW-1/SW-2;
+  допустимый timeout может отличаться, поскольку он не меняет адресуемый ход.
+  Repeated call непосредственно следует за lost call в том же complete Codex turn range.
+  Full proof MUST иметь `dropped_calls:0`, `unexpected_input_requests:0` и
+  ровно один `withheld_response`, принадлежащий lost call выбранного fault.
+  Его compact terminal response и repeated response MUST содержать одинаковые
+  result projection и immutable receipt; caller-visible lost response MUST
+  соответствовать injected failure. Обычные IDs, receipt и result проверки
+  применяются к repeated response. Только при полном таком proof lost error
+  пропускается при semantic trace projection, сохраняясь в raw calls; это не
+  `recovered_calls` argument correction и не расширяет её два класса.
+  Observation предшествует обычным terminal/receipt observations repeated call;
+  withheld result сам по себе не порождает terminal/receipt observations и
+  не доказывает доставку caller. Provider effects, иной interleaving,
+  missing proof и повторная потеря остаются mismatch; неизвестный адрес не
+  допускает нового prompt/session/resume. `withheld_response` MUST отсутствовать
+  во всех остальных calls и fault variants;
 - `turn.receipt` with a terminal `step_id`, `matched:true` and boolean
   `result_truncated`;
 - `turn.result-read` with `complete:true`, emitted only after actual
@@ -662,8 +679,6 @@ The closed trace grammar admits:
   continuation values for that turn; it proves workflow composition and does
   not define a second paging/hash/retention algorithm;
 - `prompt.contract` with a prompt-check `step_id` and `matched:true`;
-- `progress.todos`, `progress.task` and `progress.image` with the matching
-  notification `step_id`;
 - `effect.file-read` for the admitted read effect.
 - `turn.timed-out` for an observed terminal runtime status correlated with a
   fixture-armed terminal step, never reconstructed from `expected_trace`;
@@ -678,8 +693,8 @@ The closed trace grammar admits:
 `session.resumed` and terminal `session.resume-failed` are the only observations
 allowed after a close and reset the
 runtime-session identity while proving the same returned opaque provider
-session ID was used. Wait recovery MUST preserve the returned event cursor and
-progress revision. Every receipt and progress observation MUST reference its
+session ID was used. Wait recovery MUST сохранять causal session/turn IDs по SW-5; отдельного
+wait-cursor correction класса нет, ошибки IDs покрывает существующий address correction. Every receipt and progress observation MUST reference its
 compatible program step; all existing ID, ordering, close and forbidden
 observation rules continue to apply.
 For the wait that first provides `failed | timed_out` terminal evidence,
@@ -719,11 +734,10 @@ old-wrapper call, so an explicit resume can follow directly.
   raw prompt в evidence не сохраняется
 
 #### Scenario: Wait, receipt и resume проверяются одной recovery цепочкой
-- **WHEN** первый wait возвращает resumable timeout с progress revision, затем
+- **WHEN** первый wait возвращает resumable timeout с bounded progress, затем
   turn завершается и ACP child независимо исчезает, tombstoning the wrapper
-- **THEN** следующий wait использует те же runtime IDs, returned progress
-  revision и увеличенный timeout; event cursor может быть latest, earlier
-  runtime-valid или omitted=0. Evidence проверяет immutable terminal receipt и
+- **THEN** следующий wait использует те же runtime IDs и увеличенный timeout
+  по SW-5 без cursor arguments. Evidence проверяет immutable terminal receipt и
   observable old-wrapper tombstone, а
   `cursor_resume_session` attempts the retained provider ID in a new runtime
   session без fallback delegation; successful load itself is not semantic
@@ -744,7 +758,7 @@ old-wrapper call, so an explicit resume can follow directly.
 
 #### Scenario: Typed pre-effect correction проверяется прозрачно
 - **WHEN** full raw transcript содержит один или несколько disjoint spans класса
-  `address | wait_state | set_mode` и только contiguous successful pure
+  `address | set_mode` и только contiguous successful pure
   current-session status reads внутри каждого span complete range того же turn
 - **THEN** oracle сохраняет rejected calls, recomputes один typed
   `recovered_calls` record на span и проверяет каждый successful call по обычным trace,
@@ -765,9 +779,10 @@ old-wrapper call, so an explicit resume can follow directly.
 #### Scenario: Launch options и collaboration progress наблюдаемы
 - **WHEN** user явно выбирает agent model settings, локальный `plugin_dirs` bundle
   и одну покрытую запись
-- **THEN** exact delegate request содержит эти launch choices, wait доставляет
-  admitted todo/task/image progress, write effect и terminal receipt, после
-  чего workflow закрывается
+- **THEN** exact delegate request содержит эти launch choices, trace доказывает
+  покрытый write effect и terminal receipt, после чего workflow закрывается;
+  internal collaboration events проверяются только runtime owner и не ожидаются
+  в публичном wait или eval trace
 
 #### Scenario: Invalid plugin directory не вызывает fallback
 - **WHEN** ordinary user goal выбирает отсутствующий Agent Plugin directory
@@ -834,9 +849,17 @@ old-wrapper call, so an explicit resume can follow directly.
   settings, verifies the next result, and never starts an independent delegation
 
 #### Scenario: Retention gap не реконструируется
-- **WHEN** a real wait reports `events_lost:true` after bounded-log eviction
-- **THEN** trace confirms the retention gap and subsequent operations consume
-  only current normalized state and terminal evidence; free prose is not scored
+- **WHEN** caller продолжает state-oriented wait по retained session/turn IDs
+- **THEN** eval проверяет только current state/terminal delivery без event history
+  assertions; влияние internal event eviction проверяется сценарием SW-3
+
+#### Scenario: Потерянный terminal response читается повторно
+- **WHEN** выбранный `lose-terminal-wait-response-once` скрывает первый terminal wait response после его фактического получения от runtime
+- **THEN** следующий wait адресует тот же retained turn без повторного provider effect; oracle доказывает `turn.wait-response-recovered`, затем обычные terminal/receipt delivery и required close, а caller получает исходный result
+
+#### Scenario: Потеря response не подменяется потерей evidence
+- **WHEN** в таком scenario отсутствует withheld response, полный raw transcript, либо повторный wait изменяет адрес или выполняется после другого effect
+- **THEN** oracle отклоняет proof; program/expected trace не восстанавливает недостающий факт и первый скрытый result не считается доставленным
 
 ### Requirement: Outcome model и диагностические доказательства
 Каждый eval run MUST написать в stdout ровно один `EvalResultV1` JSON object;

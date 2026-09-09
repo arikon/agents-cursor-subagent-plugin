@@ -1,0 +1,83 @@
+{
+  "baseline_revision": "b8a1e5c90cc6bc82362a7c174e42ff49e649e40d",
+  "results": [
+    {
+      "variant": "baseline",
+      "settled_before_deadline": false,
+      "controlled_elapsed_ms": 1000,
+      "timeout_registered": true,
+      "cursor_supplied": true,
+      "new_events_after_answer": 0,
+      "wait_timeout": true,
+      "pending": [
+        {
+          "request_id": "second",
+          "kind": "permission",
+          "context": {
+            "title": {
+              "text": "Execute second?",
+              "truncated": false
+            },
+            "tool_kind": {
+              "text": "execute",
+              "truncated": false
+            },
+            "choices": [
+              "allow-once",
+              "reject-once"
+            ],
+            "locations": [
+              {
+                "path": {
+                  "text": "/Users/arikon/projects/codex-cursor-subagent-plugin",
+                  "truncated": false
+                },
+                "line": 1
+              }
+            ]
+          }
+        }
+      ],
+      "provider_answers": 1
+    },
+    {
+      "variant": "candidate",
+      "settled_before_deadline": true,
+      "controlled_elapsed_ms": 0,
+      "timeout_registered": false,
+      "cursor_supplied": false,
+      "new_events_after_answer": 0,
+      "wait_timeout": false,
+      "pending": [
+        {
+          "request_id": "second",
+          "kind": "permission",
+          "context": {
+            "title": {
+              "text": "Execute second?",
+              "truncated": false
+            },
+            "tool_kind": {
+              "text": "execute",
+              "truncated": false
+            },
+            "choices": [
+              "allow-once",
+              "reject-once"
+            ],
+            "locations": [
+              {
+                "path": {
+                  "text": "/Users/arikon/projects/codex-cursor-subagent-plugin",
+                  "truncated": false
+                },
+                "line": 1
+              }
+            ]
+          }
+        }
+      ],
+      "provider_answers": 1
+    }
+  ]
+}

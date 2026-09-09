@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { cp, lstat, mkdir, mkdtemp, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import { createInterface } from 'node:readline';
@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import { homedir, tmpdir } from 'node:os';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
 import { MARKER_NAME, normalizeManifestBytes, runBootstrap } from '../scripts/cursor-subagent-bootstrap.mjs';
 import { materializeScenario, parseScenarioCorpus } from '../scripts/cursor-eval-scenario.mjs';
 import { readEvaluatorInventory } from '../scripts/cursor-skill-eval.mjs';
@@ -26,6 +27,9 @@ const MARKER_BYTES = 'CURSOR_AGENT_E2E_OK\n';
 const RELEASE_PROCESS_LIMITS = Object.freeze({ timeoutMs: 10_000, outputBytes: 1_048_576 });
 const MANAGED_PLUGIN_ID = 'agents-cursor-subagent-plugin';
 const SHA256 = /^[0-9a-f]{64}$/;
+// Immutable evidence owner for the actual pre-SW runtime/skill pair, not a schema mock.
+const PRE_SW_REVISION = 'b8a1e5c90cc6bc82362a7c174e42ff49e649e40d';
+const payloadPaths = ['.codex-plugin/plugin.json', 'README.md', 'scripts/cursor-subagent-mcp.mjs', 'scripts/cursor-model-adapter.mjs', 'scripts/recording-mcp-proxy.mjs', 'scripts/cursor-subagent-bootstrap.mjs', 'skills'];
 const releaseCorpus = parseScenarioCorpus(await readFile(join(repository, 'evals/cursor-subagent-scenarios.v1.json'), 'utf8'));
 const packageCanaryScenario = releaseCorpus.scenarios.find(({ scenario_kind: kind }) => kind === 'package-canary-reference');
 const packageCanaryId = packageCanaryScenario.scenario_id;
@@ -63,13 +67,12 @@ async function writeReleaseChildResult(destination, result) {
   await rename(temporary, destination);
 }
 
-async function copyPayload(destination) {
+async function copyPayload(destination, sourceRoot = repository) {
   await mkdir(destination);
-  for (const path of ['.codex-plugin/plugin.json', 'README.md', 'scripts/cursor-subagent-mcp.mjs', 'scripts/cursor-model-adapter.mjs', 'scripts/recording-mcp-proxy.mjs', 'scripts/cursor-subagent-bootstrap.mjs']) {
+  for (const path of payloadPaths) {
     await mkdir(join(destination, path, '..'), { recursive: true });
-    await cp(join(repository, path), join(destination, path));
+    await cp(join(sourceRoot, path), join(destination, path), { recursive: true });
   }
-  await cp(join(repository, 'skills'), join(destination, 'skills'), { recursive: true });
 }
 
 async function makeLayout(prefix) {
@@ -116,7 +119,17 @@ export class McpClient {
     createInterface({ input: this.child.stdout }).on('line', (line) => {
       let message; try { message = JSON.parse(line); } catch { return; }
       const waiter = this.pending.get(String(message.id)); if (!waiter) return;
-      this.pending.delete(String(message.id)); clearTimeout(waiter.timer); waiter.resolve(message);
+      this.pending.delete(String(message.id)); clearTimeout(waiter.timer);
+      if (this.dropTerminalWaitResponseOnce && waiter.isWait && !message.result?.isError && message.result?.content?.[0]?.type === 'text') {
+        const envelope = JSON.parse(message.result.content[0].text);
+        if (envelope.turn_status === 'completed') {
+          this.dropTerminalWaitResponseOnce = false;
+          this.withheldTerminal = envelope;
+          waiter.reject(new Error('package fixture lost terminal wait response'));
+          return;
+        }
+      }
+      waiter.resolve(message);
     });
     this.exit = new Promise((resolveExit) => this.child.once('close', (code, signal) => resolveExit({ code, signal })));
     const rejectPending = (error) => {
@@ -133,7 +146,7 @@ export class McpClient {
     const id = this.nextId++;
     return new Promise((resolveRequest, reject) => {
       const timer = setTimeout(() => { this.pending.delete(String(id)); reject(new Error(`MCP ${method} timed out`)); }, timeoutMs);
-      this.pending.set(String(id), { resolve: resolveRequest, reject, timer });
+      this.pending.set(String(id), { resolve: resolveRequest, reject, timer, isWait: method === 'tools/call' && params.name === 'cursor_wait' });
       this.child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`, (error) => {
         if (error && this.pending.delete(String(id))) { clearTimeout(timer); reject(error); }
       });
@@ -164,13 +177,13 @@ export class McpClient {
   }
 }
 
-async function installAndDiscover(layout, executables, adapterCommand, env, runtimeEnv = {}) {
-  await mkdir(layout.configRoot);
+async function installAndDiscover(layout, executables, adapterCommand, env, runtimeEnv = {}, operation = 'install') {
+  await mkdir(layout.configRoot, { recursive: true });
   const bootstrapEnv = {
     ...env, CURSOR_SUBAGENT_CODEX_ADAPTER_COMMAND: JSON.stringify(adapterCommand),
     CURSOR_SUBAGENT_ADAPTER_CONFIG_ROOT: layout.configRoot, CODEX_HOME: layout.configRoot,
   };
-  const installed = await runBootstrap(['install', '--source-root', layout.source,
+  const installed = await runBootstrap([operation, '--source-root', layout.source,
     '--managed-marketplace-root', layout.managed, '--node-executable', executables.node,
     '--codex-executable', executables.codex, '--agent-executable', executables.agent,
     '--allowed-workspace-root', layout.workspace], { env: bootstrapEnv });
@@ -408,6 +421,85 @@ export async function runLiveCanary(env = process.env, hooks = {}) {
 }
 
 test('credential-free release gate installs, discovers and starts the published MCP payload', deterministicReleaseGate);
+
+test('installed runtime and skill cross close/restart upgrade and rollback boundaries', async (t) => {
+  const layout = await makeLayout('cursor-release-generations-');
+  t.after(() => rm(layout.root, { recursive: true, force: true }));
+  const previous = join(layout.root, 'previous');
+  const archive = join(layout.root, 'previous.tar');
+  const execute = promisify(execFile);
+  // Missing history fails closed: an invented legacy schema is not an installed predecessor.
+  await execute('git', ['archive', '--format=tar', `--output=${archive}`, PRE_SW_REVISION, ...payloadPaths], { cwd: repository });
+  await mkdir(previous);
+  await execute('tar', ['-xf', archive, '-C', previous]);
+  const executable = await realpath(process.execPath);
+  const env = { ...process.env, FAKE_CODEX_STATE: layout.state, FAKE_CODEX_EXPECT_CONFIG_ROOT: layout.configRoot,
+    FAKE_ACP_EXPECT_CODEX_HOME: layout.configRoot };
+  const pidPath = join(layout.root, 'acp.pid');
+  const runtimeEnv = { CURSOR_AGENT_COMMAND: executable,
+    CURSOR_SUBAGENT_ADAPTER_ARGS: JSON.stringify([join(repository, 'tests/fixtures/release-generation-acp.mjs')]),
+    NODE_OPTIONS: `--import=${modelDiscoveryPreload}`, RELEASE_MODEL_CATALOG: modelCatalogFixture,
+    RELEASE_ACP_PID_PATH: pidPath, FAKE_ACP_PICKER_FROM_ARGV: '1' };
+  const installedRoot = join(layout.managed, 'plugins', MANAGED_PLUGIN_ID);
+  let previousPayloadHash;
+  for (const [generation, sourceRoot] of [['previous', previous], ['current', repository], ['rollback', previous]]) {
+    await rm(layout.source, { recursive: true, force: true });
+    await rm(layout.hiddenSource, { recursive: true, force: true });
+    await copyPayload(layout.source, sourceRoot);
+    const current = generation === 'current';
+    const client = await installAndDiscover(layout, { node: executable, codex: executable, agent: executable },
+      [executable, fakeAdapter], env, { ...runtimeEnv, FAKE_ACP_HOLD_PROMPT: current ? undefined : '1' },
+      generation === 'previous' ? 'install' : 'update');
+    t.after(() => client.close());
+    const tools = (await client.request('tools/list')).result.tools;
+    const waitSchema = tools.find(({ name }) => name === 'cursor_wait').inputSchema.properties;
+    assert.equal(Object.hasOwn(waitSchema, 'after_event_id'), !current);
+    assert.equal(Object.hasOwn(waitSchema, 'after_progress_revision'), !current);
+    const installedSkill = await readFile(join(installedRoot, 'skills/cursor-subagent/SKILL.md'), 'utf8');
+    assert.equal(installedSkill, await readFile(join(sourceRoot, 'skills/cursor-subagent/SKILL.md'), 'utf8'));
+    assert.equal(installedSkill.includes('after_event_id'), !current);
+    const marker = JSON.parse(await readFile(join(layout.managed, MARKER_NAME), 'utf8'));
+    if (generation === 'previous') previousPayloadHash = marker.payload_hash;
+    if (generation === 'current') assert.notEqual(marker.payload_hash, previousPayloadHash);
+    if (generation === 'rollback') assert.equal(marker.payload_hash, previousPayloadHash);
+    t.diagnostic(JSON.stringify({ generation, revision: current ? 'working-tree' : PRE_SW_REVISION,
+      payload_hash: marker.payload_hash, managed_installed_skill_sha256: digestBytes(installedSkill).sha256 }));
+    const model = (await client.tool('cursor_list_models', {})).models.find(({ id }) => !['default', 'auto-smart'].includes(id)).id;
+    const turn = await client.tool('cursor_delegate', { cwd: layout.workspace, mode: 'agent', model, prompt: 'Return the package generation result.' });
+    assert.equal(turn.session_state, 'live', JSON.stringify(turn));
+    if (current) {
+      // Withhold a real terminal wire response before delivery to the caller. The
+      // eval owner covers fault ordering/oracles; this proves installed recovery only.
+      client.dropTerminalWaitResponseOnce = true;
+      let responseLost = false;
+      for (let attempt = 0; attempt < 5 && !responseLost; attempt += 1) {
+        try {
+          const pending = await client.tool('cursor_wait', { session_id: turn.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 });
+          assert.equal(pending.session_id, turn.session_id); assert.equal(pending.turn_id, turn.turn_id);
+          assert.equal(pending.turn_status, 'running'); assert.equal(pending.wait_timeout, true);
+        } catch (error) {
+          if (error.message !== 'package fixture lost terminal wait response') throw error;
+          responseLost = true;
+        }
+      }
+      assert.equal(responseLost, true, 'installed terminal response must reach the loss fixture');
+      const recovered = await client.tool('cursor_wait', { session_id: turn.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 });
+      assert.deepEqual(recovered, client.withheldTerminal);
+      assert.equal(recovered.turn_status, 'completed');
+      assert.equal(recovered.session_id, turn.session_id); assert.equal(recovered.turn_id, turn.turn_id);
+    } else {
+      const status = await client.tool('cursor_session_status', { session_id: turn.session_id });
+      assert.equal(status.active_turn?.turn_status, 'running', 'old installed delegation remains active before close');
+    }
+    const providerPid = Number(await readFile(pidPath, 'utf8'));
+    process.kill(providerPid, 0);
+    await client.tool('cursor_close_session', { session_id: turn.session_id });
+    assert.throws(() => process.kill(providerPid, 0), { code: 'ESRCH' }, 'close must reap the old ACP child before replacement');
+    await client.close();
+    assert.deepEqual(await client.exit, { code: 0, signal: null });
+    assert.throws(() => process.kill(client.child.pid, 0), { code: 'ESRCH' }, 'file replacement must follow MCP exit');
+  }
+});
 
 test('installed live model discovery canary rejects an unknown ID before allocation', {
   skip: process.env.CURSOR_MODEL_DISCOVERY_LIVE !== '1',

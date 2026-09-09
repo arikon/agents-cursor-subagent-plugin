@@ -113,6 +113,37 @@ test('filesystem callbacks normalize public failures without escaping the sessio
     assert.equal(lastLogged(log).error.data.error_code, scenario.error);
     await runtime.call('cursor_close_session', { session_id: session.session_id });
   });
+  await t.test('read target deleted after validation returns an error without breaking the turn', async (caseT) => {
+    const racedSource = join(root, 'deleted-after-validation.txt');
+    const log = join(root, 'deleted-after-validation.jsonl');
+    writeFileSync(racedSource, 'private file contents', 'utf8');
+    const runtime = withInjectedFake(caseT, { roots: [realpathSync(root)], env: {
+      FAKE_ACP_HOLD_PROMPT: '1', FAKE_ACP_LOG: log,
+    } });
+    const session = await runtime.call('cursor_start_session', { cwd: root, mode: 'plan' });
+    const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'read a changing file' });
+    const record = runtime.sessions.get(session.session_id);
+    const checkedExistingFile = record.checkedExistingFile;
+    record.checkedExistingFile = function (path) {
+      const canonical = checkedExistingFile.call(this, path);
+      rmSync(racedSource);
+      return canonical;
+    };
+    try {
+      record.receive(JSON.stringify({ jsonrpc: '2.0', id: 'read-deletion-race', method: 'fs/read_text_file',
+        params: { sessionId: record.cursorSessionId, path: racedSource } }));
+    } finally { record.checkedExistingFile = checkedExistingFile; }
+    assert.equal(existsSync(racedSource), false);
+    const status = await runtime.call('cursor_session_status', { session_id: session.session_id });
+    assert.equal(status.session_state, 'live');
+    assert.equal(status.active_turn.turn_id, turn.turn_id);
+    assert.equal(status.active_turn.turn_status, 'running');
+    assert.equal((await waitTerminal(runtime, session.session_id, turn.turn_id)).turn_status, 'completed');
+    const response = readJsonLines(log).find((entry) => entry.id === 'read-deletion-race');
+    assert.equal(response.error.data.error_code, 'protocol_error');
+    assert.equal(Object.hasOwn(response, 'result'), false);
+    assert.doesNotMatch(JSON.stringify(response), /private file contents/);
+  });
 });
 
 test('ACP callback transport handles notifications, default read ranges and a closed request channel', async (t) => {
@@ -315,12 +346,19 @@ test('public live-session and tombstone capacity limits retain only admitted rec
 
   const tombstoneRuntime = withFake(t);
   const tombstones = [];
+  let now = Date.now();
+  t.mock.method(Date, 'now', () => now);
   for (let index = 0; index < LIMITS.tombstones + 1; index += 1) {
+    if (index > 1) now += 1;
     const session = await tombstoneRuntime.call('cursor_start_session', { cwd, mode: 'ask' });
-    tombstones.push(await tombstoneRuntime.call('cursor_close_session', { session_id: session.session_id }));
+    tombstones.push({ ...await tombstoneRuntime.call('cursor_close_session', { session_id: session.session_id }), closedAt: now });
   }
-  await assert.rejects(tombstoneRuntime.call('cursor_session_status', { session_id: tombstones[0].session_id }), { error_code: 'unknown_session' });
-  assert.equal((await tombstoneRuntime.call('cursor_session_status', { session_id: tombstones.at(-1).session_id })).session_state, 'tombstone');
+  const ordered = tombstones.sort((a, b) => a.closedAt - b.closedAt || a.session_id.localeCompare(b.session_id)).map((session) => session.session_id);
+  await assert.rejects(tombstoneRuntime.call('cursor_session_status', { session_id: ordered[0] }), { error_code: 'unknown_session' });
+  assert.equal(tombstoneRuntime.sessions.size, LIMITS.tombstones);
+  for (const session_id of ordered.slice(1)) {
+    assert.equal((await tombstoneRuntime.call('cursor_session_status', { session_id })).session_state, 'tombstone');
+  }
 });
 
 test('event eviction does not prevent retained turn observation', async (t) => {
@@ -508,7 +546,7 @@ test('retained result overflow fails explicitly without publishing a partial res
   const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id);
   assert.equal(terminal.turn_status, 'failed');
   assert.deepEqual(terminal.terminal_reason, { text: 'terminal_result_limit', truncated: false });
-  assert.equal(Object.hasOwn(terminal, 'result'), false);
+  assert.equal(terminal.result, null);
   assert.equal(terminal.terminal_receipt.result_sha256, null);
   assert.equal(terminal.terminal_receipt.result_truncated, false);
   const status = await runtime.call('cursor_session_status', { session_id: session.session_id });
@@ -632,4 +670,3 @@ test('malformed and nonobject ACP frames follow init and active-turn failure lif
     const activeRuntime = withFake(t, { env: { FAKE_ACP_INVALID_FRAME: frame } }); const session = await activeRuntime.call('cursor_start_session', { cwd, mode: 'ask' }); const turn = await activeRuntime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'bad frame' }); const terminal = await waitTerminal(activeRuntime, session.session_id, turn.turn_id); const tombstone = await waitSessionState(activeRuntime, session.session_id, 'tombstone'); assert.equal(terminal.turn_status, 'failed'); assert.equal(Object.hasOwn(terminal, 'failure_kind'), false); assert.equal(tombstone.failure_kind, null);
   }
 });
-
