@@ -14,6 +14,9 @@ export const SCRUBBED_ENV = Object.freeze([
   'CLAUDE_MARKETPLACE_CANARY', 'CURSOR_EVAL_REAL_CODEX', 'CURSOR_EVAL_HOSTED_CODEX',
   'CURSOR_MODEL_DISCOVERY_LIVE', 'CURSOR_SUBAGENT_LIVE_E2E',
 ]);
+// Deterministic lanes must not inherit the host proxy configuration: recent
+// Node versions emit an experimental warning merely from those variables.
+const DETERMINISTIC_ENV_REMOVALS = Object.freeze(['HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'http_proxy', 'https_proxy', 'all_proxy']);
 const componentTests = Object.freeze([
   'tests/check-openspec-semantics.test.mjs', 'tests/coverage-audit.test.mjs',
   'tests/codex-client-integration-component.test.mjs', 'tests/facade.test.mjs', 'tests/release-e2e-component.test.mjs', 'tests/codex-client-oracle-component.test.mjs', 'tests/run-cursor-skill-eval-component.test.mjs', 'tests/bootstrap-component.test.mjs', 'tests/codex-app-server-client-component.test.mjs', 'tests/node-test-reporter-v22.test.mjs',
@@ -215,6 +218,7 @@ export async function runSupervisor({ laneName, tests = null, testNamePattern = 
   const state = { terminalCause: null, infrastructure: null, timedOut: false, interrupted: false, signal: null };
   const childEnv = { ...env };
   for (const key of SCRUBBED_ENV) delete childEnv[key];
+  for (const key of DETERMINISTIC_ENV_REMOVALS) delete childEnv[key];
   if (compatibleOptIns) for (const key of enabledOptIns) childEnv[key] = '1';
   const args = ['--test', `--test-concurrency=${lane.concurrency}`, `--test-timeout=${lane.timeoutMs}`,
     '--test-reporter=tap', `--test-reporter-destination=${paths.tap}`, `--test-reporter=${join(root, 'scripts/node-test-reporter-v22.mjs')}`, `--test-reporter-destination=${paths.failures}`];

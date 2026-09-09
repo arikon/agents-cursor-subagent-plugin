@@ -186,7 +186,7 @@ export async function runPackageCommand(command, args, { env = process.env, time
     child.on('close', (code) => {
       const output = Buffer.concat(stdout).toString('utf8');
       const error = Buffer.concat(stderr).toString('utf8');
-      finish({ code, output, error,
+      finish({ code, output, error: code === 0 ? '' : error,
         timeout: killReason === 'timeout', overflow: killReason === 'overflow' });
     });
     timer = setTimeout(() => killAndWait('timeout'), timeoutMs);

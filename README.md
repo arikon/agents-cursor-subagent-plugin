@@ -111,6 +111,18 @@ codex plugin add agents-cursor-subagent-plugin@agents-cursor-subagent-plugin
 
 Start a new Codex task only after the final `plugin add` succeeds.
 
+### Breaking update: `cursor_wait`
+
+This release removes `after_event_id` and `after_progress_revision` from
+`cursor_wait`. Before updating, finish or close every delegated Cursor session
+and stop the MCP process. Then run the update commands above and start a new
+Codex task so that it loads the matching installed skill and tools. Replacing
+plugin files while an old task is open does not update that task's MCP process.
+
+To roll back, use the previous plugin revision, repeat the same close/restart
+boundary, and open another new task. Do not combine an old skill with the new
+runtime, or the new skill with the old runtime.
+
 ## Install in Claude Code
 
 See the official [Claude Code plugin installation guide](https://code.claude.com/docs/en/discover-plugins)
