@@ -190,7 +190,7 @@ const server = createServer(async (request, response) => {
   } else if (deferred && protocolStep === 3 && ids && body.tools?.some(({ type }) => type === 'tool_search')) {
     events = toolSearchCall('wait for delegated Cursor turn terminal result', state.requests);
   } else if (protocolStep === (deferred ? 4 : 2) && ids && wait) {
-    const args = { ...ids, after_event_id: 0, timeout_ms: 1000 };
+    const args = { ...ids, timeout_ms: 1000 };
     events = waitNamespace ? namespacedToolCall(waitNamespace, wait, args, state.requests) : toolCall(wait, args, state.requests);
   } else if (deferred && protocolStep === 5 && ids && body.tools?.some(({ type }) => type === 'tool_search')) {
     events = toolSearchCall('close Cursor session', state.requests);

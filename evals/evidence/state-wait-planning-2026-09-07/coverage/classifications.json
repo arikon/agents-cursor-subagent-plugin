@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "path": "scripts/check-openspec-semantics.mjs",
+      "source_sha256": "910e75ee9dd24caf4e7cfc68a9ff4fd600d98ea257cbdd955672c872cda03265",
+      "metric": "branches",
+      "line": 147,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "Registered source spec files are read by structural ownership checks before this auxiliary scan; a removed registered file fails closed with ENOENT, verified by stacked replacement rejects missing file. This guard tolerates non-contract auxiliary directories and does not admit a missing owner."
+    },
+    {
+      "path": "scripts/check-openspec-semantics.mjs",
+      "source_sha256": "910e75ee9dd24caf4e7cfc68a9ff4fd600d98ea257cbdd955672c872cda03265",
+      "metric": "branches",
+      "line": 574,
+      "occurrence": 1,
+      "classification": "unreachable_defensive",
+      "disposition": "Import-only coverage does not enter the CLI guard; its foreground semantic verification passed for 12 changes. Adjacent Node coverage exclusion documents this entrypoint boundary."
+    },
+    {
+      "path": "scripts/cursor-subagent-bootstrap.mjs",
+      "source_sha256": "303dc84081779dc9e692e07dd97a81e8e8d5cab2add2943eeb4383499306a1b1",
+      "metric": "branches",
+      "line": 175,
+      "occurrence": 1,
+      "classification": "realistic_failure_already_owned",
+      "disposition": "Repeated overflow after the first kill is timing-dependent. tests/bootstrap.test.mjs scenario package command bounds simultaneous stdout and stderr overflow with one terminal outcome owns the observable first-reason and single-outcome behavior and passed in this coverage run; no assertion on chunk scheduling is required."
+    }
+  ]
+}

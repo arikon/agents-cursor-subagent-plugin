@@ -7,8 +7,10 @@ const changeIds = Object.freeze({
   expandedEval: "expand-cursor-subagent-skill-evals",
   parallelTestLanes: "parallelize-node-test-lanes",
   accelerateNodeUnitTests: "accelerate-node-unit-tests",
+  refactorTestPyramid: "refactor-test-pyramid",
   hardenTestContracts: "harden-test-contracts",
   interactiveAcpUx: "improve-interactive-acp-ux",
+  simplifyTaskStateWait: "simplify-task-state-wait",
   claudeCodeMarketplace: "add-claude-code-marketplace-plugin",
 });
 
@@ -93,6 +95,23 @@ export const PROJECT_SEMANTIC_REGISTRY = Object.freeze({
       ]),
     }),
     Object.freeze({
+      id: changeIds.refactorTestPyramid,
+      capability: "node-test-supervision",
+      specDirectory: "node-test-supervision",
+      ownerClaim: "`node-test-supervision` owns test-level selection and live opt-in routing",
+      invariantIds: Object.freeze(["PYR-1", "PYR-2", "NTS-1", "NTS-2", "NTS-3"]),
+      ownedRequirements: Object.freeze([
+        "Выбор уровня детерминированной проверки",
+        "Изоляция live opt-ins по выбранному eval-пути",
+      ]),
+      modified: Object.freeze([]),
+      references: Object.freeze([
+        Object.freeze({ ownerChange: changeIds.supervisor, capability: "node-test-supervision", requirementId: "NTS-1", requirement: "Терминальный foreground verdict" }),
+        Object.freeze({ ownerChange: changeIds.supervisor, capability: "node-test-supervision", requirementId: "NTS-2", requirement: "Диагностика текущего прогона без console шума" }),
+        Object.freeze({ ownerChange: changeIds.supervisor, capability: "node-test-supervision", requirementId: "NTS-3", requirement: "Lane selection и coverage scope" }),
+      ]),
+    }),
+    Object.freeze({
       id: changeIds.hardenTestContracts,
       capability: "cursor-subagent-skill-evals",
       specDirectory: "cursor-subagent-skill-evals",
@@ -145,6 +164,25 @@ export const PROJECT_SEMANTIC_REGISTRY = Object.freeze({
         Object.freeze({ capability: "cursor-subagent-skill-evals", requirement: "Cost-aware execution policy", replacementReason: "Frozen IUX baseline replaces the complete pre-change requirement.", sourceDigest: "d6f41eb1f081ff7a9c013538dced295f96508635d1aa2208b36cebb8b8601a78", replacementDigest: "6f7a15ff928dc2e573406d49d38ed3340bc654921d219da7c099fbee50ed1c51" }),
         Object.freeze({ capability: "cursor-plugin-distribution", requirement: "Проверяемая чистая установка", replacementReason: "Frozen IUX baseline replaces the complete pre-change requirement.", sourceDigest: "8b8ab02c47b021f9b5bb81b5aae0423a220db2d8b7fd4f472047226a3789dc9f", replacementDigest: "22619fba16ad2a075e8ee3b12ef8814187a3ed934038655f828f46cd5c17a436" }),
         Object.freeze({ capability: "cursor-plugin-distribution", requirement: "Managed marketplace lifecycle", replacementReason: "Installed behavior proof requires its recording proxy in the existing package owner allowlist.", sourceDigest: "eaeb536dab66e1f5ee5edb67f1792277fa1155b616282bc052d9a328ce65d43c", replacementDigest: "c8eb936407f47c09c28fc3060b71472aeeb7f46d7e640556dad106c311023593" }),
+      ]),
+    }),
+    Object.freeze({
+      id: changeIds.simplifyTaskStateWait,
+      capability: "cursor-acp-session-runtime",
+      specDirectory: "cursor-acp-session-runtime",
+      ownerClaim: "`cursor-acp-session-runtime` owns wait schemas, observation, retention and progress; `cursor-task-delegation` owns only caller composition.",
+      invariantIds: Object.freeze(["SW-1", "SW-2", "SW-3", "SW-4", "SW-5", "SW-6", "SW-7"]),
+      ownedRequirements: Object.freeze([]),
+      modified: Object.freeze([
+        Object.freeze({"capability": "cursor-acp-session-runtime", "requirement": "Публичный MCP tool contract", "replacementReason": "State-oriented observation replaces the exact source block without consumer cursor or delivery state.", "sourceDigest": "89378a95e67987767d1e0887008082444b1709b0cf709f9447eb48a549b826f8", "replacementDigest": "214d128558e158745049b827064429660c98b1804d3df62970e27e48b4118e7b"}),
+        Object.freeze({"capability": "cursor-acp-session-runtime", "requirement": "Адресуемое ожидание состояния сессии", "sourceChange": "improve-interactive-acp-ux", "replacementReason": "State-oriented observation replaces the exact source block without consumer cursor or delivery state.", "sourceDigest": "2710b075f8047dafb33e9a97ce51f2bf2e09c2c0e66c1ac23b56c5c91472e254", "replacementDigest": "c45f67a8577f8bd62f1fbb854536b7992424dedf3a096b6bc61046ec9c9a7afa"}),
+        Object.freeze({"capability": "cursor-acp-session-runtime", "requirement": "Sparse wait and bounded progress", "sourceChange": "improve-interactive-acp-ux", "replacementReason": "State-oriented observation replaces the exact source block without consumer cursor or delivery state.", "sourceDigest": "fe1856f46e88598ed676552e043945e4741ae9427cbc2efc7258ca8258f9af69", "replacementDigest": "61621122110a3ddf800441126aee418d8c3e3f6c2bd643654527781dcf613c56"}),
+        Object.freeze({"capability": "cursor-acp-session-runtime", "requirement": "Role-neutral mode and collaboration surface", "sourceChange": "improve-interactive-acp-ux", "replacementReason": "State-oriented observation replaces the exact source block without consumer cursor or delivery state.", "sourceDigest": "38fc68a64e6fe8e1c23f0ea34421618af15d6e965af843363d271380bdf92eb0", "replacementDigest": "c9a67d32bf426f693db6fcd3f353a125a76cbc7edcdc261a69c64297aa239fab"}),
+        Object.freeze({"capability": "cursor-acp-session-runtime", "requirement": "Единая машина состояний runtime", "replacementReason": "State-oriented observation replaces the exact source block without consumer cursor or delivery state.", "sourceDigest": "10846b8ad601cc14267f075fe37fb11fec80624f5e8c38bfddfd4d322b589398", "replacementDigest": "7afd0cdf0f2d542b3b21e6722283bebc1faf1cd18305cc874a5f859c6f4e8999"}),
+        Object.freeze({"capability": "cursor-acp-session-runtime", "requirement": "Изолированное состояние ходов и событий", "replacementReason": "State-oriented observation replaces the exact source block without consumer cursor or delivery state.", "sourceDigest": "0df04c98140efe7f5a27081521c1444756a56a73fb2673f2dac4ed4cdafbccd9", "replacementDigest": "0c48ecc0bb0f31a2594b839de8c46864e4c1e1fb9186dd22c4af4db884da3fca"}),
+        Object.freeze({"capability": "cursor-acp-session-runtime", "requirement": "Ограниченный жизненный цикл ACP-процесса", "replacementReason": "State-oriented observation replaces the exact source block without consumer cursor or delivery state.", "sourceDigest": "c990e7bf2f1887754d3b5b8b592f98e77d79dff5f5306f7d42fbdd08a895e6a4", "replacementDigest": "00b3088b9c57d242e441fe0cb72657370d959e455d4e4166f760790438a5e2aa"}),
+        Object.freeze({"capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования", "replacementReason": "State-oriented observation replaces the exact source block without consumer cursor or delivery state.", "sourceDigest": "4d5318db0fbf25ccee2ea6f5dfd9176969c0e57d93a77cbc53c961e8ab4e8796", "replacementDigest": "b4b8571f6f599b8749348ab5a6f8678ac55291514e21d1106646b038ed1e5892"}),
+        Object.freeze({"capability": "cursor-subagent-skill-evals", "requirement": "Сценарный контракт поведения и authority-aware interaction", "sourceChange": "improve-interactive-acp-ux", "replacementReason": "State-oriented observation replaces the exact source block without consumer cursor or delivery state.", "sourceDigest": "c5d94792c37f7138187e50f74f28f548ea5387b23737f90e0a313664cbd72637", "replacementDigest": "f3b411c9a2c54ef6f32c49d507206f792f858ea4701bce1358176c4afba3ac93"}),
       ]),
     }),
     Object.freeze({

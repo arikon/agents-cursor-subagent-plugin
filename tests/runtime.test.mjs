@@ -85,14 +85,14 @@ async function fireInitBudgetDeadline(operation) {
   }
 }
 
-async function waitTerminal(runtime, sessionId, turnId, afterEventId = 0) {
+async function waitTerminal(runtime, sessionId, turnId) {
   let envelope;
   for (let attempts = 0; attempts < 100; attempts += 1) {
-    envelope = await runtime.call('cursor_wait', { session_id: sessionId, turn_id: turnId, after_event_id: afterEventId, timeout_ms: 1_000 });
-    afterEventId = envelope.last_event_id;
+    envelope = await runtime.call('cursor_wait', { session_id: sessionId, turn_id: turnId, timeout_ms: 1_000 });
     if (!['running', 'waiting_for_input'].includes(envelope.turn_status)) {
       return envelope;
     }
+    await new Promise((resolveWait) => setImmediate(resolveWait));
   }
   assert.equal(envelope?.turn_status, 'completed', `turn ${turnId} did not terminate`);
   return envelope;
@@ -502,7 +502,7 @@ test('runtime rejects lookup of an unknown turn in a live session', async (t) =>
   await runtime.call('cursor_close_session', { session_id: session.session_id });
 });
 
-test('runtime rejects a wait cursor beyond the published event stream', async (t) => {
+test('runtime rejects legacy wait cursors before creating a waiter', async (t) => {
   const root = mkdtempSync(join(tmpdir(), 'cursor-runtime-invalid-wait-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const log = join(root, 'wire.jsonl');
@@ -545,10 +545,10 @@ test('runtime rejects a wait cursor beyond the published event stream', async (t
   assert.equal(readJsonLines(log).length, providerMessages);
 
   const waited = await runtime.call('cursor_wait', {
-    session_id: session.session_id, turn_id: turn.turn_id, after_event_id: 0, timeout_ms: 1_000,
+    session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000,
   });
   assert.equal(waited.turn_status, 'running');
-  assert.equal(waited.wait_timeout, false);
+  assert.equal(waited.wait_timeout, true);
   assert.equal(readJsonLines(log).length, providerMessages);
   const closed = await runtime.call('cursor_close_session', { session_id: session.session_id });
   assert.equal(closed.session_state, 'tombstone');
@@ -574,7 +574,7 @@ test('fake ACP completes and preserves retained T1 while T2 is active', async (t
   const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
   assert.equal(session.session_state, 'live');
   const first = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'one' });
-  const completed = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: first.turn_id, after_event_id: first.last_event_id, timeout_ms: 1_000 });
+  const completed = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: first.turn_id, timeout_ms: 1_000 });
   assert.equal(completed.turn_status, 'completed');
   const second = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'two' });
   const retained = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: first.turn_id, timeout_ms: 1_000 });
@@ -587,23 +587,20 @@ test('agent message chunks produce the result before terminal session lifecycle 
   const runtime = withFake(t, { env: { FAKE_ACP_RESULT: 'from session update' } });
   const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
   const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'one' });
-  const completed = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, after_event_id: turn.last_event_id, timeout_ms: 1_000 });
+  const completed = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 });
   assert.equal(completed.result.text, 'from session update');
-  assert.deepEqual(completed.events.map((event) => [event.kind, event.payload]), [['result', { turn_status: 'completed' }]]);
+  assert.deepEqual(completed.pending, []);
   const closed = await runtime.call('cursor_close_session', { session_id: session.session_id });
-  const afterClose = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, after_event_id: completed.last_event_id, timeout_ms: 1_000 });
+  const afterClose = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 });
   assert.equal(closed.session_state, 'tombstone');
-  assert.deepEqual(afterClose.events.map((event) => [event.kind, event.payload.scope, event.payload.to]), [
-    ['lifecycle', 'session', 'closing'],
-    ['lifecycle', 'session', 'tombstone'],
-  ]);
+  assert.deepEqual(afterClose.pending, []);
 });
 
 test('malformed prompt result fails after bounded update aggregation', async (t) => {
   const runtime = withFake(t, { env: { FAKE_ACP_BAD_PROMPT_RESULT: '1' } });
   const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
   const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'one' });
-  const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id);
+  const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id);
   assert.equal(terminal.turn_status, 'failed');
   assert.match(terminal.terminal_reason.text, /prompt response is not admitted/);
 });
@@ -613,7 +610,7 @@ test('active turn normalizes malformed, failed and unrelated ACP responses', asy
     const runtime = withFake(t, { env: { FAKE_ACP_PROMPT_RESPONSE_VARIANT: variant } });
     const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
     const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: variant });
-    const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id);
+    const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id);
     assert.equal(terminal.turn_status, 'failed', variant);
     assert.equal(Object.hasOwn(terminal, 'failure_kind'), false, variant);
     assert.equal((await runtime.call('cursor_session_status', { session_id: session.session_id })).failure_kind, null, variant);
@@ -621,14 +618,14 @@ test('active turn normalizes malformed, failed and unrelated ACP responses', asy
   const runtime = withFake(t, { env: { FAKE_ACP_PROMPT_RESPONSE_VARIANT: 'unknown-id-first' } });
   const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
   const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'ignore unrelated response' });
-  const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id);
+  const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id);
   assert.equal(terminal.turn_status, 'completed');
   await runtime.call('cursor_close_session', { session_id: session.session_id });
 
   const crlfRuntime = withFake(t, { env: { FAKE_ACP_CRLF: '1' } });
   const crlfSession = await crlfRuntime.call('cursor_start_session', { cwd, mode: 'ask' });
   const crlfTurn = await crlfRuntime.call('cursor_send_prompt', { session_id: crlfSession.session_id, prompt: 'CRLF framing' });
-  assert.equal((await waitTerminal(crlfRuntime, crlfSession.session_id, crlfTurn.turn_id, crlfTurn.last_event_id)).turn_status, 'completed');
+  assert.equal((await waitTerminal(crlfRuntime, crlfSession.session_id, crlfTurn.turn_id)).turn_status, 'completed');
   await crlfRuntime.call('cursor_close_session', { session_id: crlfSession.session_id });
 });
 
@@ -637,7 +634,7 @@ test('prompt result admits exactly the pinned stopReason table', async (t) => {
     const runtime = withFake(t, { env: { FAKE_ACP_STOP_REASON: stopReason } });
     const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
     const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: stopReason });
-    const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id);
+    const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id);
     assert.equal(terminal.turn_status, 'completed', stopReason);
     await runtime.call('cursor_close_session', { session_id: session.session_id });
   }
@@ -645,7 +642,7 @@ test('prompt result admits exactly the pinned stopReason table', async (t) => {
   const runtime = withFake(t, { env: { FAKE_ACP_STOP_REASON: 'not-admitted' } });
   const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
   const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'unknown' });
-  const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id);
+  const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id);
   assert.equal(terminal.turn_status, 'failed');
   assert.match(terminal.terminal_reason.text, /prompt response is not admitted/);
 });
@@ -655,7 +652,7 @@ test('pending request is turn-addressed and answer restores running state', asyn
   const runtime = withFake(t, { pending: 'question', env: { FAKE_ACP_LOG: log } });
   const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
   const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'ask' });
-  const waiting = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, after_event_id: turn.last_event_id, timeout_ms: 1_000 });
+  const waiting = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 });
   assert.equal(waiting.turn_status, 'waiting_for_input');
   const pending = waiting.pending[0];
   const answered = await runtime.call('cursor_answer_question', {
@@ -663,7 +660,7 @@ test('pending request is turn-addressed and answer restores running state', asyn
     outcome: 'answered', answers: [{ question_id: 'q', selected_option_ids: ['yes'] }],
   });
   assert.equal(answered.turn_status, 'running');
-  const completed = await waitTerminal(runtime, session.session_id, turn.turn_id, answered.last_event_id);
+  const completed = await waitTerminal(runtime, session.session_id, turn.turn_id);
   assert.equal(completed.turn_status, 'completed');
   assert.deepEqual(lastLogged(log).result, { outcome: { outcome: 'answered', answers: [{ questionId: 'q', selectedOptionIds: ['yes'] }] } });
   await runtime.call('cursor_close_session', { session_id: session.session_id });
@@ -706,23 +703,23 @@ test('explicit fake-ACP program mode sequences pending, effect and terminal step
   const session = await runtime.call('cursor_start_session', { cwd: root, mode: 'agent' });
   const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'run program' });
 
-  let state = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, after_event_id: turn.last_event_id, timeout_ms: 1_000 });
+  let state = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 });
   assert.equal(state.pending[0].kind, 'question');
   state = await runtime.call('cursor_answer_question', {
     session_id: session.session_id, turn_id: turn.turn_id, request_id: 'q-1', outcome: 'answered',
     answers: [{ question_id: 'q', selected_option_ids: ['choice-1'] }],
   });
-  state = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, after_event_id: state.last_event_id, timeout_ms: 1_000 });
+  state = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 });
   assert.equal(state.pending[0].kind, 'plan');
   state = await runtime.call('cursor_answer_plan', {
     session_id: session.session_id, turn_id: turn.turn_id, request_id: 'plan-1', decision: 'accept',
   });
-  state = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, after_event_id: state.last_event_id, timeout_ms: 1_000 });
+  state = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 });
   assert.equal(state.pending[0].kind, 'permission');
   state = await runtime.call('cursor_answer_permission', {
     session_id: session.session_id, turn_id: turn.turn_id, request_id: 'permission-1', decision: 'allow-once',
   });
-  const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id, state.last_event_id);
+  const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id);
 
   assert.equal(terminal.turn_status, 'completed');
   assert.equal(terminal.result.text, 'CURSOR_EVAL_OK');
@@ -753,12 +750,12 @@ test('programmed fake-ACP holds terminality until the separate follow-up gate is
   const session = await runtime.call('cursor_start_session', { cwd: root, mode: 'ask' });
   const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'hold until follow-up' });
   const waiting = await runtime.call('cursor_wait', {
-    session_id: session.session_id, turn_id: turn.turn_id, after_event_id: turn.last_event_id, timeout_ms: 1_000,
+    session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000,
   });
   assert.equal(waiting.wait_timeout, true);
   assert.equal(readJsonLines(evidencePath).some(({ event }) => event === 'prompt_result'), false);
   writeFileSync(releasePath, 'follow-up started');
-  const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id, waiting.resume_after_event_id);
+  const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id);
   assert.equal(terminal.result.text, 'still activeHELD_OK');
   let events = [];
   for (let attempt = 0; attempt < 100 && events.length < 3; attempt += 1) {
@@ -791,7 +788,7 @@ test('programmed event burst waits for every distinct runtime acknowledgement be
   } });
   const session = await runtime.call('cursor_start_session', { cwd: root, mode: 'ask' });
   const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'acknowledge burst' });
-  const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id);
+  const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id);
   assert.equal(terminal.result.text, 'BURST_OK');
   const acknowledgements = readJsonLines(evidencePath).filter(({ kind }) => kind === 'burst.ack');
   assert.equal(acknowledgements.length, 257);
@@ -905,7 +902,7 @@ test('question answers reject malformed or unadvertised inputs without mutating 
   const runtime = withFake(t, { pending: 'question' });
   const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
   const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'ask' });
-  const waiting = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, after_event_id: turn.last_event_id, timeout_ms: 1_000 });
+  const waiting = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 });
   const cases = [
     { outcome: 'skipped', answers: [] },
     { outcome: 'not-admitted' },
@@ -927,7 +924,7 @@ test('question answers reject malformed or unadvertised inputs without mutating 
 });
 
 test('late answer to a retained terminal turn is rejected without affecting a newer turn', async (t) => {
-  const runtime = withFake(t, { pending: 'question' }); const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' }); const first = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'first' }); await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: first.turn_id, after_event_id: first.last_event_id, timeout_ms: 1_000 }); const firstAnswered = await runtime.call('cursor_answer_question', { session_id: session.session_id, turn_id: first.turn_id, request_id: 'q1', outcome: 'answered', answers: [{ question_id: 'q', selected_option_ids: ['yes'] }] }); const terminal = await waitTerminal(runtime, session.session_id, first.turn_id, firstAnswered.last_event_id); const second = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'second' }); await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: second.turn_id, after_event_id: second.last_event_id, timeout_ms: 1_000 });
+  const runtime = withFake(t, { pending: 'question' }); const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' }); const first = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'first' }); await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: first.turn_id, timeout_ms: 1_000 }); const firstAnswered = await runtime.call('cursor_answer_question', { session_id: session.session_id, turn_id: first.turn_id, request_id: 'q1', outcome: 'answered', answers: [{ question_id: 'q', selected_option_ids: ['yes'] }] }); const terminal = await waitTerminal(runtime, session.session_id, first.turn_id); const second = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'second' }); await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: second.turn_id, timeout_ms: 1_000 });
   await assert.rejects(runtime.call('cursor_answer_question', { session_id: session.session_id, turn_id: first.turn_id, request_id: 'late', outcome: 'cancelled' }), { error_code: 'unknown_request' });
   const retained = await runtime.call('cursor_cancel', { session_id: session.session_id, turn_id: first.turn_id });
   assert.equal(retained.turn_status, 'completed'); assert.equal(Object.hasOwn(retained, 'active_turn'), false);
@@ -937,9 +934,9 @@ test('late answer to a retained terminal turn is rejected without affecting a ne
 
 test('duplicate pending request ID is rejected without overwriting the accepted request', async (t) => {
   const root = mkdtempSync(join(tmpdir(), 'cursor-runtime-duplicate-')); t.after(() => rmSync(root, { recursive: true, force: true })); const log = join(root, 'wire.jsonl');
-  const runtime = withFake(t, { pending: 'duplicate', env: { FAKE_ACP_LOG: log } }); const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' }); const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'duplicate' }); const waiting = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, after_event_id: turn.last_event_id, timeout_ms: 1_000 });
+  const runtime = withFake(t, { pending: 'duplicate', env: { FAKE_ACP_LOG: log } }); const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' }); const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'duplicate' }); const waiting = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 });
   assert.equal(waiting.pending.length, 1); assert.equal(waiting.pending[0].context.questions[0].prompt.text, 'First?');
-  const answered = await runtime.call('cursor_answer_question', { session_id: session.session_id, turn_id: turn.turn_id, request_id: 'q1', outcome: 'answered', answers: [{ question_id: 'q', selected_option_ids: ['yes'] }] }); await waitTerminal(runtime, session.session_id, turn.turn_id, answered.last_event_id);
+  const answered = await runtime.call('cursor_answer_question', { session_id: session.session_id, turn_id: turn.turn_id, request_id: 'q1', outcome: 'answered', answers: [{ question_id: 'q', selected_option_ids: ['yes'] }] }); await waitTerminal(runtime, session.session_id, turn.turn_id);
   const duplicateError = readJsonLines(log).find((message) => message.error?.data?.error_code === 'duplicate_request');
   assert.deepEqual({ id: duplicateError.id, error_code: duplicateError.error.data.error_code }, { id: 'q1', error_code: 'duplicate_request' });
   await runtime.call('cursor_close_session', { session_id: session.session_id });
@@ -950,7 +947,7 @@ test('permission decisions map to their advertised opaque IDs, not option order'
   const runtime = withFake(t, { pending: 'permission', env: { FAKE_ACP_LOG: log } });
   const session = await runtime.call('cursor_start_session', { cwd, mode: 'agent' });
   const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'run' });
-  const waiting = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, after_event_id: turn.last_event_id, timeout_ms: 1_000 });
+  const waiting = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 });
   assert.equal(waiting.pending[0].context.title.text, 'Run?'); assert.equal(waiting.pending[0].context.tool_kind.text, 'execute'); assert.equal(waiting.pending[0].context.locations[0].line, 1);
   for (const [name, args] of [
     ['wrong permission decision', { name: 'cursor_answer_permission', decision: 'not-admitted' }],
@@ -962,7 +959,7 @@ test('permission decisions map to their advertised opaque IDs, not option order'
     assert.equal((await runtime.call('cursor_session_status', { session_id: session.session_id })).active_turn.pending.length, 1);
   }
   const answered = await runtime.call('cursor_answer_permission', { session_id: session.session_id, turn_id: turn.turn_id, request_id: 'p1', decision: 'allow-once' });
-  await waitTerminal(runtime, session.session_id, turn.turn_id, answered.last_event_id);
+  await waitTerminal(runtime, session.session_id, turn.turn_id);
   const response = lastLogged(log);
   assert.equal(response.result.outcome.optionId, 'opaque-allow');
   await runtime.call('cursor_close_session', { session_id: session.session_id });
@@ -970,10 +967,10 @@ test('permission decisions map to their advertised opaque IDs, not option order'
 
 test('plan decisions use adapter-owned wire encoding and close settles pending once', async (t) => {
   const root = mkdtempSync(join(tmpdir(), 'cursor-runtime-plan-')); t.after(() => rmSync(root, { recursive: true, force: true })); const log = join(root, 'wire.jsonl');
-  const runtime = withFake(t, { pending: 'plan', env: { FAKE_ACP_LOG: log } }); const session = await runtime.call('cursor_start_session', { cwd, mode: 'plan' }); const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'plan' }); await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, after_event_id: turn.last_event_id, timeout_ms: 1_000 });
+  const runtime = withFake(t, { pending: 'plan', env: { FAKE_ACP_LOG: log } }); const session = await runtime.call('cursor_start_session', { cwd, mode: 'plan' }); const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'plan' }); await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 });
   await assert.rejects(runtime.call('cursor_answer_plan', { session_id: session.session_id, turn_id: turn.turn_id, request_id: 'plan1', decision: 'defer' }), { error_code: 'invalid_args' });
   assert.equal((await runtime.call('cursor_session_status', { session_id: session.session_id })).active_turn.pending.length, 1);
-  const answered = await runtime.call('cursor_answer_plan', { session_id: session.session_id, turn_id: turn.turn_id, request_id: 'plan1', decision: 'accept' }); await waitTerminal(runtime, session.session_id, turn.turn_id, answered.last_event_id);
+  const answered = await runtime.call('cursor_answer_plan', { session_id: session.session_id, turn_id: turn.turn_id, request_id: 'plan1', decision: 'accept' }); await waitTerminal(runtime, session.session_id, turn.turn_id);
   assert.deepEqual(lastLogged(log).result, { outcome: { outcome: 'accepted' } }); await runtime.call('cursor_close_session', { session_id: session.session_id });
 
   for (const closedChannel of [false, true]) {
@@ -981,7 +978,7 @@ test('plan decisions use adapter-owned wire encoding and close settles pending o
     const cancelledRuntime = withInjectedFake(t, { pending: 'question', env: { FAKE_ACP_LOG: closeLog } });
     const cancelledSession = await cancelledRuntime.call('cursor_start_session', { cwd, mode: 'ask' });
     const cancelledTurn = await cancelledRuntime.call('cursor_send_prompt', { session_id: cancelledSession.session_id, prompt: 'ask' });
-    const pending = await cancelledRuntime.call('cursor_wait', { session_id: cancelledSession.session_id, turn_id: cancelledTurn.turn_id, after_event_id: cancelledTurn.last_event_id, timeout_ms: 1_000 });
+    const pending = await cancelledRuntime.call('cursor_wait', { session_id: cancelledSession.session_id, turn_id: cancelledTurn.turn_id, timeout_ms: 1_000 });
     assert.equal(pending.pending.length, 1);
     // Close the real request pipe while an interactive request is pending.
     // Public close must still settle the turn if its cancellation reply cannot be sent.
@@ -1000,8 +997,8 @@ test('ambiguous permission and unknown callbacks are rejected without pending pu
     const runtime = withFake(t, { pending });
     const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
     const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: pending });
-    const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id);
-    assert.equal(terminal.turn_status, 'completed'); assert.equal(Object.hasOwn(terminal, 'pending'), false);
+    const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id);
+    assert.equal(terminal.turn_status, 'completed'); assert.deepEqual(terminal.pending, []);
     await runtime.call('cursor_close_session', { session_id: session.session_id });
   }
 });
@@ -1036,9 +1033,9 @@ test('malformed ACP callbacks are rejected before a pending request is published
     const runtime = withFake(t, { pending, env: { FAKE_ACP_CALLBACK_VARIANT: variant } });
     const session = await runtime.call('cursor_start_session', { cwd, mode: 'agent' });
     const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'reject malformed callback' });
-    const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id);
+    const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id);
     assert.equal(terminal.turn_status, 'completed');
-    assert.equal(Object.hasOwn(terminal, 'pending'), false);
+    assert.deepEqual(terminal.pending, []);
     await runtime.call('cursor_close_session', { session_id: session.session_id });
   });
 });
@@ -1066,7 +1063,6 @@ test('programmed ACP question normalizes empty prompt and option label', async (
   const waiting = await runtime.call('cursor_wait', {
     session_id: session.session_id,
     turn_id: turn.turn_id,
-    after_event_id: turn.last_event_id,
     timeout_ms: 1_000,
   });
   assert.equal(waiting.pending[0].context.questions[0].prompt.text, '');
@@ -1077,7 +1073,7 @@ test('programmed ACP question normalizes empty prompt and option label', async (
     request_id: 'q-1',
     outcome: 'cancelled',
   });
-  assert.equal((await waitTerminal(runtime, session.session_id, turn.turn_id, answered.last_event_id)).turn_status, 'completed');
+  assert.equal((await waitTerminal(runtime, session.session_id, turn.turn_id)).turn_status, 'completed');
   await runtime.call('cursor_close_session', { session_id: session.session_id });
 });
 
@@ -1142,9 +1138,9 @@ input.on('line', (line) => {
   await t.test('duplicate question IDs', async (caseT) => {
     const question = { id: 'q', question: 'Continue?', options: [{ id: 'yes', label: 'Yes' }] };
     const { runtime, session, turn } = await run(caseT, { questions: [question, { ...question }] });
-    const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id);
+    const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id);
     assert.equal(terminal.turn_status, 'completed');
-    assert.equal(Object.hasOwn(terminal, 'pending'), false);
+    assert.deepEqual(terminal.pending, []);
     await runtime.call('cursor_close_session', { session_id: session.session_id });
   });
 
@@ -1152,9 +1148,9 @@ input.on('line', (line) => {
     const { runtime, session, turn } = await run(caseT, { questions: [{
       id: 'q', question: 'Continue?', allowMultiple: 'sometimes', options: [{ id: 'yes', label: 'Yes' }],
     }] });
-    const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id);
+    const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id);
     assert.equal(terminal.turn_status, 'completed');
-    assert.equal(Object.hasOwn(terminal, 'pending'), false);
+    assert.deepEqual(terminal.pending, []);
     await runtime.call('cursor_close_session', { session_id: session.session_id });
   });
 
@@ -1165,7 +1161,6 @@ input.on('line', (line) => {
     const waiting = await runtime.call('cursor_wait', {
       session_id: session.session_id,
       turn_id: turn.turn_id,
-      after_event_id: turn.last_event_id,
       timeout_ms: 1_000,
     });
     assert.equal(waiting.pending[0].context.questions[0].allow_multiple, false);
@@ -1175,7 +1170,7 @@ input.on('line', (line) => {
       request_id: 'q1',
       outcome: 'cancelled',
     });
-    assert.equal((await waitTerminal(runtime, session.session_id, turn.turn_id, answered.last_event_id)).turn_status, 'completed');
+    assert.equal((await waitTerminal(runtime, session.session_id, turn.turn_id)).turn_status, 'completed');
     await runtime.call('cursor_close_session', { session_id: session.session_id });
   });
 });
@@ -1184,33 +1179,33 @@ test('optional ACP callback fields are normalized into stable public pending for
   const questionRuntime = withFake(t, { pending: 'question-optional' });
   const questionSession = await questionRuntime.call('cursor_start_session', { cwd, mode: 'ask' });
   const questionTurn = await questionRuntime.call('cursor_send_prompt', { session_id: questionSession.session_id, prompt: 'optional question' });
-  const questionWaiting = await questionRuntime.call('cursor_wait', { session_id: questionSession.session_id, turn_id: questionTurn.turn_id, after_event_id: questionTurn.last_event_id, timeout_ms: 1_000 });
+  const questionWaiting = await questionRuntime.call('cursor_wait', { session_id: questionSession.session_id, turn_id: questionTurn.turn_id, timeout_ms: 1_000 });
   assert.equal(questionWaiting.pending[0].context.title.text, 'Continue');
   assert.equal(questionWaiting.pending[0].context.questions[0].prompt.text, 'Continue?');
   assert.equal(questionWaiting.pending[0].context.questions[0].allow_multiple, true);
   const questionAnswered = await questionRuntime.call('cursor_answer_question', { session_id: questionSession.session_id, turn_id: questionTurn.turn_id, request_id: 'q1', outcome: 'answered', answers: [{ question_id: 'q', selected_option_ids: ['yes', 'no'] }] });
-  assert.equal((await waitTerminal(questionRuntime, questionSession.session_id, questionTurn.turn_id, questionAnswered.last_event_id)).turn_status, 'completed');
+  assert.equal((await waitTerminal(questionRuntime, questionSession.session_id, questionTurn.turn_id)).turn_status, 'completed');
   await questionRuntime.call('cursor_close_session', { session_id: questionSession.session_id });
 
   const permissionRuntime = withFake(t, { pending: 'permission-optional' });
   const permissionSession = await permissionRuntime.call('cursor_start_session', { cwd, mode: 'agent' });
   const permissionTurn = await permissionRuntime.call('cursor_send_prompt', { session_id: permissionSession.session_id, prompt: 'optional permission' });
-  const permissionWaiting = await permissionRuntime.call('cursor_wait', { session_id: permissionSession.session_id, turn_id: permissionTurn.turn_id, after_event_id: permissionTurn.last_event_id, timeout_ms: 1_000 });
+  const permissionWaiting = await permissionRuntime.call('cursor_wait', { session_id: permissionSession.session_id, turn_id: permissionTurn.turn_id, timeout_ms: 1_000 });
   assert.equal(permissionWaiting.pending[0].context.title.text, 'Permission request');
   assert.equal(permissionWaiting.pending[0].context.tool_kind, null);
   assert.equal(Object.hasOwn(permissionWaiting.pending[0].context, 'locations'), false);
   const permissionAnswered = await permissionRuntime.call('cursor_answer_permission', { session_id: permissionSession.session_id, turn_id: permissionTurn.turn_id, request_id: 'p1', decision: 'reject-once' });
-  assert.equal((await waitTerminal(permissionRuntime, permissionSession.session_id, permissionTurn.turn_id, permissionAnswered.last_event_id)).turn_status, 'completed');
+  assert.equal((await waitTerminal(permissionRuntime, permissionSession.session_id, permissionTurn.turn_id)).turn_status, 'completed');
   await permissionRuntime.call('cursor_close_session', { session_id: permissionSession.session_id });
 
   const planRuntime = withFake(t, { pending: 'plan-optional' });
   const planSession = await planRuntime.call('cursor_start_session', { cwd, mode: 'plan' });
   const planTurn = await planRuntime.call('cursor_send_prompt', { session_id: planSession.session_id, prompt: 'optional plan' });
-  const planWaiting = await planRuntime.call('cursor_wait', { session_id: planSession.session_id, turn_id: planTurn.turn_id, after_event_id: planTurn.last_event_id, timeout_ms: 1_000 });
+  const planWaiting = await planRuntime.call('cursor_wait', { session_id: planSession.session_id, turn_id: planTurn.turn_id, timeout_ms: 1_000 });
   assert.equal(planWaiting.pending[0].context.title, null);
   assert.equal(planWaiting.pending[0].context.body.text, 'Fallback body');
   const planAnswered = await planRuntime.call('cursor_answer_plan', { session_id: planSession.session_id, turn_id: planTurn.turn_id, request_id: 'plan1', decision: 'accept' });
-  assert.equal((await waitTerminal(planRuntime, planSession.session_id, planTurn.turn_id, planAnswered.last_event_id)).turn_status, 'completed');
+  assert.equal((await waitTerminal(planRuntime, planSession.session_id, planTurn.turn_id)).turn_status, 'completed');
   await planRuntime.call('cursor_close_session', { session_id: planSession.session_id });
 });
 
@@ -1218,23 +1213,23 @@ test('filesystem callbacks enforce mode, containment, UTF-8, cap and ranges', as
   const root = mkdtempSync(join(tmpdir(), 'cursor-runtime-fs-')); t.after(() => rmSync(root, { recursive: true, force: true })); const source = join(root, 'source.txt'); const output = join(root, 'output.txt'); const log = join(root, 'wire.jsonl');
   writeFileSync(source, 'one\ntwo', 'utf8');
   const reader = withFake(t, { roots: [realpathSync(root)], pending: 'read', env: { FAKE_ACP_PATH: source, FAKE_ACP_LINE: '2', FAKE_ACP_LOG: log } });
-  const readSession = await reader.call('cursor_start_session', { cwd: root, mode: 'plan' }); const readTurn = await reader.call('cursor_send_prompt', { session_id: readSession.session_id, prompt: 'read' }); await waitTerminal(reader, readSession.session_id, readTurn.turn_id, readTurn.last_event_id);
+  const readSession = await reader.call('cursor_start_session', { cwd: root, mode: 'plan' }); const readTurn = await reader.call('cursor_send_prompt', { session_id: readSession.session_id, prompt: 'read' }); await waitTerminal(reader, readSession.session_id, readTurn.turn_id);
   assert.equal(lastLogged(log).result.content, 'two'); await reader.call('cursor_close_session', { session_id: readSession.session_id });
 
   const writer = withFake(t, { roots: [realpathSync(root)], pending: 'write', env: { FAKE_ACP_PATH: output, FAKE_ACP_CONTENT: 'written' } });
-  const writeSession = await writer.call('cursor_start_session', { cwd: root, mode: 'agent' }); const writeTurn = await writer.call('cursor_send_prompt', { session_id: writeSession.session_id, prompt: 'write' }); await waitTerminal(writer, writeSession.session_id, writeTurn.turn_id, writeTurn.last_event_id);
+  const writeSession = await writer.call('cursor_start_session', { cwd: root, mode: 'agent' }); const writeTurn = await writer.call('cursor_send_prompt', { session_id: writeSession.session_id, prompt: 'write' }); await waitTerminal(writer, writeSession.session_id, writeTurn.turn_id);
   assert.equal(readFileSync(output, 'utf8'), 'written');
   writeFileSync(output, 'replace me', 'utf8');
-  const rewriteTurn = await writer.call('cursor_send_prompt', { session_id: writeSession.session_id, prompt: 'rewrite' }); await waitTerminal(writer, writeSession.session_id, rewriteTurn.turn_id, rewriteTurn.last_event_id);
+  const rewriteTurn = await writer.call('cursor_send_prompt', { session_id: writeSession.session_id, prompt: 'rewrite' }); await waitTerminal(writer, writeSession.session_id, rewriteTurn.turn_id);
   assert.equal(readFileSync(output, 'utf8'), 'written'); await writer.call('cursor_close_session', { session_id: writeSession.session_id });
 
   writeFileSync(source, Buffer.from([0xc3, 0x28])); writeFileSync(log, '');
   const malformed = withFake(t, { roots: [realpathSync(root)], pending: 'read', env: { FAKE_ACP_PATH: source, FAKE_ACP_LOG: log } });
-  const malformedSession = await malformed.call('cursor_start_session', { cwd: root, mode: 'plan' }); const malformedTurn = await malformed.call('cursor_send_prompt', { session_id: malformedSession.session_id, prompt: 'read' }); await waitTerminal(malformed, malformedSession.session_id, malformedTurn.turn_id, malformedTurn.last_event_id);
+  const malformedSession = await malformed.call('cursor_start_session', { cwd: root, mode: 'plan' }); const malformedTurn = await malformed.call('cursor_send_prompt', { session_id: malformedSession.session_id, prompt: 'read' }); await waitTerminal(malformed, malformedSession.session_id, malformedTurn.turn_id);
   assert.equal(lastLogged(log).error.data.error_code, 'invalid_text_encoding'); await malformed.call('cursor_close_session', { session_id: malformedSession.session_id });
 
   writeFileSync(source, Buffer.alloc(LIMITS.fsBytes + 1, 0x61)); writeFileSync(log, '');
-  const oversized = withFake(t, { roots: [realpathSync(root)], pending: 'read', env: { FAKE_ACP_PATH: source, FAKE_ACP_LOG: log } }); const oversizedSession = await oversized.call('cursor_start_session', { cwd: root, mode: 'plan' }); const oversizedTurn = await oversized.call('cursor_send_prompt', { session_id: oversizedSession.session_id, prompt: 'read' }); await waitTerminal(oversized, oversizedSession.session_id, oversizedTurn.turn_id, oversizedTurn.last_event_id);
+  const oversized = withFake(t, { roots: [realpathSync(root)], pending: 'read', env: { FAKE_ACP_PATH: source, FAKE_ACP_LOG: log } }); const oversizedSession = await oversized.call('cursor_start_session', { cwd: root, mode: 'plan' }); const oversizedTurn = await oversized.call('cursor_send_prompt', { session_id: oversizedSession.session_id, prompt: 'read' }); await waitTerminal(oversized, oversizedSession.session_id, oversizedTurn.turn_id);
   assert.equal(lastLogged(log).error.data.error_code, 'resource_limit'); await oversized.call('cursor_close_session', { session_id: oversizedSession.session_id });
 
   writeFileSync(log, ''); const oversizedOutput = join(root, 'oversized-output.txt');
@@ -1243,7 +1238,7 @@ test('filesystem callbacks enforce mode, containment, UTF-8, cap and ranges', as
   } });
   const oversizedWriteSession = await oversizedWriter.call('cursor_start_session', { cwd: root, mode: 'agent' });
   const oversizedWriteTurn = await oversizedWriter.call('cursor_send_prompt', { session_id: oversizedWriteSession.session_id, prompt: 'write oversized' });
-  const oversizedWriteTerminal = await waitTerminal(oversizedWriter, oversizedWriteSession.session_id, oversizedWriteTurn.turn_id, oversizedWriteTurn.last_event_id);
+  const oversizedWriteTerminal = await waitTerminal(oversizedWriter, oversizedWriteSession.session_id, oversizedWriteTurn.turn_id);
   assert.equal(oversizedWriteTerminal.turn_status, 'failed');
   assert.match(oversizedWriteTerminal.terminal_reason.text, /frame limit/);
   assert.equal(Object.hasOwn(oversizedWriteTerminal, 'provider_error'), false);
@@ -1251,7 +1246,7 @@ test('filesystem callbacks enforce mode, containment, UTF-8, cap and ranges', as
   await oversizedWriter.call('cursor_close_session', { session_id: oversizedWriteSession.session_id });
 
   writeFileSync(log, ''); const deniedOutput = join(root, 'denied.txt');
-  const denied = withFake(t, { roots: [realpathSync(root)], pending: 'write', env: { FAKE_ACP_PATH: deniedOutput, FAKE_ACP_CONTENT: 'no', FAKE_ACP_LOG: log } }); const deniedSession = await denied.call('cursor_start_session', { cwd: root, mode: 'plan' }); const deniedTurn = await denied.call('cursor_send_prompt', { session_id: deniedSession.session_id, prompt: 'write' }); await waitTerminal(denied, deniedSession.session_id, deniedTurn.turn_id, deniedTurn.last_event_id);
+  const denied = withFake(t, { roots: [realpathSync(root)], pending: 'write', env: { FAKE_ACP_PATH: deniedOutput, FAKE_ACP_CONTENT: 'no', FAKE_ACP_LOG: log } }); const deniedSession = await denied.call('cursor_start_session', { cwd: root, mode: 'plan' }); const deniedTurn = await denied.call('cursor_send_prompt', { session_id: deniedSession.session_id, prompt: 'write' }); await waitTerminal(denied, deniedSession.session_id, deniedTurn.turn_id);
   assert.equal(lastLogged(log).error.data.error_code, 'scope_rejected'); assert.throws(() => readFileSync(deniedOutput)); await denied.call('cursor_close_session', { session_id: deniedSession.session_id });
 });
 
@@ -1272,7 +1267,7 @@ test('filesystem callbacks reject outside and symlink paths and return empty con
     const runtime = withFake(t, { roots: [realpathSync(root)], pending: 'read', env: { FAKE_ACP_PATH: path, FAKE_ACP_LOG: log } });
     const session = await runtime.call('cursor_start_session', { cwd: root, mode: 'plan' });
     const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'read denied path' });
-    await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id);
+    await waitTerminal(runtime, session.session_id, turn.turn_id);
     assert.equal(lastLogged(log).error.data.error_code, 'scope_rejected');
     await runtime.call('cursor_close_session', { session_id: session.session_id });
   }
@@ -1281,7 +1276,7 @@ test('filesystem callbacks reject outside and symlink paths and return empty con
   const runtime = withFake(t, { roots: [realpathSync(root)], pending: 'read', env: { FAKE_ACP_PATH: source, FAKE_ACP_LINE: '4', FAKE_ACP_LOG: log } });
   const session = await runtime.call('cursor_start_session', { cwd: root, mode: 'plan' });
   const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'read after EOF' });
-  await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id);
+  await waitTerminal(runtime, session.session_id, turn.turn_id);
   assert.deepEqual(lastLogged(log).result, { content: '' });
   await runtime.call('cursor_close_session', { session_id: session.session_id });
 });
@@ -1319,7 +1314,7 @@ test('filesystem callbacks normalize public failures without escaping the sessio
     const runtime = withFake(caseT, { roots: [realpathSync(root)], pending: scenario.pending, env });
     const session = await runtime.call('cursor_start_session', { cwd: root, mode: scenario.mode });
     const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: scenario.name });
-    const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id);
+    const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id);
     assert.equal(terminal.turn_status, 'completed');
     assert.equal(lastLogged(log).error.data.error_code, scenario.error);
     await runtime.call('cursor_close_session', { session_id: session.session_id });
@@ -1414,9 +1409,9 @@ input.on('line', (line) => {
   await t.test('callback notifications do not publish pending work or responses', async (caseT) => {
     const { log, runtime, session } = await run(caseT, 'notifications');
     const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'notifications' });
-    const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id);
+    const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id);
     assert.equal(terminal.turn_status, 'completed');
-    assert.equal(Object.hasOwn(terminal, 'pending'), false);
+    assert.deepEqual(terminal.pending, []);
     assert.throws(() => readFileSync(log, 'utf8'));
     await runtime.call('cursor_close_session', { session_id: session.session_id });
   });
@@ -1424,7 +1419,7 @@ input.on('line', (line) => {
   await t.test('omitted read range returns the complete file', async (caseT) => {
     const { log, runtime, session } = await run(caseT, 'default-read');
     const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'default read' });
-    assert.equal((await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id)).turn_status, 'completed');
+    assert.equal((await waitTerminal(runtime, session.session_id, turn.turn_id)).turn_status, 'completed');
     assert.deepEqual(readJsonLines(log)[0].result, { content: 'one\ntwo' });
     await runtime.call('cursor_close_session', { session_id: session.session_id });
   });
@@ -1432,7 +1427,7 @@ input.on('line', (line) => {
   await t.test('filesystem callback after turn completion is rejected', async (caseT) => {
     const { log, runtime, session } = await run(caseT, 'late-read');
     const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'late read' });
-    assert.equal((await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id)).turn_status, 'completed');
+    assert.equal((await waitTerminal(runtime, session.session_id, turn.turn_id)).turn_status, 'completed');
     let response;
     for (let attempts = 0; attempts < 100 && !response; attempts += 1) {
       try { response = readJsonLines(log).find(({ id }) => id === 'fs-late'); } catch {}
@@ -1446,7 +1441,7 @@ input.on('line', (line) => {
   await t.test('closed ACP request channel fails an allocated turn', async (caseT) => {
     const { runtime, session } = await run(caseT, 'closed-channel');
     const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'closed channel' });
-    const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id);
+    const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id);
     assert.equal(terminal.turn_status, 'failed');
     assert.match(terminal.terminal_reason.text, /stdin EPIPE/);
     assert.equal((await waitSessionState(runtime, session.session_id, 'tombstone')).session_state, 'tombstone');
@@ -1460,9 +1455,9 @@ test('oversized normalized pending context is rejected without publication', asy
   const runtime = withFake(t, { pending: 'oversized-question', env: { FAKE_ACP_LOG: log } });
   const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
   const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'oversized pending' });
-  const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id);
+  const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id);
   assert.equal(terminal.turn_status, 'completed');
-  assert.equal(Object.hasOwn(terminal, 'pending'), false);
+  assert.deepEqual(terminal.pending, []);
   assert.equal(lastLogged(log).error.data.error_code, 'resource_limit');
   await runtime.call('cursor_close_session', { session_id: session.session_id });
 });
@@ -1474,9 +1469,12 @@ test('public pending and waiter capacity limits reject only excess work', async 
   const pendingRuntime = withFake(t, { pending: 'pending-capacity', env: { FAKE_ACP_LOG: log } });
   const pendingSession = await pendingRuntime.call('cursor_start_session', { cwd, mode: 'ask' });
   const pendingTurn = await pendingRuntime.call('cursor_send_prompt', { session_id: pendingSession.session_id, prompt: 'fill pending capacity' });
-  let pendingEnvelope = await pendingRuntime.call('cursor_wait', { session_id: pendingSession.session_id, turn_id: pendingTurn.turn_id, after_event_id: pendingTurn.last_event_id, timeout_ms: 1_000 });
+  let pendingEnvelope = await pendingRuntime.call('cursor_wait', { session_id: pendingSession.session_id, turn_id: pendingTurn.turn_id, timeout_ms: 1_000 });
   while (pendingEnvelope.pending.length < LIMITS.pending) {
-    pendingEnvelope = await pendingRuntime.call('cursor_wait', { session_id: pendingSession.session_id, turn_id: pendingTurn.turn_id, after_event_id: pendingEnvelope.last_event_id, timeout_ms: 1_000 });
+    // A pending snapshot is immediately actionable; let the fixture publish its
+    // next independent request rather than spinning on the same state.
+    await new Promise((resolveWait) => setTimeout(resolveWait, 5));
+    pendingEnvelope = await pendingRuntime.call('cursor_wait', { session_id: pendingSession.session_id, turn_id: pendingTurn.turn_id, timeout_ms: 1_000 });
   }
   let excessResponse;
   for (let attempt = 0; attempt < 100; attempt += 1) {
@@ -1489,19 +1487,18 @@ test('public pending and waiter capacity limits reject only excess work', async 
   assert.deepEqual(pendingEnvelope.pending.map(({ request_id }) => request_id), Array.from({ length: LIMITS.pending }, (_, index) => `q${index}`));
   await pendingRuntime.call('cursor_close_session', { session_id: pendingSession.session_id });
 
-  const waiterRuntime = withFake(t, { pending: 'question' });
+  const waiterRuntime = withInjectedFake(t, { env: { FAKE_ACP_HOLD_PROMPT: '1' } });
   const waiterSession = await waiterRuntime.call('cursor_start_session', { cwd, mode: 'ask' });
   const waiterTurn = await waiterRuntime.call('cursor_send_prompt', { session_id: waiterSession.session_id, prompt: 'fill waiter capacity' });
-  const waiting = await waiterRuntime.call('cursor_wait', { session_id: waiterSession.session_id, turn_id: waiterTurn.turn_id, after_event_id: waiterTurn.last_event_id, timeout_ms: 1_000 });
   const waiters = Array.from({ length: LIMITS.waiters + 1 }, () => waiterRuntime.call('cursor_wait', {
     session_id: waiterSession.session_id,
     turn_id: waiterTurn.turn_id,
-    after_event_id: waiting.last_event_id,
     timeout_ms: LIMITS.waitMaxMs,
   }).then(
     (value) => ({ status: 'fulfilled', value }),
     (reason) => ({ status: 'rejected', reason }),
   ));
+  await new Promise((resolveWait) => setImmediate(resolveWait));
   await waiterRuntime.call('cursor_close_session', { session_id: waiterSession.session_id });
   const settled = await Promise.all(waiters);
   assert.equal(settled.filter(({ status }) => status === 'fulfilled').length, LIMITS.waiters);
@@ -1532,22 +1529,23 @@ test('public live-session and tombstone capacity limits retain only admitted rec
   assert.equal((await tombstoneRuntime.call('cursor_session_status', { session_id: tombstones.at(-1).session_id })).session_state, 'tombstone');
 });
 
-test('event eviction reports loss from cursor zero after public turns overflow retention', async (t) => {
+test('event eviction does not prevent retained turn observation', async (t) => {
   const runtime = withFake(t);
   const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
   let turn;
   for (let index = 0; index < LIMITS.events + 1; index += 1) {
     turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: `turn ${index}` });
-    await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id);
+    await waitTerminal(runtime, session.session_id, turn.turn_id);
   }
-  const envelope = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, after_event_id: 0, timeout_ms: 1_000 });
-  assert.equal(envelope.events_lost, true); assert.ok(envelope.earliest_event_id > 1);
+  const envelope = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 });
+  assert.equal(envelope.turn_status, 'completed');
+  assert.deepEqual(envelope.pending, []);
   await runtime.call('cursor_close_session', { session_id: session.session_id });
 });
 
 test('bounded result text preserves UTF-8 code points', async (t) => {
   const boundary = `${'a'.repeat(7_994)}😀xyz`;
-  const resultRuntime = withFake(t, { env: { FAKE_ACP_RESULT: boundary } }); const resultSession = await resultRuntime.call('cursor_start_session', { cwd, mode: 'ask' }); const resultTurn = await resultRuntime.call('cursor_send_prompt', { session_id: resultSession.session_id, prompt: 'result' }); const terminal = await waitTerminal(resultRuntime, resultSession.session_id, resultTurn.turn_id, resultTurn.last_event_id);
+  const resultRuntime = withFake(t, { env: { FAKE_ACP_RESULT: boundary } }); const resultSession = await resultRuntime.call('cursor_start_session', { cwd, mode: 'ask' }); const resultTurn = await resultRuntime.call('cursor_send_prompt', { session_id: resultSession.session_id, prompt: 'result' }); const terminal = await waitTerminal(resultRuntime, resultSession.session_id, resultTurn.turn_id);
   assert.equal(terminal.result.truncated, true); assert.equal(Buffer.from(terminal.result.text, 'utf8').toString('utf8'), terminal.result.text); assert.ok(Buffer.byteLength(terminal.result.text, 'utf8') <= LIMITS.textBytes);
   await resultRuntime.call('cursor_close_session', { session_id: resultSession.session_id });
 
@@ -1574,7 +1572,7 @@ test('full terminal result is paged without losing its Unicode tail or mutating 
   } });
   const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
   const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'long result' });
-  const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id);
+  const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id);
   assert.equal(terminal.result.truncated, true);
   assert.equal(terminal.result.text.includes('TAIL_MARKER'), false);
   assert.equal(terminal.terminal_receipt.result_sha256, createHash('sha256').update(terminal.result.text).digest('hex'));
@@ -1583,7 +1581,6 @@ test('full terminal result is paged without losing its Unicode tail or mutating 
   const before = {
     eventId: record.nextEvent,
     idleTimer: record.idleTimer,
-    delivered: record.terminalWaitDelivered,
     providerMessages: readJsonLines(providerLog).length,
   };
   const pages = [];
@@ -1617,7 +1614,6 @@ test('full terminal result is paged without losing its Unicode tail or mutating 
   assert.deepEqual({
     eventId: record.nextEvent,
     idleTimer: record.idleTimer,
-    delivered: record.terminalWaitDelivered,
     providerMessages: readJsonLines(providerLog).length,
   }, before);
 });
@@ -1633,7 +1629,7 @@ test('full result read handles empty, active, null, replaced and retained closed
   const emptyRuntime = withInjectedFake(t, { env: { CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH: programPath } });
   const emptySession = await emptyRuntime.call('cursor_start_session', { cwd, mode: 'ask' });
   const emptyTurn = await emptyRuntime.call('cursor_send_prompt', { session_id: emptySession.session_id, prompt: 'empty' });
-  await waitTerminal(emptyRuntime, emptySession.session_id, emptyTurn.turn_id, emptyTurn.last_event_id);
+  await waitTerminal(emptyRuntime, emptySession.session_id, emptyTurn.turn_id);
   assert.deepEqual(await emptyRuntime.call('cursor_read_result', {
     session_id: emptySession.session_id, turn_id: emptyTurn.turn_id,
   }), {
@@ -1658,7 +1654,7 @@ test('full result read handles empty, active, null, replaced and retained closed
   const failedRuntime = withInjectedFake(t, { env: { FAKE_ACP_REJECT_PROMPT: '1' } });
   const failedSession = await failedRuntime.call('cursor_start_session', { cwd, mode: 'ask' });
   const failedTurn = await failedRuntime.call('cursor_send_prompt', { session_id: failedSession.session_id, prompt: 'fail' });
-  await waitTerminal(failedRuntime, failedSession.session_id, failedTurn.turn_id, failedTurn.last_event_id);
+  await waitTerminal(failedRuntime, failedSession.session_id, failedTurn.turn_id);
   await assert.rejects(failedRuntime.call('cursor_read_result', {
     session_id: failedSession.session_id, turn_id: failedTurn.turn_id,
   }), { error_code: 'protocol_error' });
@@ -1666,10 +1662,10 @@ test('full result read handles empty, active, null, replaced and retained closed
   const runtime = withInjectedFake(t, { env: { FAKE_ACP_RESULT: 'retained' } });
   const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
   const first = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'first' });
-  await waitTerminal(runtime, session.session_id, first.turn_id, first.last_event_id);
+  await waitTerminal(runtime, session.session_id, first.turn_id);
   const second = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'second' });
   assert.equal((await runtime.call('cursor_read_result', { session_id: session.session_id, turn_id: first.turn_id })).text, 'retained');
-  await waitTerminal(runtime, session.session_id, second.turn_id, second.last_event_id);
+  await waitTerminal(runtime, session.session_id, second.turn_id);
   await assert.rejects(runtime.call('cursor_read_result', {
     session_id: session.session_id, turn_id: first.turn_id,
   }), { error_code: 'unknown_turn' });
@@ -1695,7 +1691,7 @@ test('retained result overflow fails explicitly without publishing a partial res
   const exactRuntime = withInjectedFake(t, { env: { CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH: exactProgramPath } });
   const exactSession = await exactRuntime.call('cursor_start_session', { cwd, mode: 'ask' });
   const exactTurn = await exactRuntime.call('cursor_send_prompt', { session_id: exactSession.session_id, prompt: 'exact cap' });
-  const exactTerminal = await waitTerminal(exactRuntime, exactSession.session_id, exactTurn.turn_id, exactTurn.last_event_id);
+  const exactTerminal = await waitTerminal(exactRuntime, exactSession.session_id, exactTurn.turn_id);
   assert.equal(exactTerminal.turn_status, 'completed');
   const exactTail = await exactRuntime.call('cursor_read_result', {
     session_id: exactSession.session_id, turn_id: exactTurn.turn_id, offset: LIMITS.resultBytes - 1,
@@ -1715,7 +1711,7 @@ test('retained result overflow fails explicitly without publishing a partial res
   const runtime = withInjectedFake(t, { env: { CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH: programPath } });
   const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
   const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'overflow' });
-  const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id);
+  const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id);
   assert.equal(terminal.turn_status, 'failed');
   assert.deepEqual(terminal.terminal_reason, { text: 'terminal_result_limit', truncated: false });
   assert.equal(Object.hasOwn(terminal, 'result'), false);
@@ -1742,8 +1738,7 @@ test('prompt response seals one immutable terminal before later same-batch updat
       params: { sessionId: 'fake', update: { sessionUpdate: 'agent_message_chunk', content: { text: lateText } } },
     });
     const terminal = await runtime.call('cursor_wait', {
-      session_id: session.session_id, turn_id: turn.turn_id,
-      after_event_id: turn.last_event_id, timeout_ms: 1_000,
+      session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000,
     });
     assert.equal(terminal.turn_status, 'completed');
     assert.deepEqual(terminal.result, { text: '', truncated: false });
@@ -1766,8 +1761,7 @@ test('provider error without a message seals the turn before a same-batch update
     params: { sessionId: 'fake', update: { sessionUpdate: 'agent_message_chunk', content: { text: 'late' } } },
   });
   const terminal = await runtime.call('cursor_wait', {
-    session_id: session.session_id, turn_id: turn.turn_id,
-    after_event_id: turn.last_event_id, timeout_ms: 1_000,
+    session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000,
   });
   assert.equal(terminal.turn_status, 'failed');
   assert.deepEqual(terminal.provider_error, {
@@ -1788,8 +1782,7 @@ test('many small result chunks use one bounded accumulator through exact cap and
   const [exactPromptId] = record.rpc.keys();
   record.receive(JSON.stringify({ jsonrpc: '2.0', id: Number(exactPromptId), result: { stopReason: 'end_turn' } }));
   const exactTerminal = await runtime.call('cursor_wait', {
-    session_id: session.session_id, turn_id: exact.turn_id,
-    after_event_id: exact.last_event_id, timeout_ms: 1_000,
+    session_id: session.session_id, turn_id: exact.turn_id, timeout_ms: 1_000,
   });
   assert.equal(exactTerminal.turn_status, 'completed');
   const exactTail = await runtime.call('cursor_read_result', {
@@ -1803,8 +1796,7 @@ test('many small result chunks use one bounded accumulator through exact cap and
   for (let index = 0; index < LIMITS.resultBytes / 256; index += 1) record.sessionUpdate(update);
   record.sessionUpdate({ params: { sessionId: 'fake', update: { sessionUpdate: 'agent_message_chunk', content: { text: 'y' } } } });
   const failed = await runtime.call('cursor_wait', {
-    session_id: session.session_id, turn_id: overflow.turn_id,
-    after_event_id: overflow.last_event_id, timeout_ms: 1_000,
+    session_id: session.session_id, turn_id: overflow.turn_id, timeout_ms: 1_000,
   });
   assert.equal(failed.turn_status, 'failed');
   assert.deepEqual(failed.terminal_reason, { text: 'terminal_result_limit', truncated: false });
@@ -1814,7 +1806,7 @@ test('many small result chunks use one bounded accumulator through exact cap and
 test('child exit and malformed ACP UTF-8 fail an allocated active turn', async (t) => {
   for (const variable of ['FAKE_ACP_EXIT_ON_PROMPT', 'FAKE_ACP_INVALID_UTF8']) {
     const runtime = withFake(t, { env: { [variable]: '1' } }); const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' }); const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'fail' });
-    const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id); const tombstone = await waitSessionState(runtime, session.session_id, 'tombstone'); assert.equal(tombstone.session_state, 'tombstone'); assert.equal(terminal.turn_status, 'failed'); assert.equal(Object.hasOwn(terminal, 'failure_kind'), false); assert.equal(tombstone.failure_kind, null);
+    const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id); const tombstone = await waitSessionState(runtime, session.session_id, 'tombstone'); assert.equal(tombstone.session_state, 'tombstone'); assert.equal(terminal.turn_status, 'failed'); assert.equal(Object.hasOwn(terminal, 'failure_kind'), false); assert.equal(tombstone.failure_kind, null);
   }
 });
 
@@ -1823,7 +1815,7 @@ test('oversized ACP frames and invalid agent text fail the allocated active turn
     const runtime = withFake(t, { env: { FAKE_ACP_FRAME_VARIANT: variant } });
     const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
     const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: variant });
-    const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id);
+    const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id);
     assert.equal(terminal.turn_status, 'failed', variant);
     assert.equal(Object.hasOwn(terminal, 'failure_kind'), false, variant);
     assert.equal((await runtime.call('cursor_session_status', { session_id: session.session_id })).failure_kind, null, variant);
@@ -1834,7 +1826,7 @@ test('ACP stdout EOF fails the allocated active turn', async (t) => {
   const eofRuntime = withFake(t, { env: { FAKE_ACP_STDOUT_EOF_ON_PROMPT: '1' } });
   const eofSession = await eofRuntime.call('cursor_start_session', { cwd, mode: 'ask' });
   const eofTurn = await eofRuntime.call('cursor_send_prompt', { session_id: eofSession.session_id, prompt: 'stdout EOF' });
-  const eofTerminal = await waitTerminal(eofRuntime, eofSession.session_id, eofTurn.turn_id, eofTurn.last_event_id);
+  const eofTerminal = await waitTerminal(eofRuntime, eofSession.session_id, eofTurn.turn_id);
   assert.equal(eofTerminal.turn_status, 'failed');
   assert.match(eofTerminal.terminal_reason.text, /stdout EOF/);
   assert.equal((await waitSessionState(eofRuntime, eofSession.session_id, 'tombstone')).session_state, 'tombstone');
@@ -1843,7 +1835,7 @@ test('ACP stdout EOF fails the allocated active turn', async (t) => {
 test('malformed and nonobject ACP frames follow init and active-turn failure lifecycles', async (t) => {
   for (const frame of ['{', 'null', '[]', '"text"', '{"jsonrpc":"2.0"}']) {
     const initRuntime = withFake(t, { env: { FAKE_ACP_INIT_FRAME: frame } }); const init = await initRuntime.call('cursor_start_session', { cwd, mode: 'ask' }); assert.equal(init.session_state, 'tombstone'); assert.equal(init.failure_kind, 'init');
-    const activeRuntime = withFake(t, { env: { FAKE_ACP_INVALID_FRAME: frame } }); const session = await activeRuntime.call('cursor_start_session', { cwd, mode: 'ask' }); const turn = await activeRuntime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'bad frame' }); const terminal = await waitTerminal(activeRuntime, session.session_id, turn.turn_id, turn.last_event_id); const tombstone = await waitSessionState(activeRuntime, session.session_id, 'tombstone'); assert.equal(terminal.turn_status, 'failed'); assert.equal(Object.hasOwn(terminal, 'failure_kind'), false); assert.equal(tombstone.failure_kind, null);
+    const activeRuntime = withFake(t, { env: { FAKE_ACP_INVALID_FRAME: frame } }); const session = await activeRuntime.call('cursor_start_session', { cwd, mode: 'ask' }); const turn = await activeRuntime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'bad frame' }); const terminal = await waitTerminal(activeRuntime, session.session_id, turn.turn_id); const tombstone = await waitSessionState(activeRuntime, session.session_id, 'tombstone'); assert.equal(terminal.turn_status, 'failed'); assert.equal(Object.hasOwn(terminal, 'failure_kind'), false); assert.equal(tombstone.failure_kind, null);
   }
 });
 
@@ -1862,7 +1854,7 @@ test('warning scenarios: prompt rejection preserves allocation boundary', async 
   const runtime = withFake(t, { env: { FAKE_ACP_REJECT_PROMPT: '1', FAKE_ACP_PROMPT_ERROR_MESSAGE: boundary } }); const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
   await assert.rejects(runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: '' }), { error_code: 'invalid_args' }); assert.equal((await runtime.call('cursor_session_status', { session_id: session.session_id })).active_turn, null);
   const allocated = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'rejected upstream' }); assert.ok(allocated.turn_id);
-  const terminal = await waitTerminal(runtime, session.session_id, allocated.turn_id, allocated.last_event_id);
+  const terminal = await waitTerminal(runtime, session.session_id, allocated.turn_id);
   assert.equal(terminal.turn_status, 'failed');
   assert.deepEqual(terminal.terminal_reason, { text: 'ACP provider error', truncated: false });
   assert.deepEqual({ ...terminal.terminal_receipt, last_event_id: null }, {
@@ -1870,7 +1862,6 @@ test('warning scenarios: prompt rejection preserves allocation boundary', async 
     last_event_id: null, result_sha256: null, result_truncated: false,
   });
   assert.ok(Number.isSafeInteger(terminal.terminal_receipt.last_event_id));
-  assert.ok(terminal.terminal_receipt.last_event_id <= terminal.last_event_id);
   assert.equal(terminal.provider_error.code, -32000);
   assert.equal(terminal.provider_error.message.truncated, true);
   assert.equal(Buffer.from(terminal.provider_error.message.text, 'utf8').toString('utf8'), terminal.provider_error.message.text);
@@ -1894,7 +1885,7 @@ test('turn deadline publishes timed_out before releasing the session', async (t)
   assert.equal(typeof expireTurn, 'function');
   expireTurn();
   globalThis.setTimeout = originalSetTimeout;
-  const terminal = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, after_event_id: turn.last_event_id, timeout_ms: 1_000 });
+  const terminal = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 });
   assert.equal(terminal.turn_status, 'timed_out');
   assert.equal(terminal.terminal_reason.text, 'turn deadline exceeded');
 });
@@ -1956,9 +1947,12 @@ test('answering one of multiple pending requests keeps the turn waiting', async 
   const runtime = withFake(t, { pending: 'two-questions' });
   const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
   const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'two questions' });
-  let waiting = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, after_event_id: turn.last_event_id, timeout_ms: 1_000 });
+  let waiting = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 });
   while (waiting.pending.length < 2) {
-    waiting = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, after_event_id: waiting.last_event_id, timeout_ms: 1_000 });
+    // The first pending request is already actionable; yield so the fixture
+    // can publish the second independent request before observing again.
+    await new Promise((resolveWait) => setTimeout(resolveWait, 5));
+    waiting = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 });
   }
   assert.deepEqual(waiting.pending.map(({ request_id }) => request_id), ['q1', 'q2']);
 
@@ -1977,13 +1971,18 @@ test('answering one of multiple pending requests keeps the turn waiting', async 
   });
   assert.equal(remaining.turn_status, 'waiting_for_input');
   assert.deepEqual((await runtime.call('cursor_session_status', { session_id: session.session_id })).active_turn.pending.map(({ request_id }) => request_id), ['q2']);
+  const immediate = await runtime.call('cursor_wait', {
+    session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000,
+  });
+  assert.equal(immediate.wait_timeout, false);
+  assert.deepEqual(immediate.pending.map(({ request_id }) => request_id), ['q2']);
 
   const resumed = await runtime.call('cursor_answer_question', {
     session_id: session.session_id, turn_id: turn.turn_id, request_id: 'q2', outcome: 'answered',
     answers: [{ question_id: 'second', selected_option_ids: ['yes'] }],
   });
   assert.equal(resumed.turn_status, 'running');
-  assert.equal((await waitTerminal(runtime, session.session_id, turn.turn_id, resumed.last_event_id)).turn_status, 'completed');
+  assert.equal((await waitTerminal(runtime, session.session_id, turn.turn_id)).turn_status, 'completed');
   await runtime.call('cursor_close_session', { session_id: session.session_id });
 });
 
@@ -1991,17 +1990,17 @@ test('ACP result received with a pending request fails the turn and clears publi
   const runtime = withFake(t, { pending: 'result-with-pending' });
   const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
   const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'premature result' });
-  const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id);
+  const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id);
   assert.equal(terminal.turn_status, 'failed');
   assert.match(terminal.terminal_reason.text, /ACP result with pending request/);
-  assert.equal(Object.hasOwn(terminal, 'pending'), false);
+  assert.deepEqual(terminal.pending, []);
 });
 
 test('child exit after a completed turn tombstones the session without rewriting the turn', async (t) => {
   const runtime = withFake(t, { env: { FAKE_ACP_EXIT_AFTER_RESULT: '1' } });
   const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
   const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'complete then exit' });
-  const completed = await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id);
+  const completed = await waitTerminal(runtime, session.session_id, turn.turn_id);
   assert.equal(completed.turn_status, 'completed');
   let status = completed;
   for (let attempts = 0; attempts < 100 && status.session_state !== 'tombstone'; attempts += 1) {
@@ -2102,16 +2101,15 @@ test('tombstone TTL expires through the public status API', async (t) => {
   await assert.rejects(runtime.call('cursor_session_status', { session_id: session.session_id }), { error_code: 'unknown_session' });
 });
 
-test('wait reports a true timeout only after its requested interval elapses', async (t) => {
+test('wait returns an already pending request without consuming its timeout', async (t) => {
   const runtime = withFake(t, { pending: 'question' });
   const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
   const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'wait timeout' });
-  const waiting = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, after_event_id: turn.last_event_id, timeout_ms: 1_000 });
-  const started = Date.now();
-  const timedOut = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, after_event_id: waiting.last_event_id, timeout_ms: 1_000 });
-  assert.equal(timedOut.wait_timeout, true);
-  assert.ok(Date.now() - started >= 900);
-  assert.equal(timedOut.turn_status, 'waiting_for_input');
+  const waiting = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 });
+  const repeated = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 });
+  assert.equal(repeated.wait_timeout, false);
+  assert.equal(repeated.turn_status, 'waiting_for_input');
+  assert.deepEqual(repeated.pending, waiting.pending);
   await runtime.call('cursor_close_session', { session_id: session.session_id });
 });
 
@@ -2122,9 +2120,9 @@ test('question skipped and cancelled outcomes preserve their adapter wire forms'
     const runtime = withFake(t, { pending: 'question', env: { FAKE_ACP_LOG: log } });
     const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
     const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: outcome });
-    await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, after_event_id: turn.last_event_id, timeout_ms: 1_000 });
+    await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 });
     const answered = await runtime.call('cursor_answer_question', { session_id: session.session_id, turn_id: turn.turn_id, request_id: 'q1', outcome });
-    assert.equal((await waitTerminal(runtime, session.session_id, turn.turn_id, answered.last_event_id)).turn_status, 'completed');
+    assert.equal((await waitTerminal(runtime, session.session_id, turn.turn_id)).turn_status, 'completed');
     assert.deepEqual(lastLogged(log).result, { outcome: { outcome } });
     await runtime.call('cursor_close_session', { session_id: session.session_id });
   }
@@ -2141,9 +2139,9 @@ test('plan and permission rejection preserve adapter-owned wire forms', async (t
     const runtime = withFake(t, { pending: item.pending, env: { FAKE_ACP_LOG: log } });
     const session = await runtime.call('cursor_start_session', { cwd, mode: item.mode });
     const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'reject' });
-    await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, after_event_id: turn.last_event_id, timeout_ms: 1_000 });
+    await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 });
     const answered = await runtime.call(item.tool, { session_id: session.session_id, turn_id: turn.turn_id, request_id: item.request_id, decision: item.decision });
-    assert.equal((await waitTerminal(runtime, session.session_id, turn.turn_id, answered.last_event_id)).turn_status, 'completed');
+    assert.equal((await waitTerminal(runtime, session.session_id, turn.turn_id)).turn_status, 'completed');
     assert.deepEqual(lastLogged(log).result, item.expected);
     await runtime.call('cursor_close_session', { session_id: session.session_id });
   }
@@ -2162,7 +2160,7 @@ test('parallel answer calls claim each pending request exactly once', async (t) 
     const runtime = withInjectedFake(caseT, { pending: item.pending, env: { FAKE_ACP_SAFE_EVIDENCE: evidence } });
     const session = await runtime.call('cursor_start_session', { cwd, mode: item.mode });
     const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'answer once' });
-    await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, after_event_id: turn.last_event_id, timeout_ms: 1_000 });
+    await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 });
     const answer = { session_id: session.session_id, turn_id: turn.turn_id, request_id: item.request_id, ...item.args };
     const results = await Promise.allSettled([
       runtime.call(item.tool, answer),
@@ -2176,15 +2174,16 @@ test('parallel answer calls claim each pending request exactly once', async (t) 
   });
 });
 
-test('terminal receipt delivery stays per retained turn across a long live conversation', async (t) => {
+test('terminal receipt is repeatable per retained turn across a long live conversation', async (t) => {
   const runtime = withInjectedFake(t);
   const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
   for (let index = 0; index < 25; index += 1) {
     const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: `turn ${index}` });
-    const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id);
+    const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id);
     assert.ok(terminal.terminal_receipt);
-    const repeated = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, after_event_id: terminal.last_event_id, timeout_ms: 1_000 });
-    assert.equal(Object.hasOwn(repeated, 'terminal_receipt'), false);
+    const repeated = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 });
+    assert.equal(Object.hasOwn(repeated, 'terminal_receipt'), true);
+    assert.deepEqual(repeated.terminal_receipt, terminal.terminal_receipt);
   }
   await runtime.call('cursor_close_session', { session_id: session.session_id });
 });
@@ -2391,7 +2390,7 @@ test('fake behavior provider checks prompt constraint polarity without retaining
     } });
     const session = await runtime.call('cursor_start_session', { cwd: root, mode: 'ask' });
     const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt });
-    await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id);
+    await waitTerminal(runtime, session.session_id, turn.turn_id);
     await runtime.call('cursor_close_session', { session_id: session.session_id });
     const contract = readJsonLines(evidence).find(({ kind }) => kind === 'prompt.contract');
     assert.deepEqual(contract, {
@@ -2419,7 +2418,7 @@ test('fake behavior provider checks prompt constraint polarity without retaining
     } });
     const session = await runtime.call('cursor_start_session', { cwd: root, mode: 'ask' });
     const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt });
-    await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id);
+    await waitTerminal(runtime, session.session_id, turn.turn_id);
     await runtime.call('cursor_close_session', { session_id: session.session_id });
     assert.deepEqual(readJsonLines(evidence).find(({ kind }) => kind === 'prompt.contract'), {
       kind: 'prompt.contract', step_id: 'snapshot-1', matched: expected,
@@ -2445,7 +2444,7 @@ test('fake behavior provider checks prompt constraint polarity without retaining
     } });
     const session = await runtime.call('cursor_start_session', { cwd: root, mode: 'agent' });
     const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt });
-    await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id);
+    await waitTerminal(runtime, session.session_id, turn.turn_id);
     await runtime.call('cursor_close_session', { session_id: session.session_id });
     assert.deepEqual(readJsonLines(evidence).find(({ kind }) => kind === 'prompt.contract'), {
       kind: 'prompt.contract', step_id: 'write-boundary-1', matched: expected,
@@ -2502,7 +2501,7 @@ test('unknown pending request returns recovery IDs without ACP answer', async (t
     const runtime = withInjectedFake(t, { pending: scenario.pending, env: { FAKE_ACP_LOG: log } });
     const session = await runtime.call('cursor_start_session', { cwd, mode: 'agent' });
     const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: scenario.kind });
-    await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, after_event_id: turn.last_event_id, timeout_ms: 1_000 });
+    await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 });
     await assert.rejects(runtime.call(scenario.tool, {
       session_id: session.session_id, turn_id: turn.turn_id, request_id: 'stale', ...scenario.args,
     }), (error) => {
@@ -2519,22 +2518,20 @@ test('unknown pending request returns recovery IDs without ACP answer', async (t
   }
 });
 
-test('terminal wait delivers a receipt once and later action acknowledgements omit the snapshot', async (t) => {
+test('terminal wait is repeatable while later action acknowledgements omit the snapshot', async (t) => {
   const runtime = withInjectedFake(t, { env: { FAKE_ACP_RESULT: 'done' } });
   const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
   const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'one' });
-  const completed = await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id);
+  const completed = await waitTerminal(runtime, session.session_id, turn.turn_id);
   assert.equal(completed.turn_status, 'completed');
   assert.equal(completed.result.text, 'done');
   assert.equal(Object.keys(completed).includes('last_terminal_turn'), false);
   assert.equal(completed.terminal_receipt.turn_id, turn.turn_id);
   assert.equal(completed.terminal_receipt.result_truncated, false);
   assert.equal(completed.terminal_receipt.result_sha256, createHash('sha256').update('done', 'utf8').digest('hex'));
-  const firstReceipt = structuredClone(completed.terminal_receipt);
-
   const next = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'two' });
   assert.equal(Object.hasOwn(next, 'last_terminal_turn'), false);
-  assert.deepEqual(next.terminal_receipt, firstReceipt);
+  assert.equal(Object.hasOwn(next, 'terminal_receipt'), false);
   const status = await runtime.call('cursor_session_status', { session_id: session.session_id });
   assert.equal(status.last_terminal_turn.turn_id, turn.turn_id);
   assert.equal(Object.hasOwn(status, 'terminal_receipt'), false);
@@ -2569,15 +2566,15 @@ test('close preserves an undelivered retained terminal receipt and repeats it id
   assert.deepEqual(repeated.terminal_receipt, closed.terminal_receipt);
 });
 
-test('wait delta omits unchanged snapshots and empty optional fields', async (t) => {
+test('wait returns a complete state snapshot with pending context', async (t) => {
   const runtime = withFake(t, { pending: 'question' });
   const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
   const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'compact wait' });
   const delta = await runtime.call('cursor_wait', {
-    session_id: session.session_id, turn_id: turn.turn_id, after_event_id: turn.last_event_id, timeout_ms: 1_000,
+    session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000,
   });
   assert.deepEqual(Object.keys(delta).sort(), [
-    'events', 'events_lost', 'last_event_id', 'pending', 'resume_after_event_id', 'session_id', 'session_state', 'turn_id', 'turn_status', 'wait_timeout',
+    'pending', 'session_id', 'session_state', 'turn_id', 'turn_status', 'wait_timeout',
   ]);
   assert.deepEqual(delta.pending, [{
     request_id: 'q1', kind: 'question', context: {
@@ -2600,7 +2597,7 @@ test('mutation acknowledgements are sparse while explicit status retains the dia
   const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
   const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'compact actions' });
   assert.deepEqual(Object.keys(turn).sort(), ['last_event_id', 'session_id', 'session_state', 'turn_id', 'turn_status']);
-  const waiting = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, after_event_id: turn.last_event_id, timeout_ms: 1_000 });
+  const waiting = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 });
   const answered = await runtime.call('cursor_answer_question', {
     session_id: session.session_id, turn_id: turn.turn_id, request_id: waiting.pending[0].request_id, outcome: 'cancelled',
   });
@@ -2618,7 +2615,7 @@ test('delegate returns one bootstrap without null launch fields', async (t) => {
   await runtime.call('cursor_close_session', { session_id: delegated.session_id });
 });
 
-test('wait timeout progress excerpt advances only for accepted agent text', async (t) => {
+test('wait timeout exposes the retained accepted agent-text excerpt', async (t) => {
   const runtime = withInjectedFake(t, { env: {
     FAKE_ACP_HOLD_PROMPT: '1',
     FAKE_ACP_PROGRESS_TEXT: 'visible progress',
@@ -2626,26 +2623,21 @@ test('wait timeout progress excerpt advances only for accepted agent text', asyn
   } });
   const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
   const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'progress' });
-  const first = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, after_event_id: turn.last_event_id, timeout_ms: 1_000 });
+  const first = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 });
   assert.equal(first.wait_timeout, true);
-  assert.equal(first.progress_revision, 1);
   assert.equal(first.progress_excerpt.text, 'visible progress');
   assert.equal(first.progress_excerpt.truncated, false);
   assert.equal(JSON.stringify(first).includes('secret thinking'), false);
   assert.equal(JSON.stringify(first).includes('raw tool payload'), false);
   assert.equal(JSON.stringify(first).includes('acp-sessions'), false);
 
-  const repeat = await runtime.call('cursor_wait', {
-    session_id: session.session_id, turn_id: turn.turn_id, after_event_id: first.resume_after_event_id,
-    after_progress_revision: first.progress_revision, timeout_ms: 1_000,
-  });
+  const repeat = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 });
   assert.equal(repeat.wait_timeout, true);
-  assert.equal(Object.hasOwn(repeat, 'progress_revision'), false);
-  assert.equal(Object.hasOwn(repeat, 'progress_excerpt'), false);
+  assert.deepEqual(repeat.progress_excerpt, first.progress_excerpt);
   await runtime.call('cursor_close_session', { session_id: session.session_id });
 });
 
-test('wait timeout progress excerpt truncates and reports a later accepted delta', async (t) => {
+test('wait timeout progress excerpt truncates and retains the latest accepted text', async (t) => {
   const long = `${'p'.repeat(LIMITS.progressBytes - 6)}😀xyz`;
   const runtime = withInjectedFake(t, { env: {
     FAKE_ACP_HOLD_PROMPT: '1',
@@ -2655,7 +2647,7 @@ test('wait timeout progress excerpt truncates and reports a later accepted delta
   } });
   const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
   const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'long progress' });
-  const first = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, after_event_id: turn.last_event_id, timeout_ms: 1_000 });
+  const first = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 });
   assert.equal(first.progress_excerpt.truncated, true);
   assert.ok(Buffer.byteLength(first.progress_excerpt.text, 'utf8') <= LIMITS.progressBytes);
   assert.equal(Buffer.from(first.progress_excerpt.text, 'utf8').toString('utf8'), first.progress_excerpt.text);
@@ -2663,29 +2655,20 @@ test('wait timeout progress excerpt truncates and reports a later accepted delta
   assert.equal(Object.hasOwn(retained, 'progress_parts'), false);
   assert.ok(Buffer.byteLength(JSON.stringify(retained.progress_excerpt), 'utf8') <= LIMITS.progressBytes + 64);
 
-  let later;
-  for (let attempt = 0; attempt < 20; attempt += 1) {
-    later = await runtime.call('cursor_wait', {
-      session_id: session.session_id, turn_id: turn.turn_id, after_event_id: first.resume_after_event_id,
-      after_progress_revision: first.progress_revision, timeout_ms: 1_000,
-    });
-    if (later.progress_revision > first.progress_revision) break;
-  }
-  assert.ok(later.progress_revision > first.progress_revision);
+  const later = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 });
   assert.equal(Object.hasOwn(later, 'progress_excerpt'), true);
   assert.match(later.progress_excerpt.text, /later/);
   await runtime.call('cursor_close_session', { session_id: session.session_id });
 });
 
-test('wait timeout without accepted agent text omits the progress excerpt', async (t) => {
+test('repeated pending observation omits the progress excerpt', async (t) => {
   const runtime = withInjectedFake(t, { pending: 'question' });
   const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
   const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'wait timeout' });
-  const waiting = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, after_event_id: turn.last_event_id, timeout_ms: 1_000 });
-  const timedOut = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, after_event_id: waiting.last_event_id, timeout_ms: 1_000 });
-  assert.equal(timedOut.wait_timeout, true);
-  assert.equal(Object.hasOwn(timedOut, 'progress_revision'), false);
-  assert.equal(Object.hasOwn(timedOut, 'progress_excerpt'), false);
+  const waiting = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 });
+  const repeated = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 });
+  assert.equal(repeated.wait_timeout, false);
+  assert.equal(Object.hasOwn(repeated, 'progress_excerpt'), false);
   await runtime.call('cursor_close_session', { session_id: session.session_id });
 });
 
@@ -2764,7 +2747,7 @@ test('mode transition excludes concurrent prompts and mode changes', async (t) =
   assert.equal(changed.mode, 'plan');
   assert.deepEqual(readJsonLines(modeLog).map(({ params }) => params), [{ sessionId: 'fake', modeId: 'plan' }]);
   const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'after transition' });
-  assert.equal((await waitTerminal(runtime, session.session_id, turn.turn_id, turn.last_event_id)).turn_status, 'completed');
+  assert.equal((await waitTerminal(runtime, session.session_id, turn.turn_id)).turn_status, 'completed');
   await runtime.call('cursor_close_session', { session_id: session.session_id });
 });
 
@@ -2791,18 +2774,18 @@ test('one live session can move ask to agent while writes remain gated by curren
   } });
   const session = await runtime.call('cursor_start_session', { cwd: root, mode: 'ask' });
   const deniedTurn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'read-only phase' });
-  assert.equal((await waitTerminal(runtime, session.session_id, deniedTurn.turn_id, deniedTurn.last_event_id)).turn_status, 'completed');
+  assert.equal((await waitTerminal(runtime, session.session_id, deniedTurn.turn_id)).turn_status, 'completed');
   assert.equal(existsSync(target), false);
 
   const changed = await runtime.call('cursor_set_mode', { session_id: session.session_id, mode: 'agent' });
   assert.equal(changed.mode, 'agent');
   const allowedTurn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'authorized implementation phase' });
-  assert.equal((await waitTerminal(runtime, session.session_id, allowedTurn.turn_id, allowedTurn.last_event_id)).turn_status, 'completed');
+  assert.equal((await waitTerminal(runtime, session.session_id, allowedTurn.turn_id)).turn_status, 'completed');
   assert.equal(readFileSync(target, 'utf8'), 'agent-write');
   await runtime.call('cursor_close_session', { session_id: session.session_id });
 });
 
-test('cursor_wait surfaces compact collaboration events and ignores unadmitted notifications', async (t) => {
+test('cursor_wait ignores collaboration-event bursts while runtime acknowledges them', async (t) => {
   const root = mkdtempSync(join(tmpdir(), 'cursor-runtime-collab-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const log = join(root, 'wire.jsonl');
@@ -2828,28 +2811,10 @@ test('cursor_wait surfaces compact collaboration events and ignores unadmitted n
   const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'plan work' });
   await new Promise((resolve) => setTimeout(resolve, 25));
   const progress = await runtime.call('cursor_wait', {
-    session_id: session.session_id, turn_id: turn.turn_id, after_event_id: turn.last_event_id, timeout_ms: 1_000,
+    session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000,
   });
   assert.equal(progress.turn_status, 'running');
   assert.equal(['completed', 'failed', 'timed_out', 'cancelled'].includes(progress.turn_status), false);
-  const typed = progress.events.filter((event) => ['todos', 'task', 'image'].includes(event.kind));
-  assert.deepEqual(typed.map((event) => event.kind), ['todos', 'task', 'image', 'image', 'todos']);
-  assert.deepEqual(typed[0].payload, { merge: true, todos: [{ id: 'todo-1', content: { text: 'Research', truncated: false }, status: 'in_progress' }] });
-  assert.deepEqual(typed[1].payload, {
-    description: { text: 'Subagent finished', truncated: false },
-    type: { text: 'explore', truncated: false },
-    model: { text: 'grok-4.6', truncated: false },
-    duration: 42,
-  });
-  assert.deepEqual(typed[2].payload, {
-    description: { text: 'Diagram', truncated: false },
-    path: { text: '/tmp/diagram.png', truncated: false },
-  });
-  assert.deepEqual(typed[3].payload, { path: { text: '/tmp/other.png', truncated: false } });
-  assert.equal(typed[4].payload.merge, false);
-  assert.equal(typed[4].payload.todos[0].id, 'todo-2');
-  assert.equal(typed[4].payload.todos[0].content.truncated, true);
-  assert.ok(Buffer.byteLength(typed[4].payload.todos[0].content.text, 'utf8') <= LIMITS.textBytes);
   const serialized = JSON.stringify(progress);
   assert.equal(serialized.includes('SECRET_TASK_PROMPT'), false);
   assert.equal(serialized.includes('SECRET_AGENT_ID'), false);
@@ -2864,7 +2829,7 @@ test('cursor_wait surfaces compact collaboration events and ignores unadmitted n
     'image-1', 'image-rejected', 'image-2', 'todos-2',
   ]);
 
-  const completed = await waitTerminal(runtime, session.session_id, turn.turn_id, progress.resume_after_event_id);
+  const completed = await waitTerminal(runtime, session.session_id, turn.turn_id);
   assert.equal(completed.turn_status, 'completed');
   assert.equal(completed.result.text, 'done');
   await runtime.call('cursor_close_session', { session_id: session.session_id });

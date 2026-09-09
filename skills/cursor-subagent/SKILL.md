@@ -69,42 +69,23 @@ Cursor.
    then explicitly require a new user decision; retain
    exact diagnostics in tool evidence and close the failed allocation
    idempotently before the final report.
-2. For a live delegated turn, retain complete `session_id`/`turn_id` and the
-   `last_event_id` returned by `cursor_delegate` or `cursor_send_prompt`, then observe only with
-   `cursor_wait({session_id,turn_id,after_event_id?,after_progress_revision?,timeout_ms?})`.
-   Prefer that returned `last_event_id` as `after_event_id` on the first wait
-   for the turn, and prefer the most recent returned `resume_after_event_id`
-   for each later sparse wait. An earlier or repeated runtime-valid event
-   cursor, or omission for the runtime's supported zero default, is also valid;
-   `last_event_id` is a high-water mark, not an acknowledgement that preceding
-   events were read. On
-   `wait_timeout:true` keep the same turn alive, retain the latest returned
-   `progress_revision` (or the prior value when omitted), and pass that retained
-   value as `after_progress_revision` on the next wait whenever available. Omit `timeout_ms` for
-   the first wait so the runtime owns its 30-second default, then use 60, 120,
-   and at most 180 seconds for subsequent no-change waits. Report only a newly returned bounded
-   progress excerpt. Do not poll `cursor_session_status`, which is advanced
-   diagnostics rather than the normal workflow. If the caller explicitly
-   limited observation to one wait interval, do not start the later-wait
-   schedule after that first `wait_timeout:true`: emit a caller-visible final
-   report that work remains in progress, retain the returned IDs and cursor
-   in tool evidence, then end the current Codex turn while leaving the
-   Cursor turn active. If `events_lost:true`, disclose the observation gap and
-   continue only from current normalized state and runtime-valid cursors; never
-   reconstruct or guess omitted history. If that current evidence is
-   insufficient, report it as unverifiable; use `cursor_session_status` only as
-   advanced current-state diagnostics, never as lost-history reconstruction.
-   Todo/task/image events are progress, not completion.
+2. For a live delegated turn, retain its exact `session_id` and `turn_id`, then
+   observe only with `cursor_wait({session_id,turn_id,timeout_ms?})`. Omit
+   `timeout_ms` for the first wait; later no-change waits use 60, 120, then at
+   most 180 seconds. A `wait_timeout:true` keeps the turn live; report its
+   bounded `progress_excerpt` when present, and do not poll or spin. A pending
+   snapshot is immediately actionable and is handled by steps 3–4. Do not poll
+   `cursor_session_status`, which is advanced diagnostics rather than the
+   normal workflow. If observation is explicitly limited to one interval,
+   report that work remains in progress and end the Codex turn while leaving
+   the Cursor turn active.
 
    If `cursor_wait` is locally rejected with `unknown_session`, `unknown_turn`,
-   `invalid_args`, or `invalid_text_encoding`, compare its arguments with the
-   latest public state retained for that turn. When only its `session_id`,
-   `turn_id`, `after_event_id`, or `after_progress_revision` are missing,
-   malformed, or stale, repeat the same wait in the same Codex turn with the
-   exact current IDs and latest available cursors. Preserve `timeout_ms` and
-   every other argument. Do not guess IDs or cursors. This rejected-call repair
-   does not authorize resume, delegation, or a new prompt. If the rejected wait
-   already matched the latest public state, this repair does not apply.
+   `invalid_args`, or `invalid_text_encoding`, compare its `session_id` and
+   `turn_id` with the latest retained public state. Correct only missing or
+   malformed locally known IDs in the same Codex turn; do not guess an address,
+   resume, delegate, or send a prompt. If the rejected call already used the
+   exact retained IDs, this repair does not apply.
 3. When pending, give the user normalized context and retain the complete
    `session_id`, `turn_id`, and `request_id`: for a question, call
    `cursor_answer_question` only after a separate user follow-up choosing an
@@ -119,13 +100,11 @@ Cursor.
    preserving their meaning. Prose, a list or JSON are all acceptable; exact
    runtime IDs remain in tool evidence and are used for the later answer call.
    After the separate follow-up, answering continues the same delegated turn.
-   Before the next `cursor_wait`, prefer the successful answer response's
-   `last_event_id` as `after_event_id` with `timeout_ms:60000`. An earlier
-   runtime-valid cursor or omission=0 remains acceptable; do not
-   restart the first-wait schedule merely because a new Codex turn began. If an
-   answer call reports a stale or unknown pending ID, call
-   `cursor_wait({session_id,turn_id,after_event_id,timeout_ms:60000})` with the
-   current retained IDs and preferably the latest returned cursor. Answer again only from a
+   Before the next `cursor_wait`, use the same exact IDs with
+   `timeout_ms:60000`; do not restart the first-wait schedule merely because a
+   new Codex turn began. If an answer call reports a stale or unknown pending
+   ID, call `cursor_wait({session_id,turn_id,timeout_ms:60000})` with the
+   current retained IDs. Answer again only from a
    full normalized pending context returned by that wait; a context-free
    recovery summary is diagnostics only, so never guess from it.
    A follow-up that supplies the pending decision is consumed by the matching
@@ -219,10 +198,9 @@ Cursor.
    operations and follows the same close rule from step 5.
 
    When wrapper loss is suspected, first address a retained active turn with
-   `cursor_wait` using its exact retained IDs and a runtime-valid cursor,
-   preferably the latest available resume hint.
-   Only a correctly addressed observation establishes wrapper loss; a local
-   rejection caused by different, missing, or malformed address/cursor fields
+   `cursor_wait` using its exact retained IDs. Only a correctly addressed
+   observation establishes wrapper loss; a local rejection caused by different,
+   missing, or malformed address fields
    follows step 2 and does not establish loss. A tombstone or unknown wrapper with a retained
    `cursor_session_id` uses explicit resume; without that provider ID the
    conversation is not addressable through the admitted surface. Never search
@@ -245,7 +223,7 @@ Cursor.
    `cursor_start_session`, `cursor_session_status`, and `cursor_cancel` remain
    advanced diagnosis/recovery tools; status is not the normal source of
    pending context. Always retain runtime `session_id`, provider
-   `cursor_session_id`, current turn IDs/cursors, and caller-supplied launch
+   `cursor_session_id`, current turn IDs, and caller-supplied launch
    settings across these branches.
 
    If a between-turn `cursor_set_mode` fails, report the failure with the
@@ -286,8 +264,7 @@ frozen baseline, artifact paths and digest; it is not a session registry. After
 a repair send the prior digest, changed paths and their exact delta, rather than
 a full unchanged snapshot. Label these fields with exact
 `BASELINE_DIGEST=...`, `CHANGED_PATHS=...`, and `DELTA=...` lines in the repeat
-prompt, and use the same bounded
-increasing wait policy.
+prompt, and use the same bounded increasing wait policy.
 Never infer delete authority from Cursor creating an artifact. If exact
 deletion or a bounded deletion class is not already covered by user authority,
 preserve each Cursor-created

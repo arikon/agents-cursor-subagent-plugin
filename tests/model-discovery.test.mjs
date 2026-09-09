@@ -234,10 +234,8 @@ for (const strategy of ['cost', 'balanced', 'intelligence']) {
     assert.equal(delegated.optimize_for, originalStrategy);
     assert.ok(delegated.turn_id);
     let terminal;
-    let cursor = delegated.last_event_id;
     for (let attempt = 0; attempt < 3; attempt++) {
-      terminal = await runtime.call('cursor_wait', { session_id: delegated.session_id, turn_id: delegated.turn_id, after_event_id: cursor, timeout_ms: 1_000 });
-      cursor = terminal.resume_after_event_id;
+      terminal = await runtime.call('cursor_wait', { session_id: delegated.session_id, turn_id: delegated.turn_id, timeout_ms: 1_000 });
       if (['completed', 'failed', 'cancelled', 'timed_out'].includes(terminal.turn_status)) break;
     }
     assert.equal(terminal.turn_status, 'completed');
@@ -382,11 +380,9 @@ for (const options of [[], [option('model', 'auto-smart')], [option('model', 'au
     const { runtime, directory, requests } = launchRuntime(t);
     runtime.env.FAKE_ACP_PERSISTED_SESSION = join(directory, 'persisted.json');
     const original = await runtime.call('cursor_delegate', { cwd: process.cwd(), mode: 'ask', model: 'auto-smart', optimize_for: 'intelligence', prompt: 'Persist fixture conversation' });
-    let cursor = original.last_event_id;
     let terminal;
     for (let attempt = 0; attempt < 3; attempt++) {
-      terminal = await runtime.call('cursor_wait', { session_id: original.session_id, turn_id: original.turn_id, after_event_id: cursor, timeout_ms: 1_000 });
-      cursor = terminal.resume_after_event_id;
+      terminal = await runtime.call('cursor_wait', { session_id: original.session_id, turn_id: original.turn_id, timeout_ms: 1_000 });
       if (terminal.turn_status === 'completed') break;
     }
     assert.equal(terminal.turn_status, 'completed');

@@ -169,21 +169,21 @@ export async function runPackageCommand(command, args, { env = process.env, time
   outputBytes = PACKAGE_LIMITS.outputBytes, closeWaitMs = 1_000 } = {}) {
   return new Promise((done) => {
     const child = spawn(command, args, { env, stdio: ['ignore', 'pipe', 'pipe'] });
-    const chunks = []; let size = 0; let killReason = null; let settled = false; let timer; let closeTimer;
+    const stdout = []; const stderr = []; let size = 0; let killReason = null; let settled = false; let timer; let closeTimer;
     const finish = (result) => { if (!settled) { settled = true; clearTimeout(timer); clearTimeout(closeTimer); done(result); } };
     const killAndWait = (reason) => {
       if (killReason) return;
       killReason = reason; child.kill('SIGKILL');
-      closeTimer = setTimeout(() => finish({ code: null, output: Buffer.concat(chunks).toString('utf8'),
+      closeTimer = setTimeout(() => finish({ code: null, output: Buffer.concat(stdout).toString('utf8'), error: Buffer.concat(stderr).toString('utf8'),
         timeout: reason === 'timeout', overflow: reason === 'overflow', closeTimeout: true }), closeWaitMs);
     };
-    for (const stream of [child.stdout, child.stderr]) stream.on('data', (chunk) => {
+    for (const [stream, chunks] of [[child.stdout, stdout], [child.stderr, stderr]]) stream.on('data', (chunk) => {
       size += chunk.length;
       if (size > outputBytes) killAndWait('overflow');
       else chunks.push(chunk);
     });
     child.on('error', (error) => finish({ code: null, output: '', error: error.message }));
-    child.on('close', (code) => finish({ code, output: Buffer.concat(chunks).toString('utf8'),
+    child.on('close', (code) => finish({ code, output: Buffer.concat(stdout).toString('utf8'), error: Buffer.concat(stderr).toString('utf8'),
       timeout: killReason === 'timeout', overflow: killReason === 'overflow' }));
     timer = setTimeout(() => killAndWait('timeout'), timeoutMs);
   });

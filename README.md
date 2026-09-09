@@ -178,6 +178,11 @@ assistant through delegation, permissions, follow-ups, and cleanup.
 | Resume or close a session | `cursor_resume_session`, `cursor_close_session` |
 | Advanced diagnosis and recovery | `cursor_start_session`, `cursor_session_status`, `cursor_cancel` |
 
+`cursor_wait` observes one addressed turn with `session_id`, `turn_id`, and an
+optional `timeout_ms`. It returns the current pending request immediately, a
+repeatable terminal result while retained, or a timeout snapshot with a bounded
+progress excerpt. It does not require event or progress cursors.
+
 ### Follow-ups and resume
 
 Continue a completed turn with `cursor_send_prompt` while its session is live.

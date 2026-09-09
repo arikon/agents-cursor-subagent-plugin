@@ -27,6 +27,7 @@ let publicationFailure = null;
 let stopping = false;
 let staleQuestionInjected = false;
 let modeProtocolErrorInjected = false;
+let terminalWaitResponseWithheld = false;
 let proxyFailed = false;
 let pendingOutputWrites = 0;
 const outputWriteWaiters = [];
@@ -89,8 +90,6 @@ function compactRequest(tool, args) {
   }
   if (tool === 'cursor_resume_session' && boundedId(args?.cursor_session_id) !== null) request.cursor_session_id = args.cursor_session_id;
   if (tool === 'cursor_wait') {
-    if (Number.isSafeInteger(args?.after_event_id)) request.after_event_id = args.after_event_id;
-    if (Number.isSafeInteger(args?.after_progress_revision)) request.after_progress_revision = args.after_progress_revision;
     if (Number.isSafeInteger(args?.timeout_ms)) request.timeout_ms = args.timeout_ms;
   }
   if (tool === 'cursor_read_result' && Number.isSafeInteger(args?.offset)) request.offset = args.offset;
@@ -149,15 +148,8 @@ function compactResponse(message, entry) {
     const terminalReason = compactBoundedText(payload.terminal_reason);
     if (terminalReason) response.terminal_reason = terminalReason;
     if (Number.isSafeInteger(payload.last_event_id)) response.last_event_id = payload.last_event_id;
-    if (Number.isSafeInteger(payload.resume_after_event_id)) response.resume_after_event_id = payload.resume_after_event_id;
     if (typeof payload.wait_timeout === 'boolean') response.wait_timeout = payload.wait_timeout;
     if (Object.hasOwn(payload, 'active_turn')) response.active_turn_present = payload.active_turn !== null;
-    if (typeof payload.events_lost === 'boolean') response.events_lost = payload.events_lost;
-    if (Number.isSafeInteger(payload.earliest_event_id)) response.earliest_event_id = payload.earliest_event_id;
-    if (Number.isSafeInteger(payload.progress_revision)) response.progress_revision = payload.progress_revision;
-    if (Array.isArray(payload.events)) response.events = payload.events.slice(0, MAX_LIST_ITEMS).flatMap((event) => {
-      const kind = boundedId(event?.kind); return kind === null ? [] : [{ kind }];
-    });
     if (Array.isArray(payload.pending)) response.pending = compactPending(payload.pending);
     if (typeof payload.result?.text === 'string') response.result = compactResult(payload.result);
     const resultRead = compactResultRead(payload, entry);
@@ -289,9 +281,27 @@ function observeOutputFrame(frame) {
     if (transcript.length === 0) schedulePublication();
   } catch {}
 }
+function withholdTerminalWaitResponse(frame) {
+  if (!evalFaultHandshake() || process.env.CURSOR_EVAL_LOSE_TERMINAL_WAIT_RESPONSE_ONCE !== '1'
+    || terminalWaitResponseWithheld) return null;
+  let message;
+  try { message = parseFrame(frame); } catch { return null; }
+  const entry = pendingCalls.get(callKey(message?.id));
+  const payload = toolPayload(message);
+  if (entry?.tool !== 'cursor_wait' || !payload
+    || !['completed', 'failed', 'timed_out', 'cancelled'].includes(payload.turn_status)) return null;
+  terminalWaitResponseWithheld = true;
+  entry.withheld_terminal_response = true;
+  entry.caller_error_code = 'transport_error';
+  return { jsonrpc: '2.0', id: message.id, result: { isError: true, content: [{ type: 'text', text: JSON.stringify({
+    error_code: 'transport_error', message: 'terminal cursor_wait response was withheld by the eval fault',
+  }) }] } };
+}
 function forwardOutputFrame(frame, terminated) {
+  const withheld = withholdTerminalWaitResponse(frame);
   observeOutputFrame(frame);
-  forwardOutputBytes(terminated ? Buffer.concat([frame, Buffer.from('\n')]) : frame);
+  const outputFrame = withheld === null ? frame : Buffer.from(JSON.stringify(withheld));
+  forwardOutputBytes(terminated ? Buffer.concat([outputFrame, Buffer.from('\n')]) : outputFrame);
 }
 process.stdin.on('data', (chunk) => {
   if (proxyFailed) return;

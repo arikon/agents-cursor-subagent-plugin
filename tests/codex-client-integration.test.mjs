@@ -586,7 +586,7 @@ test('observed MCP transcript drives oracle order, IDs, call outcomes and droppe
 test('session-level observations do not inherit a prior turn ID', () => {
   const scenario = {
     scenario_kind: 'programmed',
-    program: { steps: [{ type: 'terminal', step_id: 'terminal-1' }] },
+    program: { steps: [{ type: 'terminal', step_id: 'terminal-1', turn_status: 'completed' }] },
     expected_trace: [
       { kind: 'session.allocated', mode: 'ask' }, { kind: 'turn.started' },
       { kind: 'turn.completed', step_id: 'terminal-1' }, { kind: 'session.mode-changed', mode: 'plan' },
@@ -608,67 +608,6 @@ test('session-level observations do not inherit a prior turn ID', () => {
   }
   assert.deepEqual(scoreWithCapturedFinals(scenario, observations).mismatches, []);
 
-  const privatePrompt = 'private close rationale';
-  const argumentsDigest = sha256(privatePrompt);
-  const recoveredCloseCalls = [...calls.slice(0, -1),
-    { tool: 'cursor_close_session', request: { session_id: 'typo', arguments_without_session_turn_sha256: argumentsDigest },
-      response: { ok: false, error_code: 'unknown_session' } },
-    { tool: 'cursor_close_session', request: { session_id: 'S', arguments_without_session_turn_sha256: argumentsDigest },
-      response: { ok: true, session_id: 'S', session_state: 'tombstone' } }];
-  const recoveryTranscript = { calls: recoveredCloseCalls, dropped_calls: 0,
-    turn_call_ranges: [{ start: 0, end: recoveredCloseCalls.length }], unexpected_input_requests: 0 };
-  const recoveredClose = observationsFromEvidence(scenario, recoveryTranscript,
-    [{ event: 'prompt_result', step_id: 'terminal-1' }],
-    { actual_task_outcome: 'succeeded', reported_task_outcome: 'not_checked' });
-  assert.equal(recoveryTranscript.calls.filter(({ tool }) => tool === 'cursor_close_session').length, 2);
-  assert.equal(recoveredClose.trace.filter(({ kind }) => kind === 'session.close-attempted').length, 1);
-  assert.deepEqual(recoveredClose.trace, observations.trace);
-  assert.equal(JSON.stringify(recoveryTranscript).includes(privatePrompt), false);
-
-  for (const diagnosticCount of [1, 2]) {
-    const withStatus = structuredClone(recoveryTranscript);
-    withStatus.calls.splice(-1, 0, ...Array.from({ length: diagnosticCount }, () => ({
-      tool: 'cursor_session_status', request: { session_id: 'S', arguments_without_session_turn_sha256: sha256('{}') },
-      response: { ok: true, session_id: 'S', session_state: 'live' },
-    })));
-    withStatus.turn_call_ranges[0].end = withStatus.calls.length;
-    const original = structuredClone(withStatus);
-    const projected = observationsFromEvidence(scenario, withStatus,
-      [{ event: 'prompt_result', step_id: 'terminal-1' }],
-      { actual_task_outcome: 'succeeded', reported_task_outcome: 'not_checked' });
-    assert.equal(scoreWithCapturedFinals(scenario, { ...projected, transcript: withStatus }).eval_status, 'pass');
-    assert.deepEqual(withStatus, original);
-    withStatus.calls.at(-2).request.turn_id = 'T';
-    const malformed = observationsFromEvidence(scenario, withStatus,
-      [{ event: 'prompt_result', step_id: 'terminal-1' }],
-      { actual_task_outcome: 'succeeded', reported_task_outcome: 'not_checked' });
-    assert.equal(scoreWithCapturedFinals(scenario, { ...malformed, transcript: withStatus }).eval_status, 'agent_behavior_mismatch');
-  }
-
-  const cursorScenario = structuredClone(scenario);
-  cursorScenario.expected_trace.splice(2, 0, { kind: 'turn.events-lost', events_lost: true });
-  const cursorCalls = structuredClone(calls);
-  cursorCalls[0].response.last_event_id = 2;
-  cursorCalls[1].request = { session_id: 'S', turn_id: 'T', after_event_id: 3,
-    arguments_without_session_turn_sha256: sha256(canonicalJson({ after_event_id: 3 })) };
-  cursorCalls[1].response.events_lost = true;
-  cursorCalls.splice(1, 0,
-    { tool: 'cursor_wait', request: { arguments_without_session_turn_sha256: sha256('{}') },
-      response: { ok: false, error_code: 'invalid_args' } },
-    { tool: 'cursor_session_status', request: { session_id: 'S', arguments_without_session_turn_sha256: sha256('{}') },
-      response: { ok: true, session_id: 'S', last_event_id: 3 } });
-  const cursorTranscript = { calls: cursorCalls, dropped_calls: 0, unexpected_input_requests: 0,
-    turn_call_ranges: [{ start: 0, end: cursorCalls.length }] };
-  const cursorObservation = observationsFromEvidence(cursorScenario, cursorTranscript,
-    [{ event: 'prompt_result', step_id: 'terminal-1' }],
-    { actual_task_outcome: 'succeeded', reported_task_outcome: 'not_checked' });
-  assert.equal(scoreWithCapturedFinals(cursorScenario, { ...cursorObservation, transcript: cursorTranscript }).eval_status, 'pass');
-
-  const missingRecoveryProof = { calls: recoveredCloseCalls, dropped_calls: 0 };
-  const unrecoveredClose = observationsFromEvidence(scenario, missingRecoveryProof,
-    [{ event: 'prompt_result', step_id: 'terminal-1' }],
-    { actual_task_outcome: 'succeeded', reported_task_outcome: 'not_checked' });
-  assert.ok(unrecoveredClose.trace.some(({ kind }) => kind === 'call.failed'));
 });
 
 test('runtime recovery trace proves the old wrapper tombstone without duplicating terminal evidence', () => {
@@ -789,7 +728,7 @@ test('installed eval MCP starts an explicit corpus model and resumes with change
   let completed = first;
   for (let count = 0; count < 5 && completed.turn_status !== 'completed'; count += 1) {
     completed = await call('cursor_wait', { session_id: first.session_id, turn_id: first.turn_id,
-      after_event_id: completed.last_event_id, timeout_ms: 1000 });
+      timeout_ms: 1000 });
   }
   assert.equal(completed.turn_status, 'completed');
   await call('cursor_close_session', { session_id: first.session_id });

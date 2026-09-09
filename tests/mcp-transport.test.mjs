@@ -93,7 +93,8 @@ test('MCP tools/list publishes the stable tool names and answer schemas', async 
   assert.deepEqual(byName.cursor_list_models, { type: 'object', properties: {}, required: [], additionalProperties: false });
   assert.deepEqual(byName.cursor_wait.required, ['session_id', 'turn_id']);
   assert.deepEqual(byName.cursor_wait.properties.timeout_ms, { type: 'integer', minimum: 1_000, maximum: 180_000 });
-  assert.deepEqual(byName.cursor_wait.properties.after_progress_revision, { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER });
+  assert.equal(Object.hasOwn(byName.cursor_wait.properties, 'after_event_id'), false);
+  assert.equal(Object.hasOwn(byName.cursor_wait.properties, 'after_progress_revision'), false);
   assert.deepEqual(byName.cursor_read_result.required, ['session_id', 'turn_id']);
   assert.deepEqual(byName.cursor_read_result.properties.offset, { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER });
   for (const name of ['cursor_delegate', 'cursor_start_session', 'cursor_resume_session']) {
@@ -170,8 +171,7 @@ test('MCP wires cursor_read_result through the public tool boundary', async (t) 
   const session = await client.tool('cursor_start_session', { cwd: process.cwd(), mode: 'ask' });
   const turn = await client.tool('cursor_send_prompt', { session_id: session.session_id, prompt: 'Complete.' });
   await client.tool('cursor_wait', {
-    session_id: session.session_id, turn_id: turn.turn_id,
-    after_event_id: turn.last_event_id, timeout_ms: 1_000,
+    session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000,
   });
   const page = await client.tool('cursor_read_result', {
     session_id: session.session_id, turn_id: turn.turn_id,
@@ -202,9 +202,7 @@ test('MCP tools/call wires interactive answers, status and cancellation', async 
     const turn = await client.tool('cursor_send_prompt', { session_id: session.session_id, prompt: `Handle ${scenario.kind}.` });
     const waiting = await client.tool('cursor_wait', {
       session_id: session.session_id,
-      turn_id: turn.turn_id,
-      after_event_id: turn.last_event_id,
-      timeout_ms: 1_000,
+      turn_id: turn.turn_id, timeout_ms: 1_000,
     });
     assert.equal(waiting.turn_status, 'waiting_for_input');
     assert.equal(waiting.pending[0].kind, scenario.kind);
@@ -227,9 +225,7 @@ test('MCP tools/call wires interactive answers, status and cancellation', async 
     });
     const completed = await client.tool('cursor_wait', {
       session_id: session.session_id,
-      turn_id: turn.turn_id,
-      after_event_id: answered.last_event_id,
-      timeout_ms: 1_000,
+      turn_id: turn.turn_id, timeout_ms: 1_000,
     });
     assert.equal(completed.turn_status, 'completed');
     assert.equal((await client.tool('cursor_close_session', { session_id: session.session_id })).session_state, 'tombstone');
@@ -305,9 +301,7 @@ test('MCP tools/call wires one complete session through stdio JSON-RPC', async (
   });
   const completed = await client.tool('cursor_wait', {
     session_id: session.session_id,
-    turn_id: turn.turn_id,
-    after_event_id: turn.last_event_id,
-    timeout_ms: 1_000,
+    turn_id: turn.turn_id, timeout_ms: 1_000,
   });
   assert.equal(completed.turn_status, 'completed');
   const retained = await client.tool('cursor_wait', {
