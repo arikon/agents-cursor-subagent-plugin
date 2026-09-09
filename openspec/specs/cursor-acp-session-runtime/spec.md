@@ -64,9 +64,10 @@ only after the terminal tombstone snapshot is stored.
 ### Requirement: Публичный MCP tool contract
 
 Runtime SHALL быть единственным владельцем MCP schemas и всех response envelopes. Tools:
-`cursor_start_session({cwd,mode,model?,effort?,fast?,plugin_dirs?})`,
-`cursor_delegate({cwd,mode,prompt,model?,effort?,fast?,plugin_dirs?})`,
-`cursor_resume_session({cwd,cursor_session_id,mode,model?,effort?,fast?,plugin_dirs?})`,
+`cursor_list_models({})`,
+`cursor_start_session({cwd,mode,model?,effort?,fast?,optimize_for?,plugin_dirs?})`,
+`cursor_delegate({cwd,mode,prompt,model?,effort?,fast?,optimize_for?,plugin_dirs?})`,
+`cursor_resume_session({cwd,cursor_session_id,mode,model?,effort?,fast?,optimize_for?,plugin_dirs?})`,
 `cursor_set_mode({session_id,mode})`, `cursor_send_prompt({session_id,prompt})`,
 `cursor_session_status({session_id})`, `cursor_read_result({session_id,turn_id,offset?})`,
 `cursor_wait({session_id,turn_id,after_event_id?,after_progress_revision?,timeout_ms?})`,
@@ -84,9 +85,10 @@ absolute directory, `mode` exactly `ask|plan|agent`; `decision` exactly
 
 | Tool | Required input | Optional input | Success output |
 |---|---|---|---|
-| `cursor_start_session` | `cwd`, `mode` | `model`, `effort`, `fast`, `plugin_dirs` | `SessionEnvelope` |
-| `cursor_delegate` | `cwd`, `mode`, `prompt` | `model`, `effort`, `fast`, `plugin_dirs` | bootstrap `ActionEnvelope` or unchanged failed-allocation `SessionEnvelope` |
-| `cursor_resume_session` | `cwd`, `cursor_session_id`, `mode` | `model`, `effort`, `fast`, `plugin_dirs` | `SessionEnvelope` |
+| `cursor_list_models` | — | — | `ModelCatalog` из «Получение моделей Cursor через MCP» |
+| `cursor_start_session` | `cwd`, `mode` | `model`, `effort`, `fast`, `optimize_for`, `plugin_dirs` | `SessionEnvelope` |
+| `cursor_delegate` | `cwd`, `mode`, `prompt` | `model`, `effort`, `fast`, `optimize_for`, `plugin_dirs` | bootstrap `ActionEnvelope` or unchanged failed-allocation `SessionEnvelope` |
+| `cursor_resume_session` | `cwd`, `cursor_session_id`, `mode` | `model`, `effort`, `fast`, `optimize_for`, `plugin_dirs` | `SessionEnvelope` |
 | `cursor_set_mode` | `session_id`, `mode` | — | `ActionEnvelope` + `mode` |
 | `cursor_send_prompt` | `session_id`, `prompt` | — | `ActionEnvelope` |
 | `cursor_session_status` | `session_id` | — | `SessionEnvelope` |
@@ -102,9 +104,27 @@ MUST NOT contain `[` or `]`; bracketed installed-CLI parameter syntax is not
 part of the public MCP surface. `effort` is a nonempty token matching
 `^[A-Za-z0-9._-]+$`; `fast` is boolean. Runtime rejects an invalid public shape
 before allocation. The version-specific adapter/golden owns exact
-installed-CLI encoding; model-specific availability is not prevalidated and a
-Cursor rejection is an ordinary allocated-session init failure. Upper layers
+installed-CLI encoding; explicit model selection is preflighted by MD-6 and a
+subsequent Cursor rejection is an ordinary allocated-session init failure. Upper layers
 do not own or repeat provider argv syntax.
+
+`optimize_for` is exactly `cost|balanced|intelligence`. It is admitted only with
+explicit `model:"auto-smart"`, and `auto-smart` requires explicit `optimize_for`.
+Omitted model, `auto`, `default`, or another model with optimize_for is
+`invalid_args` before allocation. Omitted model retains the existing `auto`
+behavior; `auto` and `default` remain valid without optimize_for. Runtime does
+not silently choose default_optimize_for; fresh selection lookup belongs to MD-6.
+The version-specific adapter/golden owns the confirmed provider encoding;
+there is no public generic parameter bag; uniform effort mapping belongs to MD-6.
+
+#### Scenario: Explicit Auto strategy
+- **WHEN** caller starts, delegates or resumes with auto-smart and one admitted optimize_for value
+- **THEN** runtime preserves the requested strategy through the admitted provider adapter
+
+#### Scenario: Auto strategy mismatch
+- **WHEN** optimize_for lacks explicit auto-smart, or auto-smart lacks optimize_for
+- **THEN** runtime returns invalid_args before allocation, without choosing a strategy
+
 
 `cursor_send_prompt` MUST validate live session, nonempty prompt and absent active
 turn before allocating `turn_id`; rejection creates no turn/event. `TurnSnapshot`
@@ -129,7 +149,7 @@ exact ACP wire encoding is version-specific fixture detail.
 session_state,cwd,mode,run_mode,sandbox,failure_kind:null|"spawn"|"init"|"init_timeout",
 terminal_reason:null|BoundedText,last_event_id,active_turn:TurnSnapshot|null,last_terminal_turn:TurnSnapshot|null}`.
 IUX-1 additionally includes `model:string`, `effort:null|string`,
-`fast:null|boolean`, `plugin_dirs:string[]` and
+`fast:null|boolean`, `optimize_for:null|string`, `plugin_dirs:string[]` and
 `cursor_session_id:null|string`: `session_id` remains the runtime opaque ID;
 `model` is `"auto"` when omitted; `cursor_session_id` is null before admitted
 provider creation and otherwise is its exact opaque provider ID. On resume,
@@ -161,7 +181,7 @@ operation, `turn_id,turn_status`, plus only its operation-specific fields.
 the session-only form when already idle,
 or the turn-targeting form when it terminalizes an active turn. For a live
 allocation, `cursor_delegate` adds only bootstrap `cursor_session_id,model` and
-supplied non-null `effort,fast` to its prompt ActionEnvelope. An allocated
+supplied non-null `effort,fast,optimize_for` to its prompt ActionEnvelope. An allocated
 init/spawn failure instead returns its unchanged failed-allocation
 `SessionEnvelope`, without `turn_id`. Live `ActionEnvelope`
 acknowledgements MUST NOT contain `cwd`,
@@ -196,7 +216,7 @@ text:JSON.stringify(the declared envelope)}]}`; it has no `structuredContent`.
 Every domain/tool error is a successful JSON-RPC result `CallToolResult` with
 `isError:true` and one text content containing JSON `{error_code,message}`;
 `structuredContent` and output schemas are outside v1 scope. `error_code` is exactly one of
-`invalid_args|unknown_session|unknown_turn|unknown_request|resource_limit|protocol_error|scope_rejected|invalid_text_encoding|mode_timeout`. JSON-RPC `error` with integer
+`invalid_args|unknown_session|unknown_turn|unknown_request|resource_limit|protocol_error|scope_rejected|invalid_text_encoding|mode_timeout|model_discovery_failed`. JSON-RPC `error` with integer
 code is reserved for malformed JSON-RPC or unknown method.
 For every existing-session tool, `unknown_session` and, where applicable,
 `unknown_turn` MUST be returned before tool-specific provider dispatch, state
@@ -400,6 +420,9 @@ Runtime MUST применять следующую таблицу.
 
 | Name | Value / range | Overflow action |
 |---|---|---|
+| model discovery slots | 1 per MCP runtime | resource_limit без очереди |
+| model discovery total timeout | 15 000 ms | model_discovery_failed, abort HTTP/stream |
+| model discovery response payload | 1 048 576 bytes | resource_limit, abort HTTP/stream; separate from public input bound |
 | init timeout | fixed 15 000 ms | terminal init timeout |
 | turn timeout | fixed 3 600 000 ms | terminal turn timeout |
 | idle TTL | fixed 900 000 ms | shared shutdown |
@@ -544,7 +567,7 @@ fixture.
 `mode` and optional model-parameter override semantics as a new runtime session.
 
 Resume MUST создать новый runtime-owned MCP `session_id`, canonicalize `cwd` и
-проверить allowed roots до spawn. После обычных initialize/authenticate runtime
+проверить allowed roots до spawn. После общего startup по MD-7 runtime
 вызывает version-specific adapter load operation с provided opaque
 `cursor_session_id` и validates the admitted load result. Exact load params and
 result shape are
@@ -636,6 +659,26 @@ terminality is ignored and cannot resurrect state.
 - **WHEN** the admitted provider rejects a load operation
 - **THEN** the new wrapper becomes terminal with bounded provider code/message,
   and runtime does not create a replacement provider session
+
+При неуспешной инициализации Cursor runtime MUST сохранять доступную stderr-диагностику CLI в существующем `terminal_reason: BoundedText`, вместе с исходной причиной runtime. Это относится к version probe и ACP startup до live-сессии; прежняя классификация `failure_kind` и отсутствие turn сохраняются. Непустой stderr сам по себе не означает отказ успешной операции. JSON-RPC provider errors продолжают использовать описанный выше `provider_error`.
+
+Диагностика MUST укладываться в derived-text bound MD-3, корректно обрабатывать UTF-8 между chunks и отмечать обрезку через `truncated`. После успешного init либо tombstone runtime MUST прекращать накопление startup stderr; опубликованное terminal_reason не изменяется поздними байтами. Дочитывание stderr при exit/EOF MUST быть ограничено shutdown grace MD-3; удерживаемый наследником pipe не блокирует завершение и освобождение собственных stream resources. Runtime MUST NOT добавлять в диагностику environment, credentials или JSON-RPC error.data; текст stderr считается данными provider, а не исполняемой инструкцией.
+
+#### Scenario: Неверная модель отклонена до turn
+- **WHEN** CLI завершает startup и сообщает в stderr, что выбранная модель недоступна
+- **THEN** failed-allocation envelope содержит `failure_kind: init` и bounded причину отказа модели, без создания turn или автоматического повторного запуска
+
+#### Scenario: Последний stderr приходит после exit
+- **WHEN** stderr дописывается после exit/EOF либо pipe остаётся открытым
+- **THEN** доступные до grace deadline байты входят в bounded diagnostic, операция завершается в ограниченное время, а поздние байты не изменяют terminal response
+
+#### Scenario: Ошибка version probe
+- **WHEN** CLI version probe завершается с ошибкой и stderr
+- **THEN** failed-allocation envelope сохраняет bounded stderr вместе с причиной ошибки probe
+
+#### Scenario: Шумный успешный startup
+- **WHEN** startup пишет предупреждение в stderr, но корректно создаёт live session
+- **THEN** предупреждение не превращается в failure и его startup buffer освобождается
 
 ### Requirement: Role-neutral mode and collaboration surface
 
@@ -744,3 +787,88 @@ A prefix is not recovered by asking the provider to regenerate the answer.
 - **WHEN** agent text crosses the retained-result cap
 - **THEN** the turn fails with `terminal_result_limit` and null result; caller
   cannot mistake a partial preview or digest for complete review evidence
+
+### Requirement: Получение моделей Cursor через MCP
+
+Runtime SHALL предоставлять `cursor_list_models` как отдельную операцию без allocation ACP-сессии или turn. Вход — только пустой JSON object; дополнительные поля дают `invalid_args`. Success `ModelCatalog` — closed object `{models:[{id:string,name:string,effort?:string[],fast?:boolean[],optimize_for?:string[],default_optimize_for?:string}]}`. ID/name — точные непустые строки provider, model IDs уникальны, порядок provider сохраняется. `effort` содержит допустимые строковые значения provider effort-параметра, сопоставленного единственным resolver MD-6; `fast` присутствует только при объявленном точном ID `fast` и содержит разрешённые boolean значения, преобразованные из provider строк `"false"`/`"true"`. Unsupported параметры отсутствуют, не заменяются пустым списком. Version-specific mapping `effort`/`reasoning`/`reasoning_effort` принадлежит MD-6; значения сохраняются без синонимов. Для `auto-smart` точный provider parameter `optimize_for` возвращается в одноимённом поле; `default_optimize_for` возвращается только при единственном provider default variant с объявленным значением optimize_for. Отсутствие default variant не синтезирует default; неоднозначный либо невалидный default даёт model_discovery_failed. Другие параметры, aliases и полные variants не входят в MCP output. Модель `default` возвращается с точными id/name; её существующий alias `auto` остаётся допустимым launch ID, без общего aliases array. Это снимок базовых моделей и разрешённых значений поддержанных параметров официального recommended каталога, не гарантия всех CLI моделей, произвольных сочетаний параметров или будущего запуска. Выбор Auto описан MD-2; общего механизма произвольных model parameters нет.
+
+Каждый вызов MUST получать актуальный каталог через официальный публичный API каталога SDK, используя исключительно `apiKey` из `~/.cursor/auth.json` текущего пользователя MCP-хоста. Runtime MUST NOT использовать fallback auth/source, запускать CLI/prompt, создавать ключ, refresh/login, писать auth/config, изменять live sessions либо создавать постоянный cache/registry. `cwd`/session ID не нужны. Account API key может отличаться от account CLI. Discovery и launch используют общий resolver MD-6; каталог не является permission gate.
+
+Отсутствующий auth file либо отсутствующий, нестроковый или blank `apiKey` MUST давать `model_discovery_failed` с сообщением получить Cursor API KEY и записать поле `apiKey` в `~/.cursor/auth.json`. Нечитаемый/некорректный JSON auth file даёт тот же код с безопасным actionable сообщением проверить этот файл. HTTP failure, network failure, timeout, некорректные UTF-8/JSON или нарушение известной provider schema дают `model_discovery_failed`; вход и ресурсные отказы используют `invalid_args`/`resource_limit`. Ошибка включает только bounded безопасную классификацию и при наличии HTTP status, не credentials, raw auth/provider body, headers или exception text. Error не создаёт SessionEnvelope и не подставляет `auto` либо встроенный список.
+
+Runtime MUST отменять принадлежащие запросу HTTP/stream resources и освобождать admission slot при success, failure и shutdown. Bounds и overload action принадлежат MD-3. Превышение payload bound не возвращает частичный каталог. Version-specific adapter, подтверждённый официальным SDK/API evidence и golden fixture, владеет внешней schema/auth и проекцией в `ModelCatalog`: неизвестные дополнительные поля игнорируются, malformed известные поля, duplicate model IDs и пустой каталог дают явную ошибку.
+
+#### Scenario: Список до создания сессии
+- **WHEN** caller запрашивает каталог с допустимым ключом и provider возвращает допустимый список
+- **THEN** MCP возвращает нормализованные ID, имена и поддержанные effort/fast и Auto optimize_for/default_optimize_for без ACP-сессии или turn
+
+#### Scenario: API key отсутствует
+- **WHEN** auth file либо непустое строковое поле apiKey отсутствует
+- **THEN** caller получает actionable model_discovery_failed с указанием получить API KEY и сохранить поле в указанном auth file, без альтернативного источника
+
+#### Scenario: Discovery повторён после изменения каталога или ключа
+- **WHEN** provider список либо apiKey изменился между последовательными вызовами
+- **THEN** второй ответ использует новые данные, без persisted cache
+
+#### Scenario: API недоступен или формат изменился
+- **WHEN** HTTP запрос отклонён, зависает либо возвращает malformed известную schema
+- **THEN** caller получает безопасный bounded MCP error без credentials, raw body, придуманного/частичного списка и allocation
+
+#### Scenario: Параллельный запрос и закрытие MCP
+- **WHEN** discovery slot занят либо MCP закрывается во время discovery
+- **THEN** новый запрос не ставится в очередь, а shutdown отменяет собственный HTTP/stream и освобождает resources в пределах MD-3
+
+### Requirement: Согласованный выбор модели до prompt
+
+MD-6 SHALL быть единственным владельцем нормализации model selection для discovery и start/delegate/resume. Discovery возвращает базовые модели provider (не разворачивает variants в отдельные модели и не исключает модели по hardcoded list). Version-specific adapter сопоставляет публичный `effort` одному подтверждённому provider ID `effort|reasoning|reasoning_effort`; неоднозначный mapping даёт `model_discovery_failed`. Значения сохраняются буквально: нет преобразования xhigh/extrahigh или иных синонимов. Public catalog остаётся компактным MD-1; полные provider variants используются только внутри resolver.
+
+При explicit fixed model или auto-smart runtime MUST получить свежий каталог через общий MD-1 transport/auth и MD-3 limits до allocation. Постоянный cache/registry и отдельный lifecycle resolver не создаются. Допустим только точный canonical base ID из каталога; неизвестный ID, alias или CLI preset даёт `invalid_args`. Исключение существующей default policy: omitted model, `auto` и `default` без effort/fast/optimize_for сохраняют существующее поведение без lookup. Эти default-policy IDs с knobs дают `invalid_args`; auto-smart требует optimize_for по MD-2. `false` считается явно переданным fast, не отсутствием значения.
+
+Resolver MUST проверить каждое явно переданное значение по соответствующему provider definition без healing, игнорирования или подстановки альтернативы. Затем он фильтрует полные variants по совпадению ВСЕХ явно переданных mapped constraints. Нет кандидатов — `invalid_args`, без fallback. При единственном provider default variant каждый кандидат получает число совпадающих с default пар параметр/значение; выбирается максимальное число, при равенстве сам default, если он кандидат, иначе первый кандидат в порядке provider. Это разрешает менять только unspecified параметры для совместимости с явным выбором. Если default отсутствует, допустим только единственный кандидат; несколько кандидатов либо неоднозначный default дают `model_discovery_failed` как неоднозначные metadata. Полный выбранный variant передаётся provider с сохранением порядка params через version-specific adapter; частичное наложение knobs на default не заменяет этот алгоритм.
+
+Для explicit selection после session/new или session/load runtime MUST сверить фактический canonical model и КАЖДЫЙ явно переданный knob с подтверждённым adapter selection evidence до объявления live и до первого delegate prompt. Несовпадение любого переданного provider параметра, для которого доступно actual evidence, также является ошибкой; отсутствие evidence обязательно является ошибкой только для canonical ID и explicit knobs. Missing/mismatch evidence даёт существующий allocated init failure с bounded причиной и cleanup, без turn или corrective ACP setters. Legacy presentation ID не заменяет подтверждённый parameterized selection. Этот контракт не обещает проверку всех скрытых unspecified параметров или модели, реально использованной для inference. Requested поля bootstrap/status не являются доказательством фактического выбора.
+
+#### Scenario: Полный variant при явном fast
+- **WHEN** выбран GPT base model с fast true, а совместимые variants имеют context, отличный от default
+- **THEN** resolver выбирает совместимый полный variant по указанному порядку и сохраняет явный fast, не отклоняя выбор из-за default context
+
+#### Scenario: Полный Grok и uniform effort
+- **WHEN** caller задаёт поддержанные effort и fast для модели
+- **THEN** resolver сохраняет точные значения через подтверждённый provider mapping и передаёт полный совместимый variant
+
+#### Scenario: Неизвестный alias или недопустимое значение
+- **WHEN** caller передаёт неканонический ID, неподдержанное значение или сочетание без variant
+- **THEN** runtime возвращает invalid_args до allocation, не исправляя выбор автоматически
+
+#### Scenario: Resume selection не подтверждён
+- **WHEN** session/load не подтверждает canonical model либо один явно выбранный knob
+- **THEN** runtime завершает init failure и cleanup без live-сессии и первого prompt
+
+### Requirement: Неинтерактивная авторизация запуска
+
+Runtime SHALL использовать существующую авторизацию при start/delegate/resume
+без принудительного interactive login. Если выбранный auth file MD-1 содержит
+валидный apiKey, version-specific adapter MUST передать его только дочернему
+процессу и использовать временное хранилище credentials в памяти; запуск не
+изменяет этот файл и не открывает браузер. Exact child environment принадлежит
+adapter/golden, credentials не входят в argv, публичные ответы или диагностику.
+
+При ENOENT либо объекте без apiKey launch сохраняет native CLI authentication,
+но не инициирует browser-login. Эта ветка не обещает запрета native refresh
+credentials. Malformed/unreadable файл или присутствующий невалидный apiKey
+дают bounded actionable init failure до spawn. При отсутствии допустимой
+авторизации provider отказ остаётся init failure, без prompt или fallback login.
+Discovery по-прежнему требует ключ по MD-1. Общий reader не создаёт cache,
+auth manager, refresh/login operation или восстановление удалённого файла.
+
+#### Scenario: В файле только API key
+- **WHEN** auth file содержит только валидный apiKey
+- **THEN** Cursor new/load использует его без browser-login и изменения файла; временные токены остаются в памяти процесса
+
+#### Scenario: Existing CLI login без API key
+- **WHEN** apiKey отсутствует и CLI имеет native authentication
+- **THEN** runtime использует её без принудительного interactive login; при auth-required возвращает bounded init failure
+
+#### Scenario: Некорректный auth file
+- **WHEN** файл нечитаем, содержит malformed JSON либо невалидное присутствующее поле apiKey
+- **THEN** launch не создаёт child process, сообщает безопасную actionable причину и не выбирает другой источник молча

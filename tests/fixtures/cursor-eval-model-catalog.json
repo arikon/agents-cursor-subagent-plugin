@@ -1,0 +1,185 @@
+{
+  "source": "Synthetic eval-only catalog for existing corpus IDs and knobs; not provider availability or primary-source evidence.",
+  "response": {
+    "items": [
+      {
+        "id": "sonnet-4.0",
+        "displayName": "Synthetic eval sonnet-4.0",
+        "parameters": [
+          {
+            "id": "effort",
+            "displayName": "effort",
+            "values": [
+              {
+                "value": "low",
+                "displayName": "low"
+              },
+              {
+                "value": "high",
+                "displayName": "high"
+              }
+            ]
+          },
+          {
+            "id": "fast",
+            "displayName": "fast",
+            "values": [
+              {
+                "value": "false",
+                "displayName": "false"
+              },
+              {
+                "value": "true",
+                "displayName": "true"
+              }
+            ]
+          }
+        ],
+        "variants": [
+          {
+            "params": [
+              {
+                "id": "effort",
+                "value": "low"
+              },
+              {
+                "id": "fast",
+                "value": "false"
+              }
+            ],
+            "displayName": "low false"
+          },
+          {
+            "params": [
+              {
+                "id": "effort",
+                "value": "low"
+              },
+              {
+                "id": "fast",
+                "value": "true"
+              }
+            ],
+            "displayName": "low true"
+          },
+          {
+            "params": [
+              {
+                "id": "effort",
+                "value": "high"
+              },
+              {
+                "id": "fast",
+                "value": "false"
+              }
+            ],
+            "displayName": "high false",
+            "isDefault": true
+          },
+          {
+            "params": [
+              {
+                "id": "effort",
+                "value": "high"
+              },
+              {
+                "id": "fast",
+                "value": "true"
+              }
+            ],
+            "displayName": "high true"
+          }
+        ]
+      },
+      {
+        "id": "grok-4.6",
+        "displayName": "Synthetic eval grok-4.6",
+        "parameters": [
+          {
+            "id": "effort",
+            "displayName": "effort",
+            "values": [
+              {
+                "value": "low",
+                "displayName": "low"
+              },
+              {
+                "value": "high",
+                "displayName": "high"
+              }
+            ]
+          },
+          {
+            "id": "fast",
+            "displayName": "fast",
+            "values": [
+              {
+                "value": "false",
+                "displayName": "false"
+              },
+              {
+                "value": "true",
+                "displayName": "true"
+              }
+            ]
+          }
+        ],
+        "variants": [
+          {
+            "params": [
+              {
+                "id": "effort",
+                "value": "low"
+              },
+              {
+                "id": "fast",
+                "value": "false"
+              }
+            ],
+            "displayName": "low false"
+          },
+          {
+            "params": [
+              {
+                "id": "effort",
+                "value": "low"
+              },
+              {
+                "id": "fast",
+                "value": "true"
+              }
+            ],
+            "displayName": "low true"
+          },
+          {
+            "params": [
+              {
+                "id": "effort",
+                "value": "high"
+              },
+              {
+                "id": "fast",
+                "value": "false"
+              }
+            ],
+            "displayName": "high false",
+            "isDefault": true
+          },
+          {
+            "params": [
+              {
+                "id": "effort",
+                "value": "high"
+              },
+              {
+                "id": "fast",
+                "value": "true"
+              }
+            ],
+            "displayName": "high true"
+          }
+        ]
+      }
+    ]
+  }
+}

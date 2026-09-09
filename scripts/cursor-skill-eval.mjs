@@ -13,7 +13,7 @@ const EVALUATOR_INPUTS = Object.freeze([
   '.codex-plugin/plugin.json', 'README.md',
   'scripts/codex-app-server-client.mjs', 'scripts/cursor-eval-scenario.mjs',
   'scripts/cursor-skill-eval.mjs', 'scripts/cursor-subagent-bootstrap.mjs',
-  'scripts/cursor-subagent-mcp.mjs', 'scripts/eval/run-cursor-skill-eval-matrix.mjs',
+  'scripts/cursor-subagent-mcp.mjs', 'scripts/cursor-model-adapter.mjs', 'scripts/eval/run-cursor-skill-eval-matrix.mjs',
   'scripts/node-test-reporter-v22.mjs', 'scripts/recording-mcp-proxy.mjs',
   'scripts/run-cursor-skill-eval.mjs', 'scripts/run-node-tests.mjs',
   'skills/cursor-subagent/SKILL.md', 'skills/cursor-subagent/agents/openai.yaml',
@@ -25,6 +25,8 @@ const EVALUATOR_INPUTS = Object.freeze([
   'tests/fixtures/cursor-agent-v20260825.golden.json', 'tests/fixtures/fake-acp.mjs',
   'tests/fixtures/fake-ollama-responses.mjs', 'tests/fixtures/fake-codex-adapter.mjs', 'tests/fixtures/fake-codex-adapter-core.mjs', 'tests/fixtures/fake-mcp-version.mjs',
   'tests/fixtures/release-fake-acp.mjs',
+  'tests/fixtures/release-model-discovery-preload.mjs', 'tests/fixtures/cursor-eval-model-catalog.json',
+  'tests/fixtures/cursor-model-catalog-1.0.31.json', 'tests/fixtures/fake-codex-cli-v01521.mjs',
 ].sort());
 const sourceRoot = fileURLToPath(new URL('..', import.meta.url));
 export async function readEvaluatorInventory(root = sourceRoot, load = readFile, runner = process.env.CURSOR_EVAL_MATRIX_RUNNER) {

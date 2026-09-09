@@ -55,6 +55,7 @@ test('Claude marketplace plugin uses the cached plugin root without changing aut
 test('MCP server fails loudly when its packaged manifest is absent', async (t) => {
   const root = mkdtempSync(join(tmpdir(), 'cursor-mcp-no-manifest-')); t.after(() => rmSync(root, { recursive: true, force: true }));
   const scripts = join(root, 'scripts'); mkdirSync(scripts); const copy = join(scripts, 'cursor-subagent-mcp.mjs'); copyFileSync(serverPath, copy);
+  copyFileSync(new URL('../scripts/cursor-model-adapter.mjs', import.meta.url), join(scripts, 'cursor-model-adapter.mjs'));
   const child = spawn(process.execPath, [copy], { stdio: ['ignore', 'ignore', 'pipe'] }); const stderr = []; child.stderr.on('data', (chunk) => stderr.push(chunk)); const [code] = await once(child, 'exit');
   assert.notEqual(code, 0); assert.match(Buffer.concat(stderr).toString('utf8'), /plugin\.json|manifest/i);
 });

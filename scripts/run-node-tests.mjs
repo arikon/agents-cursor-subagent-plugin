@@ -15,11 +15,11 @@ const unitTests = Object.freeze([
   'tests/bootstrap.test.mjs', 'tests/check-openspec-semantics.test.mjs', 'tests/claude-marketplace-canary.test.mjs', 'tests/codex-app-server-client.test.mjs',
   'tests/cursor-skill-eval.test.mjs', 'tests/eval-matrix.test.mjs', 'tests/facade.test.mjs', 'tests/mcp-smoke.test.mjs', 'tests/mcp-transport.test.mjs',
   'tests/node-test-reporter-v22.test.mjs', 'tests/run-cursor-skill-eval.test.mjs', 'tests/runtime.test.mjs', 'tests/node-test-supervisor.test.mjs',
-  'tests/coverage-audit.test.mjs', 'tests/eval-closeout.test.mjs',
+  'tests/model-discovery.test.mjs', 'tests/coverage-audit.test.mjs', 'tests/eval-closeout.test.mjs',
 ]);
 const productSources = Object.freeze([
   'scripts/check-openspec-semantics.mjs', 'scripts/codex-app-server-client.mjs', 'scripts/cursor-eval-scenario.mjs', 'scripts/cursor-skill-eval.mjs', 'scripts/openspec-semantic-registry.mjs',
-  'scripts/cursor-subagent-bootstrap.mjs', 'scripts/cursor-subagent-mcp.mjs', 'scripts/node-test-reporter-v22.mjs',
+  'scripts/cursor-subagent-bootstrap.mjs', 'scripts/cursor-subagent-mcp.mjs', 'scripts/cursor-model-adapter.mjs', 'scripts/node-test-reporter-v22.mjs',
   'scripts/recording-mcp-proxy.mjs', 'scripts/run-cursor-skill-eval.mjs', 'scripts/run-node-tests.mjs', 'scripts/run-unit-coverage.mjs',
   'scripts/eval/run-cursor-skill-eval-matrix.mjs', 'scripts/eval/run-cursor-skill-eval-suite.mjs',
   'scripts/audit-node-coverage.mjs', 'scripts/eval/finalize-cursor-skill-eval.mjs',

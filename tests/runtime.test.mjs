@@ -12,7 +12,12 @@ const fake = fileURLToPath(new URL('./fixtures/fake-acp.mjs', import.meta.url));
 const server = fileURLToPath(new URL('../scripts/cursor-subagent-mcp.mjs', import.meta.url));
 const cursorAgentGolden = JSON.parse(readFileSync(fileURLToPath(new URL('./fixtures/cursor-agent-v20260825.golden.json', import.meta.url)), 'utf8'));
 const cwd = process.cwd();
-const fakeEnvNames = ['CURSOR_AGENT_COMMAND', 'CURSOR_SUBAGENT_ADAPTER_ARGS', 'CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH', 'FAKE_ACP_PENDING', 'FAKE_ACP_CALLBACK_VARIANT', 'FAKE_ACP_FS_VARIANT', 'FAKE_ACP_LOG', 'FAKE_ACP_SAFE_EVIDENCE', 'FAKE_ACP_FOLLOWUP_RELEASE_PATH', 'FAKE_ACP_PATH', 'FAKE_ACP_CONTENT', 'FAKE_ACP_LINE', 'FAKE_ACP_LIMIT', 'FAKE_ACP_RESULT', 'FAKE_ACP_BAD_ADMISSION', 'FAKE_ACP_BAD_CAPABILITIES', 'FAKE_ACP_BAD_PROMPT_RESULT', 'FAKE_ACP_STOP_REASON', 'FAKE_ACP_VERSION', 'FAKE_ACP_VERSION_MODE', 'FAKE_ACP_UNLINK_COMMAND_ON_VERSION', 'FAKE_ACP_EXIT_ON_PROMPT', 'FAKE_ACP_EXIT_AFTER_RESULT', 'FAKE_ACP_STDOUT_EOF_ON_PROMPT', 'FAKE_ACP_INVALID_UTF8', 'FAKE_ACP_INVALID_FRAME', 'FAKE_ACP_INIT_FRAME', 'FAKE_ACP_INIT_RESPONSE_VARIANT', 'FAKE_ACP_INIT_ERROR_MESSAGE', 'FAKE_ACP_SESSION_VARIANT', 'FAKE_ACP_PROMPT_RESPONSE_VARIANT', 'FAKE_ACP_FRAME_VARIANT', 'FAKE_ACP_DELAY_INIT_MS', 'FAKE_ACP_DELAY_RESULT_MS', 'FAKE_ACP_DELAY_SET_MODE_MS', 'FAKE_ACP_IGNORE_CANCEL', 'FAKE_ACP_CRLF', 'FAKE_ACP_REQUIRE_POLICY', 'FAKE_ACP_EXPECT_DEFAULT_ARGV', 'FAKE_ACP_REJECT_PROMPT', 'FAKE_ACP_PROMPT_ERROR_MESSAGE', 'FAKE_ACP_EXPECT_MODEL_ARGV', 'FAKE_ACP_EXPECT_PLUGIN_DIRS', 'FAKE_ACP_ARGV_LOG', 'FAKE_ACP_LOAD_VARIANT', 'FAKE_ACP_PROGRESS_TEXT', 'FAKE_ACP_NOISE_UPDATES', 'FAKE_ACP_SECOND_PROGRESS_TEXT', 'FAKE_ACP_SECOND_PROGRESS_MS', 'FAKE_ACP_HOLD_PROMPT', 'FAKE_ACP_SET_MODE_LOG', 'FAKE_ACP_SET_MODE_VARIANT', 'FAKE_ACP_COLLAB'];
+const fakeEnvNames = ['CURSOR_API_KEY', 'CURSOR_AGENT_COMMAND', 'CURSOR_SUBAGENT_ADAPTER_ARGS', 'CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH', 'FAKE_ACP_PENDING', 'FAKE_ACP_CALLBACK_VARIANT', 'FAKE_ACP_FS_VARIANT', 'FAKE_ACP_LOG', 'FAKE_ACP_SAFE_EVIDENCE', 'FAKE_ACP_FOLLOWUP_RELEASE_PATH', 'FAKE_ACP_PATH', 'FAKE_ACP_CONTENT', 'FAKE_ACP_LINE', 'FAKE_ACP_LIMIT', 'FAKE_ACP_RESULT', 'FAKE_ACP_BAD_ADMISSION', 'FAKE_ACP_BAD_CAPABILITIES', 'FAKE_ACP_BAD_PROMPT_RESULT', 'FAKE_ACP_STOP_REASON', 'FAKE_ACP_VERSION', 'FAKE_ACP_VERSION_STDERR', 'FAKE_ACP_PICKER_FROM_ARGV', 'FAKE_ACP_MODEL_SELECTION', 'FAKE_ACP_VERSION_MODE', 'FAKE_ACP_UNLINK_COMMAND_ON_VERSION', 'FAKE_ACP_EXIT_ON_PROMPT', 'FAKE_ACP_EXIT_AFTER_RESULT', 'FAKE_ACP_STDOUT_EOF_ON_PROMPT', 'FAKE_ACP_INVALID_UTF8', 'FAKE_ACP_INVALID_FRAME', 'FAKE_ACP_INIT_FRAME', 'FAKE_ACP_INIT_RESPONSE_VARIANT', 'FAKE_ACP_INIT_ERROR_MESSAGE', 'FAKE_ACP_STARTUP_STDERR', 'FAKE_ACP_STARTUP_WARNING', 'FAKE_ACP_SESSION_VARIANT', 'FAKE_ACP_PROMPT_RESPONSE_VARIANT', 'FAKE_ACP_FRAME_VARIANT', 'FAKE_ACP_DELAY_INIT_MS', 'FAKE_ACP_DELAY_RESULT_MS', 'FAKE_ACP_DELAY_SET_MODE_MS', 'FAKE_ACP_IGNORE_CANCEL', 'FAKE_ACP_CRLF', 'FAKE_ACP_REQUIRE_POLICY', 'FAKE_ACP_EXPECT_DEFAULT_ARGV', 'FAKE_ACP_REJECT_PROMPT', 'FAKE_ACP_PROMPT_ERROR_MESSAGE', 'FAKE_ACP_EXPECT_MODEL_ARGV', 'FAKE_ACP_EXPECT_PLUGIN_DIRS', 'FAKE_ACP_ARGV_LOG', 'FAKE_ACP_LOAD_VARIANT', 'FAKE_ACP_PROGRESS_TEXT', 'FAKE_ACP_NOISE_UPDATES', 'FAKE_ACP_SECOND_PROGRESS_TEXT', 'FAKE_ACP_SECOND_PROGRESS_MS', 'FAKE_ACP_HOLD_PROMPT', 'FAKE_ACP_SET_MODE_LOG', 'FAKE_ACP_SET_MODE_VARIANT', 'FAKE_ACP_COLLAB'];
+
+const offlineModelDependencies = {
+  readModelAuth: async () => Buffer.from('{}'),
+  fetchModels: async () => assert.fail('unit runtime must inject model HTTP explicitly'),
+};
 
 function withFake(t, extra = {}) {
   const old = Object.fromEntries(fakeEnvNames.map((name) => [name, process.env[name]]));
@@ -22,8 +27,12 @@ function withFake(t, extra = {}) {
   process.env.FAKE_ACP_REQUIRE_POLICY = '1';
   process.env.CURSOR_SUBAGENT_ADAPTER_ARGS = JSON.stringify([fake]);
   for (const [name, value] of Object.entries(extra.env || {})) process.env[name] = value;
-  const runtime = new Runtime({ roots: Object.hasOwn(extra, 'roots') ? extra.roots : [cwd] });
-  t.after(() => { for (const name of fakeEnvNames) old[name] === undefined ? delete process.env[name] : process.env[name] = old[name]; });
+  const runtime = new Runtime({ ...offlineModelDependencies, env: { ...process.env }, roots: Object.hasOwn(extra, 'roots') ? extra.roots : [cwd] });
+  t.after(async () => {
+    try { await runtime.shutdown(); } finally {
+      for (const name of fakeEnvNames) old[name] === undefined ? delete process.env[name] : process.env[name] = old[name];
+    }
+  });
   return runtime;
 }
 
@@ -32,12 +41,8 @@ function withInjectedFake(t, extra = {}) {
     ...(extra.pending ? { FAKE_ACP_PENDING: extra.pending } : {}),
     ...extra.env,
   });
-  const runtime = new Runtime({ env, roots: Object.hasOwn(extra, 'roots') ? extra.roots : [cwd] });
-  t.after(async () => {
-    for (const id of [...runtime.live]) {
-      try { await runtime.call('cursor_close_session', { session_id: id }); } catch { /* already closed or transport gone */ }
-    }
-  });
+  const runtime = new Runtime({ ...offlineModelDependencies, env, roots: Object.hasOwn(extra, 'roots') ? extra.roots : [cwd], ...extra.runtime });
+  t.after(() => runtime.shutdown());
   return runtime;
 }
 
@@ -56,8 +61,8 @@ function withDefaultFake(t) {
   delete env.CURSOR_AGENT_COMMAND;
   delete env.CURSOR_SUBAGENT_ADAPTER_ARGS;
   delete env.FAKE_ACP_PENDING;
-  const runtime = new Runtime({ env, roots: [cwd] });
-  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const runtime = new Runtime({ ...offlineModelDependencies, env, roots: [cwd] });
+  t.after(async () => { await runtime.shutdown(); rmSync(root, { recursive: true, force: true }); });
   return runtime;
 }
 
@@ -70,6 +75,7 @@ async function fireInitBudgetDeadline(operation) {
   };
   try {
     const pending = operation();
+    for (let attempt = 0; attempt < 20 && !expire; attempt += 1) await Promise.resolve();
     assert.equal(typeof expire, 'function');
     expire();
     globalThis.setTimeout = originalSetTimeout;
@@ -134,14 +140,14 @@ function waitForLine(stream) {
 }
 
 test('runtime rejects scope before session allocation', async () => {
-  const runtime = new Runtime({ roots: [cwd] });
+  const runtime = new Runtime({ ...offlineModelDependencies, roots: [cwd] });
   await assert.rejects(runtime.call('cursor_start_session', { cwd: '/definitely-missing', mode: 'ask' }), { error_code: 'scope_rejected' });
 });
 
 test('runtime exposes normalized init tombstone when ACP cannot spawn', async () => {
   const old = process.env.CURSOR_AGENT_COMMAND; process.env.CURSOR_AGENT_COMMAND = '/definitely-missing-agent';
   try {
-    const runtime = new Runtime({ roots: [cwd] });
+    const runtime = new Runtime({ ...offlineModelDependencies, roots: [cwd] });
     const envelope = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
     assert.equal(envelope.session_state, 'tombstone');
     assert.equal(envelope.failure_kind, 'spawn');
@@ -158,7 +164,7 @@ test('runtime reports spawn failure when ACP disappears after its admitted versi
     FAKE_ACP_UNLINK_COMMAND_ON_VERSION: executable,
   });
   delete env.CURSOR_SUBAGENT_ADAPTER_ARGS;
-  const runtime = new Runtime({ env, roots: [cwd] });
+  const runtime = new Runtime({ ...offlineModelDependencies, env, roots: [cwd] });
   const envelope = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
   assert.equal(envelope.session_state, 'tombstone');
   assert.equal(envelope.failure_kind, 'spawn');
@@ -174,8 +180,8 @@ if (process.argv.includes('--version')) {
   process.stdout.write('2026.08.25-3e8eec8\\n');
   process.exit(0);
 }
-const stdoutKeeper = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 500)'], {
-  stdio: ['ignore', 'inherit', 'ignore'],
+const stdoutKeeper = spawn(process.execPath, ['-e', 'setTimeout(() => process.stderr.write("late startup diagnostic"), 100)'], {
+  stdio: ['ignore', 'inherit', 'inherit'],
 });
 stdoutKeeper.unref();
 process.exit(7);
@@ -187,13 +193,118 @@ process.exit(7);
   const envelope = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
   assert.equal(envelope.session_state, 'tombstone');
   assert.equal(envelope.failure_kind, 'init');
+  assert.match(envelope.terminal_reason.text, /late startup diagnostic/);
+});
+
+for (const phase of ['startup', 'version']) test(`${phase} stderr drain expires with inherited pipes and keeps the terminal diagnostic stable`, async (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'cursor-inherited-stderr-'));
+  const release = join(root, 'release');
+  const done = join(root, 'done');
+  t.after(async () => {
+    writeFileSync(release, '');
+    for (let attempt = 0; attempt < 200 && !existsSync(done); attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    rmSync(root, { recursive: true, force: true });
+  });
+  const keeper = join(root, 'keeper.mjs');
+  writeFileSync(keeper, `
+import { existsSync, writeFileSync } from 'node:fs';
+process.stderr.on('error', () => {});
+setTimeout(() => process.stderr.write('pre-deadline diagnostic'), 100);
+const timer = setInterval(() => {
+  if (!existsSync(${JSON.stringify(release)})) return;
+  clearInterval(timer);
+  process.stderr.write('late diagnostic after tombstone', (error) => writeFileSync(${JSON.stringify(done)}, error?.code || 'open'));
+}, 10);
+setTimeout(() => process.exit(0), 15000).unref();
+`);
+  const program = join(root, 'agent.mjs');
+  writeFileSync(program, `
+import { spawn } from 'node:child_process';
+if (process.argv.includes('--version') && ${JSON.stringify(phase)} === 'startup') {
+  process.stdout.write('2026.08.25-3e8eec8\\n');
+} else {
+  const child = spawn(process.execPath, [${JSON.stringify(keeper)}], { stdio: ['ignore', 'ignore', 'inherit'] });
+  child.unref();
+  process.stderr.write('initial startup diagnostic', () => process.exit(1));
+}
+`);
+  const runtime = withInjectedFake(t, { env: { CURSOR_SUBAGENT_ADAPTER_ARGS: JSON.stringify([program]) } });
+  const failed = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
+  assert.equal(failed.session_state, 'tombstone');
+  assert.match(failed.terminal_reason.text, /initial startup diagnostic/);
+  assert.match(failed.terminal_reason.text, /pre-deadline diagnostic/);
+  writeFileSync(release, '');
+  for (let attempt = 0; attempt < 200 && !existsSync(done); attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  assert.ok(existsSync(done), 'inherited writer completed after the reader closed at the deadline');
+  assert.equal(readFileSync(done, 'utf8'), 'EPIPE');
+  const status = await runtime.call('cursor_session_status', { session_id: failed.session_id });
+  assert.deepEqual(status.terminal_reason, failed.terminal_reason);
+});
+
+test('version probe stderr is diagnostic on failure and does not contaminate a successful version', async (t) => {
+  for (const failed of [false, true]) {
+    const runtime = withInjectedFake(t, { env: { FAKE_ACP_VERSION_STDERR: failed ? 'Version warning' : 'Warning '.repeat(10000), ...(failed ? { FAKE_ACP_VERSION_MODE: 'nonzero' } : {}) } });
+    const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
+    assert.equal(session.session_state, failed ? 'tombstone' : 'live');
+    if (failed) {
+      assert.match(session.terminal_reason.text, /Cursor version probe failed\nCursor stderr: [\s\S]*Version warning/);
+      assert.equal(session.terminal_reason.truncated, false);
+    } else await runtime.call('cursor_close_session', { session_id: session.session_id });
+  }
+});
+
+test('Cursor startup stderr survives init failure without creating a turn', async (t) => {
+  const runtime = withInjectedFake(t, { env: { FAKE_ACP_STARTUP_STDERR: 'Cannot use this model: grok.\n' } });
+  const failed = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
+  assert.equal(failed.session_state, 'tombstone');
+  assert.equal(failed.failure_kind, 'init');
+  assert.equal(failed.active_turn, null);
+  assert.equal(failed.last_terminal_turn, null);
+  assert.match(failed.terminal_reason.text, /Cursor stderr: [\s\S]*Cannot use this model: grok\./);
+  assert.equal(failed.terminal_reason.truncated, false);
+});
+
+test('startup warnings allow live sessions and do not leak into later terminal diagnostics', async (t) => {
+  const warning = 'nonfatal startup warning';
+  const runtime = withInjectedFake(t, { env: { FAKE_ACP_STARTUP_WARNING: warning } });
+  const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
+  assert.equal(session.session_state, 'live');
+  assert.equal(session.failure_kind, null);
+  assert.equal(session.terminal_reason, null);
+  await runtime.call('cursor_close_session', { session_id: session.session_id });
+  const closed = await runtime.call('cursor_session_status', { session_id: session.session_id });
+  assert.equal(closed.session_state, 'tombstone');
+  assert.doesNotMatch(closed.terminal_reason?.text || '', /nonfatal startup warning/);
+
+  delete runtime.env.FAKE_ACP_STARTUP_WARNING;
+  runtime.env.FAKE_ACP_STARTUP_STDERR = 'new startup failure';
+  const failed = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
+  assert.equal(failed.failure_kind, 'init');
+  assert.match(failed.terminal_reason.text, /new startup failure/);
+  assert.doesNotMatch(failed.terminal_reason.text, /nonfatal startup warning/);
+});
+
+test('init failure diagnostics bound noisy stderr and preserve split UTF-8', async (t) => {
+  for (const diagnostic of ['Ошибка модели', 'Ошибка модели '.repeat(2000), 'Ошибка модели' + ' '.repeat(20000)]) {
+    const runtime = withInjectedFake(t, { env: { FAKE_ACP_STARTUP_STDERR: diagnostic } });
+    const failed = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
+    assert.equal(failed.failure_kind, 'init');
+    assert.match(failed.terminal_reason.text, /Cursor stderr: [\s\S]*Ошибка модели/);
+    assert.ok(Buffer.byteLength(failed.terminal_reason.text) <= LIMITS.textBytes);
+    assert.ok(!failed.terminal_reason.text.includes('\uFFFD'));
+    assert.equal(failed.terminal_reason.truncated, Buffer.byteLength(diagnostic) > LIMITS.textBytes);
+  }
 });
 
 test('adapter admission failure is an allocated init tombstone and releases capacity', async (t) => {
   const runtime = withFake(t, { env: { FAKE_ACP_BAD_ADMISSION: '1' } });
   const failed = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
   assert.equal(failed.session_state, 'tombstone'); assert.equal(failed.failure_kind, 'init');
-  delete process.env.FAKE_ACP_BAD_ADMISSION;
+  delete runtime.env.FAKE_ACP_BAD_ADMISSION;
   const admitted = [];
   for (let index = 0; index < LIMITS.live; index += 1) admitted.push(await runtime.call('cursor_start_session', { cwd, mode: 'ask' }));
   assert.ok(admitted.every((session) => session.session_state === 'live'));
@@ -280,35 +391,35 @@ test('admitted adapter applies immutable auto-review and enabled-sandbox argv', 
 });
 
 test('runtime dispatch accepts exactly the three advertised answer tool names', async () => {
-  const runtime = new Runtime({ roots: [cwd] });
+  const runtime = new Runtime({ ...offlineModelDependencies, roots: [cwd] });
   for (const name of ['cursor_answer_', 'cursor_answer_unknown', 'cursor_answer_question_extra']) {
     await assert.rejects(runtime.call(name, {}), { error_code: 'invalid_args', message: `unknown tool: ${name}` });
   }
 });
 
 test('runtime rejects a non-object tool argument envelope', async () => {
-  const runtime = new Runtime({ roots: [cwd] });
+  const runtime = new Runtime({ ...offlineModelDependencies, roots: [cwd] });
   await assert.rejects(runtime.call('cursor_start_session', null), {
     error_code: 'invalid_args',
   });
 });
 
 test('runtime rejects an undocumented tool argument', async () => {
-  const runtime = new Runtime({ roots: [cwd] });
+  const runtime = new Runtime({ ...offlineModelDependencies, roots: [cwd] });
   await assert.rejects(runtime.call('cursor_start_session', { cwd, mode: 'ask', extra: true }), {
     error_code: 'invalid_args',
   });
 });
 
 test('runtime rejects a missing required tool argument', async () => {
-  const runtime = new Runtime({ roots: [cwd] });
+  const runtime = new Runtime({ ...offlineModelDependencies, roots: [cwd] });
   await assert.rejects(runtime.call('cursor_start_session', { cwd }), {
     error_code: 'invalid_args',
   });
 });
 
 test('runtime rejects a tool argument envelope that cannot be serialized', async () => {
-  const runtime = new Runtime({ roots: [cwd] });
+  const runtime = new Runtime({ ...offlineModelDependencies, roots: [cwd] });
   const circular = {};
   circular.self = circular;
   const args = { cwd: circular, mode: 'ask' };
@@ -328,7 +439,7 @@ test('runtime rejects oversized and malformed UTF-8 prompts before turn allocati
 });
 
 test('runtime rejects a relative working directory', async () => {
-  const runtime = new Runtime({ roots: [cwd] });
+  const runtime = new Runtime({ ...offlineModelDependencies, roots: [cwd] });
   await assert.rejects(runtime.call('cursor_start_session', { cwd: '.', mode: 'ask' }), {
     error_code: 'invalid_args',
   });
@@ -339,7 +450,7 @@ test('runtime rejects a working directory that resolves to a file', async (t) =>
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const file = join(root, 'not-a-directory');
   writeFileSync(file, 'content', 'utf8');
-  const runtime = new Runtime({ roots: [root] });
+  const runtime = new Runtime({ ...offlineModelDependencies, roots: [root] });
   await assert.rejects(runtime.call('cursor_start_session', { cwd: file, mode: 'ask' }), {
     error_code: 'scope_rejected',
   });
@@ -352,14 +463,14 @@ test('runtime rejects a working directory outside its admitted roots', async (t)
     rmSync(root, { recursive: true, force: true });
     rmSync(outside, { recursive: true, force: true });
   });
-  const runtime = new Runtime({ roots: [root] });
+  const runtime = new Runtime({ ...offlineModelDependencies, roots: [root] });
   await assert.rejects(runtime.call('cursor_start_session', { cwd: outside, mode: 'ask' }), {
     error_code: 'scope_rejected',
   });
 });
 
 test('runtime rejects an unsupported session mode before start or resume', async () => {
-  const runtime = new Runtime({ roots: [cwd] });
+  const runtime = new Runtime({ ...offlineModelDependencies, roots: [cwd] });
   await assert.rejects(runtime.call('cursor_start_session', { cwd, mode: 'review' }), {
     error_code: 'invalid_args',
   });
@@ -369,7 +480,7 @@ test('runtime rejects an unsupported session mode before start or resume', async
 });
 
 test('runtime rejects lookup of an unknown session', async () => {
-  const runtime = new Runtime({ roots: [cwd] });
+  const runtime = new Runtime({ ...offlineModelDependencies, roots: [cwd] });
   await assert.rejects(runtime.call('cursor_session_status', { session_id: 'missing' }), {
     error_code: 'unknown_session',
   });
@@ -1738,7 +1849,7 @@ test('malformed and nonobject ACP frames follow init and active-turn failure lif
 
 test('fixed resource limits remain the frozen v1 public values', () => {
   assert.deepEqual(LIMITS, {
-    initMs: 15_000, turnMs: 3_600_000, idleMs: 900_000, waitDefaultMs: 30_000,
+    discoveryMs: 15_000, discoveryBytes: 1_048_576, initMs: 15_000, turnMs: 3_600_000, idleMs: 900_000, waitDefaultMs: 30_000,
     waitMinMs: 1_000, waitMaxMs: 180_000, live: 8, pending: 8, waiters: 8,
     tombstones: 64, events: 256, graceMs: 5_000, retentionMs: 300_000,
     inputBytes: 64_000, textBytes: 8_000, progressBytes: 512, fsBytes: 1_048_576,
@@ -1791,7 +1902,7 @@ test('turn deadline publishes timed_out before releasing the session', async (t)
 test('warning scenarios: allowed roots distinguish absent, empty and malformed configuration', async (t) => {
   const root = mkdtempSync(join(tmpdir(), 'cursor-runtime-roots-')); t.after(() => rmSync(root, { recursive: true, force: true }));
   const unrestricted = withFake(t, { roots: null }); const admitted = await unrestricted.call('cursor_start_session', { cwd: root, mode: 'ask' }); assert.equal(admitted.session_state, 'live'); await unrestricted.call('cursor_close_session', { session_id: admitted.session_id });
-  const denied = new Runtime({ roots: [] }); await assert.rejects(denied.call('cursor_start_session', { cwd: root, mode: 'ask' }), { error_code: 'scope_rejected' });
+  const denied = new Runtime({ ...offlineModelDependencies, roots: [] }); await assert.rejects(denied.call('cursor_start_session', { cwd: root, mode: 'ask' }), { error_code: 'scope_rejected' });
   const file = join(root, 'not-a-root.txt'); writeFileSync(file, 'content', 'utf8');
   const previous = process.env.CURSOR_SUBAGENT_ALLOWED_ROOTS;
   try {
@@ -1940,7 +2051,7 @@ test('MCP server settles an active turn and exits cleanly on stdin EOF, SIGINT a
         FAKE_ACP_PENDING: 'question',
         FAKE_ACP_REQUIRE_POLICY: '1',
       });
-      const child = spawn(process.execPath, [server], {
+      const child = spawn(process.execPath, ['--import', fileURLToPath(new URL('./fixtures/release-model-discovery-preload.mjs', import.meta.url)), server], {
         stdio: ['pipe', 'pipe', 'pipe'],
         env,
       });
@@ -2165,15 +2276,7 @@ test('Cursor Agent versioned golden owns the admitted model argv contract', () =
     () => ADAPTER.admitImage({ description: 'Preview', path: 'preview.png' }),
     () => ADAPTER.admitImage({ suggestedPath: 'preview.png' }),
   ]) assert.equal(unconfirmedAlias(), null);
-  for (const fixture of cursorAgentGolden.argv_cases) {
-    assert.deepEqual(ADAPTER.modelArgv(fixture.input), fixture.expected);
-  }
-  for (const fixture of cursorAgentGolden.launch_argv_cases) {
-    assert.deepEqual(ADAPTER.sessionArgv(
-      ADAPTER.modelArgv(fixture.input),
-      ADAPTER.pluginArgv(fixture.input.plugin_dirs),
-    ), fixture.expected);
-  }
+
 });
 
 test('per-session model argv stays isolated from other sessions', async (t) => {
@@ -2181,7 +2284,11 @@ test('per-session model argv stays isolated from other sessions', async (t) => {
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const selectedLog = join(root, 'selected.jsonl');
   const plainLog = join(root, 'plain.jsonl');
-  const selected = withInjectedFake(t, { env: {
+  const selected = withInjectedFake(t, { runtime: {
+    readModelAuth: async () => '{"apiKey":"fixture-secret"}',
+    fetchModels: async () => new Response(JSON.stringify(JSON.parse(readFileSync(new URL('./fixtures/cursor-model-catalog-1.0.31.json', import.meta.url), 'utf8')).response)),
+  }, env: {
+    FAKE_ACP_PICKER_FROM_ARGV: '1',
     FAKE_ACP_EXPECT_MODEL_ARGV: JSON.stringify(['--model', 'grok-4.6[effort=high,fast=true]']),
     FAKE_ACP_ARGV_LOG: selectedLog,
   } });
@@ -2206,7 +2313,7 @@ test('per-session model argv stays isolated from other sessions', async (t) => {
 });
 
 test('unknown launch properties are rejected before allocation on every public entrypoint', async () => {
-  const runtime = new Runtime({ roots: [cwd] });
+  const runtime = new Runtime({ ...offlineModelDependencies, roots: [cwd] });
   await assert.rejects(runtime.call('cursor_start_session', { cwd, mode: 'ask', unsupported_launch_option: true }), { error_code: 'invalid_args' });
   await assert.rejects(runtime.call('cursor_start_session', { cwd, mode: 'agent', unsupported_launch_option: true }), { error_code: 'invalid_args' });
   await assert.rejects(runtime.call('cursor_delegate', { cwd, mode: 'agent', prompt: 'Implement', unsupported_launch_option: true }), { error_code: 'invalid_args' });
@@ -2249,7 +2356,7 @@ test('plugin directories are canonical per-session argv without ACP mutation', a
 });
 
 test('adapter rejects ambiguous nested model parameters before allocation', async () => {
-  const runtime = new Runtime({ roots: [cwd] });
+  const runtime = new Runtime({ ...offlineModelDependencies, roots: [cwd] });
   await assert.rejects(runtime.call('cursor_start_session', {
     cwd, mode: 'ask', model: 'grok-4.6[effort=medium]', effort: 'high',
   }), { error_code: 'invalid_args' });
@@ -2354,12 +2461,10 @@ test('resume loads the retained Cursor conversation id without requiring it in t
   const log = join(root, 'wire.jsonl');
   const runtime = withInjectedFake(t, { env: {
     FAKE_ACP_LOG: log,
-    FAKE_ACP_EXPECT_MODEL_ARGV: JSON.stringify(['--model', 'grok-4.6']),
   } });
-  const session = await runtime.call('cursor_resume_session', { cwd, cursor_session_id: 'cursor-resume-1', mode: 'agent', model: 'grok-4.6' });
+  const session = await runtime.call('cursor_resume_session', { cwd, cursor_session_id: 'cursor-resume-1', mode: 'agent' });
   assert.equal(session.session_state, 'live');
   assert.equal(session.cursor_session_id, 'cursor-resume-1');
-  assert.equal(session.model, 'grok-4.6');
   assert.notEqual(session.session_id, 'cursor-resume-1');
   const methods = readJsonLines(log).map((message) => message.method);
   assert.equal(methods.includes('session/load'), true);
@@ -2590,13 +2695,12 @@ test('cursor_set_mode transitions a live idle session and rejects active or tomb
   const modeLog = join(root, 'set-mode.jsonl');
   const runtime = withInjectedFake(t, { env: {
     FAKE_ACP_SET_MODE_LOG: modeLog,
-    FAKE_ACP_EXPECT_MODEL_ARGV: JSON.stringify(['--model', 'grok-4.6']),
   } });
   await assert.rejects(runtime.call('cursor_set_mode', { session_id: 'missing', mode: 'review' }), {
     error_code: 'invalid_args',
     message: 'invalid mode: ask|plan|agent',
   });
-  const session = await runtime.call('cursor_start_session', { cwd, mode: 'agent', model: 'grok-4.6' });
+  const session = await runtime.call('cursor_start_session', { cwd, mode: 'agent' });
   const same = await runtime.call('cursor_set_mode', { session_id: session.session_id, mode: 'agent' });
   assert.equal(same.mode, 'agent');
   assert.equal(same.session_state, 'live');

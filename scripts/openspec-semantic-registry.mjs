@@ -173,6 +173,21 @@ export const PROJECT_SEMANTIC_REGISTRY = Object.freeze({
         Object.freeze({"capability": "claude-code-plugin-distribution", "requirement": "Claude Code plugin предоставляет существующий interactive workflow", "sourceChange": "add-claude-code-marketplace-plugin", "replacementReason": "Align public package identifiers and the documented executable with the user-approved release naming.", "sourceDigest": "f7e91cf4dafe5292ac677d590d3d48f4f35345a6d73f33c85521b38b43ca005d", "replacementDigest": "95627a14977c7676856ce9e8b966a12c2dee52950706d260c5f4b496a90aa03f"}),
       ]),
     }),
+    Object.freeze({
+      id: "add-cursor-model-discovery",
+      capability: "cursor-acp-session-runtime",
+      specDirectory: "cursor-acp-session-runtime",
+      ownerClaim: "`cursor-acp-session-runtime` owns model discovery, HTTP bounds and startup diagnostics; `cursor-task-delegation` owns caller workflow composition.",
+      invariantIds: Object.freeze(["MD-1", "MD-2", "MD-3", "MD-4", "MD-5", "MD-6", "MD-7", "MD-8"]),
+      ownedRequirements: Object.freeze(["Получение моделей Cursor через MCP", "Согласованный выбор модели до prompt", "Неинтерактивная авторизация запуска"]),
+      modified: Object.freeze([
+        Object.freeze({"capability": "cursor-acp-session-runtime", "requirement": "Продолжение Cursor-сессии", "replacementReason": "Use the shared noninteractive startup requested after observed browser-login and credential-file deletion.", "sourceDigest": "5409b015ea76a72059639493df58fbe3948ce01132dc5e3dc59488ca609c8087", "replacementDigest": "149357332ad4174cada79b6ef7ddcd501cc7e13da5d7fa4a75c7cff1c36b5317"}),
+        Object.freeze({"capability": "cursor-acp-session-runtime", "requirement": "Публичный MCP tool contract", "replacementReason": "Add the user-approved model discovery and bounded startup diagnostics without changing other runtime or workflow behavior.", "sourceDigest": "3d712b08499b9a7f1cfe15272cd5798c728fadcc35de9644899ac7498f792fba", "replacementDigest": "89378a95e67987767d1e0887008082444b1709b0cf709f9447eb48a549b826f8"}),
+        Object.freeze({"capability": "cursor-acp-session-runtime", "requirement": "Нормативные limits runtime", "replacementReason": "Add the user-approved model discovery and bounded startup diagnostics without changing other runtime or workflow behavior.", "sourceDigest": "106a5dd616d0ea9289f716dfbd28e529451a6105c3a1407834fd736fcaa98e38", "replacementDigest": "5118bd7d1cc7d2700cae065b50c3b12989fbc2b5de61f5b09cbaf6909c0321ec"}),
+        Object.freeze({"capability": "cursor-acp-session-runtime", "requirement": "Provider errors are bounded and classified", "replacementReason": "Add the user-approved model discovery and bounded startup diagnostics without changing other runtime or workflow behavior.", "sourceDigest": "6a06279f9a7438eca30c1ed2a5f7c8cdcc3580e4d3ddc7558d8fffaa032f049f", "replacementDigest": "c8fa97783fb64b510aafee97e4d63dd11027e071fa9ccfc21e94c357f9ed1bda"}),
+        Object.freeze({"capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования", "replacementReason": "Add the user-approved model discovery and bounded startup diagnostics without changing other runtime or workflow behavior.", "sourceDigest": "3f8e7fb5f3dcd228e1bab34f444e93e791f0fd600ddb2f6668ac416769254a4d", "replacementDigest": "4d5318db0fbf25ccee2ea6f5dfd9176969c0e57d93a77cbc53c961e8ab4e8796"}),
+      ]),
+    }),
   ]),
   roles: changeIds,
 });

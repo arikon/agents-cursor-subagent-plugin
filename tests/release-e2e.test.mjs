@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { cp, lstat, mkdir, mkdtemp, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import { createInterface } from 'node:readline';
 import { join } from 'node:path';
-import { tmpdir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { MARKER_NAME, normalizeManifestBytes, runBootstrap } from '../scripts/cursor-subagent-bootstrap.mjs';
@@ -15,9 +15,11 @@ import { parseChildResult } from '../scripts/run-cursor-skill-eval.mjs';
 const repository = fileURLToPath(new URL('..', import.meta.url));
 const fakeAdapter = fileURLToPath(new URL('./fixtures/fake-codex-adapter.mjs', import.meta.url));
 const fakeAcp = fileURLToPath(new URL('./fixtures/release-fake-acp.mjs', import.meta.url));
+const modelDiscoveryPreload = fileURLToPath(new URL('./fixtures/release-model-discovery-preload.mjs', import.meta.url));
+const modelCatalogFixture = fileURLToPath(new URL('./fixtures/cursor-model-catalog-1.0.31.json', import.meta.url));
 const fakeMcpVersion = fileURLToPath(new URL('./fixtures/fake-mcp-version.mjs', import.meta.url));
 const EXPECTED_TOOLS = [
-  'cursor_delegate', 'cursor_start_session', 'cursor_resume_session', 'cursor_send_prompt', 'cursor_set_mode', 'cursor_session_status', 'cursor_wait',
+  'cursor_list_models', 'cursor_delegate', 'cursor_start_session', 'cursor_resume_session', 'cursor_send_prompt', 'cursor_set_mode', 'cursor_session_status', 'cursor_wait',
   'cursor_answer_question', 'cursor_answer_plan', 'cursor_answer_permission', 'cursor_cancel', 'cursor_close_session', 'cursor_read_result',
 ];
 const MARKER_BYTES = 'CURSOR_AGENT_E2E_OK\n';
@@ -63,7 +65,7 @@ async function writeReleaseChildResult(destination, result) {
 
 async function copyPayload(destination) {
   await mkdir(destination);
-  for (const path of ['.codex-plugin/plugin.json', 'README.md', 'scripts/cursor-subagent-mcp.mjs', 'scripts/recording-mcp-proxy.mjs', 'scripts/cursor-subagent-bootstrap.mjs']) {
+  for (const path of ['.codex-plugin/plugin.json', 'README.md', 'scripts/cursor-subagent-mcp.mjs', 'scripts/cursor-model-adapter.mjs', 'scripts/recording-mcp-proxy.mjs', 'scripts/cursor-subagent-bootstrap.mjs']) {
     await mkdir(join(destination, path, '..'), { recursive: true });
     await cp(join(repository, path), join(destination, path));
   }
@@ -192,7 +194,10 @@ async function installAndDiscover(layout, executables, adapterCommand, env, runt
   const config = document.mcpServers?.['cursor-subagent'] || document;
   if (typeof config.command !== 'string' || !Array.isArray(config.args) || !config.env || typeof config.env !== 'object') throw new Error('adapter-owned MCP configuration has invalid shape');
   await rename(layout.source, layout.hiddenSource);
-  const client = new McpClient(config.command, config.args, { ...bootstrapEnv, ...config.env, ...runtimeEnv });
+  const clientEnv = { ...bootstrapEnv, ...config.env, ...runtimeEnv };
+  // Undefined overrides explicitly remove inherited test injection from live runs.
+  for (const [name, value] of Object.entries(clientEnv)) if (value === undefined) delete clientEnv[name];
+  const client = new McpClient(config.command, config.args, clientEnv);
   try {
     const initialized = await client.request('initialize', { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'release-e2e', version: '1' } });
     assert.equal(initialized.result.serverInfo.name, 'cursor-subagent');
@@ -211,12 +216,26 @@ async function deterministicReleaseGate(t) {
     FAKE_ACP_EXPECT_CODEX_HOME: layout.configRoot };
   const client = await installAndDiscover(layout, { node: executable, codex: executable, agent: executable }, [executable, fakeAdapter], env, {
     CURSOR_AGENT_COMMAND: executable, CURSOR_SUBAGENT_ADAPTER_ARGS: JSON.stringify([fakeAcp]),
+    NODE_OPTIONS: `--import=${modelDiscoveryPreload}`, RELEASE_MODEL_CATALOG: modelCatalogFixture,
+    FAKE_ACP_LOG: join(layout.root, 'acp.jsonl'), FAKE_ACP_PICKER_FROM_ARGV: '1',
   });
-  const delegated = await client.tool('cursor_delegate', { cwd: layout.workspace, mode: 'agent', prompt: 'Return the deterministic fake ACP result.' });
+  t.after(() => client.close());
+  const catalog = await client.tool('cursor_list_models', {});
+  const fixedModel = catalog.models.find(({ id }) => !['default', 'auto-smart'].includes(id));
+  const autoModel = catalog.models.find(({ id }) => id === 'auto-smart');
+  assert.ok(fixedModel); assert.ok(autoModel?.optimize_for.includes('cost'));
+  await assert.rejects(readFile(join(layout.root, 'acp.jsonl')), { code: 'ENOENT' });
+  const delegated = await client.tool('cursor_delegate', { cwd: layout.workspace, mode: 'agent', model: fixedModel.id, prompt: 'Return the deterministic fake ACP result.' });
   assert.equal(delegated.session_state, 'live'); assert.ok(delegated.session_id); assert.ok(delegated.turn_id);
-  const waited = await client.tool('cursor_wait', { session_id: delegated.session_id, turn_id: delegated.turn_id, after_event_id: 0, timeout_ms: 1_000 });
+  let waited = delegated;
+  for (let count = 0; count < 5 && waited.turn_status !== 'completed'; count += 1) {
+    waited = await client.tool('cursor_wait', { session_id: delegated.session_id, turn_id: delegated.turn_id, after_event_id: waited.last_event_id, timeout_ms: 1_000 });
+  }
   assert.equal(waited.session_id, delegated.session_id); assert.equal(waited.turn_id, delegated.turn_id); assert.equal(waited.turn_status, 'completed');
   await client.tool('cursor_close_session', { session_id: delegated.session_id });
+  const auto = await client.tool('cursor_start_session', { cwd: layout.workspace, mode: 'ask', model: autoModel.id, optimize_for: 'cost' });
+  assert.equal(auto.session_state, 'live'); assert.equal(auto.model, autoModel.id); assert.equal(auto.optimize_for, 'cost');
+  await client.tool('cursor_close_session', { session_id: auto.session_id });
   await client.close(); return { status: 'pass' };
 }
 
@@ -406,6 +425,76 @@ export async function runLiveCanary(env = process.env, hooks = {}) {
 }
 
 test('credential-free release gate installs, discovers and starts the published MCP payload', deterministicReleaseGate);
+
+test('installed live model discovery canary rejects an unknown ID before allocation', {
+  skip: process.env.CURSOR_MODEL_DISCOVERY_LIVE !== '1',
+}, async (t) => {
+  const layout = await makeLayout('cursor-installed-model-live-');
+  t.after(() => rm(layout.root, { recursive: true, force: true }));
+  const executable = await realpath(process.execPath);
+  const agent = process.env.CURSOR_MODEL_DISCOVERY_AGENT
+    ? await realpath(process.env.CURSOR_MODEL_DISCOVERY_AGENT) : executable;
+  const authPath = join(homedir(), '.cursor', 'auth.json');
+  const originalAuth = await readFile(authPath);
+  const client = await installAndDiscover(layout, { node: executable, codex: executable, agent },
+    [executable, fakeAdapter], { ...process.env, FAKE_CODEX_STATE: layout.state }, {
+      CURSOR_AGENT_COMMAND: agent,
+      CURSOR_SUBAGENT_ADAPTER_ARGS: agent === executable ? JSON.stringify([fakeAcp]) : undefined,
+      FAKE_ACP_LOG: join(layout.root, 'acp.jsonl'),
+    });
+  t.after(async () => {
+    try { await client.close(); } finally {
+      const currentAuth = await readFile(authPath);
+      assert.equal(currentAuth.equals(originalAuth), true, 'live canary changed Cursor auth file');
+    }
+  });
+  const catalog = await client.tool('cursor_list_models', {});
+  assert.ok(catalog.models.length > 0);
+  const unknown = 'cursor-package-canary-unknown-model';
+  assert.equal(catalog.models.some(({ id }) => id === unknown), false);
+  await assert.rejects(client.tool('cursor_start_session', { cwd: layout.workspace, mode: 'ask', model: unknown }), /invalid_args/);
+  await assert.rejects(readFile(join(layout.root, 'acp.jsonl')), { code: 'ENOENT' });
+  if (agent !== executable) {
+    const started = await client.tool('cursor_start_session', { cwd: layout.workspace, mode: 'ask' });
+    try {
+      assert.equal(started.session_state, 'live', JSON.stringify({
+        failure_kind: started.failure_kind, terminal_reason: started.terminal_reason,
+      }));
+      assert.ok(started.cursor_session_id);
+    } finally {
+      if (started.session_id) await client.tool('cursor_close_session', { session_id: started.session_id });
+    }
+  }
+  await client.close();
+  const skill = await readFile(join(layout.managed, 'plugins/agents-cursor-subagent-plugin/skills/cursor-subagent/SKILL.md'));
+  t.diagnostic(JSON.stringify({ models: catalog.models.length, installed_skill: digestBytes(skill), unknown_id_rejected_before_allocation: true, real_session_initialized_without_prompt: agent !== executable }));
+});
+
+test('installed discovery failure precedes ACP allocation and startup diagnostics cross MCP', async (t) => {
+  for (const discoveryFailure of [true, false]) await t.test(discoveryFailure ? 'catalog unavailable' : 'provider startup failure', async (caseT) => {
+    const layout = await makeLayout('cursor-release-model-failure-');
+    caseT.after(() => rm(layout.root, { recursive: true, force: true }));
+    const executable = await realpath(process.execPath);
+    const acpLog = join(layout.root, 'acp.jsonl');
+    const client = await installAndDiscover(layout, { node: executable, codex: executable, agent: executable },
+      [executable, fakeAdapter], { ...process.env, FAKE_CODEX_STATE: layout.state }, {
+        CURSOR_AGENT_COMMAND: executable, CURSOR_SUBAGENT_ADAPTER_ARGS: JSON.stringify([fakeAcp]),
+        NODE_OPTIONS: `--import=${modelDiscoveryPreload}`, RELEASE_MODEL_CATALOG: modelCatalogFixture,
+        RELEASE_MODEL_DISCOVERY_FAILURE: discoveryFailure ? '1' : '0', FAKE_ACP_LOG: acpLog,
+        FAKE_ACP_STARTUP_STDERR: 'Selected model is unavailable for the fixture account.',
+      });
+    caseT.after(() => client.close());
+    if (discoveryFailure) {
+      await assert.rejects(client.tool('cursor_list_models', {}), /model_discovery_failed/);
+      await assert.rejects(readFile(acpLog), { code: 'ENOENT' });
+    } else {
+      const failed = await client.tool('cursor_start_session', { cwd: layout.workspace, mode: 'ask' });
+      assert.equal(failed.session_state, 'tombstone');
+      assert.equal(failed.failure_kind, 'init');
+      assert.match(JSON.stringify(failed.terminal_reason), /Selected model is unavailable for the fixture account/);
+    }
+  });
+});
 
 test('release discovery accepts unrelated marketplaces while requiring one exact managed tuple', async (t) => {
   const layout = await makeLayout('cursor-release-neighbour-'); t.after(() => rm(layout.root, { recursive: true, force: true }));

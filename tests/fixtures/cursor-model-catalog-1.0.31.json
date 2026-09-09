@@ -1,0 +1,2831 @@
+{
+  "source": "Public @cursor/sdk 1.0.31 GET /v1/models schema; representative credential-free rows, not an availability assertion",
+  "response": {
+    "items": [
+      {
+        "id": "auto-smart",
+        "displayName": "Auto",
+        "parameters": [
+          {
+            "id": "optimize_for",
+            "displayName": "Optimize For",
+            "values": [
+              {
+                "value": "intelligence",
+                "displayName": "Intelligence"
+              },
+              {
+                "value": "balanced",
+                "displayName": "Balance"
+              },
+              {
+                "value": "cost",
+                "displayName": "Cost"
+              }
+            ]
+          }
+        ],
+        "variants": [
+          {
+            "params": [
+              {
+                "id": "optimize_for",
+                "value": "intelligence"
+              }
+            ],
+            "displayName": "Auto Intelligence"
+          },
+          {
+            "params": [
+              {
+                "id": "optimize_for",
+                "value": "balanced"
+              }
+            ],
+            "displayName": "Auto Balance",
+            "isDefault": true
+          },
+          {
+            "params": [
+              {
+                "id": "optimize_for",
+                "value": "cost"
+              }
+            ],
+            "displayName": "Auto Cost"
+          }
+        ]
+      },
+      {
+        "id": "default",
+        "displayName": "Auto",
+        "aliases": [
+          "auto"
+        ],
+        "variants": [
+          {
+            "params": [],
+            "displayName": "Auto",
+            "isDefault": true
+          }
+        ]
+      },
+      {
+        "id": "grok-4.6",
+        "displayName": "Cursor Grok 4.6",
+        "parameters": [
+          {
+            "id": "effort",
+            "displayName": "Effort",
+            "values": [
+              {
+                "value": "low",
+                "displayName": "Low"
+              },
+              {
+                "value": "medium",
+                "displayName": "Medium"
+              },
+              {
+                "value": "high",
+                "displayName": "High"
+              },
+              {
+                "value": "xhigh",
+                "displayName": "Extra High"
+              }
+            ]
+          },
+          {
+            "id": "fast",
+            "displayName": "Fast",
+            "values": [
+              {
+                "value": "false"
+              },
+              {
+                "value": "true",
+                "displayName": "Fast​​"
+              }
+            ]
+          }
+        ],
+        "variants": [
+          {
+            "params": [
+              {
+                "id": "effort",
+                "value": "low"
+              },
+              {
+                "id": "fast",
+                "value": "false"
+              }
+            ],
+            "displayName": "Cursor Grok 4.6"
+          },
+          {
+            "params": [
+              {
+                "id": "effort",
+                "value": "low"
+              },
+              {
+                "id": "fast",
+                "value": "true"
+              }
+            ],
+            "displayName": "Cursor Grok 4.6"
+          },
+          {
+            "params": [
+              {
+                "id": "effort",
+                "value": "medium"
+              },
+              {
+                "id": "fast",
+                "value": "false"
+              }
+            ],
+            "displayName": "Cursor Grok 4.6"
+          },
+          {
+            "params": [
+              {
+                "id": "effort",
+                "value": "medium"
+              },
+              {
+                "id": "fast",
+                "value": "true"
+              }
+            ],
+            "displayName": "Cursor Grok 4.6"
+          },
+          {
+            "params": [
+              {
+                "id": "effort",
+                "value": "high"
+              },
+              {
+                "id": "fast",
+                "value": "false"
+              }
+            ],
+            "displayName": "Cursor Grok 4.6"
+          },
+          {
+            "params": [
+              {
+                "id": "effort",
+                "value": "high"
+              },
+              {
+                "id": "fast",
+                "value": "true"
+              }
+            ],
+            "displayName": "Cursor Grok 4.6",
+            "isDefault": true
+          },
+          {
+            "params": [
+              {
+                "id": "effort",
+                "value": "xhigh"
+              },
+              {
+                "id": "fast",
+                "value": "false"
+              }
+            ],
+            "displayName": "Cursor Grok 4.6"
+          },
+          {
+            "params": [
+              {
+                "id": "effort",
+                "value": "xhigh"
+              },
+              {
+                "id": "fast",
+                "value": "true"
+              }
+            ],
+            "displayName": "Cursor Grok 4.6"
+          }
+        ]
+      },
+      {
+        "id": "gpt-5.5",
+        "displayName": "GPT-5.5",
+        "aliases": [
+          "gpt-5-5"
+        ],
+        "parameters": [
+          {
+            "id": "context",
+            "displayName": "Context",
+            "values": [
+              {
+                "value": "272k",
+                "displayName": "272K"
+              },
+              {
+                "value": "1m",
+                "displayName": "1M"
+              }
+            ]
+          },
+          {
+            "id": "reasoning",
+            "displayName": "Reasoning",
+            "values": [
+              {
+                "value": "none",
+                "displayName": "None"
+              },
+              {
+                "value": "low",
+                "displayName": "Low"
+              },
+              {
+                "value": "medium",
+                "displayName": "Medium"
+              },
+              {
+                "value": "high",
+                "displayName": "High"
+              },
+              {
+                "value": "extra-high",
+                "displayName": "Extra High"
+              }
+            ]
+          },
+          {
+            "id": "fast",
+            "displayName": "Fast",
+            "values": [
+              {
+                "value": "false"
+              },
+              {
+                "value": "true",
+                "displayName": "Fast"
+              }
+            ]
+          }
+        ],
+        "variants": [
+          {
+            "params": [
+              {
+                "id": "context",
+                "value": "272k"
+              },
+              {
+                "id": "reasoning",
+                "value": "none"
+              },
+              {
+                "id": "fast",
+                "value": "false"
+              }
+            ],
+            "displayName": "GPT-5.5"
+          },
+          {
+            "params": [
+              {
+                "id": "context",
+                "value": "272k"
+              },
+              {
+                "id": "reasoning",
+                "value": "none"
+              },
+              {
+                "id": "fast",
+                "value": "true"
+              }
+            ],
+            "displayName": "GPT-5.5"
+          },
+          {
+            "params": [
+              {
+                "id": "context",
+                "value": "272k"
+              },
+              {
+                "id": "reasoning",
+                "value": "low"
+              },
+              {
+                "id": "fast",
+                "value": "false"
+              }
+            ],
+            "displayName": "GPT-5.5"
+          },
+          {
+            "params": [
+              {
+                "id": "context",
+                "value": "272k"
+              },
+              {
+                "id": "reasoning",
+                "value": "low"
+              },
+              {
+                "id": "fast",
+                "value": "true"
+              }
+            ],
+            "displayName": "GPT-5.5"
+          },
+          {
+            "params": [
+              {
+                "id": "context",
+                "value": "272k"
+              },
+              {
+                "id": "reasoning",
+                "value": "medium"
+              },
+              {
+                "id": "fast",
+                "value": "false"
+              }
+            ],
+            "displayName": "GPT-5.5"
+          },
+          {
+            "params": [
+              {
+                "id": "context",
+                "value": "272k"
+              },
+              {
+                "id": "reasoning",
+                "value": "medium"
+              },
+              {
+                "id": "fast",
+                "value": "true"
+              }
+            ],
+            "displayName": "GPT-5.5"
+          },
+          {
+            "params": [
+              {
+                "id": "context",
+                "value": "272k"
+              },
+              {
+                "id": "reasoning",
+                "value": "high"
+              },
+              {
+                "id": "fast",
+                "value": "false"
+              }
+            ],
+            "displayName": "GPT-5.5"
+          },
+          {
+            "params": [
+              {
+                "id": "context",
+                "value": "272k"
+              },
+              {
+                "id": "reasoning",
+                "value": "high"
+              },
+              {
+                "id": "fast",
+                "value": "true"
+              }
+            ],
+            "displayName": "GPT-5.5"
+          },
+          {
+            "params": [
+              {
+                "id": "context",
+                "value": "272k"
+              },
+              {
+                "id": "reasoning",
+                "value": "extra-high"
+              },
+              {
+                "id": "fast",
+                "value": "false"
+              }
+            ],
+            "displayName": "GPT-5.5"
+          },
+          {
+            "params": [
+              {
+                "id": "context",
+                "value": "272k"
+              },
+              {
+                "id": "reasoning",
+                "value": "extra-high"
+              },
+              {
+                "id": "fast",
+                "value": "true"
+              }
+            ],
+            "displayName": "GPT-5.5"
+          },
+          {
+            "params": [
+              {
+                "id": "context",
+                "value": "1m"
+              },
+              {
+                "id": "reasoning",
+                "value": "none"
+              },
+              {
+                "id": "fast",
+                "value": "false"
+              }
+            ],
+            "displayName": "GPT-5.5"
+          },
+          {
+            "params": [
+              {
+                "id": "context",
+                "value": "1m"
+              },
+              {
+                "id": "reasoning",
+                "value": "low"
+              },
+              {
+                "id": "fast",
+                "value": "false"
+              }
+            ],
+            "displayName": "GPT-5.5"
+          },
+          {
+            "params": [
+              {
+                "id": "context",
+                "value": "1m"
+              },
+              {
+                "id": "reasoning",
+                "value": "medium"
+              },
+              {
+                "id": "fast",
+                "value": "false"
+              }
+            ],
+            "displayName": "GPT-5.5",
+            "isDefault": true
+          },
+          {
+            "params": [
+              {
+                "id": "context",
+                "value": "1m"
+              },
+              {
+                "id": "reasoning",
+                "value": "high"
+              },
+              {
+                "id": "fast",
+                "value": "false"
+              }
+            ],
+            "displayName": "GPT-5.5"
+          },
+          {
+            "params": [
+              {
+                "id": "context",
+                "value": "1m"
+              },
+              {
+                "id": "reasoning",
+                "value": "extra-high"
+              },
+              {
+                "id": "fast",
+                "value": "false"
+              }
+            ],
+            "displayName": "GPT-5.5"
+          }
+        ]
+      },
+      {
+        "id": "gemini-3.8-flash",
+        "displayName": "Gemini 3.8 Flash",
+        "parameters": [
+          {
+            "id": "reasoning_effort",
+            "displayName": "Effort",
+            "values": [
+              {
+                "value": "low",
+                "displayName": "Low"
+              },
+              {
+                "value": "medium",
+                "displayName": "Medium"
+              },
+              {
+                "value": "high",
+                "displayName": "High"
+              }
+            ]
+          }
+        ],
+        "variants": [
+          {
+            "params": [
+              {
+                "id": "reasoning_effort",
+                "value": "low"
+              }
+            ],
+            "displayName": "Gemini 3.8 Flash Low"
+          },
+          {
+            "params": [
+              {
+                "id": "reasoning_effort",
+                "value": "medium"
+              }
+            ],
+            "displayName": "Gemini 3.8 Flash Medium"
+          },
+          {
+            "params": [
+              {
+                "id": "reasoning_effort",
+                "value": "high"
+              }
+            ],
+            "displayName": "Gemini 3.8 Flash High",
+            "isDefault": true
+          }
+        ]
+      },
+      {
+        "id": "claude-opus-5",
+        "displayName": "Claude Opus 5",
+        "aliases": [
+          "opus-latest",
+          "opus",
+          "opus-5"
+        ],
+        "parameters": [
+          {
+            "id": "thinking",
+            "displayName": "Thinking",
+            "values": [
+              {
+                "value": "false"
+              },
+              {
+                "value": "true"
+              }
+            ]
+          },
+          {
+            "id": "context",
+            "displayName": "Context",
+            "values": [
+              {
+                "value": "300k",
+                "displayName": "300K"
+              },
+              {
+                "value": "1m",
+                "displayName": "1M"
+              }
+            ]
+          },
+          {
+            "id": "effort",
+            "displayName": "Effort",
+            "values": [
+              {
+                "value": "low",
+                "displayName": "Low"
+              },
+              {
+                "value": "medium",
+                "displayName": "Medium"
+              },
+              {
+                "value": "high",
+                "displayName": "High"
+              },
+              {
+                "value": "xhigh",
+                "displayName": "Extra High"
+              },
+              {
+                "value": "max",
+                "displayName": "Max"
+              }
+            ]
+          },
+          {
+            "id": "fast",
+            "displayName": "Fast",
+            "values": [
+              {
+                "value": "false"
+              },
+              {
+                "value": "true",
+                "displayName": "Fast"
+              }
+            ]
+          }
+        ],
+        "variants": [
+          {
+            "params": [
+              {
+                "id": "cyber",
+                "value": "false"
+              },
+              {
+                "id": "thinking",
+                "value": "false"
+              },
+              {
+                "id": "context",
+                "value": "300k"
+              },
+              {
+                "id": "effort",
+                "value": "low"
+              },
+              {
+                "id": "fast",
+                "value": "false"
+              }
+            ],
+            "displayName": "Claude Opus 5"
+          },
+          {
+            "params": [
+              {
+                "id": "cyber",
+                "value": "false"
+              },
+              {
+                "id": "thinking",
+                "value": "false"
+              },
+              {
+                "id": "context",
+                "value": "300k"
+              },
+              {
+                "id": "effort",
+                "value": "low"
+              },
+              {
+                "id": "fast",
+                "value": "true"
+              }
+            ],
+            "displayName": "Claude Opus 5"
+          },
+          {
+            "params": [
+              {
+                "id": "cyber",
+                "value": "false"
+              },
+              {
+                "id": "thinking",
+                "value": "false"
+              },
+              {
+                "id": "context",
+                "value": "300k"
+              },
+              {
+                "id": "effort",
+                "value": "medium"
+              },
+              {
+                "id": "fast",
+                "value": "false"
+              }
+            ],
+            "displayName": "Claude Opus 5"
+          },
+          {
+            "params": [
+              {
+                "id": "cyber",
+                "value": "false"
+              },
+              {
+                "id": "thinking",
+                "value": "false"
+              },
+              {
+                "id": "context",
+                "value": "300k"
+              },
+              {
+                "id": "effort",
+                "value": "medium"
+              },
+              {
+                "id": "fast",
+                "value": "true"
+              }
+            ],
+            "displayName": "Claude Opus 5"
+          },
+          {
+            "params": [
+              {
+                "id": "cyber",
+                "value": "false"
+              },
+              {
+                "id": "thinking",
+                "value": "false"
+              },
+              {
+                "id": "context",
+                "value": "300k"
+              },
+              {
+                "id": "effort",
+                "value": "high"
+              },
+              {
+                "id": "fast",
+                "value": "false"
+              }
+            ],
+            "displayName": "Claude Opus 5"
+          },
+          {
+            "params": [
+              {
+                "id": "cyber",
+                "value": "false"
+              },
+              {
+                "id": "thinking",
+                "value": "false"
+              },
+              {
+                "id": "context",
+                "value": "300k"
+              },
+              {
+                "id": "effort",
+                "value": "high"
+              },
+              {
+                "id": "fast",
+                "value": "true"
+              }
+            ],
+            "displayName": "Claude Opus 5"
+          },
+          {
+            "params": [
+              {
+                "id": "cyber",
+                "value": "false"
+              },
+              {
+                "id": "thinking",
+                "value": "false"
+              },
+              {
+                "id": "context",
+                "value": "1m"
+              },
+              {
+                "id": "effort",
+                "value": "low"
+              },
+              {
+                "id": "fast",
+                "value": "false"
+              }
+            ],
+            "displayName": "Claude Opus 5"
+          },
+          {
+            "params": [
+              {
+                "id": "cyber",
+                "value": "false"
+              },
+              {
+                "id": "thinking",
+                "value": "false"
+              },
+              {
+                "id": "context",
+                "value": "1m"
+              },
+              {
+                "id": "effort",
+                "value": "low"
+              },
+              {
+                "id": "fast",
+                "value": "true"
+              }
+            ],
+            "displayName": "Claude Opus 5"
+          },
+          {
+            "params": [
+              {
+                "id": "cyber",
+                "value": "false"
+              },
+              {
+                "id": "thinking",
+                "value": "false"
+              },
+              {
+                "id": "context",
+                "value": "1m"
+              },
+              {
+                "id": "effort",
+                "value": "medium"
+              },
+              {
+                "id": "fast",
+                "value": "false"
+              }
+            ],
+            "displayName": "Claude Opus 5"
+          },
+          {
+            "params": [
+              {
+                "id": "cyber",
+                "value": "false"
+              },
+              {
+                "id": "thinking",
+                "value": "false"
+              },
+              {
+                "id": "context",
+                "value": "1m"
+              },
+              {
+                "id": "effort",
+                "value": "medium"
+              },
+              {
+                "id": "fast",
+                "value": "true"
+              }
+            ],
+            "displayName": "Claude Opus 5"
+          },
+          {
+            "params": [
+              {
+                "id": "cyber",
+                "value": "false"
+              },
+              {
+                "id": "thinking",
+                "value": "false"
+              },
+              {
+                "id": "context",
+                "value": "1m"
+              },
+              {
+                "id": "effort",
+                "value": "high"
+              },
+              {
+                "id": "fast",
+                "value": "false"
+              }
+            ],
+            "displayName": "Claude Opus 5"
+          },
+          {
+            "params": [
+              {
+                "id": "cyber",
+                "value": "false"
+              },
+              {
+                "id": "thinking",
+                "value": "false"
+              },
+              {
+                "id": "context",
+                "value": "1m"
+              },
+              {
+                "id": "effort",
+                "value": "high"
+              },
+              {
+                "id": "fast",
+                "value": "true"
+              }
+            ],
+            "displayName": "Claude Opus 5"
+          },
+          {
+            "params": [
+              {
+                "id": "cyber",
+                "value": "false"
+              },
+              {
+                "id": "thinking",
+                "value": "true"
+              },
+              {
+                "id": "context",
+                "value": "300k"
+              },
+              {
+                "id": "effort",
+                "value": "low"
+              },
+              {
+                "id": "fast",
+                "value": "false"
+              }
+            ],
+            "displayName": "Claude Opus 5"
+          },
+          {
+            "params": [
+              {
+                "id": "cyber",
+                "value": "false"
+              },
+              {
+                "id": "thinking",
+                "value": "true"
+              },
+              {
+                "id": "context",
+                "value": "300k"
+              },
+              {
+                "id": "effort",
+                "value": "low"
+              },
+              {
+                "id": "fast",
+                "value": "true"
+              }
+            ],
+            "displayName": "Claude Opus 5"
+          },
+          {
+            "params": [
+              {
+                "id": "cyber",
+                "value": "false"
+              },
+              {
+                "id": "thinking",
+                "value": "true"
+              },
+              {
+                "id": "context",
+                "value": "300k"
+              },
+              {
+                "id": "effort",
+                "value": "medium"
+              },
+              {
+                "id": "fast",
+                "value": "false"
+              }
+            ],
+            "displayName": "Claude Opus 5"
+          },
+          {
+            "params": [
+              {
+                "id": "cyber",
+                "value": "false"
+              },
+              {
+                "id": "thinking",
+                "value": "true"
+              },
+              {
+                "id": "context",
+                "value": "300k"
+              },
+              {
+                "id": "effort",
+                "value": "medium"
+              },
+              {
+                "id": "fast",
+                "value": "true"
+              }
+            ],
+            "displayName": "Claude Opus 5"
+          },
+          {
+            "params": [
+              {
+                "id": "cyber",
+                "value": "false"
+              },
+              {
+                "id": "thinking",
+                "value": "true"
+              },
+              {
+                "id": "context",
+                "value": "300k"
+              },
+              {
+                "id": "effort",
+                "value": "high"
+              },
+              {
+                "id": "fast",
+                "value": "false"
+              }
+            ],
+            "displayName": "Claude Opus 5"
+          },
+          {
+            "params": [
+              {
+                "id": "cyber",
+                "value": "false"
+              },
+              {
+                "id": "thinking",
+                "value": "true"
+              },
+              {
+                "id": "context",
+                "value": "300k"
+              },
+              {
+                "id": "effort",
+                "value": "high"
+              },
+              {
+                "id": "fast",
+                "value": "true"
+              }
+            ],
+            "displayName": "Claude Opus 5"
+          },
+          {
+            "params": [
+              {
+                "id": "cyber",
+                "value": "false"
+              },
+              {
+                "id": "thinking",
+                "value": "true"
+              },
+              {
+                "id": "context",
+                "value": "300k"
+              },
+              {
+                "id": "effort",
+                "value": "xhigh"
+              },
+              {
+                "id": "fast",
+                "value": "false"
+              }
+            ],
+            "displayName": "Claude Opus 5"
+          },
+          {
+            "params": [
+              {
+                "id": "cyber",
+                "value": "false"
+              },
+              {
+                "id": "thinking",
+                "value": "true"
+              },
+              {
+                "id": "context",
+                "value": "300k"
+              },
+              {
+                "id": "effort",
+                "value": "xhigh"
+              },
+              {
+                "id": "fast",
+                "value": "true"
+              }
+            ],
+            "displayName": "Claude Opus 5"
+          },
+          {
+            "params": [
+              {
+                "id": "cyber",
+                "value": "false"
+              },
+              {
+                "id": "thinking",
+                "value": "true"
+              },
+              {
+                "id": "context",
+                "value": "300k"
+              },
+              {
+                "id": "effort",
+                "value": "max"
+              },
+              {
+                "id": "fast",
+                "value": "false"
+              }
+            ],
+            "displayName": "Claude Opus 5"
+          },
+          {
+            "params": [
+              {
+                "id": "cyber",
+                "value": "false"
+              },
+              {
+                "id": "thinking",
+                "value": "true"
+              },
+              {
+                "id": "context",
+                "value": "300k"
+              },
+              {
+                "id": "effort",
+                "value": "max"
+              },
+              {
+                "id": "fast",
+                "value": "true"
+              }
+            ],
+            "displayName": "Claude Opus 5"
+          },
+          {
+            "params": [
+              {
+                "id": "cyber",
+                "value": "false"
+              },
+              {
+                "id": "thinking",
+                "value": "true"
+              },
+              {
+                "id": "context",
+                "value": "1m"
+              },
+              {
+                "id": "effort",
+                "value": "low"
+              },
+              {
+                "id": "fast",
+                "value": "false"
+              }
+            ],
+            "displayName": "Claude Opus 5"
+          },
+          {
+            "params": [
+              {
+                "id": "cyber",
+                "value": "false"
+              },
+              {
+                "id": "thinking",
+                "value": "true"
+              },
+              {
+                "id": "context",
+                "value": "1m"
+              },
+              {
+                "id": "effort",
+                "value": "low"
+              },
+              {
+                "id": "fast",
+                "value": "true"
+              }
+            ],
+            "displayName": "Claude Opus 5"
+          },
+          {
+            "params": [
+              {
+                "id": "cyber",
+                "value": "false"
+              },
+              {
+                "id": "thinking",
+                "value": "true"
+              },
+              {
+                "id": "context",
+                "value": "1m"
+              },
+              {
+                "id": "effort",
+                "value": "medium"
+              },
+              {
+                "id": "fast",
+                "value": "false"
+              }
+            ],
+            "displayName": "Claude Opus 5"
+          },
+          {
+            "params": [
+              {
+                "id": "cyber",
+                "value": "false"
+              },
+              {
+                "id": "thinking",
+                "value": "true"
+              },
+              {
+                "id": "context",
+                "value": "1m"
+              },
+              {
+                "id": "effort",
+                "value": "medium"
+              },
+              {
+                "id": "fast",
+                "value": "true"
+              }
+            ],
+            "displayName": "Claude Opus 5"
+          },
+          {
+            "params": [
+              {
+                "id": "cyber",
+                "value": "false"
+              },
+              {
+                "id": "thinking",
+                "value": "true"
+              },
+              {
+                "id": "context",
+                "value": "1m"
+              },
+              {
+                "id": "effort",
+                "value": "high"
+              },
+              {
+                "id": "fast",
+                "value": "false"
+              }
+            ],
+            "displayName": "Claude Opus 5",
+            "isDefault": true
+          },
+          {
+            "params": [
+              {
+                "id": "cyber",
+                "value": "false"
+              },
+              {
+                "id": "thinking",
+                "value": "true"
+              },
+              {
+                "id": "context",
+                "value": "1m"
+              },
+              {
+                "id": "effort",
+                "value": "high"
+              },
+              {
+                "id": "fast",
+                "value": "true"
+              }
+            ],
+            "displayName": "Claude Opus 5"
+          },
+          {
+            "params": [
+              {
+                "id": "cyber",
+                "value": "false"
+              },
+              {
+                "id": "thinking",
+                "value": "true"
+              },
+              {
+                "id": "context",
+                "value": "1m"
+              },
+              {
+                "id": "effort",
+                "value": "xhigh"
+              },
+              {
+                "id": "fast",
+                "value": "false"
+              }
+            ],
+            "displayName": "Claude Opus 5"
+          },
+          {
+            "params": [
+              {
+                "id": "cyber",
+                "value": "false"
+              },
+              {
+                "id": "thinking",
+                "value": "true"
+              },
+              {
+                "id": "context",
+                "value": "1m"
+              },
+              {
+                "id": "effort",
+                "value": "xhigh"
+              },
+              {
+                "id": "fast",
+                "value": "true"
+              }
+            ],
+            "displayName": "Claude Opus 5"
+          },
+          {
+            "params": [
+              {
+                "id": "cyber",
+                "value": "false"
+              },
+              {
+                "id": "thinking",
+                "value": "true"
+              },
+              {
+                "id": "context",
+                "value": "1m"
+              },
+              {
+                "id": "effort",
+                "value": "max"
+              },
+              {
+                "id": "fast",
+                "value": "false"
+              }
+            ],
+            "displayName": "Claude Opus 5"
+          },
+          {
+            "params": [
+              {
+                "id": "cyber",
+                "value": "false"
+              },
+              {
+                "id": "thinking",
+                "value": "true"
+              },
+              {
+                "id": "context",
+                "value": "1m"
+              },
+              {
+                "id": "effort",
+                "value": "max"
+              },
+              {
+                "id": "fast",
+                "value": "true"
+              }
+            ],
+            "displayName": "Claude Opus 5"
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "models": [
+      {
+        "id": "auto-smart",
+        "name": "Auto",
+        "optimize_for": [
+          "intelligence",
+          "balanced",
+          "cost"
+        ],
+        "default_optimize_for": "balanced"
+      },
+      {
+        "id": "default",
+        "name": "Auto"
+      },
+      {
+        "id": "grok-4.6",
+        "name": "Cursor Grok 4.6",
+        "effort": [
+          "low",
+          "medium",
+          "high",
+          "xhigh"
+        ],
+        "fast": [
+          false,
+          true
+        ]
+      },
+      {
+        "id": "gpt-5.5",
+        "name": "GPT-5.5",
+        "effort": [
+          "none",
+          "low",
+          "medium",
+          "high",
+          "extra-high"
+        ],
+        "fast": [
+          false,
+          true
+        ]
+      },
+      {
+        "id": "gemini-3.8-flash",
+        "name": "Gemini 3.8 Flash",
+        "effort": [
+          "low",
+          "medium",
+          "high"
+        ]
+      },
+      {
+        "id": "claude-opus-5",
+        "name": "Claude Opus 5",
+        "effort": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ],
+        "fast": [
+          false,
+          true
+        ]
+      }
+    ]
+  },
+  "selectionEvidence": [
+    {
+      "source": "Cursor 2026.08.25-3e8eec8 initialization-only probe grok-medium-full-selection",
+      "result": {
+        "configOptions": [
+          {
+            "id": "model",
+            "name": "Model",
+            "description": "Controls which model is used for responses",
+            "category": "model",
+            "type": "select",
+            "currentValue": "grok-4.6",
+            "options": [
+              {
+                "value": "auto-smart",
+                "name": "Auto"
+              },
+              {
+                "value": "grok-4.6",
+                "name": "Cursor Grok 4.6"
+              },
+              {
+                "value": "composer-2.5",
+                "name": "Composer 2.5"
+              },
+              {
+                "value": "claude-opus-5",
+                "name": "Claude Opus 5"
+              },
+              {
+                "value": "claude-opus-4-8",
+                "name": "Claude Opus 4.8"
+              },
+              {
+                "value": "gpt-5.6-sol",
+                "name": "GPT-5.6 Sol"
+              },
+              {
+                "value": "gpt-5.5",
+                "name": "GPT-5.5"
+              },
+              {
+                "value": "claude-fable-5-1",
+                "name": "Claude Fable 5.1"
+              },
+              {
+                "value": "claude-fable-5",
+                "name": "Claude Fable 5"
+              },
+              {
+                "value": "grok-4.5",
+                "name": "Cursor Grok 4.5"
+              },
+              {
+                "value": "gemini-3.8-flash",
+                "name": "Gemini 3.8 Flash"
+              },
+              {
+                "value": "gemini-3.7-flash",
+                "name": "Gemini 3.7 Flash"
+              },
+              {
+                "value": "muse-spark-1.3",
+                "name": "Muse Spark 1.3"
+              },
+              {
+                "value": "gpt-5.6-terra",
+                "name": "GPT-5.6 Terra"
+              },
+              {
+                "value": "claude-sonnet-5",
+                "name": "Claude Sonnet 5"
+              },
+              {
+                "value": "claude-sonnet-4-6",
+                "name": "Claude Sonnet 4.6"
+              },
+              {
+                "value": "gpt-5.3-codex",
+                "name": "Codex 5.3"
+              },
+              {
+                "value": "claude-opus-4-7",
+                "name": "Claude Opus 4.7"
+              },
+              {
+                "value": "gpt-5.4",
+                "name": "GPT-5.4"
+              },
+              {
+                "value": "claude-opus-4-6",
+                "name": "Claude Opus 4.6"
+              },
+              {
+                "value": "claude-opus-4-5",
+                "name": "Claude Opus 4.5"
+              },
+              {
+                "value": "gpt-5.2",
+                "name": "GPT-5.2"
+              },
+              {
+                "value": "gpt-5.6-luna",
+                "name": "GPT-5.6 Luna"
+              },
+              {
+                "value": "gemini-3.6-flash",
+                "name": "Gemini 3.6 Flash"
+              },
+              {
+                "value": "gemini-3.1-pro",
+                "name": "Gemini 3.1 Pro"
+              },
+              {
+                "value": "gpt-5.4-mini",
+                "name": "GPT-5.4 Mini"
+              },
+              {
+                "value": "gpt-5.4-nano",
+                "name": "GPT-5.4 Nano"
+              },
+              {
+                "value": "claude-haiku-4-5",
+                "name": "Claude Haiku 4.5"
+              },
+              {
+                "value": "claude-sonnet-4-5",
+                "name": "Claude Sonnet 4.5"
+              },
+              {
+                "value": "gpt-5.1",
+                "name": "GPT-5.1"
+              },
+              {
+                "value": "gemini-3-flash",
+                "name": "Gemini 3 Flash"
+              },
+              {
+                "value": "gemini-3.5-flash",
+                "name": "Gemini 3.5 Flash"
+              },
+              {
+                "value": "claude-sonnet-4",
+                "name": "Claude Sonnet 4"
+              },
+              {
+                "value": "gpt-5-mini",
+                "name": "GPT-5 Mini"
+              },
+              {
+                "value": "gemini-2.5-flash",
+                "name": "Gemini 2.5 Flash"
+              },
+              {
+                "value": "kimi-k3",
+                "name": "Kimi K3"
+              },
+              {
+                "value": "kimi-k2.7-code",
+                "name": "Kimi K2.7 Code"
+              },
+              {
+                "value": "glm-5.2",
+                "name": "GLM 5.2"
+              }
+            ]
+          },
+          {
+            "id": "effort",
+            "name": "Effort",
+            "description": "Effort the model uses to generate its response.",
+            "category": "thought_level",
+            "type": "select",
+            "currentValue": "medium",
+            "options": [
+              {
+                "value": "low",
+                "name": "Low"
+              },
+              {
+                "value": "medium",
+                "name": "Medium"
+              },
+              {
+                "value": "high",
+                "name": "High"
+              },
+              {
+                "value": "xhigh",
+                "name": "Extra High"
+              }
+            ]
+          },
+          {
+            "id": "fast",
+            "name": "Fast",
+            "description": "Significantly faster but consumes more usage",
+            "category": "model_config",
+            "type": "select",
+            "currentValue": "true",
+            "options": [
+              {
+                "value": "false",
+                "name": "Off"
+              },
+              {
+                "value": "true",
+                "name": "Fast​​"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "source": "Cursor 2026.08.25-3e8eec8 initialization-only probe sol-medium-full-selection",
+      "result": {
+        "configOptions": [
+          {
+            "id": "model",
+            "name": "Model",
+            "description": "Controls which model is used for responses",
+            "category": "model",
+            "type": "select",
+            "currentValue": "gpt-5.6-sol",
+            "options": [
+              {
+                "value": "auto-smart",
+                "name": "Auto"
+              },
+              {
+                "value": "grok-4.6",
+                "name": "Cursor Grok 4.6"
+              },
+              {
+                "value": "composer-2.5",
+                "name": "Composer 2.5"
+              },
+              {
+                "value": "claude-opus-5",
+                "name": "Claude Opus 5"
+              },
+              {
+                "value": "claude-opus-4-8",
+                "name": "Claude Opus 4.8"
+              },
+              {
+                "value": "gpt-5.6-sol",
+                "name": "GPT-5.6 Sol"
+              },
+              {
+                "value": "gpt-5.5",
+                "name": "GPT-5.5"
+              },
+              {
+                "value": "claude-fable-5-1",
+                "name": "Claude Fable 5.1"
+              },
+              {
+                "value": "claude-fable-5",
+                "name": "Claude Fable 5"
+              },
+              {
+                "value": "grok-4.5",
+                "name": "Cursor Grok 4.5"
+              },
+              {
+                "value": "gemini-3.8-flash",
+                "name": "Gemini 3.8 Flash"
+              },
+              {
+                "value": "gemini-3.7-flash",
+                "name": "Gemini 3.7 Flash"
+              },
+              {
+                "value": "muse-spark-1.3",
+                "name": "Muse Spark 1.3"
+              },
+              {
+                "value": "gpt-5.6-terra",
+                "name": "GPT-5.6 Terra"
+              },
+              {
+                "value": "claude-sonnet-5",
+                "name": "Claude Sonnet 5"
+              },
+              {
+                "value": "claude-sonnet-4-6",
+                "name": "Claude Sonnet 4.6"
+              },
+              {
+                "value": "gpt-5.3-codex",
+                "name": "Codex 5.3"
+              },
+              {
+                "value": "claude-opus-4-7",
+                "name": "Claude Opus 4.7"
+              },
+              {
+                "value": "gpt-5.4",
+                "name": "GPT-5.4"
+              },
+              {
+                "value": "claude-opus-4-6",
+                "name": "Claude Opus 4.6"
+              },
+              {
+                "value": "claude-opus-4-5",
+                "name": "Claude Opus 4.5"
+              },
+              {
+                "value": "gpt-5.2",
+                "name": "GPT-5.2"
+              },
+              {
+                "value": "gpt-5.6-luna",
+                "name": "GPT-5.6 Luna"
+              },
+              {
+                "value": "gemini-3.6-flash",
+                "name": "Gemini 3.6 Flash"
+              },
+              {
+                "value": "gemini-3.1-pro",
+                "name": "Gemini 3.1 Pro"
+              },
+              {
+                "value": "gpt-5.4-mini",
+                "name": "GPT-5.4 Mini"
+              },
+              {
+                "value": "gpt-5.4-nano",
+                "name": "GPT-5.4 Nano"
+              },
+              {
+                "value": "claude-haiku-4-5",
+                "name": "Claude Haiku 4.5"
+              },
+              {
+                "value": "claude-sonnet-4-5",
+                "name": "Claude Sonnet 4.5"
+              },
+              {
+                "value": "gpt-5.1",
+                "name": "GPT-5.1"
+              },
+              {
+                "value": "gemini-3-flash",
+                "name": "Gemini 3 Flash"
+              },
+              {
+                "value": "gemini-3.5-flash",
+                "name": "Gemini 3.5 Flash"
+              },
+              {
+                "value": "claude-sonnet-4",
+                "name": "Claude Sonnet 4"
+              },
+              {
+                "value": "gpt-5-mini",
+                "name": "GPT-5 Mini"
+              },
+              {
+                "value": "gemini-2.5-flash",
+                "name": "Gemini 2.5 Flash"
+              },
+              {
+                "value": "kimi-k3",
+                "name": "Kimi K3"
+              },
+              {
+                "value": "kimi-k2.7-code",
+                "name": "Kimi K2.7 Code"
+              },
+              {
+                "value": "glm-5.2",
+                "name": "GLM 5.2"
+              }
+            ]
+          },
+          {
+            "id": "context",
+            "name": "Context",
+            "description": "Context size the model has available.",
+            "category": "model_config",
+            "type": "select",
+            "currentValue": "1m",
+            "options": [
+              {
+                "value": "272k",
+                "name": "272K"
+              },
+              {
+                "value": "1m",
+                "name": "1M"
+              }
+            ]
+          },
+          {
+            "id": "reasoning",
+            "name": "Reasoning",
+            "description": "Reasoning effort the model uses to generate its response.",
+            "category": "thought_level",
+            "type": "select",
+            "currentValue": "medium",
+            "options": [
+              {
+                "value": "none",
+                "name": "None"
+              },
+              {
+                "value": "low",
+                "name": "Low"
+              },
+              {
+                "value": "medium",
+                "name": "Medium"
+              },
+              {
+                "value": "high",
+                "name": "High"
+              },
+              {
+                "value": "xhigh",
+                "name": "Extra High"
+              },
+              {
+                "value": "max",
+                "name": "Max"
+              }
+            ]
+          },
+          {
+            "id": "fast",
+            "name": "Fast",
+            "description": "2x more expensive, but faster speeds.",
+            "category": "model_config",
+            "type": "select",
+            "currentValue": "false",
+            "options": [
+              {
+                "value": "false",
+                "name": "Off"
+              },
+              {
+                "value": "true",
+                "name": "Fast"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "source": "Cursor 2026.08.25-3e8eec8 initialization-only probe gemini-medium-full-selection",
+      "result": {
+        "configOptions": [
+          {
+            "id": "model",
+            "name": "Model",
+            "description": "Controls which model is used for responses",
+            "category": "model",
+            "type": "select",
+            "currentValue": "gemini-3.8-flash",
+            "options": [
+              {
+                "value": "auto-smart",
+                "name": "Auto"
+              },
+              {
+                "value": "grok-4.6",
+                "name": "Cursor Grok 4.6"
+              },
+              {
+                "value": "composer-2.5",
+                "name": "Composer 2.5"
+              },
+              {
+                "value": "claude-opus-5",
+                "name": "Claude Opus 5"
+              },
+              {
+                "value": "claude-opus-4-8",
+                "name": "Claude Opus 4.8"
+              },
+              {
+                "value": "gpt-5.6-sol",
+                "name": "GPT-5.6 Sol"
+              },
+              {
+                "value": "gpt-5.5",
+                "name": "GPT-5.5"
+              },
+              {
+                "value": "claude-fable-5-1",
+                "name": "Claude Fable 5.1"
+              },
+              {
+                "value": "claude-fable-5",
+                "name": "Claude Fable 5"
+              },
+              {
+                "value": "grok-4.5",
+                "name": "Cursor Grok 4.5"
+              },
+              {
+                "value": "gemini-3.8-flash",
+                "name": "Gemini 3.8 Flash"
+              },
+              {
+                "value": "gemini-3.7-flash",
+                "name": "Gemini 3.7 Flash"
+              },
+              {
+                "value": "muse-spark-1.3",
+                "name": "Muse Spark 1.3"
+              },
+              {
+                "value": "gpt-5.6-terra",
+                "name": "GPT-5.6 Terra"
+              },
+              {
+                "value": "claude-sonnet-5",
+                "name": "Claude Sonnet 5"
+              },
+              {
+                "value": "claude-sonnet-4-6",
+                "name": "Claude Sonnet 4.6"
+              },
+              {
+                "value": "gpt-5.3-codex",
+                "name": "Codex 5.3"
+              },
+              {
+                "value": "claude-opus-4-7",
+                "name": "Claude Opus 4.7"
+              },
+              {
+                "value": "gpt-5.4",
+                "name": "GPT-5.4"
+              },
+              {
+                "value": "claude-opus-4-6",
+                "name": "Claude Opus 4.6"
+              },
+              {
+                "value": "claude-opus-4-5",
+                "name": "Claude Opus 4.5"
+              },
+              {
+                "value": "gpt-5.2",
+                "name": "GPT-5.2"
+              },
+              {
+                "value": "gpt-5.6-luna",
+                "name": "GPT-5.6 Luna"
+              },
+              {
+                "value": "gemini-3.6-flash",
+                "name": "Gemini 3.6 Flash"
+              },
+              {
+                "value": "gemini-3.1-pro",
+                "name": "Gemini 3.1 Pro"
+              },
+              {
+                "value": "gpt-5.4-mini",
+                "name": "GPT-5.4 Mini"
+              },
+              {
+                "value": "gpt-5.4-nano",
+                "name": "GPT-5.4 Nano"
+              },
+              {
+                "value": "claude-haiku-4-5",
+                "name": "Claude Haiku 4.5"
+              },
+              {
+                "value": "claude-sonnet-4-5",
+                "name": "Claude Sonnet 4.5"
+              },
+              {
+                "value": "gpt-5.1",
+                "name": "GPT-5.1"
+              },
+              {
+                "value": "gemini-3-flash",
+                "name": "Gemini 3 Flash"
+              },
+              {
+                "value": "gemini-3.5-flash",
+                "name": "Gemini 3.5 Flash"
+              },
+              {
+                "value": "claude-sonnet-4",
+                "name": "Claude Sonnet 4"
+              },
+              {
+                "value": "gpt-5-mini",
+                "name": "GPT-5 Mini"
+              },
+              {
+                "value": "gemini-2.5-flash",
+                "name": "Gemini 2.5 Flash"
+              },
+              {
+                "value": "kimi-k3",
+                "name": "Kimi K3"
+              },
+              {
+                "value": "kimi-k2.7-code",
+                "name": "Kimi K2.7 Code"
+              },
+              {
+                "value": "glm-5.2",
+                "name": "GLM 5.2"
+              }
+            ]
+          },
+          {
+            "id": "reasoning_effort",
+            "name": "Effort",
+            "description": "Effort the model uses to generate its response.",
+            "category": "thought_level",
+            "type": "select",
+            "currentValue": "medium",
+            "options": [
+              {
+                "value": "low",
+                "name": "Low"
+              },
+              {
+                "value": "medium",
+                "name": "Medium"
+              },
+              {
+                "value": "high",
+                "name": "High"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "source": "Cursor 2026.08.25-3e8eec8 initialization-only probe acp-auto-cost-result",
+      "result": {
+        "configOptions": [
+          {
+            "id": "model",
+            "name": "Model",
+            "description": "Controls which model is used for responses",
+            "category": "model",
+            "type": "select",
+            "currentValue": "auto-smart",
+            "options": [
+              {
+                "value": "auto-smart",
+                "name": "Auto"
+              },
+              {
+                "value": "grok-4.6",
+                "name": "Cursor Grok 4.6"
+              },
+              {
+                "value": "composer-2.5",
+                "name": "Composer 2.5"
+              },
+              {
+                "value": "claude-opus-5",
+                "name": "Claude Opus 5"
+              },
+              {
+                "value": "claude-opus-4-8",
+                "name": "Claude Opus 4.8"
+              },
+              {
+                "value": "gpt-5.6-sol",
+                "name": "GPT-5.6 Sol"
+              },
+              {
+                "value": "gpt-5.5",
+                "name": "GPT-5.5"
+              },
+              {
+                "value": "claude-fable-5-1",
+                "name": "Claude Fable 5.1"
+              },
+              {
+                "value": "claude-fable-5",
+                "name": "Claude Fable 5"
+              },
+              {
+                "value": "grok-4.5",
+                "name": "Cursor Grok 4.5"
+              },
+              {
+                "value": "gemini-3.8-flash",
+                "name": "Gemini 3.8 Flash"
+              },
+              {
+                "value": "gemini-3.7-flash",
+                "name": "Gemini 3.7 Flash"
+              },
+              {
+                "value": "muse-spark-1.3",
+                "name": "Muse Spark 1.3"
+              },
+              {
+                "value": "gpt-5.6-terra",
+                "name": "GPT-5.6 Terra"
+              },
+              {
+                "value": "claude-sonnet-5",
+                "name": "Claude Sonnet 5"
+              },
+              {
+                "value": "claude-sonnet-4-6",
+                "name": "Claude Sonnet 4.6"
+              },
+              {
+                "value": "gpt-5.3-codex",
+                "name": "Codex 5.3"
+              },
+              {
+                "value": "claude-opus-4-7",
+                "name": "Claude Opus 4.7"
+              },
+              {
+                "value": "gpt-5.4",
+                "name": "GPT-5.4"
+              },
+              {
+                "value": "claude-opus-4-6",
+                "name": "Claude Opus 4.6"
+              },
+              {
+                "value": "claude-opus-4-5",
+                "name": "Claude Opus 4.5"
+              },
+              {
+                "value": "gpt-5.2",
+                "name": "GPT-5.2"
+              },
+              {
+                "value": "gpt-5.6-luna",
+                "name": "GPT-5.6 Luna"
+              },
+              {
+                "value": "gemini-3.6-flash",
+                "name": "Gemini 3.6 Flash"
+              },
+              {
+                "value": "gemini-3.1-pro",
+                "name": "Gemini 3.1 Pro"
+              },
+              {
+                "value": "gpt-5.4-mini",
+                "name": "GPT-5.4 Mini"
+              },
+              {
+                "value": "gpt-5.4-nano",
+                "name": "GPT-5.4 Nano"
+              },
+              {
+                "value": "claude-haiku-4-5",
+                "name": "Claude Haiku 4.5"
+              },
+              {
+                "value": "claude-sonnet-4-5",
+                "name": "Claude Sonnet 4.5"
+              },
+              {
+                "value": "gpt-5.1",
+                "name": "GPT-5.1"
+              },
+              {
+                "value": "gemini-3-flash",
+                "name": "Gemini 3 Flash"
+              },
+              {
+                "value": "gemini-3.5-flash",
+                "name": "Gemini 3.5 Flash"
+              },
+              {
+                "value": "claude-sonnet-4",
+                "name": "Claude Sonnet 4"
+              },
+              {
+                "value": "gpt-5-mini",
+                "name": "GPT-5 Mini"
+              },
+              {
+                "value": "gemini-2.5-flash",
+                "name": "Gemini 2.5 Flash"
+              },
+              {
+                "value": "kimi-k3",
+                "name": "Kimi K3"
+              },
+              {
+                "value": "kimi-k2.7-code",
+                "name": "Kimi K2.7 Code"
+              },
+              {
+                "value": "glm-5.2",
+                "name": "GLM 5.2"
+              }
+            ]
+          },
+          {
+            "id": "optimize_for",
+            "name": "Optimize For",
+            "description": "How Cursor Router picks a model for each request. Cost uses classic Auto.",
+            "category": "model_config",
+            "type": "select",
+            "currentValue": "cost",
+            "options": [
+              {
+                "value": "intelligence",
+                "name": "Intelligence"
+              },
+              {
+                "value": "balanced",
+                "name": "Balance"
+              },
+              {
+                "value": "cost",
+                "name": "Cost"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "source": "Cursor 2026.08.25-3e8eec8 initialization-only probe acp-auto-balanced-result",
+      "result": {
+        "configOptions": [
+          {
+            "id": "model",
+            "name": "Model",
+            "description": "Controls which model is used for responses",
+            "category": "model",
+            "type": "select",
+            "currentValue": "auto-smart",
+            "options": [
+              {
+                "value": "auto-smart",
+                "name": "Auto"
+              },
+              {
+                "value": "grok-4.6",
+                "name": "Cursor Grok 4.6"
+              },
+              {
+                "value": "composer-2.5",
+                "name": "Composer 2.5"
+              },
+              {
+                "value": "claude-opus-5",
+                "name": "Claude Opus 5"
+              },
+              {
+                "value": "claude-opus-4-8",
+                "name": "Claude Opus 4.8"
+              },
+              {
+                "value": "gpt-5.6-sol",
+                "name": "GPT-5.6 Sol"
+              },
+              {
+                "value": "gpt-5.5",
+                "name": "GPT-5.5"
+              },
+              {
+                "value": "claude-fable-5-1",
+                "name": "Claude Fable 5.1"
+              },
+              {
+                "value": "claude-fable-5",
+                "name": "Claude Fable 5"
+              },
+              {
+                "value": "grok-4.5",
+                "name": "Cursor Grok 4.5"
+              },
+              {
+                "value": "gemini-3.8-flash",
+                "name": "Gemini 3.8 Flash"
+              },
+              {
+                "value": "gemini-3.7-flash",
+                "name": "Gemini 3.7 Flash"
+              },
+              {
+                "value": "muse-spark-1.3",
+                "name": "Muse Spark 1.3"
+              },
+              {
+                "value": "gpt-5.6-terra",
+                "name": "GPT-5.6 Terra"
+              },
+              {
+                "value": "claude-sonnet-5",
+                "name": "Claude Sonnet 5"
+              },
+              {
+                "value": "claude-sonnet-4-6",
+                "name": "Claude Sonnet 4.6"
+              },
+              {
+                "value": "gpt-5.3-codex",
+                "name": "Codex 5.3"
+              },
+              {
+                "value": "claude-opus-4-7",
+                "name": "Claude Opus 4.7"
+              },
+              {
+                "value": "gpt-5.4",
+                "name": "GPT-5.4"
+              },
+              {
+                "value": "claude-opus-4-6",
+                "name": "Claude Opus 4.6"
+              },
+              {
+                "value": "claude-opus-4-5",
+                "name": "Claude Opus 4.5"
+              },
+              {
+                "value": "gpt-5.2",
+                "name": "GPT-5.2"
+              },
+              {
+                "value": "gpt-5.6-luna",
+                "name": "GPT-5.6 Luna"
+              },
+              {
+                "value": "gemini-3.6-flash",
+                "name": "Gemini 3.6 Flash"
+              },
+              {
+                "value": "gemini-3.1-pro",
+                "name": "Gemini 3.1 Pro"
+              },
+              {
+                "value": "gpt-5.4-mini",
+                "name": "GPT-5.4 Mini"
+              },
+              {
+                "value": "gpt-5.4-nano",
+                "name": "GPT-5.4 Nano"
+              },
+              {
+                "value": "claude-haiku-4-5",
+                "name": "Claude Haiku 4.5"
+              },
+              {
+                "value": "claude-sonnet-4-5",
+                "name": "Claude Sonnet 4.5"
+              },
+              {
+                "value": "gpt-5.1",
+                "name": "GPT-5.1"
+              },
+              {
+                "value": "gemini-3-flash",
+                "name": "Gemini 3 Flash"
+              },
+              {
+                "value": "gemini-3.5-flash",
+                "name": "Gemini 3.5 Flash"
+              },
+              {
+                "value": "claude-sonnet-4",
+                "name": "Claude Sonnet 4"
+              },
+              {
+                "value": "gpt-5-mini",
+                "name": "GPT-5 Mini"
+              },
+              {
+                "value": "gemini-2.5-flash",
+                "name": "Gemini 2.5 Flash"
+              },
+              {
+                "value": "kimi-k3",
+                "name": "Kimi K3"
+              },
+              {
+                "value": "kimi-k2.7-code",
+                "name": "Kimi K2.7 Code"
+              },
+              {
+                "value": "glm-5.2",
+                "name": "GLM 5.2"
+              }
+            ]
+          },
+          {
+            "id": "optimize_for",
+            "name": "Optimize For",
+            "description": "How Cursor Router picks a model for each request. Cost uses classic Auto.",
+            "category": "model_config",
+            "type": "select",
+            "currentValue": "balanced",
+            "options": [
+              {
+                "value": "intelligence",
+                "name": "Intelligence"
+              },
+              {
+                "value": "balanced",
+                "name": "Balance"
+              },
+              {
+                "value": "cost",
+                "name": "Cost"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "source": "Cursor 2026.08.25-3e8eec8 initialization-only probe acp-auto-intelligence-result",
+      "result": {
+        "configOptions": [
+          {
+            "id": "model",
+            "name": "Model",
+            "description": "Controls which model is used for responses",
+            "category": "model",
+            "type": "select",
+            "currentValue": "auto-smart",
+            "options": [
+              {
+                "value": "auto-smart",
+                "name": "Auto"
+              },
+              {
+                "value": "grok-4.6",
+                "name": "Cursor Grok 4.6"
+              },
+              {
+                "value": "composer-2.5",
+                "name": "Composer 2.5"
+              },
+              {
+                "value": "claude-opus-5",
+                "name": "Claude Opus 5"
+              },
+              {
+                "value": "claude-opus-4-8",
+                "name": "Claude Opus 4.8"
+              },
+              {
+                "value": "gpt-5.6-sol",
+                "name": "GPT-5.6 Sol"
+              },
+              {
+                "value": "gpt-5.5",
+                "name": "GPT-5.5"
+              },
+              {
+                "value": "claude-fable-5-1",
+                "name": "Claude Fable 5.1"
+              },
+              {
+                "value": "claude-fable-5",
+                "name": "Claude Fable 5"
+              },
+              {
+                "value": "grok-4.5",
+                "name": "Cursor Grok 4.5"
+              },
+              {
+                "value": "gemini-3.8-flash",
+                "name": "Gemini 3.8 Flash"
+              },
+              {
+                "value": "gemini-3.7-flash",
+                "name": "Gemini 3.7 Flash"
+              },
+              {
+                "value": "muse-spark-1.3",
+                "name": "Muse Spark 1.3"
+              },
+              {
+                "value": "gpt-5.6-terra",
+                "name": "GPT-5.6 Terra"
+              },
+              {
+                "value": "claude-sonnet-5",
+                "name": "Claude Sonnet 5"
+              },
+              {
+                "value": "claude-sonnet-4-6",
+                "name": "Claude Sonnet 4.6"
+              },
+              {
+                "value": "gpt-5.3-codex",
+                "name": "Codex 5.3"
+              },
+              {
+                "value": "claude-opus-4-7",
+                "name": "Claude Opus 4.7"
+              },
+              {
+                "value": "gpt-5.4",
+                "name": "GPT-5.4"
+              },
+              {
+                "value": "claude-opus-4-6",
+                "name": "Claude Opus 4.6"
+              },
+              {
+                "value": "claude-opus-4-5",
+                "name": "Claude Opus 4.5"
+              },
+              {
+                "value": "gpt-5.2",
+                "name": "GPT-5.2"
+              },
+              {
+                "value": "gpt-5.6-luna",
+                "name": "GPT-5.6 Luna"
+              },
+              {
+                "value": "gemini-3.6-flash",
+                "name": "Gemini 3.6 Flash"
+              },
+              {
+                "value": "gemini-3.1-pro",
+                "name": "Gemini 3.1 Pro"
+              },
+              {
+                "value": "gpt-5.4-mini",
+                "name": "GPT-5.4 Mini"
+              },
+              {
+                "value": "gpt-5.4-nano",
+                "name": "GPT-5.4 Nano"
+              },
+              {
+                "value": "claude-haiku-4-5",
+                "name": "Claude Haiku 4.5"
+              },
+              {
+                "value": "claude-sonnet-4-5",
+                "name": "Claude Sonnet 4.5"
+              },
+              {
+                "value": "gpt-5.1",
+                "name": "GPT-5.1"
+              },
+              {
+                "value": "gemini-3-flash",
+                "name": "Gemini 3 Flash"
+              },
+              {
+                "value": "gemini-3.5-flash",
+                "name": "Gemini 3.5 Flash"
+              },
+              {
+                "value": "claude-sonnet-4",
+                "name": "Claude Sonnet 4"
+              },
+              {
+                "value": "gpt-5-mini",
+                "name": "GPT-5 Mini"
+              },
+              {
+                "value": "gemini-2.5-flash",
+                "name": "Gemini 2.5 Flash"
+              },
+              {
+                "value": "kimi-k3",
+                "name": "Kimi K3"
+              },
+              {
+                "value": "kimi-k2.7-code",
+                "name": "Kimi K2.7 Code"
+              },
+              {
+                "value": "glm-5.2",
+                "name": "GLM 5.2"
+              }
+            ]
+          },
+          {
+            "id": "optimize_for",
+            "name": "Optimize For",
+            "description": "How Cursor Router picks a model for each request. Cost uses classic Auto.",
+            "category": "model_config",
+            "type": "select",
+            "currentValue": "intelligence",
+            "options": [
+              {
+                "value": "intelligence",
+                "name": "Intelligence"
+              },
+              {
+                "value": "balanced",
+                "name": "Balance"
+              },
+              {
+                "value": "cost",
+                "name": "Cost"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "source": "Synthetic Claude fixture matching installed Cursor 2026.08.25-3e8eec8 4943.index.js isThoughtLevelParameter: thinking is thought_level; hidden singleton cyber omitted",
+      "selection": {
+        "model": "claude-opus-5",
+        "params": [
+          {
+            "id": "cyber",
+            "value": "false"
+          },
+          {
+            "id": "thinking",
+            "value": "true"
+          },
+          {
+            "id": "context",
+            "value": "1m"
+          },
+          {
+            "id": "effort",
+            "value": "high"
+          },
+          {
+            "id": "fast",
+            "value": "false"
+          }
+        ],
+        "explicitIds": [
+          "effort"
+        ],
+        "encoded": "claude-opus-5[cyber=false,thinking=true,context=1m,effort=high,fast=false]"
+      },
+      "result": {
+        "configOptions": [
+          {
+            "id": "model",
+            "category": "model",
+            "type": "select",
+            "currentValue": "claude-opus-5"
+          },
+          {
+            "id": "thinking",
+            "category": "thought_level",
+            "type": "select",
+            "currentValue": "true"
+          },
+          {
+            "id": "context",
+            "category": "model_config",
+            "type": "select",
+            "currentValue": "1m"
+          },
+          {
+            "id": "effort",
+            "category": "thought_level",
+            "type": "select",
+            "currentValue": "high"
+          },
+          {
+            "id": "fast",
+            "category": "model_config",
+            "type": "select",
+            "currentValue": "false"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -8,19 +8,27 @@ description: "Delegate a task to Cursor Agent through an interactive ACP session
 Use this skill when the user explicitly asks to delegate part of the work to
 Cursor.
 
-1. Start with `cursor_delegate({prompt,cwd,mode,model?,effort?,fast?,
+1. For a model list or unknown ID, use `cursor_list_models({})`; reuse its
+   canonical IDs, never aliases or CLI/shell bypasses. Clarify ambiguous families.
+   Report discovery errors and missing-key guidance without auth writes or
+   fallback launches. A retained catalog does not guarantee future availability.
+   Start with `cursor_delegate({prompt,cwd,mode,model?,effort?,fast?,optimize_for?,
    plugin_dirs?})`. Modes are exactly
    `ask|plan|agent`: choose `ask` for every read-only task, including research,
    Q&A, file review, diagnosis and debugging; choose `plan` for a plan requiring
    approval; choose `agent` only when the current user authority explicitly
    covers write-capable implementation or debugging. `review` is not a mode.
    Omit model for the per-session default `auto`; do not write global Cursor
-   configuration. An explicit `model` is a nonempty base-model string without
+   configuration. Omitted model, `auto`, and `default` need no discovery and
+   accept no knobs. Only `auto-smart` requires/allows explicit
+   `optimize_for:"cost"|"balanced"|"intelligence"`; ask if unselected, never infer
+   it from `default_optimize_for`. An explicit `model` is a nonempty base-model string without
    `[` or `]`; nested Cursor parameter syntax is not admitted. `effort` is a
    nonempty token matching `[A-Za-z0-9._-]+`. Pass only the public `model`,
-   `effort`, and `fast` fields;
-   their installed Cursor encoding is owned by the version-specific runtime
-   adapter. Prefer a
+   `effort`, `fast`, and `optimize_for` fields literally, including `fast:false`.
+   Runtime owns variant resolution/verification and encoding; do not infer
+   combinations or heal rejected choices. Report echoes as requested/forwarded
+   parameters, not effective model. Prefer a
    verified isolated worktree for any write-capable or concurrent delegation. A
    canonical checkout is allowed when the user authorized the changes and the
    caller accepts the coordination risk; the runtime neither creates nor
@@ -57,7 +65,8 @@ Cursor.
    provider configuration.
    If the delegate response is a failed-allocation result without `turn_id`, do not call
    `cursor_wait`, retry, resume, or start a fallback delegation. Report the
-   normalized failure code and explicitly require a new user decision; retain
+   normalized `failure_kind` and the returned `terminal_reason` diagnostic,
+   then explicitly require a new user decision; retain
    exact diagnostics in tool evidence and close the failed allocation
    idempotently before the final report.
 2. For a live delegated turn, retain complete `session_id`/`turn_id` and the
@@ -132,7 +141,8 @@ Cursor.
    context: do not call an answer tool until a separate explicit user follow-up;
    then answer exactly once with only `allow-once` or `reject-once`, according
    to that explicit decision.
-5. Protocol completion does not prove semantic task success: verify the result
+5. Copy user-required exact outcome markers verbatim into the prompt and report them when requested.
+   Protocol completion does not prove semantic task success: verify the result
    and changes independently. That verification MUST NOT create an unrequested
    `cursor_send_prompt`, retry, or new provider turn after a terminal result.
    If terminal `result.truncated:true`, read the full retained text with
@@ -189,10 +199,10 @@ Cursor.
    delta line, and the absence of unchanged baseline content before calling
    `cursor_send_prompt`.
    Launch-only
-   settings (`model`, `effort`, `fast`, and
+   settings (`model`, `effort`, `fast`, `optimize_for`, and
    `plugin_dirs`) cannot change in place. If they must change, close the idle
    wrapper and immediately use
-   `cursor_resume_session({cwd,cursor_session_id,mode,model?,effort?,fast?,plugin_dirs?})`
+   `cursor_resume_session({cwd,cursor_session_id,mode,model?,effort?,fast?,optimize_for?,plugin_dirs?})`
    with the exact retained provider ID. A lost wrapper uses the same explicit
    resume without a redundant close. The resumed wrapper has a new runtime
    `session_id`; a successful resume proves only provider acceptance of the ID,
