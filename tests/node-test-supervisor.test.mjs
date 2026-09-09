@@ -178,11 +178,11 @@ test('lane matrix produces the exact child argv and keeps parent deadlines fixed
     'tests/run-cursor-skill-eval.test.mjs',
     'tests/runtime.test.mjs',
     'tests/node-test-supervisor.test.mjs',
-    'tests/coverage-audit.test.mjs', 'tests/eval-closeout.test.mjs',
+    'tests/model-discovery.test.mjs', 'tests/coverage-audit.test.mjs', 'tests/eval-closeout.test.mjs',
   ];
   const productSources = [
     'scripts/check-openspec-semantics.mjs', 'scripts/codex-app-server-client.mjs', 'scripts/cursor-eval-scenario.mjs', 'scripts/cursor-skill-eval.mjs', 'scripts/openspec-semantic-registry.mjs',
-    'scripts/cursor-subagent-bootstrap.mjs', 'scripts/cursor-subagent-mcp.mjs', 'scripts/node-test-reporter-v22.mjs',
+    'scripts/cursor-subagent-bootstrap.mjs', 'scripts/cursor-subagent-mcp.mjs', 'scripts/cursor-model-adapter.mjs', 'scripts/node-test-reporter-v22.mjs',
     'scripts/recording-mcp-proxy.mjs', 'scripts/run-cursor-skill-eval.mjs', 'scripts/run-node-tests.mjs', 'scripts/run-unit-coverage.mjs',
     'scripts/eval/run-cursor-skill-eval-matrix.mjs', 'scripts/eval/run-cursor-skill-eval-suite.mjs',
     'scripts/audit-node-coverage.mjs', 'scripts/eval/finalize-cursor-skill-eval.mjs',

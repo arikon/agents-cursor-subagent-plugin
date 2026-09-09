@@ -1,10 +1,24 @@
 #!/usr/bin/env node
 import { createHash } from 'node:crypto';
 import { createInterface } from 'node:readline';
-import { appendFileSync, existsSync, readFileSync, unlinkSync } from 'node:fs';
+import { appendFileSync, existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+if (process.env.FAKE_ACP_PROCESS_LOG) appendFileSync(process.env.FAKE_ACP_PROCESS_LOG,
+  `${process.argv.includes('--version') ? 'version' : 'acp'}\n`);
+
+if (process.env.FAKE_ACP_EXPECT_AUTH_ENV) {
+  const expected = JSON.parse(process.env.FAKE_ACP_EXPECT_AUTH_ENV);
+  for (const [name, value] of Object.entries(expected)) {
+    if (value === null ? process.env[name] !== undefined : process.env[name] !== value) {
+      process.stderr.write('credential environment did not match authorized source\n');
+      process.exit(9);
+    }
+  }
+}
+
 if (process.argv.includes('--version')) {
+  if (process.env.FAKE_ACP_VERSION_STDERR) await new Promise((resolve) => process.stderr.write(process.env.FAKE_ACP_VERSION_STDERR, resolve));
   if (process.env.FAKE_ACP_UNLINK_COMMAND_ON_VERSION) unlinkSync(process.env.FAKE_ACP_UNLINK_COMMAND_ON_VERSION);
   if (process.env.FAKE_ACP_VERSION_MODE === 'overflow') {
     await new Promise((resolve) => process.stdout.write('v'.repeat(64_001), resolve));
@@ -33,6 +47,15 @@ if (process.env.FAKE_ACP_REQUIRE_POLICY
 if (process.env.FAKE_ACP_ARGV_LOG) appendFileSync(process.env.FAKE_ACP_ARGV_LOG, `${JSON.stringify(process.argv.slice(2))}\n`);
 
 const input = createInterface({ input: process.stdin });
+function modelSelection() {
+  if (process.env.FAKE_ACP_MODEL_SELECTION) return JSON.parse(process.env.FAKE_ACP_MODEL_SELECTION);
+  if (!process.env.FAKE_ACP_PICKER_FROM_ARGV) return undefined;
+  const encoded = process.argv[process.argv.indexOf('--model') + 1];
+  const [model, tail] = encoded.split('[');
+  const params = tail ? tail.slice(0, -1).split(',').map((pair) => pair.split('=')) : [];
+  return [{ id: 'model', category: 'model', type: 'select', currentValue: model },
+    ...params.map(([id, value]) => ({ id, category: ['effort', 'reasoning', 'reasoning_effort', 'thinking', 'thought_level'].includes(id) ? 'thought_level' : 'model_config', type: 'select', currentValue: value }))];
+}
 const send = (message) => process.stdout.write(`${JSON.stringify(message)}${process.env.FAKE_ACP_CRLF ? '\r\n' : '\n'}`);
 const FULL_RESULT_LIMIT_BYTES = 1_048_576;
 const program = process.env.CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH
@@ -49,6 +72,8 @@ const safeEvidence = (message) => {
   if (process.env.FAKE_ACP_SAFE_EVIDENCE) appendFileSync(process.env.FAKE_ACP_SAFE_EVIDENCE, `${JSON.stringify(message)}\n`);
 };
 const finishPrompt = (id, text) => {
+  if (process.env.FAKE_ACP_PERSISTED_SESSION) writeFileSync(process.env.FAKE_ACP_PERSISTED_SESSION,
+    JSON.stringify({ sessionId: 'fake', configOptions: modelSelection() }));
   send({ jsonrpc: '2.0', method: 'session/update', params: { sessionId: 'fake', update: { sessionUpdate: 'agent_message_chunk', content: { text } } } });
   send({ jsonrpc: '2.0', id, result: { stopReason: process.env.FAKE_ACP_BAD_PROMPT_RESULT ? 'unknown' : (process.env.FAKE_ACP_STOP_REASON || 'end_turn') } });
   safeEvidence({ event: 'prompt_result', request_id: id });
@@ -323,14 +348,29 @@ input.on('line', (line) => {
     const reply = () => send({ jsonrpc: '2.0', id: request.id, result: process.env.FAKE_ACP_BAD_ADMISSION ? {} : admitted });
     return process.env.FAKE_ACP_DELAY_INIT_MS ? setTimeout(reply, Number(process.env.FAKE_ACP_DELAY_INIT_MS)) : reply();
   }
-  if (request.method === 'authenticate') return send({ jsonrpc: '2.0', id: request.id, result: {} });
+  if (request.method === 'authenticate') {
+    if (process.env.FAKE_ACP_FORBID_AUTHENTICATE) {
+      log({ method: 'authenticate' });
+      process.stderr.write('interactive authentication is forbidden in fixture\n');
+      process.exit(9);
+    }
+    return send({ jsonrpc: '2.0', id: request.id, result: {} });
+  }
   if (request.method === 'session/load') {
     log(request);
+    if (process.env.FAKE_ACP_REQUIRE_EXISTING_AUTH && !process.env.CURSOR_API_KEY && !process.env.CURSOR_AUTH_TOKEN) {
+      return send({ jsonrpc: '2.0', id: request.id, error: { code: -32001, message: 'authentication required' } });
+    }
+    if (process.env.FAKE_ACP_PERSISTED_SESSION && (!existsSync(process.env.FAKE_ACP_PERSISTED_SESSION)
+      || JSON.parse(readFileSync(process.env.FAKE_ACP_PERSISTED_SESSION, 'utf8')).sessionId !== request.params?.sessionId)) {
+      return send({ jsonrpc: '2.0', id: request.id, error: { code: -32000, message: 'persisted session not found' } });
+    }
     if (process.env.FAKE_ACP_LOAD_VARIANT === 'reject') {
       return send({ jsonrpc: '2.0', id: request.id, error: { code: -32000, message: 'session not found' } });
     }
     const result = {
       modes: { currentModeId: request.params?.cwd ? 'ask' : 'agent', availableModes: ['ask', 'plan', 'agent'].map((id) => ({ id })) },
+      configOptions: modelSelection(),
     };
     if (process.env.FAKE_ACP_LOAD_VARIANT === 'unexpected-session-id') result.sessionId = request.params?.sessionId;
     if (process.env.FAKE_ACP_LOAD_VARIANT === 'missing-modes') delete result.modes;
@@ -344,11 +384,24 @@ input.on('line', (line) => {
   }
   if (request.method === 'session/new') {
     log(request);
-    const result = { sessionId: 'fake', modes: { currentModeId: 'agent', availableModes: ['ask', 'plan', 'agent'].map((id) => ({ id })) } };
+    if (process.env.FAKE_ACP_STARTUP_STDERR) {
+      const diagnostic = Buffer.from(process.env.FAKE_ACP_STARTUP_STDERR);
+      process.stderr.write(diagnostic.subarray(0, 1), () => {
+        process.stderr.write(diagnostic.subarray(1), () => process.exit(1));
+      });
+      return;
+    }
+    if (process.env.FAKE_ACP_REQUIRE_EXISTING_AUTH && !process.env.CURSOR_API_KEY && !process.env.CURSOR_AUTH_TOKEN) {
+      return send({ jsonrpc: '2.0', id: request.id, error: { code: -32001, message: 'authentication required' } });
+    }
+    const result = { sessionId: 'fake', modes: { currentModeId: 'agent', availableModes: ['ask', 'plan', 'agent'].map((id) => ({ id })) }, configOptions: modelSelection() };
     if (process.env.FAKE_ACP_SESSION_VARIANT === 'missing-id') delete result.sessionId;
     if (process.env.FAKE_ACP_SESSION_VARIANT === 'missing-modes') delete result.modes;
     if (process.env.FAKE_ACP_SESSION_VARIANT === 'incomplete-modes') result.modes.availableModes = [{ id: 'ask' }];
     if (process.env.FAKE_ACP_SESSION_VARIANT === 'invalid-current-mode') result.modes.currentModeId = 'review';
+    if (process.env.FAKE_ACP_STARTUP_WARNING) {
+      return process.stderr.write(process.env.FAKE_ACP_STARTUP_WARNING, () => send({ jsonrpc: '2.0', id: request.id, result }));
+    }
     return send({ jsonrpc: '2.0', id: request.id, result });
   }
   if (request.method === 'session/set_mode') {
@@ -368,6 +421,7 @@ input.on('line', (line) => {
     return process.env.FAKE_ACP_DELAY_SET_MODE_MS ? setTimeout(reply, Number(process.env.FAKE_ACP_DELAY_SET_MODE_MS)) : reply();
   }
   if (request.method === 'session/prompt') {
+    if (process.env.FAKE_ACP_PICKER_FROM_ARGV) log(request);
     promptId = request.id;
     promptText = Array.isArray(request.params?.prompt)
       ? request.params.prompt.filter(({ type, text }) => type === 'text' && typeof text === 'string').map(({ text }) => text).join('\n')

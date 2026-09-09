@@ -11,15 +11,17 @@ import { ADAPTER } from '../scripts/cursor-subagent-mcp.mjs';
 
 const server = fileURLToPath(new URL('../scripts/cursor-subagent-mcp.mjs', import.meta.url));
 const fakeAcp = fileURLToPath(new URL('./fixtures/fake-acp.mjs', import.meta.url));
+const modelPreload = fileURLToPath(new URL('./fixtures/release-model-discovery-preload.mjs', import.meta.url));
 
 async function transport(t, env = {}) {
-  const child = spawn(process.execPath, [server], {
+  const child = spawn(process.execPath, ['--import', modelPreload, server], {
     env: {
       ...process.env,
       CURSOR_AGENT_COMMAND: process.execPath,
       CURSOR_SUBAGENT_ADAPTER_ARGS: JSON.stringify([fakeAcp]),
       CURSOR_SUBAGENT_ALLOWED_ROOTS: JSON.stringify([process.cwd()]),
       FAKE_ACP_REQUIRE_POLICY: '1',
+      RELEASE_MODEL_CATALOG: fileURLToPath(new URL('./fixtures/cursor-model-catalog-1.0.31.json', import.meta.url)),
       ...env,
     },
     stdio: ['pipe', 'pipe', 'pipe'],
@@ -72,6 +74,7 @@ test('MCP tools/list publishes the stable tool names and answer schemas', async 
   await client.request('initialize', { protocolVersion: '2024-11-05' });
   const tools = (await client.request('tools/list')).result.tools;
   assert.deepEqual(tools.map((item) => item.name), [
+    'cursor_list_models',
     'cursor_delegate',
     'cursor_start_session',
     'cursor_resume_session',
@@ -87,6 +90,7 @@ test('MCP tools/list publishes the stable tool names and answer schemas', async 
     'cursor_close_session',
   ]);
   const byName = Object.fromEntries(tools.map((item) => [item.name, item.inputSchema]));
+  assert.deepEqual(byName.cursor_list_models, { type: 'object', properties: {}, required: [], additionalProperties: false });
   assert.deepEqual(byName.cursor_wait.required, ['session_id', 'turn_id']);
   assert.deepEqual(byName.cursor_wait.properties.timeout_ms, { type: 'integer', minimum: 1_000, maximum: 180_000 });
   assert.deepEqual(byName.cursor_wait.properties.after_progress_revision, { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER });
@@ -94,6 +98,7 @@ test('MCP tools/list publishes the stable tool names and answer schemas', async 
   assert.deepEqual(byName.cursor_read_result.properties.offset, { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER });
   for (const name of ['cursor_delegate', 'cursor_start_session', 'cursor_resume_session']) {
     assert.equal(byName[name].additionalProperties, false);
+    assert.deepEqual(byName[name].properties.optimize_for, { type: 'string', enum: ['cost', 'balanced', 'intelligence'] });
     assert.equal(byName[name].properties.model.pattern, '^[^\\[\\]]+$');
     assert.equal(byName[name].properties.effort.pattern, '^[A-Za-z0-9._-]+$');
   }
@@ -134,7 +139,7 @@ test('MCP maps requests and notifications to standard JSON-RPC outcomes', async 
 
   client.sendRaw(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }));
   client.sendRaw(JSON.stringify({ jsonrpc: '1.0', method: 'tools/list' }));
-  assert.equal((await client.request('tools/list')).result.tools.length, 13);
+  assert.equal((await client.request('tools/list')).result.tools.length, 14);
   assert.deepEqual(client.messages, []);
 });
 
@@ -145,7 +150,7 @@ test('MCP keeps notifications silent and bounds untrusted tool errors', async (t
   client.sendRaw(JSON.stringify({ jsonrpc: '2.0', method: 'not/admitted' }));
   client.sendRaw(JSON.stringify({ jsonrpc: '1.0', method: 'tools/list' }));
   client.sendRaw(JSON.stringify({ jsonrpc: '2.0', method: '\ud800' }));
-  assert.equal((await client.request('tools/list')).result.tools.length, 13);
+  assert.equal((await client.request('tools/list')).result.tools.length, 14);
   assert.deepEqual(client.messages, []);
 
   const response = await client.request('tools/call', {
@@ -260,12 +265,12 @@ test('MCP framing rejects malformed and oversized input, then resumes at frame b
 
   client.child.stdin.write(Buffer.from(`${'x'.repeat(1_048_577)}\n${JSON.stringify({ jsonrpc: '2.0', id: 'after-complete-limit', method: 'tools/list' })}\n`));
   assert.equal((await client.waitFor((message) => message.id === null)).error.code, -32700);
-  assert.equal((await client.waitFor((message) => message.id === 'after-complete-limit')).result.tools.length, 13);
+  assert.equal((await client.waitFor((message) => message.id === 'after-complete-limit')).result.tools.length, 14);
 
   client.child.stdin.write(Buffer.alloc(1_048_577, 0x61));
   assert.equal((await client.waitFor((message) => message.id === null)).error.code, -32700);
   client.child.stdin.write(Buffer.from(`discarded remainder\n${JSON.stringify({ jsonrpc: '2.0', id: 'after-limit', method: 'tools/list' })}\r\n`));
-  assert.equal((await client.waitFor((message) => message.id === 'after-limit')).result.tools.length, 13);
+  assert.equal((await client.waitFor((message) => message.id === 'after-limit')).result.tools.length, 14);
 });
 
 test('MCP server fails closed when its packaged manifest version is corrupted', async (t) => {
@@ -276,6 +281,7 @@ test('MCP server fails closed when its packaged manifest version is corrupted', 
     mkdirSync(join(root, '.codex-plugin'));
     const copiedServer = join(root, 'scripts', 'cursor-subagent-mcp.mjs');
     copyFileSync(server, copiedServer);
+    copyFileSync(new URL('../scripts/cursor-model-adapter.mjs', import.meta.url), join(root, 'scripts', 'cursor-model-adapter.mjs'));
     writeFileSync(join(root, '.codex-plugin', 'plugin.json'), manifest, 'utf8');
 
     const child = spawn(process.execPath, [copiedServer], { stdio: ['ignore', 'ignore', 'pipe'] });

@@ -1,11 +1,14 @@
 #!/usr/bin/env node
+import { readFile } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { ModelAdapterError, parseModelCatalog, resolveModelSelection, verifyModelSelection } from './cursor-model-adapter.mjs';
 import { spawn } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
 import { lstatSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, relative, resolve } from 'node:path';
 
 // Runtime-owned, fixed bounds. They deliberately are not operator settings.
-export const LIMITS = Object.freeze({ initMs: 15_000, turnMs: 3_600_000, idleMs: 900_000,
+export const LIMITS = Object.freeze({ discoveryMs: 15_000, discoveryBytes: 1_048_576, initMs: 15_000, turnMs: 3_600_000, idleMs: 900_000,
   waitDefaultMs: 30_000, waitMinMs: 1_000, waitMaxMs: 180_000, live: 8, pending: 8,
   waiters: 8, tombstones: 64, events: 256, graceMs: 5_000, retentionMs: 300_000,
   inputBytes: 64_000, textBytes: 8_000, progressBytes: 512, fsBytes: 1_048_576,
@@ -102,7 +105,7 @@ export const MANIFEST_VERSION = manifestVersion();
 
 // Version-specific ACP wire adapter. Product tools never expose these forms.
 export const CURSOR_ADAPTER_VERSION = '2026.08.25-3e8eec8';
-const DEFAULT_MODEL = Object.freeze({ model: 'auto', effort: null, fast: null });
+const DEFAULT_MODEL = Object.freeze({ model: 'auto', effort: null, fast: null, optimize_for: null });
 const DEFAULT_LAUNCH = Object.freeze({ ...DEFAULT_MODEL, plugin_dirs: [] });
 const admittedModeState = (result) => {
   const current = result?.modes?.currentModeId;
@@ -114,16 +117,10 @@ const admittedModeState = (result) => {
 export const ADAPTER = Object.freeze({
   cursorVersion: CURSOR_ADAPTER_VERSION,
   fixturePolicyArgv: ['--auto-review', '--sandbox', 'enabled'],
-  modelArgv: ({ model, effort, fast }) => {
-    const parameters = [
-      ...(effort == null ? [] : [`effort=${effort}`]),
-      ...(fast == null ? [] : [`fast=${fast}`]),
-    ];
-    return ['--model', parameters.length ? `${model}[${parameters.join(',')}]` : model];
-  },
+  modelArgv: ({ model, selection }) => ['--model', selection?.encoded ?? model],
   pluginArgv: (roots) => roots.flatMap((root) => ['--plugin-dir', root]),
   sessionArgv: (modelArgv, pluginArgv = []) => ['--auto-review', '--sandbox', 'enabled', ...modelArgv, ...pluginArgv, 'acp'],
-  initialize: () => ({ protocolVersion: 1, clientCapabilities: { fs: { readTextFile: true, writeTextFile: true }, terminal: false }, clientInfo: { name: 'agents-cursor-subagent-plugin', version: MANIFEST_VERSION } }),
+  initialize: () => ({ protocolVersion: 1, clientCapabilities: { fs: { readTextFile: true, writeTextFile: true }, terminal: false, _meta: { parameterizedModelPicker: true } }, clientInfo: { name: 'agents-cursor-subagent-plugin', version: MANIFEST_VERSION } }),
   methods: { auth: 'authenticate', sessionNew: 'session/new', sessionLoad: 'session/load', setMode: 'session/set_mode', prompt: 'session/prompt', cancel: 'session/cancel', todos: 'cursor/update_todos', task: 'cursor/task', image: 'cursor/generate_image', read: 'fs/read_text_file', write: 'fs/write_text_file' },
   loadParams: (sessionId, cwd) => ({ sessionId, cwd, mcpServers: [] }),
   admitModeState: admittedModeState,
@@ -246,7 +243,11 @@ function admitModelParams(args) {
   const fast = args.fast === undefined ? null : typeof args.fast === 'boolean' ? args.fast : fail('invalid_args', 'invalid fast');
   if (effort !== null && !/^[A-Za-z0-9._-]+$/.test(effort)) fail('invalid_args', 'invalid effort token');
   if (/[\[\]]/.test(model)) fail('invalid_args', 'model must not contain parameter brackets');
-  return { model, effort, fast };
+  const optimize_for = args.optimize_for === undefined ? null : args.optimize_for;
+  if (args.optimize_for !== undefined && !['cost', 'balanced', 'intelligence'].includes(optimize_for)) fail('invalid_args', 'invalid optimize_for');
+  if ((model === 'auto-smart') !== (optimize_for !== null)) fail('invalid_args', 'auto-smart requires explicit optimize_for; other models forbid it');
+  if (['auto', 'default'].includes(model) && (effort !== null || fast !== null)) fail('invalid_args', 'default model policy does not accept model parameters');
+  return { model, effort, fast, optimize_for };
 }
 function admitLaunchParams(args, canonicalPluginDir) {
   if (args.plugin_dirs === undefined) return { ...admitModelParams(args), plugin_dirs: [] };
@@ -269,17 +270,18 @@ function captureTerminalReceipt(session, turn) {
 function terminalReceipt(_session, turn) {
   return turn?.terminal_receipt ?? undefined;
 }
-const MODEL_KEYS = ['model', 'effort', 'fast'];
+const MODEL_KEYS = ['model', 'effort', 'fast', 'optimize_for'];
 const LAUNCH_KEYS = [...MODEL_KEYS, 'plugin_dirs'];
 
 class SessionRecord {
   constructor(runtime, cwd, mode, launch = DEFAULT_LAUNCH) {
     this.runtime = runtime; this.id = opaqueId(); this.cwd = cwd; this.mode = mode;
-    this.model = launch.model; this.effort = launch.effort; this.fast = launch.fast;
+    this.model = launch.model; this.effort = launch.effort; this.fast = launch.fast; this.optimize_for = launch.optimize_for; this.selection = launch.selection;
     this.plugin_dirs = launch.plugin_dirs;
     this.run_mode = 'auto_review'; this.sandbox = 'enabled'; this.session_state = 'starting';
     this.failure_kind = null; this.terminal_reason = null; this.active = null; this.last = null;
     this.provider_error = null;
+    this.initStderr = Buffer.alloc(0); this.stderrEnded = null;
     this.events = []; this.nextEvent = 1; this.waiters = new Set(); this.rpc = new Map(); this.rpcId = 1;
     this.child = null; this.shutdownPromise = null; this.tombstonedAt = null; this.idleTimer = null;
     this.admissionOpen = false; this.adapterCancelSent = false; this.modeTransition = false;
@@ -297,7 +299,7 @@ class SessionRecord {
   envelope() {
     return {
       session_id: this.id, session_state: this.session_state, cwd: this.cwd, mode: this.mode,
-      model: this.model, effort: this.effort, fast: this.fast,
+      model: this.model, effort: this.effort, fast: this.fast, optimize_for: this.optimize_for,
       plugin_dirs: this.plugin_dirs,
       cursor_session_id: this.cursor_session_id, run_mode: this.run_mode, sandbox: this.sandbox,
       failure_kind: this.failure_kind, terminal_reason: this.terminal_reason, last_event_id: this.nextEvent - 1,
@@ -351,12 +353,16 @@ class SessionRecord {
   }
   async start() {
     const initStartedAt = Date.now();
+    this.initAuthController = new AbortController();
     try {
-      this.installedCursorVersion = await this.withTimeout(this.probeCursorVersion(), LIMITS.initMs, 'init_timeout');
+      const childEnv = await this.withTimeout(this.runtime.childEnvironment(this.initAuthController.signal), LIMITS.initMs, 'init_timeout');
+      if (this.session_state !== 'starting') return;
+      this.installedCursorVersion = await this.withTimeout(this.probeCursorVersion(childEnv), Math.max(1, LIMITS.initMs - (Date.now() - initStartedAt)), 'init_timeout');
+      if (this.session_state !== 'starting') return;
       this.child = spawn(cursorCommand(this.runtime.env), cursorArgs(this.runtime.env, {
-        model: this.model, effort: this.effort, fast: this.fast, plugin_dirs: this.plugin_dirs,
-      }), { cwd: this.cwd, stdio: ['pipe', 'pipe', 'pipe'], env: this.runtime.env });
-      this.child.stderr.resume();
+        model: this.model, selection: this.selection, plugin_dirs: this.plugin_dirs,
+      }), { cwd: this.cwd, stdio: ['pipe', 'pipe', 'pipe'], env: childEnv });
+      this.captureStartupStderr(this.child);
       this.child.stdin.on('error', () => this.transportFailure('child stdin EPIPE'));
       this.attachStdout();
       this.child.stdout.on('end', () => { if (!['closing', 'tombstone'].includes(this.session_state)) this.transportFailure('stdout EOF'); });
@@ -364,29 +370,50 @@ class SessionRecord {
       this.child.once('exit', () => { this.childExited = true; if (!['closing', 'tombstone'].includes(this.session_state)) this.transportFailure('child exit'); });
       const remaining = Math.max(1, LIMITS.initMs - (Date.now() - initStartedAt));
       await this.withTimeout(this.initialize(), remaining, 'init_timeout');
-      if (this.session_state === 'starting') { this.admissionOpen = true; this.sessionState('live'); this.armIdle(); }
+      if (this.session_state === 'starting') { this.initStderr = Buffer.alloc(0); this.admissionOpen = true; this.sessionState('live'); this.armIdle(); }
     } catch (error) {
       if (this.session_state === 'starting') await this.initFailure(error);
       else if (this.shutdownPromise) await this.shutdownPromise;
-    }
+    } finally { this.initAuthController.abort(); this.initAuthController = null; }
   }
-  probeCursorVersion() {
+  captureStartupStderr(child) {
+    this.initStderr = Buffer.alloc(0); this.initStderrTruncated = false;
+    this.stderrEnded = new Promise((done) => child.stderr.once('close', done));
+    child.stderr.on('data', (chunk) => {
+      if (this.session_state !== 'starting' && !(this.session_state === 'closing' && this.failure_kind)) return;
+      // Retain enough extra bytes to decode a code point split at the output bound.
+      const remaining = LIMITS.textBytes + 4 - this.initStderr.length;
+      if (chunk.length > remaining) this.initStderrTruncated = true;
+      if (remaining > 0) this.initStderr = Buffer.concat([this.initStderr, chunk.subarray(0, remaining)]);
+    });
+  }
+  probeCursorVersion(childEnv) {
     return new Promise((resolveVersion, reject) => {
-      const child = spawn(cursorCommand(this.runtime.env), cursorVersionArgs(this.runtime.env), { cwd: this.cwd, stdio: ['ignore', 'pipe', 'pipe'], env: this.runtime.env }); this.child = child;
-      const chunks = []; let size = 0; let overflow = false;
-      const collect = (chunk) => { size += chunk.length; if (size > LIMITS.inputBytes) overflow = true; else chunks.push(chunk); };
-      child.stdout.on('data', collect); child.stderr.on('data', collect);
-      child.once('error', () => reject(new DomainError('spawn', 'Cursor version probe failed to spawn')));
-      child.once('exit', (code) => {
-        this.childExited = true;
+      const child = spawn(cursorCommand(this.runtime.env), cursorVersionArgs(this.runtime.env), { cwd: this.cwd, stdio: ['ignore', 'pipe', 'pipe'], env: childEnv }); this.child = child;
+      this.captureStartupStderr(child);
+      const chunks = []; let size = 0; let overflow = false; let timer; let settled = false;
+      const finish = (code) => {
+        if (settled) return;
+        settled = true; clearTimeout(timer);
+        child.stdout.destroy(); child.stderr.destroy();
         if (overflow) reject(new DomainError('init', 'Cursor version output limit'));
         else if (code !== 0) reject(new DomainError('init', 'Cursor version probe failed'));
         else {
           let version; try { version = decoder.decode(Buffer.concat(chunks)).trim(); } catch { reject(new DomainError('init', 'Cursor version is not UTF-8')); return; }
+          this.child = null; this.childExited = false;
+          this.initStderr = Buffer.alloc(0);
           resolveVersion(version);
         }
+      };
+      child.stdout.on('data', (chunk) => { size += chunk.length; if (size > LIMITS.inputBytes) overflow = true; else chunks.push(chunk); });
+      child.once('error', () => reject(new DomainError('spawn', 'Cursor version probe failed to spawn')));
+      child.once('exit', (code) => {
+        this.childExited = true;
+        // A descendant may retain the pipes after exit. Close our streams at the same bounded deadline.
+        timer = setTimeout(() => finish(code), LIMITS.graceMs);
       });
-    }).finally(() => { this.child = null; this.childExited = false; });
+      child.once('close', (code) => finish(code));
+    });
   }
   attachStdout() {
     let buffered = Buffer.alloc(0);
@@ -411,10 +438,12 @@ class SessionRecord {
   async initialize() {
     const initialized = await this.request('initialize', ADAPTER.initialize(this.mode));
     if (!ADAPTER.admitInitialize(initialized)) fail('protocol_error', 'ACP adapter admission failed');
-    await this.request(ADAPTER.methods.auth, { methodId: 'cursor_login' });
+    // Cursor initializes native/API-key authentication before ACP; cursor_login
+    // is an interactive login operation and may clear credentials/open a browser.
     if (this.resumeCursorSessionId) {
       const loaded = await this.request(ADAPTER.methods.sessionLoad, ADAPTER.loadParams(this.resumeCursorSessionId, this.cwd));
       if (!ADAPTER.admitLoadResult(loaded, this.resumeCursorSessionId)) fail('protocol_error', 'ACP session/load result is not admitted');
+      if (this.selection) verifyModelSelection(loaded, this.selection);
       this.cursorSessionId = this.resumeCursorSessionId;
       this.cursor_session_id = this.resumeCursorSessionId;
       if (loaded.modes?.currentModeId && loaded.modes.currentModeId !== this.mode) {
@@ -425,6 +454,7 @@ class SessionRecord {
     const created = await this.request(ADAPTER.methods.sessionNew, { cwd: this.cwd, mcpServers: [] });
     if (!validText(created?.sessionId) || !created.sessionId) fail('protocol_error', 'ACP session/new returned invalid session ID');
     if (!ADAPTER.admitModeState(created)) fail('protocol_error', 'ACP adapter mode admission failed');
+    if (this.selection) verifyModelSelection(created, this.selection);
     this.cursorSessionId = created.sessionId;
     this.cursor_session_id = created.sessionId;
     if (created.modes.currentModeId !== this.mode) await this.applyProviderMode(this.mode);
@@ -628,10 +658,10 @@ class SessionRecord {
     if (hasProviderError(error)) this.provider_error = error.provider_error;
     const kind = error instanceof DomainError ? error.error_code : error;
     this.failure_kind = ['spawn', 'init_timeout'].includes(kind) ? kind : 'init';
-    return this.shutdown(null, error instanceof Error ? error.message : null);
+    return this.shutdown(null, error.message);
   }
   transportFailure(reason, startingKind = 'init') {
-    if (this.session_state === 'starting') void this.initFailure(startingKind);
+    if (this.session_state === 'starting') void this.initFailure(new DomainError(startingKind, reason));
     else if (this.active) void this.terminalize(this.active, 'failed', reason);
     else if (this.session_state === 'live') void this.shutdown(null, reason);
   }
@@ -652,6 +682,7 @@ class SessionRecord {
   }
   shutdown(_turn, reason) {
     if (this.shutdownPromise) return this.shutdownPromise;
+    this.initAuthController?.abort();
     this.admissionOpen = false; this.clearIdle(); this.sessionState('closing'); this.shutdownPromise = (async () => {
       for (const waiter of this.rpc.values()) waiter.reject(new Error('session closing')); this.rpc.clear();
       if (this.child?.pid && !this.childExited) {
@@ -665,7 +696,17 @@ class SessionRecord {
         if (!this.childExited) await Promise.race([exited, new Promise((done) => setImmediate(done))]);
         if (!this.childExited) try { this.child.kill('SIGKILL'); } catch {}
       }
-      if (reason) this.terminal_reason = bounded(reason); this.sessionState('tombstone'); this.tombstonedAt = Date.now(); this.runtime.live.delete(this.id); this.runtime.evict(); this.wake();
+      if (this.failure_kind && this.stderrEnded) {
+        // exit/stdout EOF may precede the final stderr data; inherited pipes must not block cleanup.
+        let drainTimer;
+        await Promise.race([this.stderrEnded, new Promise((done) => { drainTimer = setTimeout(done, LIMITS.graceMs); })]);
+        clearTimeout(drainTimer);
+        const diagnostic = this.initStderr.toString('utf8').trim();
+        if (diagnostic) reason = `${reason || this.failure_kind}\nCursor stderr: ${diagnostic}`;
+      }
+      this.child?.stdout?.destroy(); this.child?.stderr?.destroy(); this.child?.stdin?.destroy();
+      this.initStderr = Buffer.alloc(0);
+      if (reason) { this.terminal_reason = bounded(reason); if (this.failure_kind && this.initStderrTruncated) this.terminal_reason.truncated = true; } this.sessionState('tombstone'); this.tombstonedAt = Date.now(); this.runtime.live.delete(this.id); this.runtime.evict(); this.wake();
     })(); return this.shutdownPromise;
   }
   armIdle() { this.clearIdle(); if (this.session_state === 'live' && !this.active) this.idleTimer = setTimeout(() => { void this.shutdown(null, 'idle TTL expired'); }, LIMITS.idleMs); }
@@ -674,28 +715,113 @@ class SessionRecord {
 }
 
 export class Runtime {
-  constructor({ env = process.env, roots = readRoots(env) } = {}) { this.env = env; this.roots = roots; this.sessions = new Map(); this.live = new Set(); }
+  constructor({ env = process.env, roots = readRoots(env), fetchModels = globalThis.fetch, readModelAuth = readFile } = {}) {
+    this.env = env; this.roots = roots; this.sessions = new Map(); this.live = new Set();
+    this.fetchModels = fetchModels; this.readModelAuth = readModelAuth; this.discovery = null; this.closed = false;
+  }
+  async readApiKey(signal, required = false) {
+    let auth;
+    try { auth = JSON.parse(decoder.decode(Buffer.from(await this.readModelAuth(resolve(homedir(), '.cursor/auth.json'), { signal })))); }
+    catch (error) {
+      if (error?.code !== 'ENOENT') fail('model_discovery_failed', 'Check ~/.cursor/auth.json: it must be readable valid JSON with a Cursor API KEY in apiKey');
+    }
+    if (auth !== undefined && (!auth || typeof auth !== 'object' || Array.isArray(auth))) fail('model_discovery_failed', 'Check ~/.cursor/auth.json: expected a JSON object');
+    if (typeof auth?.apiKey === 'string' && (!validText(auth.apiKey) || auth.apiKey.includes('\0'))) fail('model_discovery_failed', 'Check ~/.cursor/auth.json: apiKey must be valid UTF-8 without NUL characters');
+    const apiKey = typeof auth?.apiKey === 'string' && auth.apiKey.trim() ? auth.apiKey : null;
+    if (!required && Object.hasOwn(auth ?? {}, 'apiKey') && !apiKey) fail('model_discovery_failed', 'Check ~/.cursor/auth.json: apiKey must be a nonblank Cursor API KEY');
+    if (required && !apiKey) fail('model_discovery_failed', 'Obtain a Cursor API KEY and save apiKey in ~/.cursor/auth.json');
+    return apiKey;
+  }
+  async childEnvironment(signal) {
+    const apiKey = await this.readApiKey(signal);
+    signal.throwIfAborted();
+    const env = { ...this.env };
+    if (apiKey) {
+      env.CURSOR_API_KEY = apiKey;
+      env.AGENT_CLI_CREDENTIAL_STORE = 'memory';
+      delete env.CURSOR_AUTH_TOKEN;
+    }
+    return env;
+  }
+  async discoverModels() {
+    if (this.closed) fail('model_discovery_failed', 'Cursor model discovery is closed');
+    if (this.discovery) fail('resource_limit', 'Cursor model discovery slot is busy');
+    const controller = new AbortController(); this.discovery = controller;
+    const { signal } = controller;
+    let reader;
+    const timeout = setTimeout(() => controller.abort(), LIMITS.discoveryMs);
+    let abortListener;
+    const aborted = new Promise((_, reject) => {
+      abortListener = () => reject(new DomainError('model_discovery_failed', 'Cursor model discovery cancelled or timed out'));
+      signal.addEventListener('abort', abortListener, { once: true });
+    });
+    const operation = async () => {
+      const apiKey = await this.readApiKey(signal, true);
+      signal.throwIfAborted();
+      const response = await this.fetchModels('https://api.cursor.com/v1/models', { method: 'GET', headers: { Authorization: `Bearer ${apiKey}` }, redirect: 'error', signal });
+      if (signal.aborted) { void response.body?.cancel().catch(() => {}); signal.throwIfAborted(); }
+      if (response.status !== 200) { void response.body?.cancel().catch(() => {}); fail('model_discovery_failed', `Cursor model discovery HTTP ${response.status}`); }
+      reader = response.body?.getReader();
+      if (!reader) fail('model_discovery_failed', 'Cursor model discovery returned no body');
+      const chunks = []; let size = 0;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        size += value.byteLength;
+        if (size > LIMITS.discoveryBytes) fail('resource_limit', 'Cursor model discovery response limit exceeded');
+        chunks.push(value);
+      }
+      return parseModelCatalog(JSON.parse(decoder.decode(Buffer.concat(chunks))));
+    };
+    try { return await Promise.race([operation(), aborted]); }
+    catch (error) {
+      if (error instanceof DomainError) throw error;
+      if (error instanceof ModelAdapterError) fail(error.error_code, error.message);
+      fail('model_discovery_failed', 'Cursor model discovery network or response failure');
+    } finally {
+      clearTimeout(timeout); controller.abort(); signal.removeEventListener('abort', abortListener);
+      if (reader) void reader.cancel().catch(() => {}).finally(() => reader.releaseLock());
+      if (this.discovery === controller) this.discovery = null;
+    }
+  }
+  async selectModel(launch) {
+    if (!['auto', 'default'].includes(launch.model)) {
+      try { launch.selection = resolveModelSelection(await this.discoverModels(), launch); }
+      catch (error) { if (error instanceof ModelAdapterError) fail(error.error_code, error.message); throw error; }
+    }
+  }
+  async shutdown() {
+    this.closed = true; this.discovery?.abort();
+    await Promise.all([...this.sessions.values()].map((session) => session.active ? session.terminalize(session.active, 'cancelled', 'closed') : session.shutdown(null, null)));
+  }
   canonicalCwd(cwd) { if (!validText(cwd) || !isAbsolute(cwd)) fail('invalid_args', 'cwd must be an absolute string'); let canonical; try { canonical = realpathSync(cwd); } catch { fail('scope_rejected', 'cwd does not exist'); } if (!lstatSync(canonical).isDirectory()) fail('scope_rejected', 'cwd is not a directory'); if (this.roots && !this.roots.some((root) => inside(canonical, root))) fail('scope_rejected', 'cwd is outside allowed roots'); return canonical; }
   canonicalPluginDir(root) { if (!validText(root) || !isAbsolute(root)) fail('invalid_args', 'plugin_dir must be an absolute string'); let canonical; try { canonical = realpathSync(root); } catch { fail('scope_rejected', 'plugin_dir does not exist'); } if (!lstatSync(canonical).isDirectory()) fail('scope_rejected', 'plugin_dir is not a directory'); if (this.roots && !this.roots.some((allowed) => inside(canonical, allowed))) fail('scope_rejected', 'plugin_dir is outside allowed roots'); return canonical; }
   evict() { const now = Date.now(); for (const [id, session] of this.sessions) if (session.session_state === 'tombstone' && now - session.tombstonedAt >= LIMITS.retentionMs) this.sessions.delete(id); const tombs = [...this.sessions.values()].filter((session) => session.session_state === 'tombstone').sort((a, b) => a.tombstonedAt - b.tombstonedAt || a.id.localeCompare(b.id)); while (tombs.length > LIMITS.tombstones) this.sessions.delete(tombs.shift().id); }
   session(id) { this.evict(); const session = this.sessions.get(id); if (!session) fail('unknown_session', 'unknown session'); return session; }
   async start(args) {
+    if (this.closed) fail('protocol_error', 'runtime is closed');
     assertObject(args, ['cwd', 'mode', ...LAUNCH_KEYS], ['cwd', 'mode']);
     if (!['ask', 'plan', 'agent'].includes(args.mode)) fail('invalid_args', 'invalid mode: ask|plan|agent');
     const cwd = this.canonicalCwd(args.cwd);
     const launch = admitLaunchParams(args, (root) => this.canonicalPluginDir(root));
+    await this.selectModel(launch);
+    if (this.closed) fail('protocol_error', 'runtime is closed');
     if (this.live.size >= LIMITS.live) fail('resource_limit', 'live session limit');
     const session = new SessionRecord(this, cwd, args.mode, launch);
     this.sessions.set(session.id, session); this.live.add(session.id); await session.start(); return session.envelope();
   }
   async resume(args) {
+    if (this.closed) fail('protocol_error', 'runtime is closed');
     assertObject(args, ['cwd', 'cursor_session_id', 'mode', ...LAUNCH_KEYS], ['cwd', 'cursor_session_id', 'mode']);
     if (!['ask', 'plan', 'agent'].includes(args.mode)) fail('invalid_args', 'invalid mode: ask|plan|agent');
     const cwd = this.canonicalCwd(args.cwd);
+    const cursorSessionId = text(args.cursor_session_id, 'cursor_session_id');
     const launch = admitLaunchParams(args, (root) => this.canonicalPluginDir(root));
+    await this.selectModel(launch);
+    if (this.closed) fail('protocol_error', 'runtime is closed');
     if (this.live.size >= LIMITS.live) fail('resource_limit', 'live session limit');
     const session = new SessionRecord(this, cwd, args.mode, launch);
-    session.resumeCursorSessionId = text(args.cursor_session_id, 'cursor_session_id');
+    session.resumeCursorSessionId = cursorSessionId;
     session.cursor_session_id = session.resumeCursorSessionId;
     this.sessions.set(session.id, session); this.live.add(session.id); await session.start(); return session.envelope();
   }
@@ -723,6 +849,7 @@ export class Runtime {
   }
   async call(name, args) {
     assertAggregate(args);
+    if (name === 'cursor_list_models') { assertObject(args, [], []); return { models: (await this.discoverModels()).models }; }
     if (name === 'cursor_delegate') {
       assertObject(args, ['cwd', 'mode', 'prompt', ...LAUNCH_KEYS], ['cwd', 'mode', 'prompt']);
       const startArgs = { cwd: args.cwd, mode: args.mode };
@@ -738,6 +865,7 @@ export class Runtime {
           model: sessionEnvelope.model,
           ...(sessionEnvelope.effort != null ? { effort: sessionEnvelope.effort } : {}),
           ...(sessionEnvelope.fast != null ? { fast: sessionEnvelope.fast } : {}),
+          ...(sessionEnvelope.optimize_for != null ? { optimize_for: sessionEnvelope.optimize_for } : {}),
         };
       }
       catch (error) {
@@ -857,12 +985,13 @@ const effortString = { ...string, pattern: '^[A-Za-z0-9._-]+$' };
 const idFields = (...keys) => Object.fromEntries(keys.map((key) => [key, string]));
 const modeEnum = { type: 'string', enum: ['ask', 'plan', 'agent'] };
 const modelFields = {
-  model: modelString, effort: effortString, fast: { type: 'boolean' },
+  model: modelString, effort: effortString, fast: { type: 'boolean' }, optimize_for: { type: 'string', enum: ['cost', 'balanced', 'intelligence'] },
   plugin_dirs: { type: 'array', minItems: 1, items: string },
 };
 const answerItem = schema({ question_id: string, selected_option_ids: { type: 'array', minItems: 1, items: string } }, ['question_id', 'selected_option_ids']);
 const tool = (name, properties, required) => ({ name, description: name, inputSchema: schema(properties, required) });
 export const tools = [
+  tool('cursor_list_models', {}, []),
   tool('cursor_delegate', { cwd: string, mode: modeEnum, prompt: string, ...modelFields }, ['cwd', 'mode', 'prompt']),
   tool('cursor_start_session', { cwd: string, mode: modeEnum, ...modelFields }, ['cwd', 'mode']),
   tool('cursor_resume_session', { cwd: string, cursor_session_id: string, mode: modeEnum, ...modelFields }, ['cwd', 'cursor_session_id', 'mode']),
@@ -895,7 +1024,7 @@ function readBoundedLines(stream, onLine, onInvalid) {
 }
 export async function serve() {
   const runtime = new Runtime();
-  const closeAll = () => Promise.all([...runtime.sessions.values()].map((session) => session.active ? session.terminalize(session.active, 'cancelled', 'closed') : session.shutdown(null, null)));
+  const closeAll = () => runtime.shutdown();
   process.stdin.once('end', () => { void closeAll(); }); for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => { void closeAll().finally(() => process.exit(0)); });
   const write = (message) => process.stdout.write(`${JSON.stringify(message)}\n`);
   const invalidFrame = () => write({ jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error' } });

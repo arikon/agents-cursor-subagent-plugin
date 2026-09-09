@@ -20,6 +20,17 @@ const adapter = fileURLToPath(new URL('./fixtures/codex-v01534-adapter.mjs', imp
 const fakeAcp = fileURLToPath(new URL('./fixtures/release-fake-acp.mjs', import.meta.url));
 const fakeProvider = fileURLToPath(new URL('./fixtures/fake-ollama-responses.mjs', import.meta.url));
 const turnTimeoutPreload = fileURLToPath(new URL('./fixtures/accelerate-turn-timeout.mjs', import.meta.url));
+// The adapter installs this preload only on the MCP command. Codex app-server
+// retains its own auth and transport; fake Cursor never reads the user's key.
+async function fakeCursorPreload(fixture) {
+  const path = join(fixture.root, 'fake-cursor-preload.mjs');
+  const catalog = fileURLToPath(new URL('./fixtures/cursor-eval-model-catalog.json', import.meta.url));
+  const discovery = new URL('./fixtures/release-model-discovery-preload.mjs', import.meta.url).href;
+  const timeout = new URL('./fixtures/accelerate-turn-timeout.mjs', import.meta.url).href;
+  await writeFile(path, `process.env.RELEASE_MODEL_CATALOG = ${JSON.stringify(catalog)};\nawait import(${JSON.stringify(discovery)});\nawait import(${JSON.stringify(timeout)});\n`);
+  return path;
+}
+
 const skill = 'agents-cursor-subagent-plugin:cursor-subagent';
 const HOSTED_APP_SERVER_OUTPUT_LIMIT = 16 * 1_048_576;
 const HOSTED_OBSERVATION_TIMEOUT_MS = 300_000;
@@ -31,7 +42,7 @@ const THREAD_ACTIVE_FLAGS = new Set(['waitingOnApproval', 'waitingOnUserInput'])
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
 async function configureFakeAgent(path, values = {}) {
-  const assignments = Object.entries({ FAKE_ACP_RESULT: 'CURSOR_EVAL_OK', ...values })
+  const assignments = Object.entries({ FAKE_ACP_RESULT: 'CURSOR_EVAL_OK', FAKE_ACP_PICKER_FROM_ARGV: '1', ...values })
     .map(([name, value]) => `process.env[${JSON.stringify(name)}] = ${JSON.stringify(value)};`)
     .join('\n');
   await writeFile(path, `#!/usr/bin/env node\n${assignments}\nif (process.argv[2] === "status") { process.stdout.write(JSON.stringify({ status: "authenticated", isAuthenticated: true, hasAccessToken: true, hasRefreshToken: true })); process.exit(0); }\nawait import("./fake-acp.mjs");\n`, 'utf8');
@@ -57,7 +68,7 @@ async function layout(workspaceOverride = null) {
   const source = join(root, 'source'); const workspace = workspaceOverride || join(root, 'workspace'); const home = join(root, 'codex-home');
   await mkdir(source); if (!workspaceOverride) await mkdir(workspace); await mkdir(home);
   const originalSkill = await readFile(join(repository, 'skills/cursor-subagent/SKILL.md'));
-  for (const path of ['.codex-plugin/plugin.json', 'README.md', 'scripts/cursor-subagent-mcp.mjs', 'scripts/recording-mcp-proxy.mjs', 'scripts/cursor-subagent-bootstrap.mjs']) {
+  for (const path of ['.codex-plugin/plugin.json', 'README.md', 'scripts/cursor-subagent-mcp.mjs', 'scripts/cursor-model-adapter.mjs', 'scripts/recording-mcp-proxy.mjs', 'scripts/cursor-subagent-bootstrap.mjs']) {
     await mkdir(join(source, path, '..'), { recursive: true }); await cp(join(repository, path), join(source, path));
   }
   await cp(join(repository, 'skills'), join(source, 'skills'), { recursive: true });
@@ -733,6 +744,61 @@ test('runtime recovery trace proves the old wrapper tombstone without duplicatin
   assert.deepEqual(closeTombstone.trace.slice(firstTerminal, firstTerminal + 3).map(({ kind }) => kind),
     ['turn.completed', 'turn.receipt', 'session.tombstoned']);
   assert.equal(scoreWithCapturedFinals(scenario, closeTombstone).eval_status, 'pass');
+});
+
+test('installed eval MCP starts an explicit corpus model and resumes with changed model knobs', async (t) => {
+  const fixture = await layout();
+  t.after(() => rm(fixture.root, { recursive: true, force: true }));
+  const node = await realpath(process.execPath);
+  await configureFakeAgent(fixture.fakeAgent, { FAKE_ACP_PERSISTED_SESSION: join(fixture.root, 'persisted.json') });
+  const env = { ...process.env, CODEX_HOME: fixture.home, FAKE_CODEX_CLI_VERSION: 'codex-cli 0.153.4',
+    CURSOR_EVAL_TIMEOUT_PRELOAD: await fakeCursorPreload(fixture) };
+  // Use the same adapter render and installed payload layout as the opt-in
+  // client lanes, without a model provider or Codex installation operation.
+  const fakeCodex = join(fixture.root, 'fake-codex');
+  await cp(fileURLToPath(new URL('./fixtures/fake-codex-cli-v01521.mjs', import.meta.url)), fakeCodex);
+  await chmod(fakeCodex, 0o755);
+  const installRoot = join(fixture.managed, 'plugins/agents-cursor-subagent-plugin');
+  await mkdir(join(installRoot, '..'), { recursive: true });
+  await cp(fixture.source, installRoot, { recursive: true });
+  const rendered = await runPackageCommand(node, [adapter, 'render', JSON.stringify({
+    codex_executable: fakeCodex,
+    node_executable: node, install_root: installRoot, agent_executable: fixture.fakeAgent,
+    allowed_workspace_roots: [fixture.workspace],
+  })], { env });
+  assert.equal(rendered.code, 0, rendered.output);
+  for (const file of JSON.parse(rendered.output).files) {
+    const destination = join(fixture.managed, file.path);
+    await mkdir(join(destination, '..'), { recursive: true });
+    await writeFile(destination, Buffer.from(file.content_base64, 'base64'));
+  }
+  await rename(fixture.source, fixture.hidden);
+  const config = JSON.parse(await readFile(join(installRoot, '.mcp.json'), 'utf8')).mcpServers['cursor-subagent'];
+  const client = new CodexAppServerClient(config.command, config.args, { ...env, ...config.env });
+  t.after(() => client.close());
+  await client.request('initialize', { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'eval-selection-regression', version: '1' } });
+  const call = async (name, args) => {
+    const response = await client.request('tools/call', { name, arguments: args });
+    const result = JSON.parse(response.content[0].text);
+    assert.notEqual(response.isError, true, JSON.stringify(result));
+    return result;
+  };
+  const first = await call('cursor_delegate', { cwd: fixture.workspace, mode: 'ask',
+    model: 'sonnet-4.0', effort: 'high', fast: true, prompt: 'Return the fixture result.' });
+  assert.equal(first.session_state, 'live', JSON.stringify(first.terminal_reason));
+  let completed = first;
+  for (let count = 0; count < 5 && completed.turn_status !== 'completed'; count += 1) {
+    completed = await call('cursor_wait', { session_id: first.session_id, turn_id: first.turn_id,
+      after_event_id: completed.last_event_id, timeout_ms: 1000 });
+  }
+  assert.equal(completed.turn_status, 'completed');
+  await call('cursor_close_session', { session_id: first.session_id });
+  const resumed = await call('cursor_resume_session', { cwd: fixture.workspace, mode: 'ask',
+    cursor_session_id: first.cursor_session_id, model: 'grok-4.6', effort: 'low', fast: true });
+  try {
+    assert.equal(resumed.session_state, 'live', JSON.stringify(resumed.terminal_reason));
+    assert.deepEqual([resumed.model, resumed.effort, resumed.fast], ['grok-4.6', 'low', true]);
+  } finally { await call('cursor_close_session', { session_id: resumed.session_id }); }
 });
 
 test('scripted providers use distinct OS-assigned endpoints in parallel', async (t) => {
@@ -1736,9 +1802,7 @@ test('hosted Codex actually calls the installed Cursor MCP tools', { skip: proce
     FAKE_ACP_EXPECT_CODEX_HOME: fixture.home, CURSOR_EVAL_WORKSPACE: outer.workspace,
     CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH: programPath, CURSOR_EVAL_MCP_EVIDENCE: join(evidenceRoot, 'mcp.json'),
     FAKE_ACP_SAFE_EVIDENCE: safeEvidencePath,
-    ...(harnessFaults.has('accelerate-turn-timeout') || harnessFaults.has('accelerate-wait-timeout')
-      ? { CURSOR_EVAL_TIMEOUT_PRELOAD: join(fixture.root, 'fake-agent/accelerate-turn-timeout.mjs') }
-      : {}),
+    CURSOR_EVAL_TIMEOUT_PRELOAD: await fakeCursorPreload(fixture),
     ...(harnessFaults.has('accelerate-turn-timeout') ? { FAKE_ACP_ACCELERATE_TURN_TIMEOUT: '1' } : {}),
     ...(harnessFaults.has('accelerate-wait-timeout') ? { FAKE_ACP_ACCELERATE_WAIT_TIMEOUT: '1' } : {}) };
   await configureFakeAgent(fixture.fakeAgent, {
@@ -1915,6 +1979,7 @@ test('credential-free client integration completes the installed-skill MCP loop 
     CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH: programPath,
     CURSOR_EVAL_PROVIDER_EVIDENCE: providerEvidence, CURSOR_EVAL_MCP_EVIDENCE: join(evidenceRoot, 'mcp.json'),
     FAKE_ACP_SAFE_EVIDENCE: safeEvidencePath,
+    CURSOR_EVAL_TIMEOUT_PRELOAD: await fakeCursorPreload(fixture),
     CURSOR_EVAL_WARMUP: '1', CURSOR_EVAL_DEFERRED_TOOL_SEARCH: '0', CURSOR_EVAL_PROVIDER_PORT: '0' };
   await configureFakeAgent(fixture.fakeAgent, { CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH: programPath, FAKE_ACP_SAFE_EVIDENCE: safeEvidencePath });
   const installed = await runBootstrap(['install', '--source-root', fixture.source,

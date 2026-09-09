@@ -14,12 +14,11 @@ async function render(...items) {
   return chunks.join('');
 }
 
-test('Node 22.23.1 adapter emits only the supervisor event contract as ordered JSONL', async () => {
+test('reporter replays the Node 22.23.1 golden events as ordered supervisor JSONL', async () => {
   const fixture = JSON.parse(await readFile(
     new URL('./fixtures/node-test-reporter-v22.23.1.golden.json', import.meta.url),
     'utf8',
   ));
-  assert.equal(process.versions.node, fixture.node_version);
   const output = await render(...fixture.input_events);
 
   assert.deepEqual(

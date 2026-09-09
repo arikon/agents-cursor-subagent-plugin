@@ -188,11 +188,15 @@ test('candidate inventory detects oracle drift independently of skill and exclud
   const load = async (path) => Buffer.from(path.endsWith('/cursor-eval-scenario.mjs') ? 'oracle-v1' : 'unchanged');
   const first = await readEvaluatorInventory('/first-checkout', load);
   assert.deepEqual(await readEvaluatorInventory('/another-checkout', load), first);
-  const changed = await readEvaluatorInventory('/first-checkout', async (path) =>
-    path.endsWith('/cursor-eval-scenario.mjs') ? Buffer.from('oracle-v2') : load(path));
-  assert.notDeepEqual(changed.digest, first.digest);
-  assert.deepEqual(changed.files.find(({ path }) => path.endsWith('/SKILL.md')),
-    first.files.find(({ path }) => path.endsWith('/SKILL.md')));
+  for (const input of ['scripts/cursor-eval-scenario.mjs', 'scripts/cursor-model-adapter.mjs',
+    'tests/fixtures/release-model-discovery-preload.mjs', 'tests/fixtures/cursor-eval-model-catalog.json',
+    'tests/fixtures/cursor-model-catalog-1.0.31.json', 'tests/fixtures/fake-codex-cli-v01521.mjs']) {
+    const changed = await readEvaluatorInventory('/first-checkout', async (path) =>
+      path === `/first-checkout/${input}` ? Buffer.from('changed evaluator input') : load(path));
+    assert.notDeepEqual(changed.digest, first.digest, input);
+    assert.deepEqual(changed.files.find(({ path }) => path.endsWith('/SKILL.md')),
+      first.files.find(({ path }) => path.endsWith('/SKILL.md')));
+  }
   const alternate = await readEvaluatorInventory('/first-checkout', load, 'tests/fixtures/alternate-runner.mjs');
   assert.notDeepEqual(alternate.digest, first.digest);
   assert.equal(alternate.selected_runner, 'tests/fixtures/alternate-runner.mjs');

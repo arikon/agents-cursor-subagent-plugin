@@ -55,7 +55,7 @@ async function fixture(t) {
   t.after(() => rm(root, { recursive: true, force: true }));
   const source = join(root, 'source'); const workspace = join(root, 'workspace'); const managed = join(root, 'managed-marketplace');
   await mkdir(source); await mkdir(workspace);
-  for (const path of ['.codex-plugin/plugin.json', 'README.md', 'scripts/cursor-subagent-mcp.mjs', 'scripts/recording-mcp-proxy.mjs', 'scripts/cursor-subagent-bootstrap.mjs']) {
+  for (const path of ['.codex-plugin/plugin.json', 'README.md', 'scripts/cursor-subagent-mcp.mjs', 'scripts/cursor-model-adapter.mjs', 'scripts/recording-mcp-proxy.mjs', 'scripts/cursor-subagent-bootstrap.mjs']) {
     await mkdir(join(source, path, '..'), { recursive: true }); await cp(join(repository, path), join(source, path));
   }
   await cp(join(repository, 'skills'), join(source, 'skills'), { recursive: true });
