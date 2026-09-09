@@ -184,9 +184,9 @@ test('eval matrix records every independent serial run without collapsing failed
   assert.deepEqual([...new Set(summary.results.map(({ serial_index: index }) => index))], [1, 2, 3]);
   assert.ok(summary.runs.every((run) => !Object.hasOwn(run, 'results')));
   assert.equal(summary.results.find(({ serial_index: index, scenario_id: scenarioId }) =>
-    index === 3 && scenarioId === 'model-events-lost').artifact_root,
-    relative(root, `${output}.artifacts/serial-3/model-events-lost-attempt-1`));
-  await readFile(`${output}.artifacts/serial-3/model-events-lost-attempt-1/driver-stdout.txt`, 'utf8');
+    index === 3 && scenarioId === 'model-state-observation').artifact_root,
+  relative(root, `${output}.artifacts/serial-3/model-state-observation-attempt-1`));
+  await readFile(`${output}.artifacts/serial-3/model-state-observation-attempt-1/driver-stdout.txt`, 'utf8');
 });
 
 test('interrupted eval matrix terminates active children without publishing a partial summary', async (t) => {

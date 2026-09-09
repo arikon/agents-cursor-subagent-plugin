@@ -289,24 +289,7 @@ async function captureReleaseProof(layout, configuration, executables, childEnv)
   };
 }
 
-function exactPermission(turn, markerPath, alreadyAllowed) {
-  const pending = turn.pending || [];
-  if (alreadyAllowed || pending.length !== 1 || pending[0].kind !== 'permission') throw new Error('unexpected pending request');
-  const locations = pending[0].context?.locations || [];
-  if (locations.length === 0 || locations.some((location) => location.path?.text !== markerPath)) throw new Error('permission location is outside the exact marker path');
-  return pending[0];
-}
-
-export function terminalAgentError(turn) {
-  return /^\s*Error:/.test(turn?.result?.text || '');
-}
-
-export function classifyLiveOutcome({ enabled, failure = null, closeSucceeded = false, markerMatches = false }) {
-  if (!enabled) return { status: 'skipped' };
-  if (failure) return { status: 'integration_failure', message: failure };
-  if (!closeSucceeded) return { status: 'integration_failure', message: 'finally close failed' };
-  return markerMatches ? { status: 'pass' } : { status: 'agent_behavior_mismatch' };
-}
+import { classifyLiveOutcome, exactPermission, terminalAgentError } from './release-e2e-oracle-support.mjs';
 
 export async function closeCanaryClient(client, turn) {
   const failures = [];
@@ -543,24 +526,6 @@ test('release discovery rejects a server version different from the installed ma
   await assert.rejects(installAndDiscover(layout, { node: executable, codex: executable, agent: executable },
     [executable, fakeAdapter], env, { FAKE_MCP_CLOSE_MARKER: closeMarker }), /manifest and MCP server versions differ/);
   assert.equal(await readFile(closeMarker, 'utf8'), 'closed');
-});
-
-test('live canary admits at most one exact-path permission', () => {
-  const marker = '/tmp/exact-marker';
-  const turn = { pending: [{ request_id: 'one', kind: 'permission', context: { locations: [{ path: { text: marker } }] } }] };
-  assert.equal(exactPermission(turn, marker, false).request_id, 'one');
-  assert.throws(() => exactPermission(turn, marker, true), /unexpected pending request/);
-  assert.throws(() => exactPermission(turn, '/tmp/other', false), /outside the exact marker path/);
-});
-
-test('live result classifier covers every terminal outcome deterministically', () => {
-  assert.deepEqual(classifyLiveOutcome({ enabled: false }), { status: 'skipped' });
-  assert.deepEqual(classifyLiveOutcome({ enabled: true, failure: 'boom', closeSucceeded: true }), { status: 'integration_failure', message: 'boom' });
-  assert.deepEqual(classifyLiveOutcome({ enabled: true, closeSucceeded: false }), { status: 'integration_failure', message: 'finally close failed' });
-  assert.deepEqual(classifyLiveOutcome({ enabled: true, closeSucceeded: true, markerMatches: false }), { status: 'agent_behavior_mismatch' });
-  assert.deepEqual(classifyLiveOutcome({ enabled: true, closeSucceeded: true, markerMatches: true }), { status: 'pass' });
-  assert.equal(terminalAgentError({ result: { text: '\nError: RetriableError' } }), true);
-  assert.equal(terminalAgentError({ result: { text: 'Created the marker.' } }), false);
 });
 
 test('release handoff consumes only the exact outer package canary reference and digests', async () => {
