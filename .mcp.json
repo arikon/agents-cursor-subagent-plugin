@@ -2,6 +2,7 @@
   "mcpServers": {
     "cursor-subagent": {
       "command": "node",
+      "cwd": ".",
       "args": ["scripts/cursor-subagent-mcp.mjs"],
       "env": {
         "AGENT_CLI_CREDENTIAL_STORE": "file"

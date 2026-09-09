@@ -25,6 +25,7 @@ test('source MCP manifest uses only portable runtime paths', () => {
   const manifest = JSON.parse(readFileSync(new URL('../.mcp.json', import.meta.url), 'utf8'));
   const server = manifest.mcpServers['cursor-subagent'];
   assert.equal(server.command, 'node');
+  assert.equal(server.cwd, '.');
   assert.deepEqual(server.args, ['scripts/cursor-subagent-mcp.mjs']);
   assert.deepEqual(server.env, { AGENT_CLI_CREDENTIAL_STORE: 'file' });
 });
