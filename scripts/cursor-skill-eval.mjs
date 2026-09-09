@@ -17,7 +17,7 @@ const EVALUATOR_INPUTS = Object.freeze([
   'scripts/node-test-reporter-v22.mjs', 'scripts/recording-mcp-proxy.mjs',
   'scripts/run-cursor-skill-eval.mjs', 'scripts/run-node-tests.mjs',
   'skills/cursor-subagent/SKILL.md', 'skills/cursor-subagent/agents/openai.yaml',
-  'tests/codex-client-integration.test.mjs', 'tests/release-e2e.test.mjs', 'tests/fixtures/accelerate-turn-timeout.mjs',
+  'tests/codex-client-integration.test.mjs', 'tests/codex-client-oracle-support.mjs', 'tests/release-e2e.test.mjs', 'tests/release-e2e-oracle-support.mjs', 'tests/fixtures/accelerate-turn-timeout.mjs',
   'tests/fixtures/codex-app-server-v01534.golden.json',
   'tests/fixtures/codex-app-server-v01521.golden.json', 'tests/fixtures/node-test-reporter-v22.23.1.golden.json',
   'tests/fixtures/codex-v01521-adapter.mjs', 'tests/fixtures/codex-v01521-adapter.golden.json',

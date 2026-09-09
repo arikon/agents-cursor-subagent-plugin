@@ -40,3 +40,35 @@ R3 удалён минимально, без изменения `PYR-1`/`PYR-2`.
 Это verdict готовности плана на проверенных артефактах. Он не подтверждает
 ускорение ×2, реализацию новых lanes, закрытие SW acceptance или прохождение
 будущих full-suite/coverage gates.
+
+## Итоговый review реализации
+
+Проверка implementation scope обнаружила одно `implementation_concern`:
+real-Codex путь `client-happy` видел публичный `cursor_list_models`, а точный
+ожидаемый список tools в `tests/codex-client-integration.test.mjs` его не
+содержал. Минимальное исправление добавило этот уже экспортируемый инструмент
+в ожидание; product MCP contract, skill и supervisor не менялись.
+
+После исправления `CURSOR_EVAL_REAL_CODEX=1 node
+scripts/run-cursor-skill-eval.mjs client-happy` завершился `pass`. Полные
+детерминированные gates запущены с очищенным `NODE_USE_ENV_PROXY`: `unit` —
+777/777, `coverage` — 777/777, child stderr пуст, coverage 99.907% lines,
+98.155% branches и 99.887% functions. Предыдущий полный прогон с
+унаследованным proxy-флагом записан только как диагностика ambient stderr
+interference и не является результатом верификации.
+
+`openspec validate refactor-test-pyramid --strict`, semantic gate и
+`git diff --check` проходят. Открытых `baseline_violation`, CRITICAL или
+WARNING findings нет; ограничение остаётся прежним: hosted baseline не
+переснимался и не заявляется. Change готов к archive по отдельному запросу.
+
+Независимый финальный reviewer подтвердил точечное исправление: ожидание в
+`tests/codex-client-integration.test.mjs` совпадает с публичным экспортом
+`scripts/cursor-subagent-mcp.mjs` и operator skill. Новых findings нет;
+точное сравнение полного списка инструментов сохранено.
+
+Заключительный audit выполнил все отдельные deterministic routes в очищенном
+окружении: `component` — 191/191, `integration` — 586/586, `unit` — 777/777,
+`coverage` — 777/777 и `release` — pass. Эти результаты покрывают раздельные
+lanes, совместимый aggregate, coverage scope и минимальный package route;
+real-Codex `client-happy` остаётся отдельным explicit acceptance.

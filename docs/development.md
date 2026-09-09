@@ -9,6 +9,8 @@ that exact version:
 
 ```bash
 node scripts/run-node-tests.mjs unit
+node scripts/run-node-tests.mjs component
+node scripts/run-node-tests.mjs integration
 node scripts/run-node-tests.mjs coverage
 node scripts/run-node-tests.mjs release
 ```
@@ -16,8 +18,20 @@ node scripts/run-node-tests.mjs release
 Run commands in the foreground and wait for the terminal verdict. A failed run
 prints diagnostics and an artifact directory containing `tap.txt`, `stderr.txt`,
 `failures.jsonl`, and the atomic `result.json`. Read `result.json` first, then its
-referenced files. Coverage includes only the product manifest; the release lane
-excludes hosted and real-Codex opt-ins.
+referenced files. `component` selects deterministic validation and local-fixture
+checks; `integration` selects subprocess, transport and filesystem boundaries.
+`unit` is their complete compatible aggregate, and `coverage` runs that same
+aggregate against the product manifest. The release lane excludes hosted and
+real-Codex opt-ins.
+
+Live canaries run only through a focused `eval` selection with their explicit
+enable flag. The supervisor rejects an enabled flag without its compatible test
+file before spawning a child; inherited flags are removed from all local and
+release lanes. Current routes are `CURSOR_EVAL_REAL_CODEX` or
+`CURSOR_EVAL_HOSTED_CODEX` with `tests/codex-client-integration.test.mjs`,
+`CURSOR_SUBAGENT_LIVE_E2E` or `CURSOR_MODEL_DISCOVERY_LIVE` with
+`tests/release-e2e.test.mjs`, and `CLAUDE_MARKETPLACE_CANARY` with
+`tests/claude-marketplace-canary.test.mjs`.
 
 ## Behavior acceptance
 
@@ -70,7 +84,7 @@ To migrate to version `X.Y.Z`:
 4. Add a negative admission test for the old fixture and run:
 
    ```bash
-   node scripts/run-node-tests.mjs unit --test tests/bootstrap.test.mjs --test tests/codex-app-server-client.test.mjs
+   node scripts/run-node-tests.mjs integration --test tests/bootstrap-adapter.test.mjs --test tests/codex-app-server-client.test.mjs
    node scripts/run-node-tests.mjs unit --test tests/cursor-skill-eval.test.mjs --test tests/run-cursor-skill-eval.test.mjs
    node scripts/run-node-tests.mjs eval --test tests/codex-client-integration.test.mjs
    openspec validate improve-interactive-acp-ux --strict

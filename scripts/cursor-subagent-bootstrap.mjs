@@ -183,8 +183,12 @@ export async function runPackageCommand(command, args, { env = process.env, time
       else chunks.push(chunk);
     });
     child.on('error', (error) => finish({ code: null, output: '', error: error.message }));
-    child.on('close', (code) => finish({ code, output: Buffer.concat(stdout).toString('utf8'), error: Buffer.concat(stderr).toString('utf8'),
-      timeout: killReason === 'timeout', overflow: killReason === 'overflow' }));
+    child.on('close', (code) => {
+      const output = Buffer.concat(stdout).toString('utf8');
+      const error = Buffer.concat(stderr).toString('utf8');
+      finish({ code, output, error,
+        timeout: killReason === 'timeout', overflow: killReason === 'overflow' });
+    });
     timer = setTimeout(() => killAndWait('timeout'), timeoutMs);
   });
 }

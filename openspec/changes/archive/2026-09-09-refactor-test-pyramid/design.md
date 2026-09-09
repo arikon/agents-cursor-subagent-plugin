@@ -11,7 +11,7 @@ admitted test через `eval --test` с pattern. У `eval` также есть
 команд на момент proposal ещё нет.
 
 В текущих тестах есть process-global подмены environment, timers и `Date.now`.
-`runtime.test.mjs` поднимает fake ACP в настоящих процессах; простой rename
+`runtime-*.test.mjs` поднимают fake ACP в настоящих процессах; простой rename
 или перенос такого сценария в component lane не меняет его уровень.
 У `release-e2e` и `codex-client-integration` есть чистые функции harness,
 которые сейчас исполняются вместе с верхними уровнями.

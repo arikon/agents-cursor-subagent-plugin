@@ -10,13 +10,28 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..');
-export const SCRUBBED_ENV = Object.freeze(['CURSOR_EVAL_REAL_CODEX', 'CURSOR_EVAL_HOSTED_CODEX', 'CURSOR_SUBAGENT_LIVE_E2E']);
-const unitTests = Object.freeze([
-  'tests/bootstrap.test.mjs', 'tests/check-openspec-semantics.test.mjs', 'tests/claude-marketplace-canary.test.mjs', 'tests/codex-app-server-client.test.mjs',
-  'tests/cursor-skill-eval.test.mjs', 'tests/eval-matrix.test.mjs', 'tests/facade.test.mjs', 'tests/mcp-smoke.test.mjs', 'tests/mcp-transport.test.mjs',
-  'tests/node-test-reporter-v22.test.mjs', 'tests/run-cursor-skill-eval.test.mjs', 'tests/runtime.test.mjs', 'tests/node-test-supervisor.test.mjs',
-  'tests/model-discovery.test.mjs', 'tests/coverage-audit.test.mjs', 'tests/eval-closeout.test.mjs',
+export const SCRUBBED_ENV = Object.freeze([
+  'CLAUDE_MARKETPLACE_CANARY', 'CURSOR_EVAL_REAL_CODEX', 'CURSOR_EVAL_HOSTED_CODEX',
+  'CURSOR_MODEL_DISCOVERY_LIVE', 'CURSOR_SUBAGENT_LIVE_E2E',
 ]);
+const componentTests = Object.freeze([
+  'tests/check-openspec-semantics.test.mjs', 'tests/coverage-audit.test.mjs',
+  'tests/codex-client-integration-component.test.mjs', 'tests/facade.test.mjs', 'tests/release-e2e-component.test.mjs', 'tests/codex-client-oracle-component.test.mjs', 'tests/run-cursor-skill-eval-component.test.mjs', 'tests/bootstrap-component.test.mjs', 'tests/codex-app-server-client-component.test.mjs', 'tests/node-test-reporter-v22.test.mjs',
+]);
+const integrationTests = Object.freeze([
+  'tests/bootstrap-cli.test.mjs', 'tests/cursor-skill-eval.test.mjs', 'tests/cursor-skill-eval-component.test.mjs', 'tests/eval-closeout.test.mjs', 'tests/bootstrap-adapter.test.mjs', 'tests/bootstrap-lifecycle.test.mjs', 'tests/bootstrap-recovery.test.mjs', 'tests/codex-app-server-client.test.mjs', 'tests/eval-matrix.test.mjs', 'tests/eval-closeout-cli.test.mjs',
+  'tests/mcp-smoke.test.mjs', 'tests/mcp-transport.test.mjs', 'tests/node-test-supervisor.test.mjs',
+  'tests/run-cursor-skill-eval.test.mjs', 'tests/runtime-admission.test.mjs', 'tests/runtime-interaction.test.mjs',
+  'tests/runtime-callbacks-results.test.mjs', 'tests/runtime-lifecycle.test.mjs', 'tests/model-discovery.test.mjs',
+]);
+const unitTests = Object.freeze([...componentTests, ...integrationTests]);
+const EVAL_OPT_INS = Object.freeze({
+  CLAUDE_MARKETPLACE_CANARY: Object.freeze(['tests/claude-marketplace-canary.test.mjs']),
+  CURSOR_EVAL_REAL_CODEX: Object.freeze(['tests/codex-client-integration.test.mjs']),
+  CURSOR_EVAL_HOSTED_CODEX: Object.freeze(['tests/codex-client-integration.test.mjs']),
+  CURSOR_MODEL_DISCOVERY_LIVE: Object.freeze(['tests/release-e2e.test.mjs']),
+  CURSOR_SUBAGENT_LIVE_E2E: Object.freeze(['tests/release-e2e.test.mjs']),
+});
 const productSources = Object.freeze([
   'scripts/check-openspec-semantics.mjs', 'scripts/codex-app-server-client.mjs', 'scripts/cursor-eval-scenario.mjs', 'scripts/cursor-skill-eval.mjs', 'scripts/openspec-semantic-registry.mjs',
   'scripts/cursor-subagent-bootstrap.mjs', 'scripts/cursor-subagent-mcp.mjs', 'scripts/cursor-model-adapter.mjs', 'scripts/node-test-reporter-v22.mjs',
@@ -27,10 +42,12 @@ const productSources = Object.freeze([
 const coverageThresholds = Object.freeze({ lines: 90, branches: 90, functions: 90 });
 const focusedTestPath = /^tests\/[A-Za-z0-9_.-]+\.test\.mjs$/;
 export const LANES = Object.freeze({
-  unit: Object.freeze({ tests: unitTests, concurrency: 2, timeoutMs: 120_000, deadlineMs: 600_000 }),
-  coverage: Object.freeze({ tests: unitTests, concurrency: 2, timeoutMs: 120_000, deadlineMs: 900_000, coverage: true }),
+  component: Object.freeze({ tests: componentTests, concurrency: 4, timeoutMs: 120_000, deadlineMs: 600_000 }),
+  integration: Object.freeze({ tests: integrationTests, concurrency: 4, timeoutMs: 120_000, deadlineMs: 600_000 }),
+  unit: Object.freeze({ tests: unitTests, concurrency: 4, timeoutMs: 120_000, deadlineMs: 600_000 }),
+  coverage: Object.freeze({ tests: unitTests, concurrency: 4, timeoutMs: 120_000, deadlineMs: 900_000, coverage: true }),
   release: Object.freeze({ tests: Object.freeze(['tests/release-e2e.test.mjs']), concurrency: 1, timeoutMs: 120_000, deadlineMs: 300_000 }),
-  eval: Object.freeze({ tests: Object.freeze(['tests/codex-client-integration.test.mjs', 'tests/release-e2e.test.mjs']), concurrency: 1, timeoutMs: 420_000, deadlineMs: 600_000, preserveEvalOptIns: true }),
+  eval: Object.freeze({ tests: Object.freeze(['tests/claude-marketplace-canary.test.mjs', 'tests/codex-client-integration.test.mjs', 'tests/release-e2e.test.mjs']), concurrency: 1, timeoutMs: 420_000, deadlineMs: 600_000, preserveEvalOptIns: true }),
 });
 
 function errorRecord(error) { return { name: error?.name || 'Error', message: error?.message || String(error), code: error?.code, stack: error?.stack }; }
@@ -188,9 +205,17 @@ export async function runSupervisor({ laneName, tests = null, testNamePattern = 
   if (!validFocusedTests || !validPattern || (lane.coverage && (tests !== null || testNamePattern !== null))) {
     return earlyFailure('invalid_invocation', { stage: 'preflight', cause: 'invalid_invocation' });
   }
+  const selectedTests = tests || lane.tests;
+  const enabledOptIns = SCRUBBED_ENV.filter((key) => env[key] === '1');
+  const compatibleOptIns = lane.preserveEvalOptIns && tests !== null
+    && enabledOptIns.every((key) => selectedTests.every((test) => EVAL_OPT_INS[key].includes(test)));
+  if (lane.preserveEvalOptIns && enabledOptIns.length && !compatibleOptIns) {
+    return earlyFailure('invalid_invocation', { stage: 'preflight', cause: 'invalid_invocation' });
+  }
   const state = { terminalCause: null, infrastructure: null, timedOut: false, interrupted: false, signal: null };
   const childEnv = { ...env };
-  if (!lane.preserveEvalOptIns) for (const key of SCRUBBED_ENV) delete childEnv[key];
+  for (const key of SCRUBBED_ENV) delete childEnv[key];
+  if (compatibleOptIns) for (const key of enabledOptIns) childEnv[key] = '1';
   const args = ['--test', `--test-concurrency=${lane.concurrency}`, `--test-timeout=${lane.timeoutMs}`,
     '--test-reporter=tap', `--test-reporter-destination=${paths.tap}`, `--test-reporter=${join(root, 'scripts/node-test-reporter-v22.mjs')}`, `--test-reporter-destination=${paths.failures}`];
   if (lane.coverage) {
@@ -198,7 +223,7 @@ export async function runSupervisor({ laneName, tests = null, testNamePattern = 
     for (const source of productSources) args.push(`--test-coverage-include=${source}`);
   }
   if (testNamePattern !== null) args.push(`--test-name-pattern=${testNamePattern}`);
-  args.push(...(tests || lane.tests).map((test) => join(root, test)));
+  args.push(...selectedTests.map((test) => join(root, test)));
   const loadSource = dependencies.readFile || readFile;
   let sources = null;
   if (lane.coverage) {

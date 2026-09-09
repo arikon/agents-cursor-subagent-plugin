@@ -146,5 +146,5 @@ export async function runFakeCodexAdapter(operation, request, env = process.env)
 export async function runFakeCodexAdapterCommand(_command, args, { env = process.env } = {}) {
   const [, operation, rawRequest] = args;
   const result = await runFakeCodexAdapter(operation, JSON.parse(rawRequest || '{}'), env);
-  return { code: result.code, output: result.output, timeout: result.timeout, overflow: result.overflow };
+  return { code: result.code, output: result.stream === 'stdout' ? result.output : '', error: result.stream === 'stderr' ? result.output : '', timeout: result.timeout, overflow: result.overflow };
 }

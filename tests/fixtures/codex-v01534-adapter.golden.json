@@ -1,8 +1,8 @@
 {
   "adapter_version": "codex-cli-0.153.4-fixture-v1",
   "codex_version": "codex-cli 0.153.4",
-  "implementation_sha256": "bd3ec39d5ef094577bacf062f8918ba897c66b1f2e1e3cc0a1c08a4f81dc4910",
-  "implementation_bytes": 10188,
+  "implementation_sha256": "def5bfefeb4a7ed4d5121431e2764bdbb1b0f0b30c29d373bd12e70c7f296a3b",
+  "implementation_bytes": 10328,
   "wrapper_sha256": "5ad4cb1117c27ae112e4fe610d4fe155f121c05a77fb0458a6a27c36fc4c2e5e",
   "wrapper_bytes": 125,
   "shared_implementation": "codex-v01521-adapter.mjs",
