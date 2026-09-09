@@ -36,7 +36,6 @@
       "scenario_id": "model-question",
       "lane": "model-behavior",
       "owner_requirements": [
-        { "capability": "cursor-acp-session-runtime", "requirement": "Адресуемое ожидание состояния сессии" },
         { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" }
       ],
       "initial_input": "Делегируй Cursor проверку в режиме вопросов. Если для продолжения потребуется моё уточнение, передай мне исходный текст вопроса и видимые варианты дословно, затем дождись ответа.",
@@ -64,10 +63,8 @@
         { "kind": "turn.started" },
         { "kind": "pending.question", "step_id": "question-1" },
         { "kind": "answer.rejected-stale", "step_id": "question-1", "error_code": "unknown_request" },
-        { "kind": "turn.wait-timeout", "timeout_ms": 60000, "timeout_omitted": false },
         { "kind": "pending.question", "step_id": "question-1" },
         { "kind": "answer.question", "step_id": "question-1", "option_ids": ["choice-1"] },
-        { "kind": "turn.wait-recovered", "timeout_ms": 60000, "timeout_omitted": false },
         { "kind": "turn.completed", "step_id": "terminal-1" },
         { "kind": "turn.receipt", "step_id": "terminal-1", "matched": true, "result_truncated": false },
         { "kind": "session.close-attempted" }

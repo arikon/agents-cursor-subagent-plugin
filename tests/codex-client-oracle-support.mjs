@@ -55,6 +55,7 @@ function observationsFromEvidence(scenario, transcriptEvidence, safeEvidence, ou
     const codexTurnIndex = codexTurnIndexForCall(callIndex);
     const traceLengthBeforeCall = trace.length;
     let expectedFailure = false;
+    let terminalAlreadyObserved = false;
     const callOutcome = !call.response ? 'not_observed' : call.response.ok ? 'succeeded' : 'failed';
     const ids = { session_id: call.request?.session_id || call.response?.session_id || sessionId,
       turn_id: call.request?.turn_id || call.response?.turn_id || turnId };
@@ -118,6 +119,9 @@ function observationsFromEvidence(scenario, transcriptEvidence, safeEvidence, ou
     } else if (call.tool === 'cursor_set_mode' && callOutcome === 'succeeded') {
       trace.push({ kind: 'session.mode-changed', mode: call.request?.mode,
         session_id: call.request?.session_id || call.response?.session_id, call_outcome: callOutcome });
+    } else if (call.tool === 'cursor_list_models' && callOutcome === 'succeeded') {
+      // Model discovery is global runtime metadata.  It neither reads nor
+      // advances a delegated session, including one that was just closed.
     } else if (call.tool === 'cursor_wait') {
       const timeoutOmitted = call.request?.timeout_ms === undefined;
       const effectiveTimeoutMs = timeoutOmitted ? 30_000 : call.request.timeout_ms;
@@ -138,6 +142,7 @@ function observationsFromEvidence(scenario, transcriptEvidence, safeEvidence, ou
       }
       const terminalStatus = call.response?.turn_status;
       const terminal = ['completed', 'failed', 'timed_out'].includes(terminalStatus);
+      terminalAlreadyObserved = terminal && ids.turn_id && completedTurnIds.has(ids.turn_id);
       if (terminal && sawWaitTimeout) {
         trace.push({ kind: 'turn.wait-recovered', timeout_ms: effectiveTimeoutMs, timeout_omitted: timeoutOmitted,
           progress_revision_matched: progressRevisionMatched, ...ids, call_outcome: callOutcome });
@@ -161,7 +166,7 @@ function observationsFromEvidence(scenario, transcriptEvidence, safeEvidence, ou
         trace.push({ kind: `pending.${pending.kind}`, step_id: observedCallback?.step_id || `unobserved:${pending.request_id}`,
           ...ids, request_id: pending.request_id, call_outcome: callOutcome });
       }
-      if (terminal && ids.turn_id && !completedTurnIds.has(ids.turn_id)) {
+      if (terminal && ids.turn_id && !terminalAlreadyObserved) {
         completedTurnIds.add(ids.turn_id);
         terminalProgramIndex += 1;
         const completedEvidenceRecord = terminalStatus === 'completed' ? terminalEvidence[terminalIndex++] : null;
@@ -258,7 +263,10 @@ function observationsFromEvidence(scenario, transcriptEvidence, safeEvidence, ou
     } else {
       trace.push({ kind: 'unexpected-operation', ...ids, call_outcome: callOutcome });
     }
-    if (trace.length === traceLengthBeforeCall && !(call.tool === 'cursor_read_result' && callOutcome === 'succeeded')) {
+    if (trace.length === traceLengthBeforeCall
+      && !(callOutcome === 'succeeded' && (call.tool === 'cursor_read_result'
+        || call.tool === 'cursor_list_models'
+        || (call.tool === 'cursor_wait' && terminalAlreadyObserved)))) {
       trace.push({ kind: 'call.observed', ...ids, call_outcome: callOutcome });
     }
     if (callOutcome !== 'succeeded' && !expectedFailure) trace.push({ kind: 'call.failed', ...ids, call_outcome: callOutcome });
