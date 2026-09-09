@@ -25,6 +25,7 @@ const EVALUATOR_INPUTS = Object.freeze([
   'tests/fixtures/cursor-agent-v20260825.golden.json', 'tests/fixtures/fake-acp.mjs',
   'tests/fixtures/fake-ollama-responses.mjs', 'tests/fixtures/fake-codex-adapter.mjs', 'tests/fixtures/fake-codex-adapter-core.mjs', 'tests/fixtures/fake-mcp-version.mjs',
   'tests/fixtures/release-fake-acp.mjs',
+  'tests/fixtures/release-generation-acp.mjs',
   'tests/fixtures/release-model-discovery-preload.mjs', 'tests/fixtures/cursor-eval-model-catalog.json',
   'tests/fixtures/cursor-model-catalog-1.0.31.json', 'tests/fixtures/fake-codex-cli-v01521.mjs',
 ].sort());

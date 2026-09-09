@@ -41,6 +41,34 @@ cursors. Проверка использует контролируемую си
 harness, а не live latency threshold. Объём ответов — дополнительное измерение;
 никакой конкретный выигрыш по времени или байтам не обещан.
 
+## Контролируемое сравнение реализации (2026-09-09)
+
+Проверен настоящий baseline `b8a1e5c90cc6bc82362a7c174e42ff49e649e40d`,
+материализованный через `git archive`, и текущий runtime. Исходник диагностики —
+`compare-pending-wait.mjs`, полный machine-readable результат —
+`controlled-pending-wait.json`. Это диагностический replay, не benchmark и не
+новая зависимость deterministic suite от Git/history.
+
+```sh
+git archive b8a1e5c90cc6bc82362a7c174e42ff49e649e40d | tar -x -C <empty-baseline-root>
+node openspec/changes/simplify-task-state-wait/evidence/compare-pending-wait.mjs <baseline-root> <current-root>
+```
+
+Оба runtime получают одинаковые две admitted permission callbacks, первый answer
+и затем ни одного нового события. Callback transport подтверждён контролируемым
+`sendConfirmed`; реальный fixture process удерживает prompt. Baseline получает
+актуальный event cursor из answer boundary: wait остаётся незавершённым до явного
+срабатывания управляемого таймера на 1000 ms и возвращает `wait_timeout:true`.
+Candidate без cursor возвращает полный второй pending сразу в microtask queue,
+не регистрирует таймер, clock advance равен 0, `wait_timeout:false`.
+У обоих ровно один provider answer и ноль новых events после answer.
+Команда завершилась exit 0; миллисекунды — контролируемое время, не live latency.
+
+Постоянный regression owner — `tests/runtime-lifecycle.test.mjs`, сценарий
+`remaining permission is immediately observable without another event or clock advance`.
+Он запрещает регистрацию timeout и сравнивает полный retained permission context;
+старое поведение не копируется в product или постоянный test harness.
+
 ## Границы
 
 Не включаются пакетные/pre-authorized permissions, pending в ActionEnvelope

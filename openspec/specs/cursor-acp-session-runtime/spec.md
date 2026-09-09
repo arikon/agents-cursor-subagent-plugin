@@ -8,7 +8,7 @@
 
 ### Requirement: Единая машина состояний runtime
 Этот requirement — единственный нормативный источник переходов `session_state`,
-`turn_status` и terminalization; `cursor_wait` владеет cursor/wake semantics,
+`turn_status` и terminalization; `cursor_wait` владеет state observation/wake semantics,
 а конфигурация runtime — TTL и limits. Design, facade и package MUST ссылаться
 на соответствующего владельца, а не дублировать transition semantics.
 
@@ -70,7 +70,7 @@ Runtime SHALL быть единственным владельцем MCP schemas
 `cursor_resume_session({cwd,cursor_session_id,mode,model?,effort?,fast?,optimize_for?,plugin_dirs?})`,
 `cursor_set_mode({session_id,mode})`, `cursor_send_prompt({session_id,prompt})`,
 `cursor_session_status({session_id})`, `cursor_read_result({session_id,turn_id,offset?})`,
-`cursor_wait({session_id,turn_id,after_event_id?,after_progress_revision?,timeout_ms?})`,
+`cursor_wait({session_id,turn_id,timeout_ms?})`,
 `cursor_answer_question({session_id,turn_id,request_id,outcome,answers?})`,
 `cursor_answer_plan({session_id,turn_id,request_id,decision})`,
 `cursor_answer_permission({session_id,turn_id,request_id,decision})`,
@@ -81,7 +81,7 @@ Runtime SHALL быть единственным владельцем MCP schemas
 answer fields nonempty UTF-8 strings в limits данного change; `cwd` — canonical
 absolute directory, `mode` exactly `ask|plan|agent`; `decision` exactly
 `accept|reject` для plan и `allow-once|reject-once` для permission. IDs opaque;
-`after_event_id`/`timeout_ms` имеют ranges из «Нормативные limits runtime».
+`timeout_ms` имеют ranges из «Нормативные limits runtime».
 
 | Tool | Required input | Optional input | Success output |
 |---|---|---|---|
@@ -92,7 +92,7 @@ absolute directory, `mode` exactly `ask|plan|agent`; `decision` exactly
 | `cursor_set_mode` | `session_id`, `mode` | — | `ActionEnvelope` + `mode` |
 | `cursor_send_prompt` | `session_id`, `prompt` | — | `ActionEnvelope` |
 | `cursor_session_status` | `session_id` | — | `SessionEnvelope` |
-| `cursor_wait` | `session_id`, `turn_id` | `after_event_id`, `after_progress_revision`, `timeout_ms` | `WaitDeltaEnvelope` |
+| `cursor_wait` | `session_id`, `turn_id` | `timeout_ms` | `WaitStateEnvelope` |
 | `cursor_read_result` | `session_id`, `turn_id` | `offset` | `ResultPage` |
 | `cursor_answer_question` | `session_id`, `turn_id`, `request_id`, `outcome` | `answers` | `ActionEnvelope` |
 | plan/permission answer | `session_id`, `turn_id`, `request_id`, `decision` | — | `ActionEnvelope` |
@@ -165,14 +165,20 @@ started turn belongs to its `TurnEnvelope`, while the session field stays `null`
 `terminal_reason` is non-null only after terminalization. Public trace is outside
 v1 scope; bounded pending context and terminal/result fields are the diagnostics.
 `TurnEnvelope` extends `SessionEnvelope` with top-level `turn_id,turn_status`.
-`WaitDeltaEnvelope` is intentionally not a `SessionEnvelope` or `TurnEnvelope`:
-it contains only `session_id,turn_id,turn_status,session_state,last_event_id,
-resume_after_event_id,wait_timeout,events_lost` plus its changed nonempty delta
-fields. `resume_after_event_id` equals `last_event_id` and is the cursor for a
-following wait. A nonempty `pending` delta contains the complete normalized
-`PendingRequest`, including its bounded `context`; this is the primary workflow
-delivery path and MUST NOT require a diagnostic status call. Empty events,
-pending, result, receipt, nulls and unrelated session diagnostics are omitted.
+`WaitStateEnvelope` SHALL быть closed object с обязательными
+`session_id,turn_id,turn_status,session_state,wait_timeout,pending`.
+`pending` содержит все актуальные normalized `PendingRequest` этого хода,
+включая bounded context, или пустой массив. Для terminal turn envelope MUST
+содержать `result:null|BoundedText`, `terminal_reason:null|BoundedText` и
+`terminal_receipt`; retained `provider_error` добавляется при наличии.
+Для running turn на timeout `progress_excerpt` MUST присутствовать ровно тогда,
+когда сохранён непустой accepted agent text, и содержит текущий bounded excerpt
+по «Sparse wait and bounded progress». До первого такого текста и на остальных
+ветках поле MUST отсутствовать.
+Envelope MUST NOT содержать `events`, `events_lost`, `earliest_event_id`,
+`last_event_id`, `resume_after_event_id`, `progress_revision` или session diagnostics.
+Числа внутри immutable terminal receipt сохраняют прежний evidence смысл.
+
 `ActionEnvelope` is intentionally not a `SessionEnvelope` or `TurnEnvelope`:
 it contains `session_id,session_state,last_event_id` and, for a turn-targeting
 operation, `turn_id,turn_status`, plus only its operation-specific fields.
@@ -197,13 +203,10 @@ text; it is `null` only when the terminal result is `null`. `last_event_id` is
 captured after the turn's terminal result event and the complete receipt MUST
 remain immutable while later turns add session events. Receipt creation MUST
 NOT read Cursor-private persistent stores or write a new persistent registry.
-The first terminal `cursor_wait` for a target turn delivers its bounded result
-and receipt exactly once; repeated waits for that same retained turn omit both.
-Subsequent mutation acknowledgements MAY carry the compact immutable receipt of
-the affected or most recently delivered terminal turn, but MUST omit
-`last_terminal_turn` and MUST NOT redeliver its bounded result. The full retained
-snapshot preview is otherwise available only through explicit
-`cursor_session_status`; full text is read through `cursor_read_result`.
+Каждый terminal `cursor_wait` SHALL возвращать retained bounded result,
+reason и immutable receipt независимо от предыдущих или параллельных reads.
+Mutation acknowledgements сохраняют compact receipt без повторной передачи result.
+Полный retained text остаётся доступен через `cursor_read_result`.
 `ResultPage` is the closed object
 `{session_id,turn_id,offset,next_offset,eof,text,total_bytes,sha256}`. Offsets
 and total are nonnegative safe integers in UTF-8 bytes; `offset` defaults to
@@ -222,7 +225,7 @@ For every existing-session tool, `unknown_session` and, where applicable,
 `unknown_turn` MUST be returned before tool-specific provider dispatch, state
 transition or effect; bounded tombstone eviction remains independent lifecycle
 housekeeping and does not turn a rejected call into a dispatched operation.
-Tool-local validation errors for wait address/cursors/timeout, result-read
+Tool-local validation errors for wait address/timeout, result-read
 address/offset, set-mode session/mode and answer address/request/answer shape
 MUST be returned before that call creates a waiter/timer, dispatches to the
 provider, changes session/turn state or performs the requested effect. This
@@ -289,78 +292,95 @@ back to its opaque ID; exact upstream option schema is fixture-local.
 - **THEN** runtime отправляет сохранённый ACP option ID, а не semantic label
 
 ### Requirement: Адресуемое ожидание состояния сессии
-Сервер SHALL предоставлять `cursor_wait(session_id, turn_id, after_event_id?,
-after_progress_revision?, timeout_ms?)` согласно единой машине состояний для
-конкретного хода с ограниченным таймаутом. Результат MUST
-быть sparse `WaitDeltaEnvelope`, определённым requirement «Sparse wait and
-bounded progress»: mandatory адресные/state/cursor fields плюс только changed
-nonempty events, complete normalized pending context, result, receipt и progress.
-Одинаковый cursor допускает независимые повторные wait; превышение bounded
-waiter cap отклоняется.
-`event_id` — generated safe integer 1..9 007 199 254 740 991, первый 1;
-optional `after_event_id` — safe integer 0..9 007 199 254 740 991 (omission=0).
-Events находятся в одном bounded session-wide log: turn event содержит `turn_id`,
-lifecycle event может не содержать его. Фильтр возвращает target events и affecting lifecycle;
-ID могут иметь пропуски, `last_event_id` — high-water mark, `earliest_event_id`
-— retained watermark. Future cursor — MCP error; `events_lost=true` только если
-после cursor были удалены события.
-Result MUST additionally contain
-`resume_after_event_id`, equal to its `last_event_id`, and that value MUST be a
-valid cursor for the next wait for the same turn.
 
-#### Scenario: Ход Cursor завершился
-- **WHEN** клиент ожидает активную сессию и Cursor заканчивает ход
-- **THEN** ожидание возвращает `turn_status=completed`, итог хода, идентификатор события и отдельный `session_state=live` без polling полного журнала
+Runtime SHALL предоставлять `cursor_wait({session_id,turn_id,timeout_ms?})`
+с `WaitStateEnvelope` из SW-1. Состояния и numerical bounds принадлежат
+существующим runtime owners; wait не создаёт новую машину состояний.
 
-#### Scenario: Повторное ожидание terminal turn
-- **WHEN** клиент повторяет wait T1 после одноразовой доставки terminal result
-- **THEN** сервер возвращает только mandatory sparse fields и genuinely new
-  retained events, не дублируя terminal snapshot/result
+Для адресуемого terminal turn или хода с доступным pending request call MUST
+вернуть текущее состояние немедленно с `wait_timeout:false`. Для running turn
+без pending call MUST ждать pending, terminality либо истечения timeout.
+Необязательные progress/lifecycle/events сами по себе MUST NOT завершать wait.
+По timeout runtime SHALL заново проверить состояние: actionable state получает
+`wait_timeout:false`, иначе возвращается running snapshot с `wait_timeout:true`.
+Wait timeout MUST NOT отменять ход или подменять terminal `timed_out`.
+
+Read MUST NOT потреблять pending/result, продвигать consumer cursor, менять
+полномочия или продлевать retention. Одновременные waits наблюдают один источник
+состояния независимо в пределах существующего waiter cap. Snapshot соответствует
+одному моменту наблюдения; происходящие затем ответы могут сделать request stale.
+Unknown session/turn и удалённые cursor arguments MUST давать существующие domain
+errors до создания waiter/timer или provider effect. Допустимые адреса и eviction
+остаются в существующем runtime lifecycle; после потери адресуемости read не
+восстанавливает turn и не создаёт новую session.
 
 #### Scenario: Таймаут ожидания
-- **WHEN** за заданный интервал состояние сессии не изменилось
-- **THEN** ожидание возвращает sparse state/cursor fields с `wait_timeout=true`
-  и не изменяет ход Cursor
-
-#### Scenario: Deadline хода превышен
-- **WHEN** активный ход превышает сконфигурированный deadline выполнения
-- **THEN** сервер отменяет ход и сохраняет терминальное состояние `timed_out` с причиной превышения deadline
-
-#### Scenario: Устаревший идентификатор хода
-- **WHEN** клиент ожидает или отменяет `turn_id`, который не является ни активным, ни сохранённым последним terminal turn этой session/tombstone
-- **THEN** сервер отклоняет операцию и не затрагивает следующий ход той же сессии
-
-#### Scenario: Граница cursor
-- **WHEN** `after_event_id` больше session high-water mark
-- **THEN** сервер возвращает MCP error без изменения state; `after_event_id=0` сообщает `events_lost=false`, пока после него не было eviction
+- **WHEN** ход продолжает выполняться без pending до timeout
+- **THEN** wait возвращает `running`, `pending:[]`, `wait_timeout:true`, оставляя ход активным
 
 #### Scenario: Pending request ожидает решения
-- **WHEN** Cursor публикует question, plan или permission request
-- **THEN** `cursor_wait` возвращает `waiting_for_input`, pending ID и контекст, а ход не завершается
+- **WHEN** повторный wait адресует ход с нерешённым question, plan или permission
+- **THEN** он немедленно возвращает актуальные IDs и полный normalized context независимо от предыдущего read
+
+#### Scenario: Answer и следующий wait
+- **WHEN** ответ потреблён, после него caller вызывает wait только с IDs
+- **THEN** решённый request не возвращается; новый pending или terminal возвращается сразу, а running без pending ожидает
+
+#### Scenario: Повторное ожидание terminal turn
+- **WHEN** caller повторяет wait после потери terminal response, пока turn retained
+- **THEN** result, reason и receipt доступны повторно для каждого terminal outcome
+
+#### Scenario: Два читателя
+- **WHEN** два admitted wait одновременно наблюдают retained turn
+- **THEN** ни один не потребляет результат или pending другого; каждый получает состояние на момент собственного snapshot
+
+#### Scenario: Progress flood и граница timeout
+- **WHEN** идут progress updates, затем pending или terminality возникает около регистрации waiter либо timeout
+- **THEN** progress не сокращает interval, actionable состояние не теряется и видимое на финальной проверке имеет приоритет над timeout
+
+#### Scenario: Следующий ход и eviction
+- **WHEN** сразу после terminality начинается следующий turn
+- **THEN** уже принятый wait завершается snapshot своего turn; новые calls к более не retained turn получают `unknown_turn`, не результат следующего turn
+
+#### Scenario: Граница cursor
+- **WHEN** caller передаёт `after_event_id` или `after_progress_revision`
+- **THEN** runtime возвращает `invalid_args` без waiter, provider dispatch и изменения хода
 
 #### Scenario: Следующее ожидание использует explicit resume cursor
-- **WHEN** `cursor_wait` возвращает timeout, pending или terminal snapshot
-- **THEN** `resume_after_event_id` равен returned `last_event_id` и может быть передан следующему wait без повторного устаревшего cursor
+- **WHEN** legacy caller пытается продолжить старый workflow с explicit resume cursor
+- **THEN** применяется отказ из сценария «Граница cursor»; после обновления caller наблюдает тот же retained turn по session/turn IDs согласно SW-2, без cursor migration или нового provider effect
+
+
+#### Scenario: Ход Cursor завершился
+- **WHEN** ожидаемый ход успешно заканчивается
+- **THEN** wait возвращает completed snapshot с result и receipt, не завершая live session
+
+#### Scenario: Deadline хода превышен
+- **WHEN** runtime terminalizes ход по его execution deadline
+- **THEN** wait возвращает `timed_out` с причиной и `wait_timeout:false`
+
+#### Scenario: Устаревший идентификатор хода
+- **WHEN** ID больше не принадлежит активному или retained terminal turn
+- **THEN** новый wait получает `unknown_turn` и не затрагивает следующий ход
 
 ### Requirement: Изолированное состояние ходов и событий
 Сервер SHALL реализовать turn isolation и события согласно единой машине
 состояний. Все answer operations MUST проверять `session_id`, `turn_id`,
 `request_id`; они ссылаются на state-machine owner для terminalization и очистки
-pending. Клиент MUST
-иметь возможность получить события после переданного курсора
-и MUST быть уведомлён, если ранние события были удалены по лимиту хранения.
+pending. События SHALL оставаться внутренним bounded evidence runtime; публичное
+наблюдение состояния определяется SW-1/SW-2 и не требует event cursor.
 
 #### Scenario: Последовательные ходы
 - **WHEN** в одной сессии выполнены два последовательных запроса
 - **THEN** итог и текст второго хода не содержат фрагменты первого хода
 
 #### Scenario: Устаревший курсор
-- **WHEN** клиент запрашивает события после курсора, который уже вышел за пределы retention
-- **THEN** сервер сообщает о потере событий и возвращает самый ранний доступный курсор
+- **WHEN** клиент передаёт прежний event cursor в wait после eviction событий
+- **THEN** runtime отклоняет удалённый аргумент по SW-2; повторный call без cursor наблюдает retained turn независимо от event retention
 
 #### Scenario: Идемпотентная отмена retained turn
 - **WHEN** T1 completed, T2 running, а клиент вызывает `cursor_cancel(session_id, T1)`
-- **THEN** сервер возвращает неизменённый final snapshot T1 и сохраняет T2 running; cancel active turn ждёт tombstone и возвращает cancelled snapshot
+- **THEN** сервер возвращает compact terminal `ActionEnvelope` с immutable receipt T1 без result и сохраняет T2 running; cancel active turn ждёт tombstone и возвращает compact cancelled `ActionEnvelope` по SW-1
 
 #### Scenario: Поздний ответ прошлого хода
 - **WHEN** request хода A отвечает после cancel, timeout или terminalization и уже начат ход B
@@ -399,7 +419,7 @@ fixture-local.
 
 #### Scenario: Результат после завершения процесса
 - **WHEN** Cursor-процесс уже завершён, но result-retention TTL не истёк
-- **THEN** status и wait возвращают tombstone с итогом, terminal reason и последним event ID
+- **THEN** status возвращает диагностический tombstone, а wait — retained terminal snapshot по SW-1/SW-2, без top-level event cursor
 
 #### Scenario: Неожиданное завершение процесса
 - **WHEN** active turn не получил ACP result до child error, exit, stdout EOF или child-stdin EPIPE
@@ -430,7 +450,7 @@ Runtime MUST применять следующую таблицу.
 | progress excerpt | fixed 512 UTF-8 bytes | retain newest bounded excerpt |
 | live slots / pending / waiters | 8 / 8 per turn / 8 per session | pre-allocation MCP error / resource_limit |
 | tombstones | 64 | evict expired, then lowest `(tombstoned_at, session_id)` |
-| events | 256 | FIFO: lowest `event_id`; update earliest watermark/events_lost |
+| events | 256 | FIFO: lowest `event_id` |
 | shutdown grace / tombstone retention | 5 000 / 300 000 ms | shared shutdown / unknown after retention |
 | public input / derived text / FS file | 64 000 / 8 000 / 1 048 576 UTF-8 bytes | reject input / BoundedText truncation / resource_limit |
 | retained result per turn / result page | 1 048 576 / 8 000 UTF-8 bytes | explicit terminal failure / Unicode-safe page |
@@ -494,8 +514,9 @@ and oversized values reject. It returns the admitted adapter success or error
 outcome; no atomic/no-partial promise is made. Cursor-specific wire normalization
 is adapter-owned and covered by fixtures. Эти callbacks не являются OS sandbox;
 Cursor Auto-Review может самостоятельно не эскалировать safe action. Caller
-наблюдает normalized pending question/plan/permission requests и admitted
-collaboration projections через wait; filesystem callbacks выполняются и
+наблюдает normalized pending question/plan/permission requests через wait;
+collaboration evidence определяется «Role-neutral mode and collaboration surface».
+Filesystem callbacks выполняются и
 получают response только через runtime mode/cwd/text/limit checks. Unsupported
 callbacks получают bounded provider error, а malformed/unadmitted collaboration
 requests отклоняются или acknowledged-and-ignored согласно их owner contract,
@@ -516,7 +537,8 @@ requests отклоняются или acknowledged-and-ignored согласно
 #### Scenario: Auto-review с sandbox
 - **WHEN** delegate запускает v1 session through an admitted Cursor adapter
 - **THEN** runtime возвращает оба immutable metadata, exposes only admitted
-  normalized pending/collaboration evidence, and does not claim that every
+  normalized pending evidence and handles collaboration according to
+  «Role-neutral mode and collaboration surface», and does not claim that every
   provider callback becomes a caller-visible permission request
 
 ### Requirement: Ограниченный контекст интерактивных запросов
@@ -613,35 +635,30 @@ adapter/golden evidence, not a product requirement.
 
 ### Requirement: Sparse wait and bounded progress
 
-`cursor_wait` SHALL return `WaitDeltaEnvelope`, not a SessionEnvelope-derived
-snapshot. It always contains session ID, target turn ID/status, session state,
-`last_event_id`, `resume_after_event_id`, `wait_timeout` and `events_lost`.
-`events`, complete normalized pending requests with bounded context, result,
-reason, receipt, `progress_revision` and
-`progress_excerpt` appear only when nonempty or changed for this wait; normal
-wait output MUST omit model, run mode, sandbox, full nested snapshots, nulls and
-empty arrays. `cursor_session_status` remains the full diagnostic owner.
-On a timeout `after_progress_revision?:safe integer` selects a delta from
-accepted `agent_message_chunk` text only. The reply contains the current revision
-and at most 512 UTF-8 bytes only when it advanced; it never exposes thought,
-tool payload, transcript archive or provider frame.
-Progress state is independent from the bounded terminal-result accumulator:
-each accepted nonempty chunk advances the monotonic revision after the
-preview saturates while the retained full result remains within its cap;
-crossing that cap terminalizes through «Полное чтение terminal result».
-Progress retains only the newest bounded
-512-byte excerpt, so multiple updates between waits MAY coalesce; it MUST NOT
-retain an array of raw chunks.
+Runtime SHALL сохранять только актуальный bounded progress excerpt принятого
+agent message text согласно существующим numerical limits; raw chunks, thoughts
+и provider frames не публикуются. SW-1 определяет его место в response,
+SW-2 — wake semantics. Excerpt на timeout MAY повторяться между calls и
+не требует consumer revision. Wait SHALL оставаться компактным snapshot target
+turn без полного SessionEnvelope и журнала событий.
+Полный result accumulator и его overflow сохраняют отдельный существующий
+контракт «Полное чтение terminal result».
+
+#### Scenario: Повторный progress
+- **WHEN** после принятого непустого agent text два waits заканчиваются timeout без нового текста
+- **THEN** оба возвращают одинаковый последний excerpt в пределах runtime bound
 
 #### Scenario: Idle timeout has no repeated context
-- **WHEN** two waits time out without a new accepted message chunk
-- **THEN** the second output has no `progress_excerpt`, no empty events/pending
-  arrays and no duplicated terminal snapshot
+- **WHEN** два running waits заканчиваются timeout до первого непустого accepted agent text
+- **THEN** оба snapshots не содержат `progress_excerpt` и full session context
 
 #### Scenario: Pending context reaches the primary workflow
-- **WHEN** Cursor publishes a question, plan or permission request
-- **THEN** the next `cursor_wait` returns its exact request ID, kind and bounded
-  normalized context without a `cursor_session_status` call
+- **WHEN** primary workflow наблюдает pending request
+- **THEN** применяется единственная pending delivery из SW-1/SW-2; отдельный diagnostic read или второй механизм доставки не нужен
+
+#### Scenario: Event eviction
+- **WHEN** internal event log вытеснил ранние события
+- **THEN** wait по-прежнему возвращает актуальное состояние target turn без cursor recovery и без обещания восстановления истории
 
 ### Requirement: Provider errors are bounded and classified
 
@@ -713,15 +730,15 @@ accepted by `stdin.write` remains an ordinary runtime transport failure and
 follows the existing fail-closed terminalization path. Malformed or unadmitted
 data itself is ignored without terminalizing a healthy turn.
 The versioned adapter/golden is the sole owner of the pinned Cursor version,
-exact request/response wire keys and their mapping to the public todo/task/image
-projection. Runtime tests MUST consume every golden variant, reject missing
+exact request/response wire keys and their mapping to internal bounded todo/task/image
+evidence. Runtime tests MUST consume every golden variant, reject missing
 required or additional wire keys, and prove that raw prompt, agent identity,
 image references and other provider data are never published.
 
 #### Scenario: Planning progress reaches the caller
 - **WHEN** a plan or research turn publishes todos and a subagent completion
-- **THEN** a following wait returns their compact typed events, but does not
-  report terminal or semantic completion until the prompt result arrives
+- **THEN** runtime retains their compact typed events internally; wait follows SW-2
+  and does not report terminal or semantic completion until the prompt result arrives
 
 #### Scenario: Ask переходит к implementation в той же session
 - **WHEN** an idle `ask` session changes to `agent` and its next turn requests a
@@ -752,7 +769,7 @@ describes the full retained result. Empty completed text is a valid full result.
 
 `cursor_read_result` MUST synchronously read only the addressed retained last
 terminal turn with a non-null result. It MUST NOT call the provider, create a
-turn/event, change wait delivery state, or refresh idle/retention timers. It
+turn/event, or refresh idle/retention timers. It
 returns the largest whole-code-point prefix from `offset` within the page
 bound, with exact next offset; concatenating sequential pages from zero to EOF
 reproduces the result and its full digest without omission or duplication.
@@ -774,7 +791,7 @@ A prefix is not recovered by asking the provider to regenerate the answer.
 
 #### Scenario: Long review remains completely readable
 - **WHEN** a completed review exceeds the preview bound within the retained limit
-- **THEN** terminal wait delivers a truncated preview once; sequential explicit
+- **THEN** terminal wait exposes the bounded preview according to «Публичный MCP tool contract»; sequential explicit
   reads recover every finding including the tail, with a matching full digest
 
 #### Scenario: UTF-8 page and retention boundaries

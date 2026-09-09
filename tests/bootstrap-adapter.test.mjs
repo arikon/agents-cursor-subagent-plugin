@@ -1,7 +1,52 @@
 import test from 'node:test';
+import { setImmediate as nextTurn } from 'node:timers/promises';
 import * as support from './bootstrap-test-support.mjs';
 
 const { assert, spawn, createHash, chmod, cp, lstat, mkdir, mkdtemp, readFile, readdir, realpath, rename, rm, symlink, writeFile, join, tmpdir, fileURLToPath, MARKER_NAME, canonicalJson, normalizeManifestBytes, parseArgs, runBootstrap, runPackageCommand, treeHashV1, validateTopology, runFakeCodexAdapterCommand, repository, bootstrapScript, adapter, versionedAdapter, adapterGolden, currentVersionedAdapter, currentAdapterGolden, fakeCodexCli, fakeCursorAgentStatus, killWaitCommand, adapterFixtureCall, adapterFixtureResult, runInProcessFakeAdapter, runInProcessBootstrap, bootstrapCli, fixture } = support;
+
+async function waitForPid(root, path) {
+  const deadline = Date.now() + 10_000;
+  while (Date.now() < deadline) {
+    const value = await readFile(path, 'utf8').catch((error) => {
+      if (error.code !== 'ENOENT') throw error;
+      return '';
+    });
+    if (/^\d+$/.test(value.trim())) return Number(value);
+    await nextTurn();
+  }
+  assert.fail(`child readiness was not published in ${root}`);
+}
+
+function retainedPipeScript(pidPath, overflow = false) {
+  // The original test process owns this descendant even after its immediate
+  // parent is killed: fixture removal or owner loss releases retained pipes.
+  const descendant = `
+    const fs = require('node:fs');
+    fs.writeFileSync(${JSON.stringify(pidPath)}, String(process.pid));
+    ${overflow ? "process.stdout.write('overflow');" : ''}
+    setInterval(() => {
+      if (!fs.existsSync(${JSON.stringify(join(pidPath, '..'))})) process.exit();
+      try { process.kill(${process.pid}, 0); } catch { process.exit(); }
+    }, 1000);
+  `;
+  return `require('node:child_process').spawn(process.execPath, ['-e', ${JSON.stringify(descendant)}], { stdio: ['ignore', 'inherit', 'inherit'] }); setInterval(() => {}, 1000);`;
+}
+
+function controlPackageTimers(t) {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  // Registered before readiness: also kill the child and finish its close wait
+  // when startup/readiness fails before the test has obtained any PID.
+  t.after(() => {
+    t.mock.timers.runAll();
+    t.mock.timers.runAll();
+  });
+}
+
+function cleanupPid(t, pid) {
+  t.after(() => {
+    try { process.kill(pid, 'SIGKILL'); } catch (error) { if (error.code !== 'ESRCH') throw error; }
+  });
+}
 
 test('versioned Codex adapter admission and help match its checked-in golden surface', async (t) => {
   const context = await fixture(t); const golden = JSON.parse(await readFile(adapterGolden, 'utf8'));
@@ -144,16 +189,31 @@ test('versioned Codex adapter admission and help match its checked-in golden sur
 
 test('versioned adapter bounds nested Cursor commands and waits for killed child close', async (t) => {
   const context = await fixture(t); const agent = join(context.root, 'agent'); await symlink(fakeCursorAgentStatus, agent);
-  const pidPath = join(context.root, 'nested-agent.pid'); const timeoutMs = 2_000; const started = Date.now();
-  let result = await adapterFixtureResult(context.executable, 'agent-status', { agent_executable: agent }, {
+  const pidPath = join(context.root, 'nested-agent.pid'); const timeoutMs = 2_000;
+  const preload = join(context.root, 'controlled-nested-timeout.mjs');
+  await writeFile(preload, `import { mock } from 'node:test';
+if (process.send) {
+  mock.timers.enable({ apis: ['setTimeout'] });
+  const cleanup = () => { mock.timers.runAll(); mock.timers.runAll(); };
+  process.once('message', () => { mock.timers.tick(${timeoutMs}); process.removeListener('disconnect', cleanup); process.disconnect(); });
+  process.once('disconnect', cleanup);
+}
+`);
+  const child = spawn(context.executable, ['--import', preload, versionedAdapter, 'agent-status', JSON.stringify({ agent_executable: agent })], { env: {
     ...process.env,
     CURSOR_EVAL_ADAPTER_TIMEOUT_MS: String(timeoutMs),
     FAKE_CURSOR_AGENT_BLOCK_ARGV: '--version',
-    CURSOR_EVAL_ADAPTER_NESTED_PID_PATH: pidPath,
-  }, versionedAdapter);
-  const elapsed = Date.now() - started;
-  assert.equal(result.code, 1); assert.match(result.stderr, /nested command timed out/); assert.ok(elapsed >= timeoutMs - 200 && elapsed < 5_000, elapsed);
-  const pid = Number((await readFile(pidPath, 'utf8')).trim().split('\n').at(-1));
+    FAKE_CURSOR_AGENT_PID_PATH: pidPath,
+  }, stdio: ['ignore', 'pipe', 'pipe', 'ipc'] });
+  const errors = [];
+  child.stdout.resume();
+  child.stderr.on('data', (chunk) => errors.push(chunk));
+  const closed = new Promise((resolve, reject) => { child.once('close', resolve); child.once('error', reject); });
+  t.after(async () => { if (child.connected) child.disconnect(); await closed; });
+  const pid = await waitForPid(context.root, pidPath);
+  child.send('deadline');
+  let result = { code: await closed, stderr: Buffer.concat(errors).toString('utf8') };
+  assert.equal(result.code, 1); assert.match(result.stderr, /nested command timed out/);
   assert.throws(() => process.kill(pid, 0), { code: 'ESRCH' }, 'nested Cursor child survived adapter timeout');
   result = await adapterFixtureResult(context.executable, 'agent-status', { agent_executable: agent }, {
     ...process.env, FAKE_CURSOR_AGENT_OVERFLOW_ARGV: '--version',
@@ -163,48 +223,67 @@ test('versioned adapter bounds nested Cursor commands and waits for killed child
 
 test('package command waits for child close after timeout and output overflow kills', async (t) => {
   const context = await fixture(t);
+  controlPackageTimers(t);
   for (const overflow of [false, true]) {
     const pidPath = join(context.root, `killed-${overflow}.pid`);
-    const result = await runPackageCommand(context.executable, [killWaitCommand], { env: { ...process.env, KILL_WAIT_PID_PATH: pidPath,
+    const pending = runPackageCommand(context.executable, [killWaitCommand], { env: { ...process.env, KILL_WAIT_PID_PATH: pidPath,
       ...(overflow ? { KILL_WAIT_OVERFLOW: '1' } : {}) }, timeoutMs: overflow ? 1_000 : 500, outputBytes: 64, closeWaitMs: 1_000 });
+    const pid = await waitForPid(context.root, pidPath);
+    cleanupPid(t, pid);
+    if (!overflow) t.mock.timers.tick(500);
+    const result = await pending;
     assert.equal(overflow ? result.overflow : result.timeout, true);
-    const pid = Number(await readFile(pidPath, 'utf8'));
     assert.throws(() => process.kill(pid, 0), { code: 'ESRCH' }, `child ${pid} was still alive after command return`);
     assert.equal(result.closeTimeout, undefined);
   }
 });
 
-test('package command reports close timeout while a descendant retains the killed child output pipe', async () => {
-  const descendantScript = [
-    'const { spawn } = require("node:child_process");',
-    'spawn(process.execPath, ["-e", "setTimeout(() => {}, 750)"], { stdio: ["ignore", "inherit", "inherit"] });',
-    'setInterval(() => {}, 1_000);',
-  ].join(' ');
-  const result = await runPackageCommand(process.execPath, ['-e', descendantScript], {
+test('package command reports close timeout while a descendant retains the killed child output pipe', async (t) => {
+  const context = await fixture(t);
+  const pidPath = join(context.root, 'descendant.pid');
+  controlPackageTimers(t);
+  const pending = runPackageCommand(process.execPath, ['-e', retainedPipeScript(pidPath)], {
     timeoutMs: 100,
     closeWaitMs: 100,
   });
+  cleanupPid(t, await waitForPid(context.root, pidPath));
+  t.mock.timers.tick(100);
+  t.mock.timers.tick(100);
+  const result = await pending;
   assert.deepEqual({ code: result.code, timeout: result.timeout, closeTimeout: result.closeTimeout },
     { code: null, timeout: true, closeTimeout: true });
 });
 
-test('package command keeps the first kill reason when overflow precedes its timeout', async () => {
-  const descendantScript = [
-    'const { spawn } = require("node:child_process");',
-    'spawn(process.execPath, ["-e", "setTimeout(() => {}, 750)"], { stdio: ["ignore", "inherit", "inherit"] });',
-    'process.stdout.write("overflow");',
-    'setInterval(() => {}, 1_000);',
-  ].join(' ');
-  const result = await runPackageCommand(process.execPath, ['-e', descendantScript], {
+test('package command keeps the first kill reason when overflow precedes its timeout', async (t) => {
+  const context = await fixture(t);
+  const pidPath = join(context.root, 'descendant.pid');
+  controlPackageTimers(t);
+  // Registering the close deadline proves the real pipe delivered overflow.
+  const registered = Promise.withResolvers();
+  const controlledTimeout = globalThis.setTimeout;
+  let commandDeadline;
+  t.mock.method(globalThis, 'setTimeout', (callback, delay, ...args) => {
+    const timer = controlledTimeout(callback, delay, ...args);
+    if (delay === 2_000) commandDeadline = callback;
+    if (delay === 300) registered.resolve();
+    return timer;
+  });
+  const pending = runPackageCommand(process.execPath, ['-e', retainedPipeScript(pidPath, true)], {
     timeoutMs: 2_000,
     outputBytes: 1,
     closeWaitMs: 300,
   });
+  cleanupPid(t, await waitForPid(context.root, pidPath));
+  await registered.promise;
+  commandDeadline();
+  t.mock.timers.tick(300);
+  const result = await pending;
   assert.deepEqual({ code: result.code, timeout: result.timeout, overflow: result.overflow, closeTimeout: result.closeTimeout },
     { code: null, timeout: false, overflow: true, closeTimeout: true });
 });
 
-test('package command bounds simultaneous stdout and stderr overflow with one terminal outcome', async () => {
+test('package command bounds simultaneous stdout and stderr overflow with one terminal outcome', async (t) => {
+  controlPackageTimers(t);
   const script = [
     'process.stdout.write("o".repeat(65536));',
     'process.stderr.write("e".repeat(65536));',
@@ -219,5 +298,3 @@ test('package command bounds simultaneous stdout and stderr overflow with one te
     { code: null, timeout: false, overflow: true });
   assert.equal(result.closeTimeout, undefined);
 });
-
-

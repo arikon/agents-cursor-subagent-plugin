@@ -396,7 +396,7 @@ test('recording proxy injects one stale question ID as fixture behavior, not use
   const ambientEvidence = join(root, 'ambient-mcp.json');
   const ambient = spawn(process.execPath, [recorder, '-e', fake], {
     env: { ...process.env, CURSOR_EVAL_MCP_EVIDENCE: ambientEvidence, CURSOR_EVAL_SCENARIO_ID: 'partial-handshake',
-      CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH: 'relative-program.json', CURSOR_EVAL_INJECT_STALE_QUESTION_ONCE: '1' },
+      CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH: '', CURSOR_EVAL_INJECT_STALE_QUESTION_ONCE: '1' },
     stdio: ['pipe', 'ignore', 'ignore'],
   });
   ambient.stdin.end(`${calls.join('\n')}\n`);
@@ -412,8 +412,14 @@ test('recording proxy withholds one terminal wait response while retaining raw e
     const readline = require('node:readline');
     readline.createInterface({ input: process.stdin }).on('line', (line) => {
       const call = JSON.parse(line);
+      if (call.id === 5) return process.stdout.write('invalid-json\\n');
       const payload = { session_id: 'S', turn_id: 'T', turn_status: 'completed', wait_timeout: false,
-        result: { text: 'DONE', truncated: false }, terminal_receipt: { session_id: 'S', turn_id: 'T', turn_status: 'completed', result_sha256: 'a'.repeat(64), result_truncated: false } };
+        session_state: 'live', pending: [],
+        result: { text: 'DONE', truncated: false }, terminal_receipt: { session_id: 'S', turn_id: 'T', turn_status: 'completed', last_event_id: 1, result_sha256: require('node:crypto').createHash('sha256').update('DONE').digest('hex'), result_truncated: false } };
+      if (call.id === 3) delete payload.result.truncated;
+      if (call.id === 4) payload.result.truncated = 'false';
+      if (call.id === 6) payload.result.text = '';
+      if (call.id === 7) payload.result.text = 42;
       process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id: call.id, result: { isError: false, content: [{ type: 'text', text: JSON.stringify(payload) }] } }) + '\\n');
     });`;
   const child = spawn(process.execPath, [recorder, '-e', fake], {
@@ -423,16 +429,28 @@ test('recording proxy withholds one terminal wait response while retaining raw e
   });
   const output = []; child.stdout.on('data', (chunk) => output.push(chunk));
   const call = (id) => ({ jsonrpc: '2.0', id, method: 'tools/call', params: { name: 'cursor_wait', arguments: { session_id: 'S', turn_id: 'T', timeout_ms: 1_000 } } });
-  child.stdin.end(`${JSON.stringify(call(1))}\n${JSON.stringify(call(2))}\n`);
+  child.stdin.end([5, 6, 7, 1, 2, 3, 4].map((id) => JSON.stringify(call(id))).join('\n') + '\n');
   const [code] = await once(child, 'close'); assert.equal(code, 0);
-  const responses = Buffer.concat(output).toString('utf8').trim().split('\n').map(JSON.parse);
-  assert.equal(JSON.parse(responses[0].result.content[0].text).error_code, 'transport_error');
+  const outputLines = Buffer.concat(output).toString('utf8').trim().split('\n');
+  assert.equal(outputLines.shift(), 'invalid-json');
+  const responses = outputLines.slice(2).map(JSON.parse);
+  assert.deepEqual(JSON.parse(responses[0].result.content[0].text), { error_code: 'eval_wait_response_lost', message: 'cursor_wait response unavailable' });
   assert.equal(JSON.parse(responses[1].result.content[0].text).turn_status, 'completed');
-  const transcript = JSON.parse(await readFile(evidence, 'utf8')).transcript;
-  assert.deepEqual(transcript.map(({ tool, request, response, withheld_terminal_response, caller_error_code }) => ({ tool, request, response, withheld_terminal_response, caller_error_code })), [
-    { tool: 'cursor_wait', request: recordedRequest(call(1).params.arguments, { session_id: 'S', turn_id: 'T', timeout_ms: 1_000 }), response: { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'completed', wait_timeout: false, result: { text_bytes: 4, text_sha256: createHash('sha256').update('DONE').digest('hex'), truncated: false }, terminal_receipt: { session_id: 'S', turn_id: 'T', turn_status: 'completed', result_sha256: 'a'.repeat(64), result_truncated: false } }, withheld_terminal_response: true, caller_error_code: 'transport_error' },
-    { tool: 'cursor_wait', request: recordedRequest(call(2).params.arguments, { session_id: 'S', turn_id: 'T', timeout_ms: 1_000 }), response: { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'completed', wait_timeout: false, result: { text_bytes: 4, text_sha256: createHash('sha256').update('DONE').digest('hex'), truncated: false }, terminal_receipt: { session_id: 'S', turn_id: 'T', turn_status: 'completed', result_sha256: 'a'.repeat(64), result_truncated: false } }, withheld_terminal_response: undefined, caller_error_code: undefined },
-  ]);
+  const allCalls = JSON.parse(await readFile(evidence, 'utf8')).transcript;
+  assert.equal(allCalls.slice(0, 3).some((entry) => Object.hasOwn(entry, 'withheld_response')), false);
+  const transcript = allCalls.slice(3);
+  assert.deepEqual(transcript[0].response, { ok: false, error_code: 'eval_wait_response_lost', message: 'cursor_wait response unavailable' });
+  assert.deepEqual(transcript[0].withheld_response, transcript[1].response);
+  assert.equal(transcript[0].withheld_response.result.text_sha256, createHash('sha256').update('DONE').digest('hex'));
+  assert.equal(transcript[0].withheld_response.result.text_bytes, 4);
+  assert.equal(Object.hasOwn(transcript[1], 'withheld_response'), false);
+  assert.equal(transcript[0].withheld_response.result.truncated, false);
+  for (const entry of transcript.slice(2)) {
+    assert.equal(Object.hasOwn(entry.response.result, 'truncated'), false);
+    assert.equal(Object.hasOwn(entry, 'withheld_response'), false);
+  }
+  assert.equal(JSON.stringify(transcript).includes('DONE'), false);
+  for (const entry of transcript) assert.deepEqual(entry.request, recordedRequest(call(1).params.arguments, { session_id: 'S', turn_id: 'T', timeout_ms: 1_000 }));
 });
 
 test('recording proxy injects a handshaken mode protocol error while preserving live status', async (t) => {
@@ -512,19 +530,21 @@ test('stdio recording proxy controls an immediate publication failure and closes
     const readline = require('node:readline');
     process.on('exit', () => writeFileSync(${JSON.stringify(closedMarker)}, 'closed'));
     process.on('SIGTERM', () => process.exit(0));
+    const calls = [];
     readline.createInterface({ input: process.stdin }).on('line', (line) => {
-      const call = JSON.parse(line);
-      process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id: call.id, result: { isError: false, content: [{ type: 'text', text: '{}' }] } }) + '\\n');
+      calls.push(JSON.parse(line));
+      if (calls.length === 2) process.stdout.write(calls.map((call) => JSON.stringify({ jsonrpc: '2.0', id: call.id, result: { isError: false, content: [{ type: 'text', text: '{}' }] } })).join('\\n') + '\\n');
     });`;
   const child = spawn(process.execPath, [recorder, '-e', fake], {
     env: { ...process.env, CURSOR_EVAL_MCP_EVIDENCE: '/dev/null/mcp.json' }, stdio: ['pipe', 'ignore', 'pipe'],
   });
   const diagnostics = []; child.stderr.on('data', (chunk) => diagnostics.push(chunk));
-  child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'cursor_wait', arguments: { session_id: 'S', turn_id: 'T' } } })}\n`);
+  child.stdin.write([1, 2].map((id) => JSON.stringify({ jsonrpc: '2.0', id, method: 'tools/call', params: { name: 'cursor_wait', arguments: { session_id: 'S', turn_id: 'T' } } })).join('\n') + '\n');
   const [code] = await once(child, 'close');
   assert.notEqual(code, 0);
   const stderr = Buffer.concat(diagnostics).toString('utf8');
   assert.match(stderr, /recording MCP proxy failed: /);
+  assert.equal(stderr.match(/recording MCP proxy failed:/g).length, 1, 'queued publication failures must have one terminal diagnostic');
   assert.doesNotMatch(stderr, /Unhandled|node:events|throw er/);
   assert.equal(await readFile(closedMarker, 'utf8'), 'closed');
   assert.deepEqual(await readdir(root), ['child-closed']);
@@ -631,11 +651,75 @@ test('stdio recording proxy publishes no partial oversized provider frame', asyn
   assert.match(Buffer.concat(diagnostics).toString('utf8'), /frame exceeded 1 MiB limit/);
 });
 
+test('stdio recording proxy rejects late input and output while an errored child stops', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'cursor-eval-proxy-late-io-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const evidence = join(root, 'mcp.json');
+  const marker = join(root, 'child-closed');
+  const target = `
+    const fs = require('node:fs');
+    const ownerPid = process.ppid;
+    process.on('exit', () => { if (fs.existsSync(${JSON.stringify(root)})) fs.writeFileSync(${JSON.stringify(marker)}, 'closed'); });
+    process.on('SIGUSR1', () => process.exit(0));
+    process.on('SIGTERM', () => {
+      process.stdout.write('LATE_OUTPUT_MUST_NOT_ESCAPE\\n', () => process.stderr.write('stopping\\n'));
+    });
+    process.stderr.write('pid:' + process.pid + '\\n');
+    process.stdin.once('data', () => process.stdout.write(Buffer.alloc(1048577, 0x78)));
+    process.stdin.on('end', () => {});
+    setInterval(() => {
+      if (process.ppid !== ownerPid || !fs.existsSync(${JSON.stringify(root)})) process.exit(0);
+    }, 100);
+  `;
+  const proxy = spawn(process.execPath, [recorder, '-e', target], {
+    env: { ...process.env, CURSOR_EVAL_MCP_EVIDENCE: evidence }, stdio: ['pipe', 'pipe', 'pipe'],
+  });
+  const closed = once(proxy, 'close');
+  let targetPid;
+  t.after(async () => {
+    if (Number.isSafeInteger(targetPid)) {
+      try { process.kill(targetPid, 'SIGKILL'); }
+      catch (error) { if (error.code !== 'ESRCH') throw error; }
+    }
+    if (proxy.exitCode === null && proxy.signalCode === null) proxy.kill('SIGKILL');
+    // close includes inherited pipe closure; the provider watchdog covers failure before PID capture.
+    await closed;
+  });
+  const output = []; proxy.stdout.on('data', (chunk) => output.push(chunk));
+  const diagnostics = []; proxy.stderr.on('data', (chunk) => diagnostics.push(chunk));
+  const lines = createInterface({ input: proxy.stderr });
+  const [pidLine] = await once(lines, 'line');
+  targetPid = Number(pidLine.slice(4));
+  assert.ok(Number.isSafeInteger(targetPid));
+  const stopping = new Promise((resolveStopped) => lines.on('line', (line) => { if (line === 'stopping') resolveStopped(); }));
+  proxy.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'cursor_wait', arguments: { session_id: 'S', turn_id: 'T' } } })}\n`);
+  await stopping;
+  proxy.kill('SIGTERM');
+  await new Promise((resolveWritten, rejectWritten) => proxy.stdin.end(`${JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'cursor_send_prompt', arguments: { session_id: 'S', prompt: 'must not be forwarded' } } })}\n`, (error) => error ? rejectWritten(error) : resolveWritten()));
+  process.kill(targetPid, 'SIGUSR1');
+  const [code] = await closed;
+  assert.equal(code, 1);
+  assert.equal(Buffer.concat(output).length, 0);
+  assert.equal(Buffer.concat(diagnostics).toString().match(/recording MCP proxy failed:/g).length, 1);
+  assert.deepEqual(JSON.parse(await readFile(evidence, 'utf8')).transcript.map(({ call_id }) => call_id), [1]);
+  assert.equal(await readFile(marker, 'utf8'), 'closed');
+  assert.deepEqual((await readdir(root)).sort(), ['child-closed', 'mcp.json']);
+});
+
 test('stdio recording proxy flushes a backpressured final response before exit', { timeout: 10_000 }, async (t) => {
-  const target = `process.stdout.write(JSON.stringify({jsonrpc:'2.0',id:1,result:{content:[{type:'text',text:'x'.repeat(900000)}]}})+'\\n');`;
+  const target = `process.stderr.write(String(process.pid)+'\\n');process.stdout.end(JSON.stringify({jsonrpc:'2.0',id:1,result:{content:[{type:'text',text:'x'.repeat(900000)}]}})+'\\n');`;
   const child = spawn(process.execPath, [recorder, '-e', target], { stdio: ['ignore', 'pipe', 'pipe'] });
   t.after(() => { if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL'); });
-  await new Promise((resolveWait) => setTimeout(resolveWait, 50));
+  const [pidChunk] = await once(child.stderr, 'data');
+  const targetPid = Number(pidChunk.toString().trim());
+  let targetExited = false;
+  for (let attempt = 0; attempt < 500; attempt += 1) {
+    try { process.kill(targetPid, 0); }
+    catch (error) { if (error.code === 'ESRCH') { targetExited = true; break; } throw error; }
+    await new Promise((resolveWait) => setTimeout(resolveWait, 10));
+  }
+  assert.equal(targetExited, true, 'provider must exit before delivery is drained');
+  assert.equal(child.exitCode, null, 'proxy must retain its undelivered output');
   const chunks = []; child.stdout.on('data', (chunk) => chunks.push(chunk));
   const [code] = await once(child, 'close');
   assert.equal(code, 0);
@@ -750,31 +834,33 @@ for (const [name, target, expectedCode] of [
 }
 
 test('stdio recording proxy terminates its target when its owning process disappears', { timeout: 5_000 }, async (t) => {
-  const root = await mkdtemp(join(tmpdir(), 'cursor-eval-proxy-owner-')); t.after(() => rm(root, { recursive: true, force: true }));
+  const root = await mkdtemp(join(tmpdir(), 'cursor-eval-proxy-owner-'));
   const pidFile = join(root, 'target.pid');
-  const target = `require('node:fs').writeFileSync(process.env.TARGET_PID_FILE, String(process.pid)); setInterval(() => {}, 1_000); process.once('SIGTERM', () => process.exit(0));`;
-  const launcher = `const { spawn } = require('node:child_process'); const { existsSync } = require('node:fs'); spawn(process.execPath, [process.env.RECORDER, '-e', process.env.TARGET], { detached: true, stdio: 'ignore', env: process.env }).unref(); const ready = setInterval(() => { if (existsSync(process.env.TARGET_PID_FILE)) { clearInterval(ready); process.exit(0); } }, 10);`;
+  const proxyPidFile = join(root, 'proxy.pid');
+  const target = `const fs = require('node:fs'); fs.writeFileSync(process.env.TARGET_PID_FILE, String(process.pid)); setInterval(() => { if (!fs.existsSync(${JSON.stringify(root)})) process.exit(0); }, 100); process.once('SIGTERM', () => process.exit(0)); process.stderr.write('ready\\n');`;
+  const launcher = `const { spawn } = require('node:child_process'); const { writeFileSync } = require('node:fs'); const proxy = spawn(process.execPath, [process.env.RECORDER, '-e', process.env.TARGET], { detached: true, stdio: ['ignore', 'inherit', 'pipe'], env: process.env }); writeFileSync(process.env.PROXY_PID_FILE, String(proxy.pid)); require('node:readline').createInterface({ input: proxy.stderr }).on('line', (line) => { if (line === 'ready') process.exit(0); });`;
   const owner = spawn(process.execPath, ['-e', launcher], {
-    env: { ...process.env, RECORDER: recorder, TARGET: target, TARGET_PID_FILE: pidFile },
-    stdio: 'ignore',
+    env: { ...process.env, RECORDER: recorder, TARGET: target, TARGET_PID_FILE: pidFile, PROXY_PID_FILE: proxyPidFile },
+    stdio: ['ignore', 'pipe', 'pipe'],
   });
-  assert.equal((await once(owner, 'close'))[0], 0);
-
-  let targetPid;
-  for (let attempt = 0; attempt < 40; attempt += 1) {
-    try { targetPid = Number(await readFile(pidFile, 'utf8')); break; }
-    catch { await new Promise((resolve) => setTimeout(resolve, 25)); }
-  }
+  const closed = once(owner, 'close');
+  t.after(async () => {
+    if (owner.exitCode === null && owner.signalCode === null) owner.kill('SIGKILL');
+    try {
+      const proxyPid = Number(await readFile(proxyPidFile, 'utf8'));
+      if (Number.isSafeInteger(proxyPid) && proxyPid > 0) {
+        try { process.kill(-proxyPid, 'SIGKILL'); } catch (error) { if (error.code !== 'ESRCH') throw error; }
+      }
+    } catch (error) { if (error.code !== 'ENOENT') throw error; }
+    await rm(root, { recursive: true, force: true });
+    await closed;
+  });
+  owner.stdout.resume(); owner.stderr.resume();
+  // The launcher exits explicitly; inherited stdout closes only after proxy/target cleanup.
+  assert.equal((await closed)[0], 0);
+  const targetPid = Number(await readFile(pidFile, 'utf8'));
   assert.ok(Number.isSafeInteger(targetPid));
-  t.after(() => { try { process.kill(targetPid, 'SIGKILL'); } catch {} });
-
-  let terminated = false;
-  for (let attempt = 0; attempt < 80; attempt += 1) {
-    try { process.kill(targetPid, 0); }
-    catch (error) { if (error.code === 'ESRCH') { terminated = true; break; } throw error; }
-    await new Promise((resolve) => setTimeout(resolve, 25));
-  }
-  assert.equal(terminated, true);
+  assert.throws(() => process.kill(targetPid, 0), { code: 'ESRCH' });
 });
 
 test('evidence is atomically published outside and survives fixture cleanup', async (t) => {

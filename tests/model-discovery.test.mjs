@@ -118,19 +118,25 @@ test('discovery rejects concurrent requests without queue and shutdown aborts th
   assert.equal(runtime.sessions.size, 0);
 });
 
-test('streaming overflow cancels reader and releases the slot without using public input bound', async (t) => {
+for (const cancelRejects of [false, true]) test(`streaming overflow releases reader and slot when cancellation ${cancelRejects ? 'rejects' : 'succeeds'}`, async (t) => {
   let cancelled = false;
   let call = 0;
+  const stream = new ReadableStream({
+    pull(controller) { controller.enqueue(new Uint8Array(600_000)); },
+    cancel() { cancelled = true; if (cancelRejects) throw new Error('provider cancellation failed'); },
+  });
   const runtime = discovery(t, { fetchModels: async () => {
     if (++call > 1) {
       const body = golden().response;
       body.ignored = 'x'.repeat(64_001);
       return jsonResponse(body);
     }
-    return new Response(new ReadableStream({ pull(controller) { controller.enqueue(new Uint8Array(600_000)); }, cancel() { cancelled = true; } }));
+    return new Response(stream);
   } });
   await assert.rejects(runtime.call('cursor_list_models', {}), { error_code: 'resource_limit' });
   assert.equal(cancelled, true);
+  await new Promise(setImmediate);
+  assert.equal(stream.locked, false);
   assert.deepEqual(await runtime.call('cursor_list_models', {}), golden().expected);
 });
 
@@ -365,6 +371,7 @@ for (const tool of ['cursor_start_session', 'cursor_resume_session']) {
     const rejected = assert.rejects(pending, { error_code: 'protocol_error' });
     await runtime.shutdown();
     await rejected;
+    await assert.rejects(runtime.call(tool, { cwd: process.cwd(), mode: 'ask', ...(tool === 'cursor_resume_session' ? { cursor_session_id: 'persisted' } : {}) }), { error_code: 'protocol_error' });
     assert.equal(runtime.sessions.size, 0);
   });
 }
@@ -539,7 +546,7 @@ for (const tool of ['cursor_start_session', 'cursor_resume_session', 'cursor_del
   });
 }
 
-for (const fault of ['malformed', 'unreadable']) {
+for (const fault of ['malformed', 'unreadable', 'null', '[]', '123', '"PRIVATE"']) {
   test(`${fault} credential file fails before spawn and remains intact`, async (t) => {
     let authPath;
     const { runtime, directory, requests } = launchRuntime(t, { FAKE_ACP_FORBID_AUTHENTICATE: '1' }, {
@@ -547,10 +554,11 @@ for (const fault of ['malformed', 'unreadable']) {
         if (fault === 'unreadable') throw Object.assign(new Error('PRIVATE credential read error'), { code: 'EACCES' });
         return readFileSync(authPath);
       },
+      fetchModels: async () => assert.fail('invalid credentials must not reach HTTP'),
     });
     authPath = join(directory, 'auth.json');
     runtime.env.FAKE_ACP_PROCESS_LOG = join(directory, 'processes.log');
-    const bytes = Buffer.from('{PRIVATE malformed credential bytes');
+    const bytes = Buffer.from(['malformed', 'unreadable'].includes(fault) ? '{PRIVATE malformed credential bytes' : fault);
     writeFileSync(authPath, bytes);
     const result = await runtime.call('cursor_delegate', { cwd: process.cwd(), mode: 'ask', prompt: 'must not run' });
     assert.equal(result.session_state, 'tombstone');
@@ -561,6 +569,7 @@ for (const fault of ['malformed', 'unreadable']) {
     assert.deepEqual(readFileSync(authPath), bytes);
     assert.throws(() => readFileSync(runtime.env.FAKE_ACP_PROCESS_LOG), { code: 'ENOENT' });
     assert.deepEqual(requests(), []);
+    await assert.rejects(runtime.call('cursor_list_models', {}), { error_code: 'model_discovery_failed' });
   });
 }
 

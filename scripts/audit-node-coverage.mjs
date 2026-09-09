@@ -367,7 +367,7 @@ function strictArtifactRef(value, label) {
   return value;
 }
 function evidenceRecord(path, content, outputDir) {
-  return { path: portable(relative(outputDir, path)) || basename(path),
+  return { path: portable(relative(outputDir, path)),
     bytes: content.length, sha256: sha256(content) };
 }
 async function preflightSnapshots(snapshots, outputDir) {

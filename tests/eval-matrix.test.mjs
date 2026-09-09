@@ -7,6 +7,7 @@ import { join, relative } from 'node:path';
 import { tmpdir } from 'node:os';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { setImmediate as nextTurn } from 'node:timers/promises';
 
 const repository = fileURLToPath(new URL('..', import.meta.url));
 const matrix = fileURLToPath(new URL('../scripts/eval/run-cursor-skill-eval-matrix.mjs', import.meta.url));
@@ -103,6 +104,25 @@ test('matrix rejects malformed verdicts and missing or drifting candidate eviden
     assert.ok(row.evidence_ref === null || !row.evidence_ref.startsWith('/'));
     assert.equal(row.attempts.length, 1);
   }
+  const output = join(root, 'unsupported-artifact.json');
+  const preload = join(root, 'linked-artifact.mjs');
+  await writeFile(preload, `import { symlink } from 'node:fs/promises';
+if (process.argv[1] === ${JSON.stringify(fakeChild)} && process.argv[2] === ${JSON.stringify(ids[0])}) {
+  await symlink(${JSON.stringify(fakeChild)}, process.env.NODE_TEST_ARTIFACT_ROOT + '/linked-artifact');
+}
+`);
+  const child = spawn(process.execPath, [matrix, 'gpt-5.6-terra', 'high', output], {
+    cwd: repository,
+    env: { ...process.env, CURSOR_EVAL_MATRIX_RUNNER: fakeChild, NODE_OPTIONS: `${process.env.NODE_OPTIONS || ''} --import=${JSON.stringify(preload)}` },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  const errors = [];
+  child.stdout.resume(); child.stderr.on('data', (chunk) => errors.push(chunk));
+  const [unsupportedCode] = await once(child, 'close');
+  assert.notEqual(unsupportedCode, 0);
+  assert.match(Buffer.concat(errors).toString('utf8'), /unsupported bundle artifact/);
+  await assert.rejects(readFile(output), { code: 'ENOENT' });
+  await assert.rejects(readFile(`${output}.tmp`), { code: 'ENOENT' });
 });
 
 test('matrix retains an atomic failure bundle when no child supplies candidate proof', async (t) => {
@@ -189,28 +209,70 @@ test('eval matrix records every independent serial run without collapsing failed
   await readFile(`${output}.artifacts/serial-3/model-state-observation-attempt-1/driver-stdout.txt`, 'utf8');
 });
 
-test('interrupted eval matrix terminates active children without publishing a partial summary', async (t) => {
+for (const timing of ['early', 'active']) test(`interrupted eval matrix stops ${timing} work without publishing a partial summary`, async (t) => {
   const root = await mkdtemp(join(tmpdir(), 'cursor-eval-matrix-interrupt-'));
   t.after(() => rm(root, { recursive: true, force: true }));
   const output = join(root, 'summary.json');
+  const pidPath = join(root, 'active-child.pid');
+  const readyPath = timing === 'early' ? join(root, 'mkdir-ready.pid') : pidPath;
+  const preload = join(root, 'ready-child.mjs');
+  await writeFile(preload, `import fs from 'node:fs/promises';
+import { once } from 'node:events';
+import { syncBuiltinESMExports } from 'node:module';
+if (process.argv[1] === ${JSON.stringify(fakeChild)}) await fs.writeFile(${JSON.stringify(pidPath)}, String(process.pid));
+if (${JSON.stringify(timing)} === 'early' && process.argv[1] === ${JSON.stringify(matrix)}) {
+  const mkdir = fs.mkdir;
+  fs.mkdir = async (path, options) => {
+    const result = await mkdir(path, options);
+    if (String(path).startsWith(${JSON.stringify(`${output}.artifacts/serial-`)})) {
+      // The real allocation completed; hold its continuation until cancellation.
+      const release = once(process, 'SIGTERM');
+      const keepAlive = setInterval(() => {}, 1000);
+      try { await fs.writeFile(${JSON.stringify(readyPath)}, String(process.pid)); await release; }
+      finally { clearInterval(keepAlive); }
+    }
+    return result;
+  };
+  syncBuiltinESMExports();
+}
+`);
   const child = spawn(process.execPath, [matrix, 'gpt-5.6-terra', 'high', output], {
     cwd: repository,
-    env: { ...process.env, CURSOR_EVAL_MATRIX_RUNNER: fakeChild, FAKE_EVAL_MATRIX_DELAY_MS: '10000' },
+    env: { ...process.env, CURSOR_EVAL_MATRIX_RUNNER: fakeChild, CURSOR_EVAL_MATRIX_CONCURRENCY: '1',
+      NODE_OPTIONS: `${process.env.NODE_OPTIONS || ''} --import=${JSON.stringify(preload)}`, FAKE_EVAL_MATRIX_DELAY_MS: '10000' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   const stdout = [];
-  let markStarted;
-  const started = new Promise((resolveStarted) => { markStarted = resolveStarted; });
-  child.stdout.on('data', (chunk) => {
-    stdout.push(chunk);
-    if (Buffer.concat(stdout).toString('utf8').includes('matrix_started')) markStarted();
+  child.stdout.on('data', (chunk) => stdout.push(chunk)); child.stderr.resume();
+  const closed = once(child, 'close');
+  t.after(async () => {
+    if (child.exitCode === null && child.signalCode === null) child.kill('SIGTERM');
+    await closed;
   });
-  await started;
+  let readyPid;
+  const deadline = Date.now() + 10_000;
+  while (!readyPid && Date.now() < deadline) {
+    const value = await readFile(readyPath, 'utf8').catch((error) => {
+      if (error.code !== 'ENOENT') throw error;
+      return '';
+    });
+    if (/^\d+$/.test(value)) readyPid = Number(value);
+    else await nextTurn();
+  }
+  assert.ok(readyPid, `${timing} readiness must be published before interruption`);
+  process.kill(readyPid, 0);
   child.kill('SIGTERM');
   child.kill('SIGINT');
-  const [code, signal] = await once(child, 'close');
+  const [code, signal] = await closed;
   assert.equal(signal, null);
   assert.equal(code, 130);
+  if (timing === 'active') {
+    assert.throws(() => process.kill(readyPid, 0), { code: 'ESRCH' }, 'the active scenario child must be reaped');
+  } else {
+    await assert.rejects(readFile(pidPath), { code: 'ENOENT' });
+    const events = Buffer.concat(stdout).toString('utf8').trim().split('\n').map(JSON.parse);
+    assert.equal(events.some(({ event }) => event === 'scenario_started'), false, 'early cancellation must prevent scenario launch');
+  }
   await assert.rejects(readFile(output, 'utf8'));
 });
 

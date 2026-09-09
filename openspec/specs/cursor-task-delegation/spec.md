@@ -151,10 +151,8 @@ the wrapper, and, when the follow-up grants write authority after an `ask` turn,
 MUST call `cursor_set_mode` with `mode:"agent"` before `cursor_send_prompt` on
 that same wrapper.
 Every branch MUST report the semantic result to the user. A continuing branch
-MUST preserve the exact IDs and pending context from tool history for the next
-operation within the same Codex task. It SHOULD retain the latest returned
-resume cursor as the sparse default, but an earlier/repeated runtime-valid
-cursor or omission=0 is permitted; copying these values into final JSON
+MUST preserve the exact IDs and pending context from tool history for
+the next operation within the same Codex task; copying them into final JSON
 is not a continuation requirement. An observation gap and a required new user decision MUST be stated
 explicitly. A tool result or commentary-only message does not satisfy the
 caller report and MUST NOT end that Codex turn. Terminal success MAY use normal
@@ -169,7 +167,7 @@ token, вопрос с видимыми options и plan; MCP mechanics пров�
 
 Runtime tool results remain the source of exact receipts, hashes, provider
 diagnostics and IDs. The skill MUST NOT require their duplication in the
-human-facing report. Incorrect address or runtime-invalid cursor fields in a subsequent tool
+human-facing report. Incorrect address fields in a subsequent tool
 call remain a continuation failure unless corrected under the finite recovery
 proof owned by «Сценарный контракт поведения и authority-aware interaction».
 The normal wait workflow MUST distinguish a rejected call with incorrect
@@ -180,9 +178,6 @@ success, a hidden observation gap and a missing required
 new user decision are report failures. A consumer restricted to final-only
 external handoff is outside this change; no new handoff protocol is introduced.
 
-When a wait returns `events_lost:true`, the report MUST explicitly disclose the
-observation gap, state that missing history was not reconstructed, and bound
-its conclusions to the current normalized state.
 If `cursor_delegate` returns a failed-allocation result without `turn_id`, the
 skill MUST report normalized failed state and error code and explicitly require
 a new user decision; exact diagnostics remain in transcript evidence.
@@ -196,10 +191,8 @@ option и request ID из tool result, не из самостоятельно с
 и MUST NOT
 вызвать answer до отдельного user follow-up с выбором,
 skip или cancel. После follow-up answer response продолжает тот же delegated
-turn: следующий wait SHOULD использовать его `last_event_id` как sparse
-`after_event_id` и MUST сохранять later-wait `timeout_ms:60000`. Более ранний
-или повторный runtime-valid cursor либо omission=0 не является continuation
-failure и не перезапускает first-wait schedule из-за нового Codex turn;
+turn: следующий wait MUST использовать exact session/turn IDs и later-wait
+`timeout_ms:60000`, не перезапуская first-wait schedule из-за нового Codex turn;
 то же правило действует для fresh wait после stale/unknown answer. Для pending
 decision follow-up MUST быть потреблён только соответствующим answer tool и
 MUST NOT одновременно пересылаться через `cursor_send_prompt`; только отдельная
@@ -259,11 +252,15 @@ Explicit follow-up, полученный во время active turn, MUST бы�
 в соответствующую terminal recovery ветку без send; pre-failure follow-up не
 заменяет новое post-failure user decision.
 
-For the first wait of every turn, the skill SHOULD pass the `last_event_id`
-returned by `cursor_delegate` or `cursor_send_prompt` as `after_event_id`.
-For following waits it SHOULD use the most recent `resume_after_event_id` as
-the sparse default. Runtime omission=0 and an earlier or repeated runtime-valid
-`after_event_id` remain valid and are not continuation failures. When the caller explicitly limits observation to one wait
+Skill MUST наблюдать ход через SW-1/SW-2 без event/progress cursors,
+включая продолжение после answer и recovery stale request. При pending он
+обрабатывает решение по существующим authority правилам, а не повторяет wait
+в tight loop. Повторный terminal snapshot не является новым выполнением задачи.
+Для восстановления недоставленного wait response skill использует повторное
+наблюдение SW-2 с уже возвращёнными session/turn IDs; неизвестный адрес не
+разрешает новый prompt, resume или delegation. Это продолжение существующего
+наблюдения, а не отдельная retry policy для provider operations.
+When the caller explicitly limits observation to one wait
 interval, the skill MUST stop the later-wait schedule after the first
 `wait_timeout:true`, report that work remains in progress, end that Codex turn,
 and leave the Cursor turn active; continuation uses the retained tool results.
@@ -380,16 +377,14 @@ full bounded baseline or snapshot together with the delta, or the skill MUST
 NOT use the same-live delta-only template and MUST
 report the review as unverifiable when that evidence is unavailable. Bounded
 waits use increasing intervals capped by the runtime maximum and always retain
-exact `session_id` and `turn_id`; they SHOULD retain the latest resume cursor as
-the next sparse default. This is workflow
+exact `session_id`, `turn_id` без consumer cursor. This is workflow
 composition only: no further critic/session tool, session registry or automatic retry is
 introduced.
 
 #### Scenario: Повторное ревью использует delta
 - **WHEN** prior critic verdict requires a minimal artifact repair
 - **THEN** next prompt contains the prior digest and only changed artifacts,
-  while subsequent tool calls use the retained session IDs and a runtime-valid
-  event cursor, preferably the latest resume hint
+  while subsequent tool calls use the retained session IDs без consumer cursor
 
 #### Scenario: Resume повторно устанавливает critic context
 - **WHEN** runtime wrapper потерян между critic turns и provider conversation
@@ -407,19 +402,14 @@ introduced.
 - **WHEN** задача проходит фазы research, planning и explicit implementation
 - **THEN** skill starts `ask`, uses `plan` when approval is needed and uses
   `agent` only for authorized work; it preserves one live session through
-  `cursor_set_mode`, prefers returned resume cursors for sparse waits and
-  reports compact progress
-  events without treating them as completion
+  `cursor_set_mode`, наблюдает по exact session/turn IDs и сообщает bounded progress excerpt without treating them as completion
 
 #### Scenario: Long implementation remains observable
 - **WHEN** explicitly authorized local implementation runs longer than one
   regular wait interval
-- **THEN** skill normally passes the turn-start `last_event_id` on the first wait, leaves
-  that wait at runtime's 30-second timeout default, then uses 60/120/180-second
-  bounded waits, preserves and passes each returned progress revision, and
-  prefers each returned resume cursor while accepting earlier/repeated
-  runtime-valid or omitted=0 event cursors,
-  reports only a new bounded excerpt, and distinguishes
+- **THEN** skill использует только адрес хода, оставляет первый timeout default,
+  затем увеличивает интервалы в пределах runtime bounds,
+  сообщает актуальный bounded excerpt и различает
   `timed_out` from a resumable work-in-progress rather than restarting it
 
 Для выбора неизвестного точного model ID или ответа на запрос доступных моделей установленный skill MUST использовать runtime MD-1 через MCP. Он MUST NOT предлагать caller выполнять CLI models вручную, самостоятельно обходить MCP shell-командой или придумывать family alias. При отсутствии явно выбранной модели сохраняется существующий путь с omitted model; обязательного discovery для каждого default запуска нет. Уже полученный в текущей задаче список можно использовать как контекст выбора без обещания дальнейшей доступности модели.

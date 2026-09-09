@@ -8,6 +8,7 @@ const OUTCOMES = new Set(['succeeded', 'failed']);
 const REPORT_CATEGORIES = new Set(['interaction']);
 const TRACE_KINDS = new Set(['session.allocated', 'session.start-rejected', 'session.resumed', 'session.resume-failed', 'session.tombstoned', 'session.mode-changed', 'session.mode-change-failed', 'session.mode-recovery-status', 'turn.started', 'turn.wait-timeout', 'turn.wait-recovered', 'turn.followup-received-active', 'turn.receipt', 'turn.result-read', 'session.close-attempted', 'prompt.contract', 'pending.question', 'pending.plan', 'pending.permission', 'effect.file-read', 'effect.file-written', 'turn.completed', 'turn.failed', 'turn.timed-out', 'answer.question', 'answer.plan', 'answer.permission', 'answer.rejected-stale']);
 const PLACEHOLDER = /\$\{([^}]+)\}/g;
+TRACE_KINDS.add('turn.wait-response-recovered');
 const PUBLIC_MCP_TOOL_NAMES = Object.freeze([
   'cursor_delegate', 'cursor_start_session', 'cursor_resume_session', 'cursor_send_prompt',
   'cursor_set_mode', 'cursor_session_status', 'cursor_wait', 'cursor_answer_question',
@@ -240,6 +241,9 @@ function trace(value, steps, label) {
       if (!Number.isSafeInteger(observation.timeout_ms) || observation.timeout_ms < 1_000 || observation.timeout_ms > 180_000
         || typeof observation.timeout_omitted !== 'boolean'
         || (observation.timeout_omitted && observation.timeout_ms !== 30_000)) admission(`${label}[${index}] has an invalid wait contract`);
+    } else if (observation.kind === 'turn.wait-response-recovered') {
+      closed(observation, ['kind', 'matched', 'step_id'], `${label}[${index}]`);
+      if (observation.matched !== true) admission(`${label}[${index}].matched must be true`);
     } else if (observation.kind === 'turn.receipt') {
       closed(observation, ['kind', 'matched', 'result_truncated', 'step_id'], `${label}[${index}]`);
       if (observation.matched !== true || typeof observation.result_truncated !== 'boolean') admission(`${label}[${index}] has an invalid receipt contract`);
@@ -272,6 +276,7 @@ function trace(value, steps, label) {
       ? 'answer.rejected-stale' : `${observation.kind.startsWith('answer.') ? 'answer' : 'pending'}.${referenced.step.request_kind}`)
       : referenced.step.type === 'effect' ? `effect.file-${referenced.step.operation === 'read' ? 'read' : 'written'}`
         : referenced.step.type === 'prompt-check' ? 'prompt.contract'
+          : observation.kind === 'turn.wait-response-recovered' ? 'turn.wait-response-recovered'
           : observation.kind === 'turn.receipt' ? 'turn.receipt'
               : observation.kind === 'turn.result-read' ? 'turn.result-read'
               : referenced.step.turn_status === 'timed_out' ? 'turn.timed-out'
@@ -436,13 +441,18 @@ function programmedScenario(scenario, label) {
   if (modeTimeout !== Boolean(scenario.harness_faults?.includes('mode-timeout'))) admission(`${label}.mode timeout and fault must be paired`);
   if (modeProtocolError !== Boolean(scenario.harness_faults?.includes('inject-mode-protocol-error-once')
     || scenario.harness_faults?.includes('reject-mode'))) admission(`${label}.mode protocol failure and fault must be paired`);
-  if (Boolean(scenario.harness_faults?.includes('inject-mode-protocol-error-once'))
-    && Boolean(scenario.harness_faults?.includes('reject-mode'))) admission(`${label}.mode protocol faults are mutually exclusive`);
   if (scenario.expected_trace.some(({ kind, timeout_omitted: omitted }) => kind === 'turn.wait-timeout' && omitted === true)
     !== Boolean(scenario.harness_faults?.includes('accelerate-wait-timeout'))) admission(`${label}.default wait timeout and acceleration fault must be paired`);
   if (scenario.expected_trace.some(({ kind }) => kind === 'turn.followup-received-active')
     !== Boolean(scenario.harness_faults?.includes('hold-terminal-until-followup'))) admission(`${label}.active-followup trace and hold fault must be paired`);
   const expectedKinds = scenario.expected_trace.map(({ kind }) => kind);
+  const lossFault = Boolean(scenario.harness_faults?.includes('lose-terminal-wait-response-once'));
+  if (expectedKinds.includes('turn.wait-response-recovered') !== lossFault) admission(`${label}.loss recovery trace and fault must be paired`);
+  if (lossFault) {
+    const terminals = scenario.program.steps.filter(({ type }) => type === 'terminal');
+    if (scenario.harness_faults.length !== 1 || terminals.length !== 1 || terminals[0].turn_status !== 'completed'
+      || expectedKinds.filter((kind) => kind === 'turn.wait-response-recovered').length !== 1) admission(`${label}.loss fault requires one isolated nonempty completed terminal`);
+  }
   if (expectedKinds.includes('answer.rejected-stale')
     !== Boolean(scenario.harness_faults?.includes('inject-stale-question-once'))) admission(`${label}.stale-answer trace and injection fault must be paired`);
   if (expectedKinds.includes('turn.timed-out')
@@ -721,7 +731,8 @@ const argumentTag = (request) => typeof request?.arguments_without_session_turn_
   && /^[a-f0-9]{64}$/.test(request.arguments_without_session_turn_sha256)
   ? request.arguments_without_session_turn_sha256 : null;
 function exactArgumentProjection(request, fields) {
-  const projection = Object.fromEntries(fields.filter((field) => Object.hasOwn(request || {}, field))
+  if (!request) return false;
+  const projection = Object.fromEntries(fields.filter((field) => Object.hasOwn(request, field))
     .map((field) => [field, request[field]]));
   return argumentTag(request) === createHash('sha256').update(canonicalJson(projection)).digest('hex');
 }
@@ -745,7 +756,6 @@ export function findRecoveredCalls(transcript, expectedTurns) {
       || call.response.ok !== false || call.response.provider_error
       || (call.response.error_code === 'unknown_turn' && !TURN_LOOKUP_TOOLS.has(call.tool))) continue;
     const rangeIndex = transcript.turn_call_ranges.findIndex(({ start, end }) => start <= index && index < end);
-    if (rangeIndex < 0) continue;
     let successIndex = index + 1;
     // Read-only diagnostics do not change the operation being repaired. Their
     // successful current-session responses must remain in the original evidence.
@@ -784,20 +794,45 @@ export function findRecoveredCalls(transcript, expectedTurns) {
   return recovered;
 }
 
-function hasTerminalWaitLossRecovery(transcript) {
+export function findTerminalWaitLossRecovery(scenario, transcript) {
   const calls = transcript?.calls;
-  if (!Array.isArray(calls)) return false;
-  const losses = calls.map((call, index) => ({ call, index })).filter(({ call }) => call?.tool === 'cursor_wait'
-    && call.withheld_terminal_response === true && call.caller_error_code === 'transport_error'
-    && call.response?.ok === true && ['completed', 'failed', 'timed_out', 'cancelled'].includes(call.response.turn_status));
-  if (losses.length !== 1) return false;
+  if (!scenario.harness_faults?.includes('lose-terminal-wait-response-once')
+    || !validRecoveryContext(transcript, (scenario.followups?.length || 0) + 1)
+    || transcript.dropped_calls !== 0 || transcript.unexpected_input_requests !== 0) return null;
+  const losses = calls.map((call, index) => ({ call, index })).filter(({ call }) => call && Object.hasOwn(call, 'withheld_response'));
+  if (losses.length !== 1) return null;
   const { call: lost, index } = losses[0];
   const repeated = calls[index + 1];
-  return repeated?.tool === 'cursor_wait' && repeated.response?.ok === true
-    && repeated.request?.session_id === lost.request?.session_id && repeated.request?.turn_id === lost.request?.turn_id
-    && repeated.response?.session_id === lost.response?.session_id && repeated.response?.turn_id === lost.response?.turn_id
-    && repeated.response?.turn_status === lost.response?.turn_status
-    && ['completed', 'failed', 'timed_out', 'cancelled'].includes(repeated.response.turn_status);
+  const range = transcript.turn_call_ranges.find(({ start, end }) => start <= index && index < end);
+  let sessionId; let turnId;
+  for (const call of calls.slice(0, index)) {
+    if (call?.response?.ok !== true) continue;
+    if (['cursor_delegate', 'cursor_start_session', 'cursor_resume_session'].includes(call.tool)) {
+      sessionId = call.response.session_id; turnId = call.response.turn_id;
+    } else if (call.tool === 'cursor_send_prompt' && call.request?.session_id === sessionId) turnId = call.response.turn_id;
+  }
+  const admitted = (call) => call?.tool === 'cursor_wait' && capturedRecoveryId(sessionId) && capturedRecoveryId(turnId)
+    && call.request?.session_id === sessionId && call.request?.turn_id === turnId
+    && Object.keys(call.request).every((key) => ['session_id', 'turn_id', 'timeout_ms', 'arguments_without_session_turn_sha256'].includes(key))
+    && (call.request.timeout_ms === undefined || (Number.isSafeInteger(call.request.timeout_ms) && call.request.timeout_ms >= 1000 && call.request.timeout_ms <= 180000))
+    && exactArgumentProjection(call.request, ['timeout_ms']);
+  const terminal = (response) => response?.ok === true && response.turn_status === 'completed'
+    && response.session_id === sessionId && response.turn_id === turnId && !response.error_code && !response.provider_error
+    && response.wait_timeout === false && Array.isArray(response.pending) && response.pending.length === 0
+    && ['live', 'closing', 'tombstone'].includes(response.session_state)
+    && Number.isSafeInteger(response.result?.text_bytes) && response.result.text_bytes > 0 && /^[a-f0-9]{64}$/.test(response.result.text_sha256)
+    && typeof response.result.truncated === 'boolean'
+    && response.terminal_receipt?.session_id === sessionId && response.terminal_receipt.turn_id === turnId
+    && response.terminal_receipt.turn_status === 'completed'
+    && Number.isSafeInteger(response.terminal_receipt.last_event_id) && response.terminal_receipt.last_event_id >= 0
+    && response.terminal_receipt.result_sha256 === response.result.text_sha256
+    && response.terminal_receipt.result_truncated === response.result.truncated;
+  if (!range || index + 1 >= range.end || !admitted(lost) || !admitted(repeated)
+    || canonicalJson(lost.response) !== canonicalJson({ ok: false, error_code: 'eval_wait_response_lost', message: 'cursor_wait response unavailable' })
+    || !terminal(lost.withheld_response) || !terminal(repeated.response)
+    || canonicalJson(lost.withheld_response.result) !== canonicalJson(repeated.response.result)
+    || canonicalJson(lost.withheld_response.terminal_receipt) !== canonicalJson(repeated.response.terminal_receipt)) return null;
+  return { lost_call_index: index + 1, repeated_call_index: index + 2 };
 }
 
 export function evaluateScenario(scenario, { trace = [], callbacks = [], effects = [], captured_finals: capturedFinals, actual_task_outcome: actualTaskOutcome, transcript } = {}) {
@@ -824,7 +859,10 @@ export function evaluateScenario(scenario, { trace = [], callbacks = [], effects
     };
   }
   const recoveredCalls = findRecoveredCalls(transcript, capturedFinals.length);
-  if (scenario.harness_faults?.includes('lose-terminal-wait-response-once') && !hasTerminalWaitLossRecovery(transcript)) add('terminal-wait-loss-recovery-mismatch');
+  const waitLossRecovery = findTerminalWaitLossRecovery(scenario, transcript);
+  if (scenario.harness_faults?.includes('lose-terminal-wait-response-once')
+    ? !waitLossRecovery
+    : transcript?.calls?.some((call) => call && Object.hasOwn(call, 'withheld_response'))) add('terminal-wait-loss-recovery-mismatch');
   const recoveredIndices = new Set(recoveredCalls.map(({ failed_call_index: index }) => index));
   if (transcript?.calls?.some((call, index) => call?.response?.ok === false
     && (['unknown_session', 'unknown_turn'].includes(call.response.error_code)
@@ -892,6 +930,9 @@ export function evaluateScenario(scenario, { trace = [], callbacks = [], effects
       }
     }
     if (observation.kind === 'prompt.contract' && observation.matched !== true) add('prompt-contract-mismatch');
+    if (observation.kind === 'turn.wait-response-recovered' && (!waitLossRecovery
+      || observation.lost_call_index !== waitLossRecovery.lost_call_index
+      || observation.repeated_call_index !== waitLossRecovery.repeated_call_index)) add('terminal-wait-loss-recovery-mismatch');
   }
   let segmentStarted = false;
   let segmentTerminal = false;

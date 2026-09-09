@@ -4,15 +4,26 @@ import * as support from './runtime-test-support.mjs';
 const { assert, spawn, createHash, chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync, tmpdir, join, fileURLToPath, ADAPTER, CURSOR_ADAPTER_VERSION, LIMITS, MANIFEST_VERSION, Runtime, fake, server, cursorAgentGolden, cwd, fakeEnvNames, offlineModelDependencies, withFake, withInjectedFake, isolatedFakeEnvironment, withDefaultFake, fireInitBudgetDeadline, waitTerminal, waitSessionState, readJsonLines, lastLogged, waitForExit, waitForLine } = support;
 
 test('fake ACP completes and preserves retained T1 while T2 is active', async (t) => {
-  const runtime = withFake(t);
+  const runtime = withInjectedFake(t, { env: { FAKE_ACP_HOLD_PROMPT: '1' } });
   const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
   assert.equal(session.session_state, 'live');
   const first = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'one' });
-  const completed = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: first.turn_id, timeout_ms: 1_000 });
+  const record = runtime.sessions.get(session.session_id);
+  const readers = [1, 2].map(() => runtime.call('cursor_wait', {
+    session_id: session.session_id, turn_id: first.turn_id, timeout_ms: 1_000,
+  }));
+  assert.equal(record.waiters.size, 2, 'both readers are registered before completion');
+  record.complete(record.active, { stopReason: 'end_turn' });
+  // Allocate T2 synchronously before either suspended T1 reader can resume.
+  const nextPrompt = runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'two' });
+  const [completed, concurrent] = await Promise.all(readers);
+  assert.deepEqual(concurrent, completed);
+  assert.equal(completed.turn_id, first.turn_id);
   assert.equal(completed.turn_status, 'completed');
-  const second = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'two' });
+  const second = await nextPrompt;
   const retained = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: first.turn_id, timeout_ms: 1_000 });
-  assert.equal(retained.turn_status, 'completed');
+  assert.deepEqual(retained, completed);
+  assert.equal((await runtime.call('cursor_session_status', { session_id: session.session_id })).active_turn.turn_id, second.turn_id);
   await runtime.call('cursor_close_session', { session_id: session.session_id });
   assert.ok(second.turn_id);
 });
@@ -472,6 +483,35 @@ test('malformed ACP callbacks are rejected before a pending request is published
     assert.deepEqual(terminal.pending, []);
     await runtime.call('cursor_close_session', { session_id: session.session_id });
   });
+  const runtime = withInjectedFake(t, { env: { FAKE_ACP_HOLD_PROMPT: '1' } });
+  const started = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
+  const turn = await runtime.call('cursor_send_prompt', { session_id: started.session_id, prompt: 'invalid shapes' });
+  const record = runtime.sessions.get(started.session_id);
+  const originalWrite = record.child.stdin.write;
+  const replies = [];
+  record.child.stdin.write = (frame, callback) => { replies.push(JSON.parse(frame)); callback?.(); return true; };
+  try {
+    const question = { id: 'q', question: 'Continue?', options: [{ id: 'yes', label: 'Yes' }] };
+    const invalid = [{ questions: [] }, { questions: [{ ...question, options: {} }] },
+      { questions: [{ ...question, options: [{ id: 'yes', label: 'Yes' }, { id: 'yes', label: 'Again' }] }] },
+      { questions: [{ ...question, id: 'q'.repeat(LIMITS.inputBytes + 1) }] },
+      { title: 1, questions: [question] },
+      { questions: [{ ...question, options: [{ id: 'yes', label: 1 }] }] }];
+    for (const [index, params] of invalid.entries()) {
+      record.receive(JSON.stringify({ jsonrpc: '2.0', id: `invalid-${index}`, method: 'cursor/ask_question', params }));
+      assert.equal(replies.at(-1).error.data.error_code, 'invalid_callback');
+      const status = await runtime.call('cursor_session_status', { session_id: started.session_id });
+      assert.equal(status.session_state, 'live');
+      assert.equal(status.active_turn.turn_status, 'running');
+      assert.deepEqual(status.active_turn.pending, []);
+    }
+    assert.equal(replies.length, invalid.length);
+    record.receive(JSON.stringify({ jsonrpc: '2.0', id: 'missing-label', method: 'cursor/ask_question',
+      params: { questions: [{ id: 'q', options: [{ id: 'yes' }] }] } }));
+    const waiting = await runtime.call('cursor_wait', { session_id: started.session_id, turn_id: turn.turn_id });
+    assert.deepEqual(waiting.pending[0].context.questions[0].options[0].label, { text: '', truncated: false });
+  } finally { record.child.stdin.write = originalWrite; }
+  await runtime.call('cursor_close_session', { session_id: started.session_id });
 });
 
 test('programmed ACP question normalizes empty prompt and option label', async (t) => {
@@ -638,8 +678,18 @@ test('optional ACP callback fields are normalized into stable public pending for
   const planWaiting = await planRuntime.call('cursor_wait', { session_id: planSession.session_id, turn_id: planTurn.turn_id, timeout_ms: 1_000 });
   assert.equal(planWaiting.pending[0].context.title, null);
   assert.equal(planWaiting.pending[0].context.body.text, 'Fallback body');
+  const planRecord = planRuntime.sessions.get(planSession.session_id);
+  planRecord.receive(JSON.stringify({ jsonrpc: '2.0', id: 'empty-plan', method: 'cursor/create_plan', params: {} }));
+  const plans = await planRuntime.call('cursor_wait', { session_id: planSession.session_id, turn_id: planTurn.turn_id });
+  assert.deepEqual(plans.pending.find(({ request_id }) => request_id === 'empty-plan').context,
+    { title: null, body: { text: '', truncated: false } });
+  // The additional callback is injected at the adapter boundary, so settle its
+  // reply locally without making the fixture complete its actual plan early.
+  const sendConfirmed = planRecord.sendConfirmed;
+  planRecord.sendConfirmed = async () => {};
+  try { await planRuntime.call('cursor_answer_plan', { session_id: planSession.session_id, turn_id: planTurn.turn_id, request_id: 'empty-plan', decision: 'reject' }); }
+  finally { planRecord.sendConfirmed = sendConfirmed; }
   const planAnswered = await planRuntime.call('cursor_answer_plan', { session_id: planSession.session_id, turn_id: planTurn.turn_id, request_id: 'plan1', decision: 'accept' });
   assert.equal((await waitTerminal(planRuntime, planSession.session_id, planTurn.turn_id)).turn_status, 'completed');
   await planRuntime.call('cursor_close_session', { session_id: planSession.session_id });
 });
-

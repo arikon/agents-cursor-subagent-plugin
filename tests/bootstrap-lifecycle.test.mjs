@@ -74,6 +74,21 @@ test('preflight is read-only, emits exactly eight checks and reports missing exe
   assert.equal(result.envelope.checks.find(({ name }) => name === 'node').status, 'fail');
   assert.equal(result.envelope.checks.find(({ name }) => name === 'managed_root').status, 'pass');
   assert.equal(result.envelope.checks.find(({ name }) => name === 'agent_status').status, 'not_checked');
+  const messageLess = await runBootstrap(['preflight', '--managed-marketplace-root', context.managed,
+    '--node-executable', missing, '--codex-executable', context.executable, '--agent-executable', context.executable], {
+    env: context.env,
+    runCommand: async (command, args, options) => {
+      const operation = args[1];
+      calls.push(operation);
+      if (operation === 'mcp-check') return { code: 0, output: JSON.stringify({ ok: true }) };
+      if (operation === 'agent-status') return { code: 0, output: JSON.stringify({ ok: true, verified: true, auth_state: 'authenticated' }) };
+      return runFakeCodexAdapterCommand(command, args, options);
+    },
+  });
+  assert.deepEqual(messageLess.envelope.checks.filter(({ name }) => ['mcp_config', 'agent_status'].includes(name)), [
+    { name: 'mcp_config', status: 'pass', code: 'ok', message: 'managed MCP config checked' },
+    { name: 'agent_status', status: 'pass', code: 'ok', message: 'authentication authenticated' },
+  ]);
   assert.equal(calls.some((operation) => /(?:add|remove)$/.test(operation)), false);
 });
 
@@ -275,4 +290,3 @@ test('install no-op compares the desired generated artifact hash as well as payl
   assert.deepEqual({ exitCode: result.exitCode, code: result.envelope.error_code }, { exitCode: 1, code: 'update_required' });
   assert.equal(await lstat(`${context.managed}.agents-cursor-subagent-plugin.staging`).then(() => true).catch(() => false), false);
 });
-

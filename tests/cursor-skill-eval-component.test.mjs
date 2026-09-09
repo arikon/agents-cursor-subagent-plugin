@@ -11,6 +11,7 @@ import test from 'node:test';
 import { assertEvalResultV1, assertEvidenceManifestV1, classifyEval, classifyScenario, evalResult, publishEvidence, readEvaluatorInventory, writeEvalResult } from '../scripts/cursor-skill-eval.mjs';
 import { evaluateScenario, findRecoveredCalls, parseScenarioCorpus, validRecoveryContext } from '../scripts/cursor-eval-scenario.mjs';
 import { canonicalJson } from '../scripts/cursor-subagent-bootstrap.mjs';
+import { observationsFromEvidence } from './codex-client-oracle-support.mjs';
 
 const recorder = fileURLToPath(new URL('../scripts/recording-mcp-proxy.mjs', import.meta.url));
 
@@ -165,6 +166,9 @@ test('recovery variation table distinguishes grounded repairs from changed inten
     ['failed diagnostic', false, evidence('cursor_wait', {}, wait, 'invalid_args', [
       { ...status, response: { ok: false, error_code: 'unknown_session' } }])],
   ];
+  const missingRequest = evidence('cursor_set_mode', {}, { session_id: 'S', mode: 'plan' });
+  delete missingRequest.calls[1].request;
+  variations.push(['missing captured mode request', false, missingRequest]);
   for (const [label, expected, transcript] of variations) {
     const original = structuredClone(transcript);
     const recovered = findRecoveredCalls(transcript, 1);
@@ -180,7 +184,7 @@ test('candidate inventory detects oracle drift independently of skill and exclud
   for (const input of ['scripts/cursor-eval-scenario.mjs', 'scripts/cursor-model-adapter.mjs',
     'tests/fixtures/release-model-discovery-preload.mjs', 'tests/fixtures/cursor-eval-model-catalog.json',
     'tests/fixtures/cursor-model-catalog-1.0.31.json', 'tests/fixtures/fake-codex-cli-v01521.mjs',
-    'tests/codex-client-oracle-support.mjs', 'tests/release-e2e-oracle-support.mjs']) {
+    'tests/codex-client-oracle-support.mjs', 'tests/release-e2e-oracle-support.mjs', 'tests/fixtures/release-generation-acp.mjs']) {
     const changed = await readEvaluatorInventory('/first-checkout', async (path) =>
       path === `/first-checkout/${input}` ? Buffer.from('changed evaluator input') : load(path));
     assert.notDeepEqual(changed.digest, first.digest, input);
@@ -289,34 +293,104 @@ test('scenario wait observations reject obsolete cursor equality fields', async 
     const scenario = corpus.scenarios.find((entry) => entry.expected_trace.some((observation) => observation.kind === kind));
     scenario.expected_trace.find((observation) => observation.kind === kind).cursor_matched = true;
     assert.throws(() => parseScenarioCorpus(JSON.stringify(corpus)), /invalid shape/, kind);
+    delete scenario.expected_trace.find((observation) => observation.kind === kind).cursor_matched;
+    Object.assign(scenario.expected_trace.find((observation) => observation.kind === kind), { timeout_omitted: true, timeout_ms: 60_000 });
+    assert.throws(() => parseScenarioCorpus(JSON.stringify(corpus)), /invalid wait contract|omitted-default wait timeout/, kind);
   }
 });
 
 test('terminal wait loss proof rejects missing evidence, wrong addresses, interleaving, and repeated provider work', async () => {
   const corpus = parseScenarioCorpus(await readFile(fileURLToPath(new URL('../evals/cursor-subagent-scenarios.v1.json', import.meta.url))));
-  const scenario = corpus.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-active-followup');
-  const loss = { tool: 'cursor_wait', request: { session_id: 'S', turn_id: 'T', timeout_ms: 60_000 },
-    response: { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'completed', wait_timeout: false },
-    withheld_terminal_response: true, caller_error_code: 'transport_error' };
-  const retry = structuredClone(loss); delete retry.withheld_terminal_response; delete retry.caller_error_code;
+  const scenario = corpus.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-terminal-wait-response-loss');
+  const request = { session_id: 'S', turn_id: 'T', arguments_without_session_turn_sha256: createHash('sha256').update('{}').digest('hex') };
+  const terminal = { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'completed', wait_timeout: false,
+    pending: [], session_state: 'live',
+    result: { text_bytes: 17, text_sha256: 'a'.repeat(64), truncated: false },
+    terminal_receipt: { session_id: 'S', turn_id: 'T', turn_status: 'completed', last_event_id: 1, result_sha256: 'a'.repeat(64), result_truncated: false } };
+  const loss = { tool: 'cursor_wait', request, response: { ok: false, error_code: 'eval_wait_response_lost', message: 'cursor_wait response unavailable' }, withheld_response: terminal };
+  const retry = { tool: 'cursor_wait', request: structuredClone(request), response: structuredClone(terminal) };
   const input = {
-    trace: scenario.expected_trace, callbacks: [], effects: [], actual_task_outcome: 'succeeded',
+    trace: scenario.expected_trace.map((entry) => ({ ...entry, ...(entry.kind === 'turn.wait-response-recovered' ? { lost_call_index: 2, repeated_call_index: 3 } : {}) })), callbacks: [], effects: [], actual_task_outcome: 'succeeded',
     captured_finals: [
-      { turn_index: 1, completeness: 'complete', text: 'ACTIVE_TIMEOUT_PROGRESS_7F3' },
-      { turn_index: 2, completeness: 'complete', text: 'ACTIVE_SECOND_OK' },
+      { turn_index: 1, completeness: 'complete', text: 'WAIT_RECOVERED_OK' },
     ],
     transcript: { calls: [{ tool: 'cursor_delegate', response: { ok: true, session_id: 'S', turn_id: 'T' } }, loss, retry],
-      dropped_calls: 0, unexpected_input_requests: 0, turn_call_ranges: [{ start: 0, end: 1 }, { start: 1, end: 3 }] },
+      dropped_calls: 0, unexpected_input_requests: 0, turn_call_ranges: [{ start: 0, end: 3 }] },
   };
   assert.equal(evaluateScenario(scenario, input).mismatches.includes('terminal-wait-loss-recovery-mismatch'), false);
+  const changedTimeout = structuredClone(input);
+  changedTimeout.transcript.calls[2].request.timeout_ms = 60_000;
+  changedTimeout.transcript.calls[2].request.arguments_without_session_turn_sha256 = createHash('sha256').update('{"timeout_ms":60000}').digest('hex');
+  assert.equal(evaluateScenario(scenario, changedTimeout).mismatches.includes('terminal-wait-loss-recovery-mismatch'), false);
+  const laterTurn = structuredClone(input);
+  laterTurn.transcript.calls.splice(1, 0,
+    { tool: 'cursor_wait', response: { ok: false, error_code: 'unknown_turn' } },
+    { tool: 'cursor_send_prompt', request: { session_id: 'S' }, response: { ok: true, session_id: 'S', turn_id: 'T' } });
+  laterTurn.transcript.turn_call_ranges[0].end += 2;
+  Object.assign(laterTurn.trace.find(({ kind }) => kind === 'turn.wait-response-recovered'), { lost_call_index: 4, repeated_call_index: 5 });
+  assert.equal(evaluateScenario(scenario, laterTurn).mismatches.includes('terminal-wait-loss-recovery-mismatch'), false);
+  const safeEvidence = [{ event: 'prompt_result', step_id: 'terminal-1', result_sha256: 'a'.repeat(64) }];
+  const projected = observationsFromEvidence(scenario, input.transcript, safeEvidence, []);
+  assert.deepEqual(projected.trace.filter(({ kind }) => kind.startsWith('turn.')).map(({ kind }) => kind),
+    ['turn.started', 'turn.wait-response-recovered', 'turn.completed', 'turn.receipt']);
+  const corruptDelivery = structuredClone(input.transcript);
+  for (const response of [corruptDelivery.calls[1].withheld_response, corruptDelivery.calls[2].response]) {
+    response.result.text_sha256 = 'b'.repeat(64); response.terminal_receipt.result_sha256 = 'b'.repeat(64);
+  }
+  assert.equal(observationsFromEvidence(scenario, corruptDelivery, safeEvidence, []).trace.find(({ kind }) => kind === 'turn.receipt').matched, false);
+  for (const result_sha256 of [undefined, 'malformed']) {
+    const missingDigest = [{ event: 'prompt_result', step_id: 'terminal-1', ...(result_sha256 === undefined ? {} : { result_sha256 }) }];
+    for (const evidence of [input.transcript, corruptDelivery]) {
+      assert.equal(observationsFromEvidence(scenario, evidence, missingDigest, []).trace.find(({ kind }) => kind === 'turn.receipt').matched, false);
+    }
+  }
+  const missingRetry = structuredClone(input.transcript);
+  missingRetry.calls.pop(); missingRetry.turn_call_ranges[0].end = 2;
+  assert.equal(observationsFromEvidence(scenario, missingRetry, safeEvidence, []).trace.some(({ kind }) => ['turn.completed', 'turn.receipt'].includes(kind)), false);
+  const noFault = { ...scenario, harness_faults: [] };
+  assert.ok(evaluateScenario(noFault, input).mismatches.includes('terminal-wait-loss-recovery-mismatch'));
   for (const mutate of [
-    (value) => delete value.transcript.calls[1].withheld_terminal_response,
+    (value) => delete value.transcript.calls[1].withheld_response,
+    (value) => delete value.transcript.calls[2].response.terminal_receipt,
+    (value) => delete value.transcript.calls[2].response.terminal_receipt.last_event_id,
+    (value) => { value.transcript.calls[2].response.wait_timeout = true; },
+    (value) => { value.transcript.calls[2].response.pending = [{ request_id: 'P' }]; },
+    (value) => { value.transcript.calls[2].response.result.text_bytes = 0.5; },
+    (value) => { delete value.transcript.calls[1].withheld_response.result.truncated; delete value.transcript.calls[2].response.result.truncated; },
+    (value) => { value.transcript.calls[1].withheld_response.result.truncated = 'false'; value.transcript.calls[2].response.result.truncated = 'false'; },
+    (value) => { value.transcript.calls[2].response.session_state = 'unknown'; },
+    (value) => { value.trace.find(({ kind }) => kind === 'turn.wait-response-recovered').lost_call_index = 1; },
+    (value) => { value.transcript.calls[2].response.result.text_sha256 = 'b'.repeat(64); },
+    (value) => { value.transcript.calls[2].response.terminal_receipt.result_sha256 = 'b'.repeat(64); },
+    (value) => { value.transcript.calls[2].withheld_response = terminal; },
+    (value) => { value.transcript.calls[1].response.message = 'other'; },
+    (value) => { value.transcript.calls[1].request.timeout_ms = 999; },
+    (value) => { value.transcript.calls[1].request.extra = true; },
+    (value) => { value.transcript.calls[1].request.arguments_without_session_turn_sha256 = 'a'.repeat(64); },
+    (value) => { value.transcript.calls[0].response.turn_id = 'OTHER'; },
+    (value) => { value.transcript.calls[2].response.session_id = 'OTHER'; },
+    (value) => { value.transcript.dropped_calls = 1; },
+    (value) => { value.transcript.unexpected_input_requests = 1; },
+    (value) => delete value.transcript.turn_call_ranges,
+    (value) => { value.transcript.turn_call_ranges[0].end = 2; },
     (value) => { value.transcript.calls[2].request.turn_id = 'WRONG'; },
     (value) => value.transcript.calls.splice(2, 0, { tool: 'cursor_session_status', request: { session_id: 'S' }, response: { ok: true, session_id: 'S' } }),
     (value) => value.transcript.calls.splice(2, 0, { tool: 'cursor_send_prompt', request: { session_id: 'S' }, response: { ok: true, session_id: 'S', turn_id: 'NEXT' } }),
   ]) {
     const variation = structuredClone(input); mutate(variation);
     assert.equal(evaluateScenario(scenario, variation).mismatches.includes('terminal-wait-loss-recovery-mismatch'), true);
+  }
+  for (const mutate of [
+    (row) => row.harness_faults.push('exit-after-result'),
+    (row) => { row.program.steps[0].result_text = ''; },
+    (row) => { row.program.steps[0].turn_status = 'failed'; },
+    (row) => { row.expected_trace = row.expected_trace.filter(({ kind }) => kind !== 'turn.wait-response-recovered'); },
+    (row) => { row.harness_faults = []; },
+    (row) => { row.expected_trace.find(({ kind }) => kind === 'turn.wait-response-recovered').matched = false; },
+    (row) => { row.expected_trace.splice(2, 0, { ...row.expected_trace[2] }); },
+  ]) {
+    const candidate = structuredClone(corpus); mutate(candidate.scenarios.find(({ scenario_id: id }) => id === scenario.scenario_id));
+    assert.throws(() => parseScenarioCorpus(JSON.stringify(candidate)));
   }
 });
 
@@ -428,4 +502,3 @@ test('launch trace constrains declared effort and fast fields without inventing 
     assert.deepEqual(evaluate(declared, trace, ['FIRST_CONFIG_OK', 'SECOND_CONFIG_OK']).mismatches, ['trace-mismatch']);
   }
 });
-

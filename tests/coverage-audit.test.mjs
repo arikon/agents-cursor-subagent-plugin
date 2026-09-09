@@ -267,6 +267,10 @@ test('coverage audit rejects incomplete, drifting and ambiguously referenced art
     ['invalid artifact digest descriptors', { mutateResult: (result) => { delete result.coverage.artifact_digests.stderr; } }],
     ['invalid artifact digest bytes', { mutateResult: (result) => { result.coverage.artifact_digests.tap.bytes = -1; } }],
     ['invalid artifact digest hash', { mutateResult: (result) => { result.coverage.artifact_digests.tap.sha256 = 'bad'; } }],
+    ...[undefined, null, ''].flatMap((sha256) => [
+      [`source file hash ${String(sha256)}`, { mutateResult: (result) => { result.coverage.sources.files[0].sha256 = sha256; } }],
+      [`artifact digest hash ${String(sha256)}`, { mutateResult: (result) => { result.coverage.artifact_digests.tap.sha256 = sha256; } }],
+    ]),
     ['missing artifact reference', { mutateResult: (result) => { delete result.artifacts.failures; } }],
     ['escaping artifact reference', { mutateResult: (result) => { result.artifacts.failures = '../failures.jsonl'; } }],
     ['nested artifact reference', { mutateResult: (result) => { result.artifacts.failures = 'nested/failures.jsonl'; } }],
