@@ -129,40 +129,31 @@ test('recovery variation table distinguishes grounded repairs from changed inten
       .filter(([key]) => !['session_id', 'turn_id'].includes(key))))).digest('hex') });
   const evidence = (tool, before, after, error = 'invalid_args', interleave = []) => ({
     calls: [
-      { tool: 'cursor_delegate', response: { ok: true, session_id: 'S', turn_id: 'T', last_event_id: 2, progress_revision: 1 } },
+      { tool: 'cursor_delegate', response: { ok: true, session_id: 'S', turn_id: 'T' } },
       { tool, request: request(before), response: { ok: false, error_code: error } },
       ...interleave,
       { tool, request: request(after), response: { ok: true, session_id: 'S', turn_id: 'T' } },
     ], dropped_calls: 0, unexpected_input_requests: 0, turn_call_ranges: [{ start: 0, end: 3 + interleave.length }],
   });
-  const wait = { session_id: 'S', turn_id: 'T', after_event_id: 2 };
+  const wait = { session_id: 'S', turn_id: 'T' };
   const status = { tool: 'cursor_session_status', request: request({ session_id: 'S' }),
     response: { ok: true, session_id: 'S', session_state: 'live' } };
   // Verdicts are specified before replay; no inference from a hosted pass/fail.
   const variations = [
-    ['empty wait address and published cursor', true, evidence('cursor_wait', {}, wait)],
+    ['empty wait address', true, evidence('cursor_wait', {}, wait)],
     ['missing session ID', true, evidence('cursor_wait', { turn_id: 'T' }, { session_id: 'S', turn_id: 'T' })],
     ['missing turn ID', true, evidence('cursor_wait', { session_id: 'S' }, { session_id: 'S', turn_id: 'T' })],
     ['wrong ID', true, evidence('cursor_wait', { ...wait, turn_id: 'typo' }, wait, 'unknown_turn')],
     ['both wrong IDs', true, evidence('cursor_wait', { ...wait, session_id: 'typo', turn_id: 'typo' }, wait, 'unknown_session')],
     ['malformed address encoding', true, evidence('cursor_wait', { ...wait, session_id: '\ud800' }, wait, 'invalid_text_encoding')],
     ['diagnostic between rejection and repair', true, evidence('cursor_wait', {}, wait, 'invalid_args', [status])],
-    ['cursor learned from intervening status', true, evidence('cursor_wait', {}, { ...wait, after_event_id: 3 }, 'invalid_args', [
-      { ...status, response: { ...status.response, last_event_id: 3 } }])],
     ['repeated read-only diagnostics', true, evidence('cursor_wait', {}, wait, 'invalid_args', [status, status])],
-    ['bad event cursor', true, evidence('cursor_wait', { ...wait, after_event_id: -1 }, wait)],
-    ['both bad cursors', true, evidence('cursor_wait', { ...wait, after_event_id: -1, after_progress_revision: -1 },
-      { ...wait, after_progress_revision: 1 })],
-    ['wrong address and bad cursor together', true, evidence('cursor_wait', { session_id: 'typo', turn_id: 'typo', after_event_id: -1 },
-      wait, 'unknown_session')],
     ['missing mode', true, evidence('cursor_set_mode', { session_id: 'S' }, { session_id: 'S', mode: 'plan' })],
     ['malformed mode', true, evidence('cursor_set_mode', { session_id: 'S', mode: 'plna' }, { session_id: 'S', mode: 'plan' })],
     ['changed valid mode intent', false, evidence('cursor_set_mode', { session_id: 'S', mode: 'ask' }, { session_id: 'S', mode: 'plan' })],
     ['mode provider failure', false, evidence('cursor_set_mode', { session_id: 'S', mode: 'plna' }, { session_id: 'S', mode: 'plan' }, 'protocol_error')],
     ['changed timeout', false, evidence('cursor_wait', { ...wait, timeout_ms: 0 }, { ...wait, timeout_ms: 1000 })],
-    ['invented event cursor', false, evidence('cursor_wait', {}, { ...wait, after_event_id: 3 })],
     ['unknown extra argument', false, evidence('cursor_wait', { extra: true }, wait)],
-    ['uncaptured malformed cursor', false, evidence('cursor_wait', { after_event_id: 'bad' }, wait)],
     ['changed read offset', false, evidence('cursor_read_result', { ...wait, offset: -1 }, { ...wait, offset: 0 })],
     ['changed answer choice', false, evidence('cursor_answer_plan', { ...wait, request_id: 'P', decision: 'bad' },
       { ...wait, request_id: 'P', decision: 'accept' })],
@@ -174,8 +165,6 @@ test('recovery variation table distinguishes grounded repairs from changed inten
     ['failed diagnostic', false, evidence('cursor_wait', {}, wait, 'invalid_args', [
       { ...status, response: { ok: false, error_code: 'unknown_session' } }])],
   ];
-  // The recorder deliberately drops malformed scalar fields, but hashes raw args.
-  delete variations.find(([label]) => label === 'uncaptured malformed cursor')[2].calls[1].request.after_event_id;
   for (const [label, expected, transcript] of variations) {
     const original = structuredClone(transcript);
     const recovered = findRecoveredCalls(transcript, 1);
@@ -294,11 +283,39 @@ test('scenario classification depends on observed task outcome rather than repor
 test('scenario wait observations reject obsolete cursor equality fields', async () => {
   const source = JSON.parse(await readFile(fileURLToPath(new URL('../evals/cursor-subagent-scenarios.v1.json', import.meta.url))));
   assert.doesNotThrow(() => parseScenarioCorpus(JSON.stringify(source)));
-  for (const kind of ['turn.wait-timeout', 'turn.wait-recovered', 'turn.events-lost']) {
+  for (const kind of ['turn.wait-timeout', 'turn.wait-recovered']) {
     const corpus = structuredClone(source);
     const scenario = corpus.scenarios.find((entry) => entry.expected_trace.some((observation) => observation.kind === kind));
     scenario.expected_trace.find((observation) => observation.kind === kind).cursor_matched = true;
     assert.throws(() => parseScenarioCorpus(JSON.stringify(corpus)), /invalid shape/, kind);
+  }
+});
+
+test('terminal wait loss proof rejects missing evidence, wrong addresses, interleaving, and repeated provider work', async () => {
+  const corpus = parseScenarioCorpus(await readFile(fileURLToPath(new URL('../evals/cursor-subagent-scenarios.v1.json', import.meta.url))));
+  const scenario = corpus.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-active-followup');
+  const loss = { tool: 'cursor_wait', request: { session_id: 'S', turn_id: 'T', timeout_ms: 60_000 },
+    response: { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'completed', wait_timeout: false },
+    withheld_terminal_response: true, caller_error_code: 'transport_error' };
+  const retry = structuredClone(loss); delete retry.withheld_terminal_response; delete retry.caller_error_code;
+  const input = {
+    trace: scenario.expected_trace, callbacks: [], effects: [], actual_task_outcome: 'succeeded',
+    captured_finals: [
+      { turn_index: 1, completeness: 'complete', text: 'ACTIVE_TIMEOUT_PROGRESS_7F3' },
+      { turn_index: 2, completeness: 'complete', text: 'ACTIVE_SECOND_OK' },
+    ],
+    transcript: { calls: [{ tool: 'cursor_delegate', response: { ok: true, session_id: 'S', turn_id: 'T' } }, loss, retry],
+      dropped_calls: 0, unexpected_input_requests: 0, turn_call_ranges: [{ start: 0, end: 1 }, { start: 1, end: 3 }] },
+  };
+  assert.equal(evaluateScenario(scenario, input).mismatches.includes('terminal-wait-loss-recovery-mismatch'), false);
+  for (const mutate of [
+    (value) => delete value.transcript.calls[1].withheld_terminal_response,
+    (value) => { value.transcript.calls[2].request.turn_id = 'WRONG'; },
+    (value) => value.transcript.calls.splice(2, 0, { tool: 'cursor_session_status', request: { session_id: 'S' }, response: { ok: true, session_id: 'S' } }),
+    (value) => value.transcript.calls.splice(2, 0, { tool: 'cursor_send_prompt', request: { session_id: 'S' }, response: { ok: true, session_id: 'S', turn_id: 'NEXT' } }),
+  ]) {
+    const variation = structuredClone(input); mutate(variation);
+    assert.equal(evaluateScenario(scenario, variation).mismatches.includes('terminal-wait-loss-recovery-mismatch'), true);
   }
 });
 
@@ -433,7 +450,7 @@ test('stdio recording proxy atomically publishes bounded lifecycle evidence with
           ? { session_id: 'S', turn_id: 'T', turn_status: 'running', last_event_id: 7 }
           : tool === 'cursor_close_session'
             ? { session_id: 'S', session_state: 'tombstone', last_event_id: 11 }
-            : call.params.arguments.after_event_id === 3
+            : call.id === 2
               ? { session_id: 'S', turn_id: 'T', turn_status: 'waiting_for_input', last_event_id: 6, resume_after_event_id: 6, wait_timeout: false,
                   pending: [{ request_id: 'R', kind: 'permission', context: { secret: 'not-recorded' } },
                     { request_id: 'R2' }, { request_id: 'R3', kind: { secret: true } }] }
@@ -452,9 +469,9 @@ test('stdio recording proxy atomically publishes bounded lifecycle evidence with
   child.stderr.on('data', (chunk) => diagnostics.push(chunk));
   const calls = [
     { id: 1, name: 'cursor_delegate', arguments: { cwd: '/secret/workspace', mode: 'agent', prompt: 'secret prompt' } },
-    { id: 2, name: 'cursor_wait', arguments: { session_id: 'S', turn_id: 'T', after_event_id: 3, timeout_ms: 1_000 } },
+    { id: 2, name: 'cursor_wait', arguments: { session_id: 'S', turn_id: 'T', timeout_ms: 1_000 } },
     { id: 3, name: 'cursor_answer_permission', arguments: { session_id: 'S', turn_id: 'T', request_id: 'R', decision: 'allow-once', secret: 'not-recorded' } },
-    { id: 4, name: 'cursor_wait', arguments: { session_id: 'S', turn_id: 'T', after_event_id: 7, timeout_ms: 1_000 } },
+    { id: 4, name: 'cursor_wait', arguments: { session_id: 'S', turn_id: 'T', timeout_ms: 1_000 } },
     { id: 5, name: 'cursor_close_session', arguments: { session_id: 'S' } },
   ];
   child.stdin.end(calls.map(({ id, name, arguments: args }) => JSON.stringify({ jsonrpc: '2.0', id, method: 'tools/call', params: { name, arguments: args } })).join('\n') + '\n');
@@ -464,13 +481,13 @@ test('stdio recording proxy atomically publishes bounded lifecycle evidence with
   assert.equal(Buffer.byteLength(raw), raw.length);
   assert.deepEqual(published, { schema_version: 1, dropped_calls: 0, transcript: [
     { direction: 'request', tool: 'cursor_delegate', call_id: 1, request: recordedRequest(calls[0].arguments, { mode: 'agent' }), response: { ok: true, session_id: 'S', turn_id: 'T', cursor_session_id: 'C', model: 'auto', effort: 'high', fast: false, turn_status: 'running', last_event_id: 3 } },
-    { direction: 'request', tool: 'cursor_wait', call_id: 2, request: recordedRequest(calls[1].arguments, { session_id: 'S', turn_id: 'T', after_event_id: 3, timeout_ms: 1_000 }), response: { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'waiting_for_input', last_event_id: 6, resume_after_event_id: 6, wait_timeout: false, pending: [{ request_id: 'R', kind: 'permission' }, { request_id: 'R2' }, { request_id: 'R3' }] } },
+    { direction: 'request', tool: 'cursor_wait', call_id: 2, request: recordedRequest(calls[1].arguments, { session_id: 'S', turn_id: 'T', timeout_ms: 1_000 }), response: { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'waiting_for_input', last_event_id: 6, wait_timeout: false, pending: [{ request_id: 'R', kind: 'permission' }, { request_id: 'R2' }, { request_id: 'R3' }] } },
     { direction: 'request', tool: 'cursor_answer_permission', call_id: 3, request: recordedRequest(calls[2].arguments, { session_id: 'S', turn_id: 'T', request_id: 'R', decision: 'allow-once' }), response: { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'running', last_event_id: 7 } },
-    { direction: 'request', tool: 'cursor_wait', call_id: 4, request: recordedRequest(calls[3].arguments, { session_id: 'S', turn_id: 'T', after_event_id: 7, timeout_ms: 1_000 }), response: { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'completed', last_event_id: 10, resume_after_event_id: 10, wait_timeout: false, events_lost: true, earliest_event_id: 8, progress_revision: 2, events: [{ kind: 'task' }], terminal_reason: { text: 'provider stopped', truncated: false }, terminal_receipt: { session_id: 'S', turn_id: 'T', turn_status: 'completed', last_event_id: 10, result_sha256: 'a'.repeat(64), result_truncated: false }, result: { text_bytes: 14, text_sha256: '65eb05dc0fa59c8ac6150c3fe6d3d7634471290d68fa38ae770b18c2ec2cc4cf', truncated: false } } },
+    { direction: 'request', tool: 'cursor_wait', call_id: 4, request: recordedRequest(calls[3].arguments, { session_id: 'S', turn_id: 'T', timeout_ms: 1_000 }), response: { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'completed', last_event_id: 10, wait_timeout: false, terminal_reason: { text: 'provider stopped', truncated: false }, terminal_receipt: { session_id: 'S', turn_id: 'T', turn_status: 'completed', last_event_id: 10, result_sha256: 'a'.repeat(64), result_truncated: false }, result: { text_bytes: 14, text_sha256: '65eb05dc0fa59c8ac6150c3fe6d3d7634471290d68fa38ae770b18c2ec2cc4cf', truncated: false } } },
     { direction: 'request', tool: 'cursor_close_session', call_id: 5, request: recordedRequest(calls[4].arguments, { session_id: 'S' }), response: { ok: true, session_id: 'S', session_state: 'tombstone', last_event_id: 11 } },
   ] });
   assert.doesNotMatch(raw, /secret|workspace|prompt|context/);
-  assert.equal(Buffer.concat(diagnostics).toString('utf8'), 'adapter diagnostic');
+  assert.match(Buffer.concat(diagnostics).toString('utf8'), /adapter diagnostic/);
   assert.deepEqual((await readdir(root)).sort(), ['mcp.json']);
 });
 
@@ -799,6 +816,36 @@ test('recording proxy injects one stale question ID as fixture behavior, not use
   assert.deepEqual(ambientRequests, ['current-request', 'current-request']);
 });
 
+test('recording proxy withholds one terminal wait response while retaining raw evidence for an immediate retry', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'cursor-eval-proxy-lost-terminal-')); t.after(() => rm(root, { recursive: true, force: true }));
+  const evidence = join(root, 'mcp.json');
+  const fake = `
+    const readline = require('node:readline');
+    readline.createInterface({ input: process.stdin }).on('line', (line) => {
+      const call = JSON.parse(line);
+      const payload = { session_id: 'S', turn_id: 'T', turn_status: 'completed', wait_timeout: false,
+        result: { text: 'DONE', truncated: false }, terminal_receipt: { session_id: 'S', turn_id: 'T', turn_status: 'completed', result_sha256: 'a'.repeat(64), result_truncated: false } };
+      process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id: call.id, result: { isError: false, content: [{ type: 'text', text: JSON.stringify(payload) }] } }) + '\\n');
+    });`;
+  const child = spawn(process.execPath, [recorder, '-e', fake], {
+    env: { ...process.env, CURSOR_EVAL_MCP_EVIDENCE: evidence, CURSOR_EVAL_SCENARIO_ID: 'lost-terminal-fixture',
+      CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH: join(root, 'program.json'), CURSOR_EVAL_LOSE_TERMINAL_WAIT_RESPONSE_ONCE: '1' },
+    stdio: ['pipe', 'pipe', 'ignore'],
+  });
+  const output = []; child.stdout.on('data', (chunk) => output.push(chunk));
+  const call = (id) => ({ jsonrpc: '2.0', id, method: 'tools/call', params: { name: 'cursor_wait', arguments: { session_id: 'S', turn_id: 'T', timeout_ms: 1_000 } } });
+  child.stdin.end(`${JSON.stringify(call(1))}\n${JSON.stringify(call(2))}\n`);
+  const [code] = await once(child, 'close'); assert.equal(code, 0);
+  const responses = Buffer.concat(output).toString('utf8').trim().split('\n').map(JSON.parse);
+  assert.equal(JSON.parse(responses[0].result.content[0].text).error_code, 'transport_error');
+  assert.equal(JSON.parse(responses[1].result.content[0].text).turn_status, 'completed');
+  const transcript = JSON.parse(await readFile(evidence, 'utf8')).transcript;
+  assert.deepEqual(transcript.map(({ tool, request, response, withheld_terminal_response, caller_error_code }) => ({ tool, request, response, withheld_terminal_response, caller_error_code })), [
+    { tool: 'cursor_wait', request: recordedRequest(call(1).params.arguments, { session_id: 'S', turn_id: 'T', timeout_ms: 1_000 }), response: { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'completed', wait_timeout: false, result: { text_bytes: 4, text_sha256: createHash('sha256').update('DONE').digest('hex'), truncated: false }, terminal_receipt: { session_id: 'S', turn_id: 'T', turn_status: 'completed', result_sha256: 'a'.repeat(64), result_truncated: false } }, withheld_terminal_response: true, caller_error_code: 'transport_error' },
+    { tool: 'cursor_wait', request: recordedRequest(call(2).params.arguments, { session_id: 'S', turn_id: 'T', timeout_ms: 1_000 }), response: { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'completed', wait_timeout: false, result: { text_bytes: 4, text_sha256: createHash('sha256').update('DONE').digest('hex'), truncated: false }, terminal_receipt: { session_id: 'S', turn_id: 'T', turn_status: 'completed', result_sha256: 'a'.repeat(64), result_truncated: false } }, withheld_terminal_response: undefined, caller_error_code: undefined },
+  ]);
+});
+
 test('recording proxy injects a handshaken mode protocol error while preserving live status', async (t) => {
   const root = await mkdtemp(join(tmpdir(), 'cursor-eval-proxy-mode-')); t.after(() => rm(root, { recursive: true, force: true }));
   const evidence = join(root, 'mcp.json');
@@ -888,7 +935,7 @@ test('stdio recording proxy controls an immediate publication failure and closes
   const [code] = await once(child, 'close');
   assert.notEqual(code, 0);
   const stderr = Buffer.concat(diagnostics).toString('utf8');
-  assert.match(stderr, /^recording MCP proxy failed: /);
+  assert.match(stderr, /recording MCP proxy failed: /);
   assert.doesNotMatch(stderr, /Unhandled|node:events|throw er/);
   assert.equal(await readFile(closedMarker, 'utf8'), 'closed');
   assert.deepEqual(await readdir(root), ['child-closed']);

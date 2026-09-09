@@ -286,7 +286,6 @@ class SessionRecord {
     this.child = null; this.shutdownPromise = null; this.tombstonedAt = null; this.idleTimer = null;
     this.admissionOpen = false; this.adapterCancelSent = false; this.modeTransition = false;
     this.cursor_session_id = null; this.resumeCursorSessionId = null;
-    this.terminalWaitDelivered = false;
   }
   emit(kind, turn_id, payload) {
     const event = { event_id: this.nextEvent++, kind, turn_id, payload };
@@ -295,7 +294,6 @@ class SessionRecord {
   sessionState(to) { const from = this.session_state; if (from === to) return; this.session_state = to; this.emit('lifecycle', null, { scope: 'session', from, to }); }
   turnState(turn, to) { const from = turn.turn_status; if (from === to) return; turn.turn_status = to; this.emit('lifecycle', turn.turn_id, { scope: 'turn', from, to }); }
   snapshot(turn) { return !turn ? null : { turn_id: turn.turn_id, turn_status: turn.turn_status, result: turn.result, terminal_reason: turn.terminal_reason, pending: [...turn.pending.values()].map((pending) => ({ request_id: pending.request_id, kind: pending.kind, context: pending.context })) }; }
-  deliveredReceipt() { return this.last && this.terminalWaitDelivered ? terminalReceipt(this, this.last) : undefined; }
   envelope() {
     return {
       session_id: this.id, session_state: this.session_state, cwd: this.cwd, mode: this.mode,
@@ -308,7 +306,7 @@ class SessionRecord {
     };
   }
   actionEnvelope(turn = null, extra = {}) {
-    const terminal = turn && ['completed', 'failed', 'timed_out', 'cancelled'].includes(turn.turn_status) ? terminalReceipt(this, turn) : this.deliveredReceipt();
+    const terminal = turn && ['completed', 'failed', 'timed_out', 'cancelled'].includes(turn.turn_status) ? terminalReceipt(this, turn) : undefined;
     return {
       session_id: this.id,
       session_state: this.session_state,
@@ -318,37 +316,20 @@ class SessionRecord {
       ...extra,
     };
   }
-  waitEnvelope(turn, after, wait_timeout, after_progress_revision = 0) {
-    const earliest = this.events.length ? this.events[0].event_id : null;
-    const events_lost = Boolean(earliest && after < earliest - 1);
-    const events = this.events.filter((event) => event.event_id > after && (event.turn_id === turn.turn_id || event.turn_id === null));
-    const last_event_id = this.nextEvent - 1;
+  waitEnvelope(turn, wait_timeout) {
     const terminal = ['completed', 'failed', 'timed_out', 'cancelled'].includes(turn.turn_status);
-    const deliverTerminal = terminal && this.last === turn && !this.terminalWaitDelivered;
-    if (deliverTerminal) this.terminalWaitDelivered = true;
     const envelope = {
       session_id: this.id, turn_id: turn.turn_id, turn_status: turn.turn_status,
-      session_state: this.session_state, last_event_id, resume_after_event_id: last_event_id,
-      wait_timeout, events_lost,
+      session_state: this.session_state, wait_timeout,
+      pending: [...turn.pending.values()].map(({ request_id, kind, context }) => ({ request_id, kind, context })),
     };
-    if (events.length) envelope.events = events;
-    if (events_lost) envelope.earliest_event_id = earliest;
-    if (turn.pending.size) {
-      envelope.pending = [...turn.pending.values()].map(({ request_id, kind, context }) => ({ request_id, kind, context }));
-    }
-    if (deliverTerminal) {
+    if (terminal) {
       if (turn.result) envelope.result = turn.result;
       if (turn.terminal_reason) envelope.terminal_reason = turn.terminal_reason;
       envelope.terminal_receipt = terminalReceipt(this, turn);
       if (this.provider_error) envelope.provider_error = this.provider_error;
     }
-    if (wait_timeout) {
-      const revision = turn.progress_revision || 0;
-      if (revision > after_progress_revision) {
-        envelope.progress_revision = revision;
-        if (turn.progress_excerpt) envelope.progress_excerpt = turn.progress_excerpt;
-      }
-    }
+    if (wait_timeout && turn.progress_excerpt) envelope.progress_excerpt = turn.progress_excerpt;
     return envelope;
   }
   async start() {
@@ -549,7 +530,6 @@ class SessionRecord {
       return;
     }
     if (chunk) {
-      turn.progress_revision = (turn.progress_revision || 0) + 1;
       turn.progress_excerpt = bounded(chunk, LIMITS.progressBytes);
     }
     if (chunk) turn.agent_text_parts.push(chunk);
@@ -612,7 +592,7 @@ class SessionRecord {
     if (this.session_state !== 'live') fail('protocol_error', 'session is not live');
     if (this.modeTransition) fail('protocol_error', 'session mode transition is in progress');
     if (this.active) fail('protocol_error', 'session already has an active turn');
-    this.clearIdle(); const turn = { turn_id: opaqueId(), turn_status: 'running', result: null, full_result: null, full_result_sha256: null, terminal_reason: null, terminal_receipt: null, pending: new Map(), timer: null, agent_text_parts: [], agent_text_bytes: 0, progress_revision: 0, progress_excerpt: null };
+    this.clearIdle(); const turn = { turn_id: opaqueId(), turn_status: 'running', result: null, full_result: null, full_result_sha256: null, terminal_reason: null, terminal_receipt: null, pending: new Map(), timer: null, agent_text_parts: [], agent_text_bytes: 0, progress_excerpt: null };
     this.active = turn; this.emit('lifecycle', turn.turn_id, { scope: 'turn', from: null, to: 'running' });
     turn.timer = setTimeout(() => this.terminalize(turn, 'timed_out', 'turn deadline exceeded'), LIMITS.turnMs);
     let dispatched;
@@ -678,7 +658,7 @@ class SessionRecord {
       try { this.respond(pending.rawId, ADAPTER.cancelResponse(pending.kind)); } catch { /* shutdown abandons closed transport */ }
     }
     this.requestAdapterCancel(); turn.agent_text_parts = null; turn.agent_text_bytes = null;
-    turn.terminal_reason = bounded(reason); turn.turn_status = status; this.emit('result', turn.turn_id, { turn_status: status }); captureTerminalReceipt(this, turn); this.active = null; this.last = turn; this.terminalWaitDelivered = false; await this.shutdown(turn, reason);
+    turn.terminal_reason = bounded(reason); turn.turn_status = status; this.emit('result', turn.turn_id, { turn_status: status }); captureTerminalReceipt(this, turn); this.active = null; this.last = turn; await this.shutdown(turn, reason);
   }
   shutdown(_turn, reason) {
     if (this.shutdownPromise) return this.shutdownPromise;
@@ -903,14 +883,23 @@ export class Runtime {
     fail('invalid_args', `unknown tool: ${name}`);
   }
   async wait(args) {
-    assertObject(args, ['session_id', 'turn_id', 'after_event_id', 'timeout_ms', 'after_progress_revision'], ['session_id', 'turn_id']); const session = this.session(text(args.session_id, 'session_id')); const turn = this.turn(session, text(args.turn_id, 'turn_id')); const after = args.after_event_id ?? 0; const timeout = args.timeout_ms ?? LIMITS.waitDefaultMs; const afterProgress = args.after_progress_revision ?? 0;
-    if (!Number.isSafeInteger(after) || after < 0 || after > session.nextEvent - 1) fail('invalid_args', 'invalid after_event_id');
+    assertObject(args, ['session_id', 'turn_id', 'timeout_ms'], ['session_id', 'turn_id']); const session = this.session(text(args.session_id, 'session_id')); const turn = this.turn(session, text(args.turn_id, 'turn_id')); const timeout = args.timeout_ms ?? LIMITS.waitDefaultMs;
     if (!Number.isInteger(timeout) || timeout < LIMITS.waitMinMs || timeout > LIMITS.waitMaxMs) fail('invalid_args', 'invalid timeout_ms');
-    if (!Number.isSafeInteger(afterProgress) || afterProgress < 0 || afterProgress > (turn.progress_revision || 0)) fail('invalid_args', 'invalid after_progress_revision');
-    if (turn !== session.active || session.events.some((event) => event.event_id > after && (event.turn_id === turn.turn_id || event.turn_id === null))) return session.waitEnvelope(turn, after, false, afterProgress);
+    const actionable = () => turn !== session.active || turn.pending.size > 0;
+    if (actionable()) return session.waitEnvelope(turn, false);
     if (session.waiters.size >= LIMITS.waiters) fail('resource_limit', 'waiter limit');
-    const changed = await new Promise((resolveWait) => { const timer = setTimeout(() => { session.waiters.delete(done); resolveWait(false); }, timeout); const done = () => { clearTimeout(timer); resolveWait(true); }; session.waiters.add(done); });
-    return session.waitEnvelope(turn, after, !changed, afterProgress);
+    const deadline = Date.now() + timeout;
+    while (!actionable()) {
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) return session.waitEnvelope(turn, true);
+      await new Promise((resolveWait) => {
+        const done = () => { clearTimeout(timer); session.waiters.delete(done); resolveWait(); };
+        const timer = setTimeout(done, remaining);
+        session.waiters.add(done);
+        if (actionable()) done();
+      });
+    }
+    return session.waitEnvelope(turn, false);
   }
   async answer(name, args) {
     const question = name === 'cursor_answer_question'; const keys = question ? ['session_id', 'turn_id', 'request_id', 'outcome', 'answers'] : ['session_id', 'turn_id', 'request_id', 'decision']; const required = question ? ['session_id', 'turn_id', 'request_id', 'outcome'] : ['session_id', 'turn_id', 'request_id', 'decision'];
@@ -999,7 +988,7 @@ export const tools = [
   tool('cursor_set_mode', { ...idFields('session_id'), mode: modeEnum }, ['session_id', 'mode']),
   tool('cursor_session_status', idFields('session_id'), ['session_id']),
   tool('cursor_read_result', { ...idFields('session_id', 'turn_id'), offset: { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER } }, ['session_id', 'turn_id']),
-  tool('cursor_wait', { ...idFields('session_id', 'turn_id'), after_event_id: { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER }, after_progress_revision: { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER }, timeout_ms: { type: 'integer', minimum: LIMITS.waitMinMs, maximum: LIMITS.waitMaxMs } }, ['session_id', 'turn_id']),
+  tool('cursor_wait', { ...idFields('session_id', 'turn_id'), timeout_ms: { type: 'integer', minimum: LIMITS.waitMinMs, maximum: LIMITS.waitMaxMs } }, ['session_id', 'turn_id']),
   tool('cursor_answer_question', { ...idFields('session_id', 'turn_id', 'request_id'), outcome: { type: 'string', enum: ['answered', 'skipped', 'cancelled'] }, answers: { type: 'array', items: answerItem } }, ['session_id', 'turn_id', 'request_id', 'outcome']),
   tool('cursor_answer_plan', { ...idFields('session_id', 'turn_id', 'request_id'), decision: { type: 'string', enum: ['accept', 'reject'] } }, ['session_id', 'turn_id', 'request_id', 'decision']),
   tool('cursor_answer_permission', { ...idFields('session_id', 'turn_id', 'request_id'), decision: { type: 'string', enum: ['allow-once', 'reject-once'] } }, ['session_id', 'turn_id', 'request_id', 'decision']),

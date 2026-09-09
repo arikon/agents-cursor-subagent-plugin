@@ -1,0 +1,318 @@
+## MODIFIED Requirements
+
+### Requirement: Skill workflow делегирования
+The installed skill MUST use `cursor_delegate` as its primary start path and
+`cursor_wait` for observation; it MUST not poll `cursor_session_status`. Every
+answer-tool call includes the exact session, turn and request IDs from prior
+tool results; the user-facing answer does not have to repeat them. Protocol completion is
+reported without a semantic-success claim. Independent verification MUST NOT
+create an unrequested provider turn after terminality; without a declared later
+stage it uses only available independent evidence and reports an unverifiable
+limitation instead of calling `cursor_send_prompt`. A live session remains available
+after a terminal turn only while a user-declared later follow-up or review stage
+remains unfinished; the skill uses `cursor_send_prompt` for that next turn. The
+mere possibility of a future user message does not defer cleanup. It closes idempotently
+only when delegated work is complete, abandoned/cancelled, irrecoverably failed,
+or an idle wrapper needs a required launch-setting change followed immediately
+by explicit resume. Answer tools and `cursor_send_prompt` are primary workflow tools;
+start/status/cancel are advanced diagnosis/recovery surfaces.
+Every user-required exact outcome marker MUST be copied verbatim into the
+provider prompt and report it when the user requested that exact result marker.
+Launch parameters remain available in tool results. When a follow-up completes the last later stage
+previously declared by the user and no additional stage was declared, delegated
+work is complete and the close attempt is required. Each workflow step has one
+close owner; after explicit resume that same owner uses the new current runtime
+`session_id` for the resumed wrapper's close attempt.
+Each user-provided absolute Agent Plugin root MUST be forwarded unchanged via
+`plugin_dirs`; the skill MUST NOT copy or substitute it and MUST NOT pre-empt
+runtime-owned canonicalization, existence, or allowed-root validation. A
+runtime `invalid_args` or `scope_rejected` result is reported without fallback.
+Before a write-capable `cursor_delegate`, the skill MUST verify that the
+provider prompt contains one exact `AUTHORIZED_ACTIONS` line for every
+caller-authorized write plus the exact `NO_SCOPE_EXPANSION: make no other
+changes; stop and report any required expansion.` line, and MUST NOT delegate
+until those clauses are present. The operation token is exactly `write` for
+both file creation and modification and MUST NOT be replaced by a synonym.
+A terminal turn MUST NOT be treated as a terminal delegation when the user has
+already declared a later decision, follow-up, or review stage. In that case the
+skill MUST preserve the same live runtime `session_id`, MUST NOT close or resume
+the wrapper, and, when the follow-up grants write authority after an `ask` turn,
+MUST call `cursor_set_mode` with `mode:"agent"` before `cursor_send_prompt` on
+that same wrapper.
+Every branch MUST report the semantic result to the user. A continuing branch
+MUST preserve the exact IDs and pending context from tool history for
+the next operation within the same Codex task; copying them into final JSON
+is not a continuation requirement. An observation gap and a required new user decision MUST be stated
+explicitly. A tool result or commentary-only message does not satisfy the
+caller report and MUST NOT end that Codex turn. Terminal success MAY use normal
+human-facing prose; a global machine-readable final-answer protocol is outside
+the current product scope.
+
+Эти требования остаются operator guidance владельца IUX-3. Mandatory IUX-19
+acceptance не оценивает свободную формулировку outcome или safety disclosure:
+они записываются как `not_checked`. Eval owner проверяет в final только exact
+пользовательские данные, явно заданные corpus/fixture, включая marker/result
+token, вопрос с видимыми options и plan; MCP mechanics проверяются по trace.
+
+Runtime tool results remain the source of exact receipts, hashes, provider
+diagnostics and IDs. The skill MUST NOT require their duplication in the
+human-facing report. Incorrect address fields in a subsequent tool
+call remain a continuation failure unless corrected under the finite recovery
+proof owned by «Сценарный контракт поведения и authority-aware interaction».
+The normal wait workflow MUST distinguish a rejected call with incorrect
+arguments from wrapper loss observed through correctly addressed public state.
+Local argument repair MUST NOT trigger resume, delegation, or a new prompt;
+it does not admit guessed or historical IDs. False semantic
+success, a hidden observation gap and a missing required
+new user decision are report failures. A consumer restricted to final-only
+external handoff is outside this change; no new handoff protocol is introduced.
+
+If `cursor_delegate` returns a failed-allocation result without `turn_id`, the
+skill MUST report normalized failed state and error code and explicitly require
+a new user decision; exact diagnostics remain in transcript evidence.
+It MUST NOT call `cursor_wait`, retry, resume or create a fallback delegation.
+
+Для pending question skill MUST показать нормализованный вопрос и доступные
+options без потери смысла вопроса, различий между вариантами и необходимости
+решения. Формат MAY быть prose, списком или JSON; внутренние IDs не обязательны
+в сообщении пользователю. Skill MUST сопоставить выбор пользователя с точной
+option и request ID из tool result, не из самостоятельно сгенерированных IDs,
+и MUST NOT
+вызвать answer до отдельного user follow-up с выбором,
+skip или cancel. После follow-up answer response продолжает тот же delegated
+turn: следующий wait MUST использовать exact session/turn IDs и later-wait
+`timeout_ms:60000`, не перезапуская first-wait schedule из-за нового Codex turn;
+то же правило действует для fresh wait после stale/unknown answer. Для pending
+decision follow-up MUST быть потреблён только соответствующим answer tool и
+MUST NOT одновременно пересылаться через `cursor_send_prompt`; только отдельная
+новая provider-задача после terminality начинает следующий delegated turn. Для
+pending plan skill MUST NOT отправить `accept` до явного
+одобрения пользователя и MUST NOT отправить `reject` до явного отклонения или
+отмены пользователя. Для permission, точно покрытого текущим поручением,
+skill MUST использовать только `allow-once` без повторного подтверждения.
+Для permission вне текущих полномочий skill MUST NOT отправлять answer до
+явного follow-up; после него разрешены только `allow-once` или `reject-once`.
+Расширение scope, destructive/external action или доступ к credentials MUST
+NOT выводиться из неявного контекста.
+
+Для read-only review skill MUST вызывать `cursor_delegate` с допустимым
+`mode:"ask"` (либо `mode:"plan"`, когда результатом нужен план), а не с
+`mode:"review"`. После выбора точного model ID по MD-5 skill MUST
+передать этот optional `model` и явно указанные `effort`/`fast` без изменения
+глобальной Cursor-конфигурации. Если model не указан для запуска, skill MUST
+его опустить для runtime default `auto`; default запуск не требует discovery.
+Явный запрос каталога или разрешение неизвестного model ID выполняется по MD-5
+и не является выбором explicit model вместо default. Если report упоминает model parameters, он описывает их
+только как requested/forwarded launch parameters; skill MUST
+NOT представлять их как provider-confirmed resolved/effective model.
+
+Terminal `turn_status:"failed"`, including a tombstoned envelope that still
+carries `turn_id`, MUST быть сообщён как failure с содержательным объяснением
+доступной причины; полные diagnostics остаются в tool results.
+Skill MUST NOT автоматически retry, resume или redelegate
+после такого terminal failure; дальнейшая provider operation требует нового
+решения пользователя.
+Report MUST NOT выдумывать причину failure или подменять её успешным исходом.
+
+После terminal close skill MAY продолжить работу только через явный
+`cursor_resume_session` с exact previously returned `cursor_session_id`,
+caller-selected canonicalized permitted `cwd`, user-authorized `mode` и optional user-selected model
+parameters.
+Он MUST сохранить отдельно новый MCP `session_id` и старый provider ID; при
+resume failure skill сообщает failure и не создаёт replacement session без
+нового поручения. Живая session продолжает следующий turn через
+`cursor_send_prompt`, без resume tool.
+Если between-turn `cursor_set_mode` завершается error, skill MUST сообщить
+нормализованный error code и его смысл без обязательной JSON-сериализации.
+`invalid_args` допускает только исправление
+локально malformed call при однозначном уже авторизованном intended mode.
+`protocol_error` требует one-shot `cursor_session_status`: live idle wrapper
+сохраняется без close и prompt и без вымышленной state transition; report MUST
+state the observed live-idle result. Observed active turn на этом serial
+between-turn path только сообщается без дальнейшей provider
+operation. Только `mode_timeout`, другая provider-transition
+failure или observed tombstone запрещает retry/resume/replacement и требует
+новое user decision перед следующей provider operation. Report MUST явно
+объяснить необходимость нового решения; имя технического поля и boolean JSON
+не обязательны. Recoverable live-idle ветка MUST NOT выдумывать это требование.
+Explicit follow-up, полученный во время active turn, MUST быть отправлен через
+`cursor_send_prompt` только после observed `turn_status:"completed"` вместе с
+`session_state:"live"`. `failed|timed_out|cancelled` либо tombstone MUST перейти
+в соответствующую terminal recovery ветку без send; pre-failure follow-up не
+заменяет новое post-failure user decision.
+
+Skill MUST наблюдать ход через SW-1/SW-2 без event/progress cursors,
+включая продолжение после answer и recovery stale request. При pending он
+обрабатывает решение по существующим authority правилам, а не повторяет wait
+в tight loop. Повторный terminal snapshot не является новым выполнением задачи.
+Для восстановления недоставленного wait response skill использует повторное
+наблюдение SW-2 с уже возвращёнными session/turn IDs; неизвестный адрес не
+разрешает новый prompt, resume или delegation. Это продолжение существующего
+наблюдения, а не отдельная retry policy для provider operations.
+When the caller explicitly limits observation to one wait
+interval, the skill MUST stop the later-wait schedule after the first
+`wait_timeout:true`, report that work remains in progress, end that Codex turn,
+and leave the Cursor turn active; continuation uses the retained tool results.
+When a terminal preview is truncated, the skill MUST call `cursor_read_result`
+through the runtime-owned «Полное чтение terminal result» read path before final verification/reporting
+or starting another turn. It MUST retain the complete result before required
+close, without provider regeneration, repeated wait or private archive access.
+If result retention failed or data is unavailable, report the completeness
+limitation; a partial review is not a complete verdict.
+At a required close boundary the skill MUST retain the semantic result and
+limitations, attempt close, then deliver the caller-visible final report.
+For read-only review
+the skill MUST choose one explicit evidence mode before delegation: `file review`
+permits only read/search of the exact or bounded user-authorized scope inside
+the supplied checkout (the full checkout only when already authorized) and forbids writes, network,
+credentials and internal memory/transcript retrieval; `snapshot review` forbids
+tools and supplies all required evidence in the prompt. The skill MUST NOT forbid
+local file inspection while requiring a file review. On `unknown_request`, the
+context-free recovery summary is diagnostics only: the skill MUST perform a
+fresh `cursor_wait`, consume its complete normalized pending context and only
+then use the returned current ID. It MUST NOT guess a `request_id`, answer from
+the recovery summary, automatically re-delegate, or automatically expand
+authority. This request-ID recovery is distinct from the eval-owned rejected
+session/turn lookup correction above.
+
+For an active turn the skill MUST NOT invent an active-turn steering call: the
+pinned Cursor ACP interface exposes none. If the user already supplied a
+follow-up, the skill waits for terminality and uses `cursor_send_prompt` only
+after observed `completed + live`; every other terminal state follows its
+recovery branch. Otherwise it explains the capability gap and waits for a
+user-directed normal follow-up.
+
+#### Scenario: Интерактивное делегирование
+- **WHEN** Cursor creates a pending request or completes a turn
+- **THEN** the skill observes it with `cursor_wait`, addresses any answer by full
+  IDs, keeps the live session only for an explicitly declared unfinished next
+  stage, and closes at the delegated-work terminal path
+
+#### Scenario: Initial allocation failure не вызывает wait или fallback
+- **WHEN** `cursor_delegate` returns an allocated init/spawn tombstone without
+  `turn_id`
+- **THEN** the skill reports the normalized failure and need for a new decision, and stops without
+  wait, retry, resume or replacement delegation
+
+#### Scenario: Question и plan ожидают явный выбор
+- **WHEN** Cursor публикует question или plan
+- **THEN** skill показывает нормализованный pending context и не отправляет
+  answer до соответствующего explicit user follow-up
+
+#### Scenario: Permission покрыт текущим поручением
+- **WHEN** Cursor запрашивает действие, точно покрытое current user authority
+- **THEN** skill отвечает только `allow-once` без дополнительного user turn
+
+#### Scenario: Permission расширяет scope
+- **WHEN** Cursor запрашивает действие вне current user authority, destructive,
+  external или credential action
+- **THEN** skill не отвечает до explicit user follow-up и использует только
+  `allow-once` либо `reject-once` после него
+
+#### Scenario: File review имеет непротиворечивый scope
+- **WHEN** skill делегирует read-only review по файлам checkout
+- **THEN** prompt разрешает local read/search и запрещает только writes, network, credentials и internal retrieval, без tool-free требования
+
+#### Scenario: Review использует допустимый mode и явную модель
+- **WHEN** пользователь просит file review с точным fixture model ID `grok-4.6`, уже полученным из каталога MD-1 (пример не утверждает текущую доступность этого ID)
+- **THEN** skill вызывает `cursor_delegate` с `mode:"ask"` и
+  `model:"grok-4.6"` без mutation глобальной Cursor-конфигурации;
+  при упоминании модели report не выдаёт launch echo за resolved model
+
+#### Scenario: Закрытая Cursor-сессия продолжается явно
+- **WHEN** пользователь просит продолжить ранее закрытую session и предоставляет
+  returned `cursor_session_id`
+- **THEN** skill вызывает `cursor_resume_session` с exact provider ID, сохраняет
+  new MCP session ID и не делает скрытый поиск или replacement delegation
+
+#### Scenario: Следующий turn продолжает live conversation
+- **WHEN** предыдущий turn terminal, session остаётся live и пользователь просит
+  следующий этап ревью с прежними launch options
+- **THEN** skill вызывает `cursor_send_prompt` с тем же runtime `session_id`,
+  сохраняет provider conversation и не создаёт или resume-ит другую session
+
+#### Scenario: Snapshot review не нуждается в file search
+- **WHEN** skill выбирает tool-free snapshot review
+- **THEN** prompt содержит достаточные review artifacts и явно запрещает tools без последующего запроса локального поиска
+
+#### Scenario: Unknown pending ID восстанавливается без угадывания
+- **WHEN** answer-tool возвращает recovery для unknown/stale request
+- **THEN** skill получает complete normalized context через fresh wait и не
+  отправляет answer из context-free recovery summary или с выдуманным ID
+
+#### Scenario: Явный active-turn follow-up ждёт terminality
+- **WHEN** user sends a separate follow-up while exact Cursor turn is active
+- **THEN** skill waits for terminality and sends the already supplied text as
+  the next turn only after `completed + live`; failed, timed-out, cancelled or
+  tombstoned state sends nothing before a new post-failure user decision
+
+After any explicit resume, provider acceptance of `cursor_session_id` does not
+prove retained semantic history. If the next turn depends on prior semantic
+history, the skill MUST repeat the minimal bounded context and constraints
+needed by that turn, or MUST report the result as unverifiable rather than
+assuming provider memory.
+
+For repeated critic review, skill SHALL create one compact manifest of artifact
+paths, digest and frozen baseline. While the same runtime session remains live
+and the manifest digest is unchanged, a follow-up MUST send only changed paths
+and their delta; it MUST NOT resend a full unchanged snapshot.
+The same-live-session repeat prompt MUST encode them as exact
+`BASELINE_DIGEST=<retained digest>`, `CHANGED_PATHS=<bounded changed paths>` and
+`DELTA=<exact bounded delta>` lines, and MUST omit the unchanged baseline body.
+After wrapper
+loss or explicit resume, provider acceptance of `cursor_session_id` does not
+prove retained semantic history: the next critic prompt MUST re-establish the
+full bounded baseline or snapshot together with the delta, or the skill MUST
+NOT use the same-live delta-only template and MUST
+report the review as unverifiable when that evidence is unavailable. Bounded
+waits use increasing intervals capped by the runtime maximum and always retain
+exact `session_id`, `turn_id` без consumer cursor. This is workflow
+composition only: no further critic/session tool, session registry or automatic retry is
+introduced.
+
+#### Scenario: Повторное ревью использует delta
+- **WHEN** prior critic verdict requires a minimal artifact repair
+- **THEN** next prompt contains the prior digest and only changed artifacts,
+  while subsequent tool calls use the retained session IDs без consumer cursor
+
+#### Scenario: Resume повторно устанавливает critic context
+- **WHEN** runtime wrapper потерян между critic turns и provider conversation
+  продолжается через retained `cursor_session_id`
+- **THEN** resumed prompt содержит bounded baseline/snapshot и новый delta либо
+  skill явно сообщает, что semantic review unverifiable; delta-only запрещён
+
+#### Scenario: Resume role-neutral turn не предполагает provider memory
+- **WHEN** любой research, Q&A, planning, debugging или coordinator turn после
+  explicit resume семантически зависит от предшествующего разговора
+- **THEN** skill повторяет минимальный bounded context и constraints для этого
+  turn либо сообщает результат как unverifiable
+
+#### Scenario: Универсальный интерактивный happy path
+- **WHEN** задача проходит фазы research, planning и explicit implementation
+- **THEN** skill starts `ask`, uses `plan` when approval is needed and uses
+  `agent` only for authorized work; it preserves one live session through
+  `cursor_set_mode`, наблюдает по exact session/turn IDs и сообщает bounded progress excerpt without treating them as completion
+
+#### Scenario: Long implementation remains observable
+- **WHEN** explicitly authorized local implementation runs longer than one
+  regular wait interval
+- **THEN** skill использует только адрес хода, оставляет первый timeout default,
+  затем увеличивает интервалы в пределах runtime bounds,
+  сообщает актуальный bounded excerpt и различает
+  `timed_out` from a resumable work-in-progress rather than restarting it
+
+Для выбора неизвестного точного model ID или ответа на запрос доступных моделей установленный skill MUST использовать runtime MD-1 через MCP. Он MUST NOT предлагать caller выполнять CLI models вручную, самостоятельно обходить MCP shell-командой или придумывать family alias. При отсутствии явно выбранной модели сохраняется существующий путь с omitted model; обязательного discovery для каждого default запуска нет. Уже полученный в текущей задаче список можно использовать как контекст выбора без обещания дальнейшей доступности модели.
+
+После ответа discovery caller использует MD-1 каталог для выбора canonical ID и передаёт его в существующий launch input. Выбор Auto caller выполняет по MD-2: передаёт явно выбранную стратегию, либо уточняет её у пользователя для auto-smart; default из каталога не подставляется без выбора. Обычный omitted-model путь сохраняется. Возвращённые effort/fast используются в launch input; каталог не обещает допустимость произвольного сочетания значений; разрешение variant и подтверждение до prompt принадлежат MD-6, caller не повторяет этот алгоритм и не исправляет invalid selection через aliases/fallback. Если пользователь назвал только семейство и несколько результатов существенно различаются, caller уточняет выбор, а не молча меняет модель. При missing-key error caller передаёт actionable guidance MD-1 пользователю; сам не создаёт ключ и не пишет auth file. Discovery failure сообщается пользователю; он не считается разрешением на смену account, модели или повторный launch. При failed allocation caller сообщает `failure_kind` и доступный `terminal_reason` MD-4, сохраняя существующую cleanup/authority ветвь. Формат, limits и HTTP lifecycle остаются у runtime.
+
+#### Scenario: Пользователь спрашивает доступные модели
+- **WHEN** пользователь просит список доступных моделей Cursor
+- **THEN** caller вызывает MCP discovery и использует его результат, без shell обхода и без запуска provider turn
+
+#### Scenario: Вместо ID названо неоднозначное семейство
+- **WHEN** указанное семейство соответствует нескольким существенно разным вариантам в полученном списке
+- **THEN** caller предлагает выбрать точный ID до запуска, не посылая выдуманный alias
+
+#### Scenario: Ошибка модели имеет диагностику
+- **WHEN** allocation не создал turn и runtime вернул причину в terminal_reason
+- **THEN** пользователь получает эту причину вместе с нормализованной классификацией, без автоматической fallback-сессии

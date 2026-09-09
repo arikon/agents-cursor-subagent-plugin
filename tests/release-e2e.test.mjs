@@ -229,7 +229,7 @@ async function deterministicReleaseGate(t) {
   assert.equal(delegated.session_state, 'live'); assert.ok(delegated.session_id); assert.ok(delegated.turn_id);
   let waited = delegated;
   for (let count = 0; count < 5 && waited.turn_status !== 'completed'; count += 1) {
-    waited = await client.tool('cursor_wait', { session_id: delegated.session_id, turn_id: delegated.turn_id, after_event_id: waited.last_event_id, timeout_ms: 1_000 });
+    waited = await client.tool('cursor_wait', { session_id: delegated.session_id, turn_id: delegated.turn_id, timeout_ms: 1_000 });
   }
   assert.equal(waited.session_id, delegated.session_id); assert.equal(waited.turn_id, delegated.turn_id); assert.equal(waited.turn_status, 'completed');
   await client.tool('cursor_close_session', { session_id: delegated.session_id });
@@ -377,7 +377,7 @@ export async function runLiveCanary(env = process.env, hooks = {}) {
     if (turn.session_state !== 'live' || !turn.session_id || !turn.turn_id) throw new Error('delegate did not allocate a live turn');
     trace.push({ kind: 'session.allocated' }, { kind: 'turn.started' });
     for (let count = 0; count < 12; count += 1) {
-      turn = await client.tool('cursor_wait', { session_id: turn.session_id, turn_id: turn.turn_id, after_event_id: turn.last_event_id, timeout_ms: 60_000 });
+      turn = await client.tool('cursor_wait', { session_id: turn.session_id, turn_id: turn.turn_id, timeout_ms: 60_000 });
       if (turn.turn_status === 'completed') {
         trace.push({ kind: 'turn.completed' });
         if (terminalAgentError(turn)) throw new Error('agent completed with an error');

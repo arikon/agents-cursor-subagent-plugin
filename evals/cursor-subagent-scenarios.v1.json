@@ -64,10 +64,10 @@
         { "kind": "turn.started" },
         { "kind": "pending.question", "step_id": "question-1" },
         { "kind": "answer.rejected-stale", "step_id": "question-1", "error_code": "unknown_request" },
-        { "kind": "turn.wait-timeout", "timeout_ms": 60000, "timeout_omitted": false, "progress_revision_matched": true },
+        { "kind": "turn.wait-timeout", "timeout_ms": 60000, "timeout_omitted": false },
         { "kind": "pending.question", "step_id": "question-1" },
         { "kind": "answer.question", "step_id": "question-1", "option_ids": ["choice-1"] },
-        { "kind": "turn.wait-recovered", "timeout_ms": 60000, "timeout_omitted": false, "progress_revision_matched": true },
+        { "kind": "turn.wait-recovered", "timeout_ms": 60000, "timeout_omitted": false },
         { "kind": "turn.completed", "step_id": "terminal-1" },
         { "kind": "turn.receipt", "step_id": "terminal-1", "matched": true, "result_truncated": false },
         { "kind": "session.close-attempted" }
@@ -639,12 +639,12 @@
       ],
       "initial_input": "Начни у Cursor длительный первый этап проверки и потребуй, чтобы Cursor включил точный маркер ACTIVE_FIRST_OK в свой результат. Подожди только один обычный интервал; если результат ещё не готов, сообщи промежуточное состояние с данными для продолжения и оставь задачу выполняться. Затем я пришлю дополнение отдельным сообщением.",
       "prior_authority": { "kind": "none" },
-      "harness_faults": ["accelerate-wait-timeout", "hold-terminal-until-followup"],
+      "harness_faults": ["accelerate-wait-timeout", "hold-terminal-until-followup", "lose-terminal-wait-response-once"],
       "program": {
         "kind": "fake-acp",
         "steps": [
           { "type": "prompt-check", "step_id": "prompt-1", "required_fragments": ["ACTIVE_FIRST_OK"], "forbidden_fragments": ["ACTIVE_SECOND_OK"] },
-          { "type": "terminal", "step_id": "terminal-1", "turn_status": "completed", "result_text": "ACTIVE_FIRST_OK", "progress_text": "active working" },
+          { "type": "terminal", "step_id": "terminal-1", "turn_status": "completed", "result_text": "ACTIVE_FIRST_OK", "progress_text": "ACTIVE_TIMEOUT_PROGRESS_7F3" },
           { "type": "prompt-check", "step_id": "prompt-2", "required_fragments": ["ACTIVE_SECOND_OK"], "forbidden_fragments": [] },
           { "type": "terminal", "step_id": "terminal-2", "turn_status": "completed", "result_text": "ACTIVE_SECOND_OK" }
         ]
@@ -654,9 +654,9 @@
         { "kind": "session.allocated", "mode": "ask" },
         { "kind": "turn.started" },
         { "kind": "prompt.contract", "step_id": "prompt-1", "matched": true },
-        { "kind": "turn.wait-timeout", "timeout_ms": 30000, "timeout_omitted": true, "progress_revision_matched": true },
+        { "kind": "turn.wait-timeout", "timeout_ms": 30000, "timeout_omitted": true },
         { "kind": "turn.followup-received-active" },
-        { "kind": "turn.wait-recovered", "timeout_ms": 60000, "timeout_omitted": false, "progress_revision_matched": true },
+        { "kind": "turn.wait-recovered", "timeout_ms": 60000, "timeout_omitted": false },
         { "kind": "turn.completed", "step_id": "terminal-1" },
         { "kind": "turn.receipt", "step_id": "terminal-1", "matched": true, "result_truncated": false },
         { "kind": "turn.started" },
@@ -666,6 +666,7 @@
         { "kind": "session.close-attempted" }
       ],
       "report_checks": [
+        { "turn_index": 1, "category": "interaction", "required_fragments": ["ACTIVE_TIMEOUT_PROGRESS_7F3"], "forbidden_fragments": [] },
         { "turn_index": 2, "category": "interaction", "required_fragments": ["ACTIVE_SECOND_OK"], "forbidden_fragments": [] }
       ],
       "fixture_predicate": { "kind": "terminal-token", "token": "ACTIVE_SECOND_OK" },
@@ -698,9 +699,9 @@
         { "kind": "session.allocated", "mode": "ask" },
         { "kind": "turn.started" },
         { "kind": "prompt.contract", "step_id": "prompt-1", "matched": true },
-        { "kind": "turn.wait-timeout", "timeout_ms": 30000, "timeout_omitted": true, "progress_revision_matched": true },
+        { "kind": "turn.wait-timeout", "timeout_ms": 30000, "timeout_omitted": true },
         { "kind": "turn.followup-received-active" },
-        { "kind": "turn.wait-recovered", "timeout_ms": 60000, "timeout_omitted": false, "progress_revision_matched": true },
+        { "kind": "turn.wait-recovered", "timeout_ms": 60000, "timeout_omitted": false },
         { "kind": "turn.failed", "step_id": "terminal-1" },
         { "kind": "turn.receipt", "step_id": "terminal-1", "matched": true, "result_truncated": false },
         { "kind": "session.close-attempted" }
@@ -800,8 +801,7 @@
         { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
         { "capability": "cursor-task-delegation", "requirement": "Workspace discipline делегирования" },
         { "capability": "cursor-acp-session-runtime", "requirement": "Режимы Cursor и ACP callbacks" },
-        { "capability": "cursor-acp-session-runtime", "requirement": "Seamless per-session launch" },
-        { "capability": "cursor-acp-session-runtime", "requirement": "Role-neutral mode and collaboration surface" }
+        { "capability": "cursor-acp-session-runtime", "requirement": "Seamless per-session launch" }
       ],
       "initial_input": "Используй Cursor для одной разрешённой локальной реализации с явно выбранными model=sonnet-4.0, effort=high, fast=true и Agent Plugin bundle ${PLUGIN_DIR}. Создай только ${RESULT_FILE} с точным содержимым LAUNCH_PROGRESS_OK и сообщи итог с маркером LAUNCH_PROGRESS_OK вместе с выбранными настройками.",
       "prior_authority": {
@@ -812,9 +812,6 @@
         "kind": "fake-acp",
         "steps": [
           { "type": "prompt-check", "step_id": "prompt-1", "required_fragments": ["AUTHORIZED_ACTIONS: write ${RESULT_FILE} with exact content LAUNCH_PROGRESS_OK only.", "NO_SCOPE_EXPANSION: make no other changes; stop and report any required expansion."], "forbidden_fragments": ["you may make other changes", "continue after a required expansion"] },
-          { "type": "notification", "step_id": "todos-1", "notification_kind": "todos" },
-          { "type": "notification", "step_id": "task-1", "notification_kind": "task" },
-          { "type": "notification", "step_id": "image-1", "notification_kind": "image" },
           { "type": "effect", "step_id": "effect-1", "callback_id": "write-1", "operation": "write", "path": "result.txt", "text": "LAUNCH_PROGRESS_OK", "expected_callback": { "kind": "write-result", "outcome": "succeeded" } },
           { "type": "terminal", "step_id": "terminal-1", "turn_status": "completed", "result_text": "LAUNCH_PROGRESS_OK" }
         ]
@@ -824,9 +821,6 @@
         { "kind": "session.allocated", "mode": "agent", "model": "sonnet-4.0", "effort": "high", "fast": true, "plugin_dirs_count": 1, "plugin_dirs_matched": true },
         { "kind": "turn.started" },
         { "kind": "prompt.contract", "step_id": "prompt-1", "matched": true },
-        { "kind": "progress.todos", "step_id": "todos-1" },
-        { "kind": "progress.task", "step_id": "task-1" },
-        { "kind": "progress.image", "step_id": "image-1" },
         { "kind": "effect.file-written", "step_id": "effect-1" },
         { "kind": "turn.completed", "step_id": "terminal-1" },
         { "kind": "turn.receipt", "step_id": "terminal-1", "matched": true, "result_truncated": false },
@@ -1030,20 +1024,18 @@
     },
     {
       "scenario_kind": "programmed",
-      "scenario_id": "model-events-lost",
+      "scenario_id": "model-state-observation",
       "lane": "model-behavior",
       "owner_requirements": [
-        { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
-        { "capability": "cursor-acp-session-runtime", "requirement": "Sparse wait and bounded progress" }
+        { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" }
       ],
-      "initial_input": "Попроси Cursor выполнить шумную read-only проверку и потребуй, чтобы Cursor включил точный маркер NOISY_REVIEW_OK в свой результат; сообщи мне только подтверждённый результат с этим маркером.",
+      "initial_input": "Попроси Cursor выполнить read-only проверку и потребуй, чтобы Cursor включил точный маркер STATE_REVIEW_OK в свой результат; сообщи мне только подтверждённый результат с этим маркером.",
       "prior_authority": { "kind": "none" },
       "program": {
         "kind": "fake-acp",
         "steps": [
-          { "type": "prompt-check", "step_id": "prompt-1", "required_fragments": ["NOISY_REVIEW_OK"], "forbidden_fragments": [] },
-          { "type": "event-burst", "step_id": "burst-1", "count": 300 },
-          { "type": "terminal", "step_id": "terminal-1", "turn_status": "completed", "result_text": "Current normalized state verifies the review result despite the disclosed observation gap. NOISY_REVIEW_OK" }
+          { "type": "prompt-check", "step_id": "prompt-1", "required_fragments": ["STATE_REVIEW_OK"], "forbidden_fragments": [] },
+          { "type": "terminal", "step_id": "terminal-1", "turn_status": "completed", "result_text": "STATE_REVIEW_OK" }
         ]
       },
       "followups": [],
@@ -1051,15 +1043,14 @@
         { "kind": "session.allocated", "mode": "ask" },
         { "kind": "turn.started" },
         { "kind": "prompt.contract", "step_id": "prompt-1", "matched": true },
-        { "kind": "turn.events-lost", "events_lost": true },
         { "kind": "turn.completed", "step_id": "terminal-1" },
         { "kind": "turn.receipt", "step_id": "terminal-1", "matched": true, "result_truncated": false },
         { "kind": "session.close-attempted" }
       ],
       "report_checks": [
-        { "turn_index": 1, "category": "interaction", "required_fragments": ["NOISY_REVIEW_OK"], "forbidden_fragments": [] }
+        { "turn_index": 1, "category": "interaction", "required_fragments": ["STATE_REVIEW_OK"], "forbidden_fragments": [] }
       ],
-      "fixture_predicate": { "kind": "terminal-token", "token": "Current normalized state verifies the review result despite the disclosed observation gap. NOISY_REVIEW_OK" },
+      "fixture_predicate": { "kind": "terminal-token", "token": "STATE_REVIEW_OK" },
       "expected_actual_task_outcome": "succeeded",
       "expected_enabled_eval_status": "pass"
     },

@@ -3,10 +3,10 @@ import { isAbsolute, resolve } from 'node:path';
 
 const PROGRAMMED_KEYS = ['expected_actual_task_outcome', 'expected_enabled_eval_status', 'expected_trace', 'fixture_predicate', 'followups', 'harness_faults', 'initial_input', 'lane', 'owner_requirements', 'prior_authority', 'program', 'report_checks', 'scenario_id', 'scenario_kind'];
 const REFERENCE_KEYS = ['expected_enabled_eval_status', 'lane', 'owner_requirements', 'scenario_id', 'scenario_kind'];
-const HARNESS_FAULTS = new Set(['mode-timeout', 'accelerate-turn-timeout', 'accelerate-wait-timeout', 'exit-after-result', 'hold-terminal-until-followup', 'inject-mode-protocol-error-once', 'inject-stale-question-once', 'reject-initialize', 'reject-mode', 'reject-prompt', 'reject-resume', 'result-overflow']);
+const HARNESS_FAULTS = new Set(['mode-timeout', 'accelerate-turn-timeout', 'accelerate-wait-timeout', 'exit-after-result', 'hold-terminal-until-followup', 'inject-mode-protocol-error-once', 'inject-stale-question-once', 'lose-terminal-wait-response-once', 'reject-initialize', 'reject-mode', 'reject-prompt', 'reject-resume', 'result-overflow']);
 const OUTCOMES = new Set(['succeeded', 'failed']);
 const REPORT_CATEGORIES = new Set(['interaction']);
-const TRACE_KINDS = new Set(['session.allocated', 'session.start-rejected', 'session.resumed', 'session.resume-failed', 'session.tombstoned', 'session.mode-changed', 'session.mode-change-failed', 'session.mode-recovery-status', 'turn.started', 'turn.wait-timeout', 'turn.wait-recovered', 'turn.events-lost', 'turn.followup-received-active', 'turn.receipt', 'turn.result-read', 'session.close-attempted', 'prompt.contract', 'pending.question', 'pending.plan', 'pending.permission', 'effect.file-read', 'effect.file-written', 'progress.todos', 'progress.task', 'progress.image', 'turn.completed', 'turn.failed', 'turn.timed-out', 'answer.question', 'answer.plan', 'answer.permission', 'answer.rejected-stale']);
+const TRACE_KINDS = new Set(['session.allocated', 'session.start-rejected', 'session.resumed', 'session.resume-failed', 'session.tombstoned', 'session.mode-changed', 'session.mode-change-failed', 'session.mode-recovery-status', 'turn.started', 'turn.wait-timeout', 'turn.wait-recovered', 'turn.followup-received-active', 'turn.receipt', 'turn.result-read', 'session.close-attempted', 'prompt.contract', 'pending.question', 'pending.plan', 'pending.permission', 'effect.file-read', 'effect.file-written', 'turn.completed', 'turn.failed', 'turn.timed-out', 'answer.question', 'answer.plan', 'answer.permission', 'answer.rejected-stale']);
 const PLACEHOLDER = /\$\{([^}]+)\}/g;
 const PUBLIC_MCP_TOOL_NAMES = Object.freeze([
   'cursor_delegate', 'cursor_start_session', 'cursor_resume_session', 'cursor_send_prompt',
@@ -176,12 +176,6 @@ function program(value, label) {
         || (step.turn_status !== 'completed' && step.result_text !== null)) admission(`${label}.steps[${index}] is invalid`);
       if (step.delay_ms !== undefined && (!Number.isSafeInteger(step.delay_ms) || step.delay_ms < 1 || step.delay_ms > 5_000)) admission(`${label}.steps[${index}].delay_ms is invalid`);
       if (step.progress_text !== undefined) text(step.progress_text, `${label}.steps[${index}].progress_text`, 1, 512);
-    } else if (step.type === 'notification') {
-      closed(step, ['notification_kind', 'step_id', 'type'], `${label}.steps[${index}]`);
-      if (!['todos', 'task', 'image'].includes(step.notification_kind)) admission(`${label}.steps[${index}].notification_kind is invalid`);
-    } else if (step.type === 'event-burst') {
-      closed(step, ['count', 'step_id', 'type'], `${label}.steps[${index}]`);
-      if (!Number.isSafeInteger(step.count) || step.count < 257 || step.count > 512) admission(`${label}.steps[${index}].count is invalid`);
     } else admission(`${label}.steps[${index}].type is invalid`);
   }
   unique(value.steps, `${label}.steps`, ({ step_id: stepId }) => stepId);
@@ -242,14 +236,10 @@ function trace(value, steps, label) {
       if (observation.fast !== undefined && typeof observation.fast !== 'boolean') admission(`${label}[${index}].fast is invalid`);
     }
     else if (['turn.wait-timeout', 'turn.wait-recovered'].includes(observation.kind)) {
-      closed(observation, ['kind', 'progress_revision_matched', 'timeout_ms', 'timeout_omitted'], `${label}[${index}]`);
+      closed(observation, ['kind', 'timeout_ms', 'timeout_omitted'], `${label}[${index}]`);
       if (!Number.isSafeInteger(observation.timeout_ms) || observation.timeout_ms < 1_000 || observation.timeout_ms > 180_000
         || typeof observation.timeout_omitted !== 'boolean'
-        || (observation.timeout_omitted && observation.timeout_ms !== 30_000)
-        || observation.progress_revision_matched !== true) admission(`${label}[${index}] has an invalid wait contract`);
-    } else if (observation.kind === 'turn.events-lost') {
-      closed(observation, ['events_lost', 'kind'], `${label}[${index}]`);
-      if (observation.events_lost !== true) admission(`${label}[${index}] has an invalid retention-gap contract`);
+        || (observation.timeout_omitted && observation.timeout_ms !== 30_000)) admission(`${label}[${index}] has an invalid wait contract`);
     } else if (observation.kind === 'turn.receipt') {
       closed(observation, ['kind', 'matched', 'result_truncated', 'step_id'], `${label}[${index}]`);
       if (observation.matched !== true || typeof observation.result_truncated !== 'boolean') admission(`${label}[${index}] has an invalid receipt contract`);
@@ -282,8 +272,7 @@ function trace(value, steps, label) {
       ? 'answer.rejected-stale' : `${observation.kind.startsWith('answer.') ? 'answer' : 'pending'}.${referenced.step.request_kind}`)
       : referenced.step.type === 'effect' ? `effect.file-${referenced.step.operation === 'read' ? 'read' : 'written'}`
         : referenced.step.type === 'prompt-check' ? 'prompt.contract'
-          : referenced.step.type === 'notification' ? `progress.${referenced.step.notification_kind}`
-            : observation.kind === 'turn.receipt' ? 'turn.receipt'
+          : observation.kind === 'turn.receipt' ? 'turn.receipt'
               : observation.kind === 'turn.result-read' ? 'turn.result-read'
               : referenced.step.turn_status === 'timed_out' ? 'turn.timed-out'
                 : referenced.step.turn_status === 'failed' ? 'turn.failed' : 'turn.completed';
@@ -624,8 +613,6 @@ function traceProjection(observation) {
   if ('matched' in observation) projected.matched = observation.matched;
   if ('timeout_ms' in observation) projected.timeout_ms = observation.timeout_ms;
   if ('timeout_omitted' in observation) projected.timeout_omitted = observation.timeout_omitted;
-  if ('progress_revision_matched' in observation) projected.progress_revision_matched = observation.progress_revision_matched;
-  if ('events_lost' in observation) projected.events_lost = observation.events_lost;
   if ('result_truncated' in observation) projected.result_truncated = observation.result_truncated;
   if ('complete' in observation) projected.complete = observation.complete;
   if ('error_code' in observation) projected.error_code = observation.error_code;
@@ -743,22 +730,14 @@ export function findRecoveredCalls(transcript, expectedTurns) {
   if (!validRecoveryContext(transcript, expectedTurns) || transcript.dropped_calls !== 0
     || transcript.unexpected_input_requests !== 0) return [];
   const recovered = [];
-  let sessionId; let turnId; let eventId; let progressRevision;
+  let sessionId; let turnId;
   for (let index = 0; index < transcript.calls.length; index += 1) {
     const call = transcript.calls[index];
     if (call?.response?.ok === true) {
       if (['cursor_delegate', 'cursor_start_session', 'cursor_resume_session'].includes(call.tool)) {
         sessionId = call.response.session_id; turnId = call.response.turn_id;
-        eventId = undefined; progressRevision = undefined;
       } else if (call.tool === 'cursor_send_prompt' && call.request?.session_id === sessionId) {
         turnId = call.response.turn_id;
-        progressRevision = undefined;
-      }
-      if (call.response.session_id === sessionId) {
-        if (Number.isSafeInteger(call.response.last_event_id)) eventId = call.response.last_event_id;
-        if (call.response.turn_id === turnId && Number.isSafeInteger(call.response.progress_revision)) {
-          progressRevision = call.response.progress_revision;
-        }
       }
       continue;
     }
@@ -768,7 +747,6 @@ export function findRecoveredCalls(transcript, expectedTurns) {
     const rangeIndex = transcript.turn_call_ranges.findIndex(({ start, end }) => start <= index && index < end);
     if (rangeIndex < 0) continue;
     let successIndex = index + 1;
-    let repairEventId = eventId;
     // Read-only diagnostics do not change the operation being repaired. Their
     // successful current-session responses must remain in the original evidence.
     while (successIndex < transcript.turn_call_ranges[rangeIndex].end) {
@@ -778,7 +756,6 @@ export function findRecoveredCalls(transcript, expectedTurns) {
         || diagnostic.request?.session_id !== sessionId || diagnostic.response.session_id !== sessionId
         || diagnostic.request.turn_id !== undefined
         || !exactArgumentProjection(diagnostic.request, [])) break;
-      if (Number.isSafeInteger(diagnostic.response.last_event_id)) repairEventId = diagnostic.response.last_event_id;
       successIndex += 1;
     }
     const next = transcript.calls[successIndex];
@@ -792,16 +769,6 @@ export function findRecoveredCalls(transcript, expectedTurns) {
     let recoveryClass;
     if (changed.length && argumentTag(before) && argumentTag(before) === argumentTag(after)) {
       recoveryClass = 'address';
-    } else if (call.tool === 'cursor_wait'
-      && exactArgumentProjection(before, ['after_event_id', 'after_progress_revision', 'timeout_ms'])
-      && exactArgumentProjection(after, ['after_event_id', 'after_progress_revision', 'timeout_ms'])
-      && before.timeout_ms === after.timeout_ms) {
-      const cursors = [['after_event_id', repairEventId], ['after_progress_revision', progressRevision]];
-      const changedCursors = cursors.filter(([field]) => before[field] !== after[field]);
-      if (changedCursors.length && changedCursors.every(([field, observed]) => Number.isSafeInteger(observed)
-        && observed >= 0 && after[field] === observed)) {
-        recoveryClass = 'wait_state';
-      }
     } else if (call.tool === 'cursor_set_mode' && call.response.error_code === 'invalid_args'
       && !['ask', 'plan', 'agent'].includes(before?.mode) && ['ask', 'plan', 'agent'].includes(after.mode)
       && exactArgumentProjection(before, ['mode']) && exactArgumentProjection(after, ['mode'])) {
@@ -815,6 +782,22 @@ export function findRecoveredCalls(transcript, expectedTurns) {
       correction_kind: recoveryClass });
   }
   return recovered;
+}
+
+function hasTerminalWaitLossRecovery(transcript) {
+  const calls = transcript?.calls;
+  if (!Array.isArray(calls)) return false;
+  const losses = calls.map((call, index) => ({ call, index })).filter(({ call }) => call?.tool === 'cursor_wait'
+    && call.withheld_terminal_response === true && call.caller_error_code === 'transport_error'
+    && call.response?.ok === true && ['completed', 'failed', 'timed_out', 'cancelled'].includes(call.response.turn_status));
+  if (losses.length !== 1) return false;
+  const { call: lost, index } = losses[0];
+  const repeated = calls[index + 1];
+  return repeated?.tool === 'cursor_wait' && repeated.response?.ok === true
+    && repeated.request?.session_id === lost.request?.session_id && repeated.request?.turn_id === lost.request?.turn_id
+    && repeated.response?.session_id === lost.response?.session_id && repeated.response?.turn_id === lost.response?.turn_id
+    && repeated.response?.turn_status === lost.response?.turn_status
+    && ['completed', 'failed', 'timed_out', 'cancelled'].includes(repeated.response.turn_status);
 }
 
 export function evaluateScenario(scenario, { trace = [], callbacks = [], effects = [], captured_finals: capturedFinals, actual_task_outcome: actualTaskOutcome, transcript } = {}) {
@@ -841,6 +824,7 @@ export function evaluateScenario(scenario, { trace = [], callbacks = [], effects
     };
   }
   const recoveredCalls = findRecoveredCalls(transcript, capturedFinals.length);
+  if (scenario.harness_faults?.includes('lose-terminal-wait-response-once') && !hasTerminalWaitLossRecovery(transcript)) add('terminal-wait-loss-recovery-mismatch');
   const recoveredIndices = new Set(recoveredCalls.map(({ failed_call_index: index }) => index));
   if (transcript?.calls?.some((call, index) => call?.response?.ok === false
     && (['unknown_session', 'unknown_turn'].includes(call.response.error_code)
@@ -929,14 +913,6 @@ export function evaluateScenario(scenario, { trace = [], callbacks = [], effects
   if (canonicalJson(comparableTrace(trace, scenario.expected_trace)) !== canonicalJson(comparableTrace(scenario.expected_trace))) add('trace-mismatch');
 
   for (const step of scenario.program.steps) {
-    if (step.type === 'event-burst') {
-      const acknowledgements = callbacks.filter(({ step_id: stepId, kind }) => stepId === step.step_id && kind === 'burst.ack');
-      const ids = new Set(acknowledgements.map(({ callback_id: callbackId }) => callbackId));
-      if (acknowledgements.length !== step.count || ids.size !== step.count
-        || acknowledgements.some(({ callback_id: callbackId }) => typeof callbackId !== 'string' || !callbackId.startsWith('burst:'))
-        || callbacks.some(({ step_id: stepId, kind }) => stepId === step.step_id && kind === 'callback.failure')) add('burst-ack-mismatch');
-      continue;
-    }
     if (!['pending', 'effect'].includes(step.type)) continue;
     const observed = callbacks.filter(({ step_id: stepId }) => stepId === step.step_id);
     if (observed.length === 0) add(step.type === 'effect' ? 'missing-effect-callback' : 'missing-callback');

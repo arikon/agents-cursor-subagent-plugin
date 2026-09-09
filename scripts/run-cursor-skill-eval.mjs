@@ -272,6 +272,7 @@ export async function runEval({ scenarioId = null, env = process.env } = {}, dep
       CURSOR_EVAL_EVALUATOR_BYTES: String(evaluator.digest.bytes),
       ...(scenario.harness_faults?.includes('inject-stale-question-once') ? { CURSOR_EVAL_INJECT_STALE_QUESTION_ONCE: '1' } : {}),
       ...(scenario.harness_faults?.includes('inject-mode-protocol-error-once') ? { CURSOR_EVAL_INJECT_MODE_PROTOCOL_ERROR_ONCE: '1' } : {}),
+      ...(scenario.harness_faults?.includes('lose-terminal-wait-response-once') ? { CURSOR_EVAL_LOSE_TERMINAL_WAIT_RESPONSE_ONCE: '1' } : {}),
       ...(scenario.harness_faults?.includes('accelerate-wait-timeout') ? { FAKE_ACP_ACCELERATE_WAIT_TIMEOUT: '1' } : {}),
       ...(expectedPluginDirsSha256 ? { CURSOR_EVAL_EXPECTED_PLUGIN_DIRS_SHA256: expectedPluginDirsSha256 } : {}),
     };
