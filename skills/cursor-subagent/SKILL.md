@@ -244,8 +244,9 @@ Cursor.
    failure, or observed tombstone enters irrecoverable recovery: do not retry,
    resume, or create a replacement delegation and require a new user decision.
 
-Each session belongs to one Cursor process. Do not run two write-capable agents
-in the same worktree.
+Each session belongs to one Cursor process. Prefer separate worktrees for
+concurrent write-capable agents. Sharing one worktree is allowed for independent
+changes with coordinated, non-overlapping write scopes.
 
 Choose exactly one review evidence form before delegation:
 
