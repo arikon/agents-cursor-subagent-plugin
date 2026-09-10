@@ -699,6 +699,7 @@ test('child-result parser rejects every required evidence-contract violation', (
     { ...valid, transcript: { ...valid.transcript, extra: true } },
     { ...valid, provider_oracle: null },
     { ...valid, provider_oracle: [] },
+    { ...valid, token_usage: { ...valid.token_usage, extra: true } },
   ];
   for (const value of invalidResults) {
     assert.throws(() => parseChildResult(JSON.stringify(value), 'model-question', { scenario: scenarioById.get('model-question') }), (error) => error.evalCode === 'child_result_invalid');

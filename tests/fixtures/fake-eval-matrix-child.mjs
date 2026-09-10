@@ -5,6 +5,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readEvaluatorInventory } from '../../scripts/cursor-skill-eval.mjs';
+import { aggregateTokenUsage, makeUsageSession, makeUsageTurn, parseCodexTurnUsage } from '../../scripts/eval-token-usage.mjs';
 
 await new Promise((resolve) => setTimeout(resolve, Number(process.env.FAKE_EVAL_MATRIX_DELAY_MS || '35')));
 const repository = fileURLToPath(new URL('../..', import.meta.url));
@@ -42,6 +43,12 @@ const evidence = {
     model: { name: null, provider: null },
   },
   final_result: { ...result, evidence_ref: 'fake-evidence.json' },
+  token_usage: aggregateTokenUsage([
+    makeUsageSession('codex', result.scenario_id, [
+      makeUsageTurn('turn-1', parseCodexTurnUsage({ inputTokens: 10, cachedInputTokens: 2, outputTokens: 5 }), 'turn/completed'),
+    ]),
+    makeUsageSession('cursor', `${result.scenario_id}-cursor`, [], 'not_reported'),
+  ]),
 };
 if (fault === 'candidate-drift') evidence.manifest.client.version = 'different';
 if (fault === 'evaluator-drift') evidence.manifest.evaluator.sha256 = '0'.repeat(64);

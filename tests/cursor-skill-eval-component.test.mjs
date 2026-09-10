@@ -181,7 +181,7 @@ test('candidate inventory detects oracle drift independently of skill and exclud
   const load = async (path) => Buffer.from(path.endsWith('/cursor-eval-scenario.mjs') ? 'oracle-v1' : 'unchanged');
   const first = await readEvaluatorInventory('/first-checkout', load);
   assert.deepEqual(await readEvaluatorInventory('/another-checkout', load), first);
-  for (const input of ['scripts/cursor-eval-scenario.mjs', 'scripts/cursor-model-adapter.mjs',
+  for (const input of ['scripts/cursor-eval-scenario.mjs', 'scripts/eval-token-usage.mjs', 'scripts/cursor-model-adapter.mjs',
     'tests/fixtures/release-model-discovery-preload.mjs', 'tests/fixtures/cursor-eval-model-catalog.json',
     'tests/fixtures/cursor-model-catalog-1.0.31.json', 'tests/fixtures/fake-codex-cli-v01521.mjs',
     'tests/codex-client-oracle-support.mjs', 'tests/release-e2e-oracle-support.mjs', 'tests/fixtures/release-generation-acp.mjs']) {

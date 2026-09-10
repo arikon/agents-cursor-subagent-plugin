@@ -6,6 +6,7 @@ import { basename, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { evaluateScenario, materializeScenario, parseScenarioCorpus, validRecoveryContext } from './cursor-eval-scenario.mjs';
 import { assertEvidenceManifestV1, EVAL_LIMITS, evalResult, readEvaluatorInventory, writeEvalResult } from './cursor-skill-eval.mjs';
+import { assertEvalTokenUsageV1, emptyEvalTokenUsage } from './eval-token-usage.mjs';
 import { runSupervisor as runNodeTestSupervisor } from './run-node-tests.mjs';
 
 const repository = fileURLToPath(new URL('..', import.meta.url));
@@ -144,8 +145,14 @@ export function parseChildResult(encoded, scenarioId, expected = {}) {
     throw Object.assign(new Error('child result has an invalid evidence contract'), { evalCode: 'child_result_invalid' });
   }
   if (!validCaptures) throw Object.assign(new Error('child final capture is incomplete or malformed'), { evalCode: 'capture_invalid' });
+  let tokenUsage = emptyEvalTokenUsage();
+  if (result.token_usage != null) {
+    try { tokenUsage = assertEvalTokenUsageV1(result.token_usage); }
+    catch { throw Object.assign(new Error('child result has an invalid evidence contract'), { evalCode: 'child_result_invalid' }); }
+  }
   return { provenance, manifest, captured_finals: captures,
-    observations: { ...normalizedObservations, captured_finals: captures }, transcript: normalizedTranscript, provider_oracle: result.provider_oracle || null };
+    observations: { ...normalizedObservations, captured_finals: captures }, transcript: normalizedTranscript, provider_oracle: result.provider_oracle || null,
+    token_usage: tokenUsage };
 }
 
 export async function publishFinalEvidence({ evidenceRoot, fixtureRoot, makeEvidence }) {
@@ -321,6 +328,7 @@ export async function runEval({ scenarioId = null, env = process.env } = {}, dep
         transcript: childResult?.transcript || { calls: [], dropped_calls: 0 }, provider_oracle: childResult?.provider_oracle || null,
         captured_finals: childResult?.captured_finals || [],
         fixture_oracle: fixtureOracle,
+        token_usage: childResult?.token_usage || emptyEvalTokenUsage(),
         harness: harnessEvidence, final_result: { ...publishedResult, evidence_ref: basename(ref) },
         manifest: childResult.manifest };
     } });

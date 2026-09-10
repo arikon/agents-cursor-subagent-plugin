@@ -8,6 +8,7 @@ import { basename, dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assertEvalResultV1, assertEvidenceManifestV1, EVAL_LIMITS, readEvaluatorInventory } from '../cursor-skill-eval.mjs';
 import { canonicalJson, parseScenarioCorpus } from '../cursor-eval-scenario.mjs';
+import { emptyEvalTokenUsage, mergeEvalTokenUsage, readTokenUsageFromEvidence } from '../eval-token-usage.mjs';
 
 const repository = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const [model, effort, outputArg] = process.argv.slice(2);
@@ -95,6 +96,7 @@ const runOne = async (scenarioId, index, attempt, serialIndex) => {
   ]);
   const text = Buffer.concat(stdout).toString('utf8').trim();
   let result;
+  let tokenUsage = emptyEvalTokenUsage();
   try {
     if (Buffer.concat(stdout).length > EVAL_LIMITS.stdoutBytes) throw new Error('child stdout exceeds its byte limit');
     result = assertEvalResultV1(JSON.parse(text));
@@ -129,6 +131,8 @@ const runOne = async (scenarioId, index, attempt, serialIndex) => {
       result.evidence_ref = bundlePath(evidencePath);
       result.evidence_publication_status = 'published';
       bindCandidate(evidence.manifest);
+      try { tokenUsage = readTokenUsageFromEvidence(evidence); }
+      catch { tokenUsage = emptyEvalTokenUsage(); }
     } catch (error) {
       result = { ...result, eval_status: 'integration_failure', failure_stage: 'inspection',
         error_code: 'matrix_candidate_evidence_invalid', message: error.message };
@@ -144,7 +148,7 @@ const runOne = async (scenarioId, index, attempt, serialIndex) => {
       evidence_ref: null, evidence_publication_status: 'failed' };
     assertEvalResultV1(result);
   }
-  const completed = { ...result, process: { code, signal, duration_ms: Date.now() - started, artifact_root: bundlePath(attemptArtifactRoot) } };
+  const completed = { ...result, process: { code, signal, duration_ms: Date.now() - started, artifact_root: bundlePath(attemptArtifactRoot) }, token_usage: tokenUsage };
   emit({ event: 'scenario_completed', serial_index: serialIndex, serial, scenario_id: scenarioId, index, total: scenarioIds.length, attempt,
     eval_status: completed.eval_status, error_code: completed.error_code, duration_ms: completed.process.duration_ms });
   return completed;
@@ -191,6 +195,7 @@ const runMatrix = async (serialIndex) => {
     duration_ms: Date.now() - startedMs, initial, final, digest_stable: JSON.stringify(initial) === JSON.stringify(final),
     counts: { total: results.length, ...counts }, pass_rate: results.length ? counts.pass / results.length : 0,
     attempted_runs: results.reduce((sum, item) => sum + item.attempts.length, 0), results,
+    token_usage: mergeEvalTokenUsage(results.map((item) => item.token_usage)),
     candidate_digest: candidate?.digest || null,
   };
   emit({ event: 'matrix_completed', serial_index: serialIndex, serial, output, counts: summary.counts, pass_rate: summary.pass_rate,
@@ -220,6 +225,7 @@ const summary = {
   pass_rate: counts.pass / results.length,
   attempted_runs: runs.reduce((total, run) => total + run.attempted_runs, 0),
   results,
+  token_usage: mergeEvalTokenUsage(runs.map((run) => run.token_usage)),
   runs: runSummaries,
   candidate_digest: candidate?.digest || null,
   candidate_ref: candidate ? bundlePath(candidatePath) : null,

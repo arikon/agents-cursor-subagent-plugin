@@ -53,4 +53,11 @@ test('current versioned golden fixes the paginated final-capture surface', async
     fields: ['text', 'turn_id', 'turn_status', 'phase', 'source', 'completeness', 'error_code'],
     source: 'thread/items/list', completeness: ['complete', 'confirmed_missing', 'incomplete'], max_text_bytes: 1_000_000,
   });
+  assert.deepEqual(contract.turn_usage, {
+    completed_notification: 'turn/completed',
+    completed_wire: ['inputTokens', 'cachedInputTokens', 'outputTokens'],
+    thread_notification: 'thread/tokenUsage/updated',
+    thread_wire: ['threadId', 'turnId', 'tokenUsage.total', 'tokenUsage.last'],
+    breakdown_wire: ['inputTokens', 'cachedInputTokens', 'outputTokens', 'reasoningOutputTokens', 'totalTokens'],
+  });
 });

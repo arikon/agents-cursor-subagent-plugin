@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
@@ -322,5 +322,80 @@ test('MCP tools/call wires one complete session through stdio JSON-RPC', async (
   });
   assert.equal(staleAnswer.result.isError, true);
   assert.equal(JSON.parse(staleAnswer.result.content[0].text).error_code, 'unknown_request');
+  assert.equal((await client.tool('cursor_close_session', { session_id: session.session_id })).session_state, 'tombstone');
+});
+
+test('MCP writes billed token-usage sidecar and ignores context-window usage_update', async (t) => {
+  const dir = mkdtempSync(join(tmpdir(), 'mcp-token-usage-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const mcpEvidence = join(dir, 'mcp.json');
+  writeFileSync(mcpEvidence, '{}');
+  const client = await transport(t, {
+    CURSOR_EVAL_MCP_EVIDENCE: mcpEvidence,
+    FAKE_ACP_PROMPT_USAGE: JSON.stringify({
+      used: 53_000, size: 200_000, inputTokens: 11, outputTokens: 4, thoughtTokens: 2,
+    }),
+  });
+  await client.request('initialize', { protocolVersion: '2024-11-05' });
+  const session = await client.tool('cursor_start_session', { cwd: process.cwd(), mode: 'ask' });
+  const turn = await client.tool('cursor_send_prompt', {
+    session_id: session.session_id,
+    prompt: 'Record billed usage.',
+  });
+  const completed = await client.tool('cursor_wait', {
+    session_id: session.session_id,
+    turn_id: turn.turn_id,
+    timeout_ms: 1_000,
+  });
+  assert.equal(completed.turn_status, 'completed');
+  const sidecar = JSON.parse(readFileSync(join(dir, 'token-usage.json'), 'utf8'));
+  assert.equal(sidecar.schema_version, 1);
+  assert.equal(sidecar.sessions.length, 1);
+  assert.equal(sidecar.sessions[0].reporting, 'provider');
+  assert.equal(sidecar.sessions[0].turns.length, 1);
+  assert.equal(sidecar.sessions[0].turns[0].input_tokens, 11);
+  assert.equal(sidecar.sessions[0].turns[0].output_tokens, 4);
+  assert.equal(sidecar.sessions[0].turns[0].thought_tokens, 2);
+  assert.equal((await client.tool('cursor_close_session', { session_id: session.session_id })).session_state, 'tombstone');
+});
+
+test('MCP token-usage sidecar failure does not fail the ACP session', async (t) => {
+  const dir = mkdtempSync(join(tmpdir(), 'mcp-token-usage-fail-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const blockedParent = join(dir, 'not-a-dir');
+  writeFileSync(blockedParent, 'file');
+  const client = await transport(t, {
+    CURSOR_EVAL_MCP_EVIDENCE: join(blockedParent, 'mcp.json'),
+  });
+  await client.request('initialize', { protocolVersion: '2024-11-05' });
+  const session = await client.tool('cursor_start_session', { cwd: process.cwd(), mode: 'ask' });
+  assert.equal(session.session_state, 'live');
+  assert.equal((await client.tool('cursor_close_session', { session_id: session.session_id })).session_state, 'tombstone');
+});
+
+test('MCP ignores non-integer Cursor billed usage instead of inventing spend', async (t) => {
+  const dir = mkdtempSync(join(tmpdir(), 'mcp-token-usage-invalid-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const mcpEvidence = join(dir, 'mcp.json');
+  writeFileSync(mcpEvidence, '{}');
+  const client = await transport(t, {
+    CURSOR_EVAL_MCP_EVIDENCE: mcpEvidence,
+    FAKE_ACP_PROMPT_USAGE: JSON.stringify({ inputTokens: '11', outputTokens: 4 }),
+  });
+  await client.request('initialize', { protocolVersion: '2024-11-05' });
+  const session = await client.tool('cursor_start_session', { cwd: process.cwd(), mode: 'ask' });
+  const turn = await client.tool('cursor_send_prompt', {
+    session_id: session.session_id,
+    prompt: 'Ignore invalid billed usage.',
+  });
+  const completed = await client.tool('cursor_wait', {
+    session_id: session.session_id,
+    turn_id: turn.turn_id,
+    timeout_ms: 1_000,
+  });
+  assert.equal(completed.turn_status, 'completed');
+  const sidecar = JSON.parse(readFileSync(join(dir, 'token-usage.json'), 'utf8'));
+  assert.equal(sidecar.sessions[0].reporting, 'not_reported');
+  assert.deepEqual(sidecar.sessions[0].turns, []);
   assert.equal((await client.tool('cursor_close_session', { session_id: session.session_id })).session_state, 'tombstone');
 });

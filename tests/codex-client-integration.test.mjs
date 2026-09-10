@@ -12,6 +12,7 @@ import { MARKER_NAME, runBootstrap, runPackageCommand } from '../scripts/cursor-
 import { CodexAppServerClient } from '../scripts/codex-app-server-client.mjs';
 import { canonicalJson, evaluateScenario, findRecoveredCalls, materializeScenario } from '../scripts/cursor-eval-scenario.mjs';
 import { readEvaluatorInventory } from '../scripts/cursor-skill-eval.mjs';
+import { buildEvalTokenUsage } from '../scripts/eval-token-usage.mjs';
 import { parseChildResult, runHarness } from '../scripts/run-cursor-skill-eval.mjs';
 
 const repository = fileURLToPath(new URL('..', import.meta.url));
@@ -838,6 +839,13 @@ async function waitForProviderEvidence(path, minimumRequests = 4) {
   throw new Error(`scripted provider did not observe a complete tool loop: ${JSON.stringify(latest)}`);
 }
 
+async function observedTokenUsage(runner, threadId, evidenceRoot) {
+  let cursorSidecar = null;
+  try { cursorSidecar = JSON.parse(await readFile(join(evidenceRoot, 'token-usage.json'), 'utf8')); }
+  catch (error) { if (error.code !== 'ENOENT') throw error; }
+  return buildEvalTokenUsage({ notifications: runner?.notifications || [], threadId, cursorSidecar });
+}
+
 async function waitForMcpEvidence(path, minimumTranscriptLength = 3, timeoutMs = 5_000) {
   const deadline = Date.now() + timeoutMs;
   let latest = null;
@@ -1332,6 +1340,7 @@ test('hosted Codex actually calls the installed Cursor MCP tools', { skip: proce
         report_checks: oracle.report_checks,
         prompt_contracts: safeEvidence.filter(({ kind }) => kind === 'prompt.contract'),
         tool_sequence: mcp.transcript.map(({ tool }) => tool), request_trace: mcp.transcript.map(({ tool, call_id: callId }, index) => ({ step: index + 1, tool, call_id: callId })) },
+      token_usage: await observedTokenUsage(runner, hostedThreadId, evidenceRoot),
     };
     phase('child-result-built');
     const mismatchDiagnostics = { oracle, trace: observations.trace, capturedFinals };
@@ -1458,6 +1467,7 @@ test('credential-free client integration completes the installed-skill MCP loop 
       transcript: transcriptEvidence,
       provider_oracle: { request_count: evidence.requests, skill_context_seen: installedSkillSelected,
         terminal_result_matched: evidence.terminal_result_matched, tool_sequence: evidence.tool_sequence.slice(1), request_trace: evidence.request_trace },
+      token_usage: await observedTokenUsage(runner, thread.thread.id, evidenceRoot),
     };
     assert.equal(oracle.eval_status, 'pass', JSON.stringify(oracle));
   } catch (error) {

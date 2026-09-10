@@ -166,7 +166,7 @@ async function stopProcessGroup(child) {
 
 test('lane matrix produces the exact child argv and keeps parent deadlines fixed', async (t) => {
   const componentTests = [
-    'tests/check-openspec-semantics.test.mjs', 'tests/coverage-audit.test.mjs',
+    'tests/check-openspec-semantics.test.mjs', 'tests/coverage-audit.test.mjs', 'tests/eval-token-usage.test.mjs',
     'tests/codex-client-integration-component.test.mjs', 'tests/facade.test.mjs', 'tests/release-e2e-component.test.mjs', 'tests/codex-client-oracle-component.test.mjs', 'tests/run-cursor-skill-eval-component.test.mjs', 'tests/bootstrap-component.test.mjs', 'tests/codex-app-server-client-component.test.mjs', 'tests/node-test-reporter-v22.test.mjs',
   ];
   const integrationTests = [
@@ -177,7 +177,7 @@ test('lane matrix produces the exact child argv and keeps parent deadlines fixed
   ];
   const unitTests = [...componentTests, ...integrationTests];
   const productSources = [
-    'scripts/check-openspec-semantics.mjs', 'scripts/codex-app-server-client.mjs', 'scripts/cursor-eval-scenario.mjs', 'scripts/cursor-skill-eval.mjs', 'scripts/openspec-semantic-registry.mjs',
+    'scripts/check-openspec-semantics.mjs', 'scripts/codex-app-server-client.mjs', 'scripts/cursor-eval-scenario.mjs', 'scripts/cursor-skill-eval.mjs', 'scripts/eval-token-usage.mjs', 'scripts/openspec-semantic-registry.mjs',
     'scripts/cursor-subagent-bootstrap.mjs', 'scripts/cursor-subagent-mcp.mjs', 'scripts/cursor-model-adapter.mjs', 'scripts/node-test-reporter-v22.mjs',
     'scripts/recording-mcp-proxy.mjs', 'scripts/run-cursor-skill-eval.mjs', 'scripts/run-node-tests.mjs', 'scripts/run-unit-coverage.mjs',
     'scripts/eval/run-cursor-skill-eval-matrix.mjs', 'scripts/eval/run-cursor-skill-eval-suite.mjs',

@@ -35,5 +35,12 @@
     "source": "thread/items/list",
     "completeness": ["complete", "confirmed_missing", "incomplete"],
     "max_text_bytes": 1000000
+  },
+  "turn_usage": {
+    "completed_notification": "turn/completed",
+    "completed_wire": ["inputTokens", "cachedInputTokens", "outputTokens"],
+    "thread_notification": "thread/tokenUsage/updated",
+    "thread_wire": ["threadId", "turnId", "tokenUsage.total", "tokenUsage.last"],
+    "breakdown_wire": ["inputTokens", "cachedInputTokens", "outputTokens", "reasoningOutputTokens", "totalTokens"]
   }
 }

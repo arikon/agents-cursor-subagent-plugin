@@ -4,7 +4,7 @@ import { homedir } from 'node:os';
 import { ModelAdapterError, parseModelCatalog, resolveModelSelection, verifyModelSelection } from './cursor-model-adapter.mjs';
 import { spawn } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
-import { lstatSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { lstatSync, mkdirSync, readFileSync, realpathSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, relative, resolve } from 'node:path';
 
 // Runtime-owned, fixed bounds. They deliberately are not operator settings.
@@ -259,6 +259,21 @@ function admitLaunchParams(args, canonicalPluginDir) {
   }
   return { ...admitModelParams(args), plugin_dirs };
 }
+function evalTokenUsageSidecarPath(mcpEvidence) {
+  if (typeof mcpEvidence !== 'string' || !mcpEvidence) return null;
+  return resolve(dirname(mcpEvidence), 'token-usage.json');
+}
+function parseCursorBilledUsage(usage) {
+  if (!usage || Array.isArray(usage) || typeof usage !== 'object') return null;
+  const input_tokens = usage.inputTokens;
+  const output_tokens = usage.outputTokens;
+  if (!Number.isSafeInteger(input_tokens) || input_tokens < 0 || !Number.isSafeInteger(output_tokens) || output_tokens < 0) return null;
+  const cached_input_tokens = usage.cachedReadTokens ?? 0;
+  const thought_tokens = usage.thoughtTokens ?? 0;
+  const total_tokens = usage.totalTokens ?? (input_tokens + output_tokens + thought_tokens);
+  if (![cached_input_tokens, thought_tokens, total_tokens].every((value) => Number.isSafeInteger(value) && value >= 0)) return null;
+  return { input_tokens, cached_input_tokens, output_tokens, thought_tokens, total_tokens };
+}
 function captureTerminalReceipt(session, turn) {
   turn.terminal_receipt = {
     session_id: session.id, turn_id: turn.turn_id, turn_status: turn.turn_status, last_event_id: session.nextEvent - 1,
@@ -286,12 +301,26 @@ class SessionRecord {
     this.child = null; this.shutdownPromise = null; this.tombstonedAt = null; this.idleTimer = null;
     this.admissionOpen = false; this.adapterCancelSent = false; this.modeTransition = false;
     this.cursor_session_id = null; this.resumeCursorSessionId = null;
+    this.usageTurns = [];
+  }
+  recordBilledUsage(turnId, usage, source) {
+    const counts = parseCursorBilledUsage(usage);
+    if (!counts) return;
+    const turn = { turn_id: turnId ?? null, source, ...counts };
+    const index = this.usageTurns.findIndex((entry) => turnId && entry.turn_id === turnId);
+    if (index >= 0) this.usageTurns[index] = turn;
+    else this.usageTurns.push(turn);
+    this.runtime.persistTokenUsage();
   }
   emit(kind, turn_id, payload) {
     const event = { event_id: this.nextEvent++, kind, turn_id, payload };
     this.events.push(event); if (this.events.length > LIMITS.events) this.events.shift(); this.wake(); return event;
   }
-  sessionState(to) { const from = this.session_state; if (from === to) return; this.session_state = to; this.emit('lifecycle', null, { scope: 'session', from, to }); }
+  sessionState(to) {
+    const from = this.session_state; if (from === to) return; this.session_state = to;
+    this.emit('lifecycle', null, { scope: 'session', from, to });
+    this.runtime.persistTokenUsage();
+  }
   turnState(turn, to) { const from = turn.turn_status; if (from === to) return; turn.turn_status = to; this.emit('lifecycle', turn.turn_id, { scope: 'turn', from, to }); }
   snapshot(turn) { return !turn ? null : { turn_id: turn.turn_id, turn_status: turn.turn_status, result: turn.result, terminal_reason: turn.terminal_reason, pending: [...turn.pending.values()].map((pending) => ({ request_id: pending.request_id, kind: pending.kind, context: pending.context })) }; }
   envelope() {
@@ -519,7 +548,10 @@ class SessionRecord {
   sessionUpdate(message) {
     const turn = this.active;
     const update = message.params?.update;
-    if (!turn || message.params?.sessionId !== this.cursorSessionId || update?.sessionUpdate !== 'agent_message_chunk') return;
+    if (message.params?.sessionId !== this.cursorSessionId) return;
+    if (update?.sessionUpdate === 'usage_update') { this.runtime.persistTokenUsage(); return; }
+    if (update?.sessionUpdate === 'state_update' && update.usage) this.recordBilledUsage(turn?.turn_id, update.usage, 'state_update');
+    if (!turn || update?.sessionUpdate !== 'agent_message_chunk') return;
     const chunk = update.content?.text;
     if (!validText(chunk)) return this.transportFailure('invalid ACP agent message');
     // Retain only the admitted agent-text stream. Thinking/tool/archive payloads
@@ -620,6 +652,7 @@ class SessionRecord {
   complete(turn, result) {
     if (this.active !== turn || turn.turn_status !== 'running') return;
     if (!ADAPTER.admitPromptResult(result)) fail('protocol_error', 'ACP prompt response is not admitted');
+    this.recordBilledUsage(turn.turn_id, result.usage, 'session/prompt');
     clearTimeout(turn.timer); turn.full_result = turn.agent_text_parts.join('');
     turn.agent_text_parts = null; turn.agent_text_bytes = null;
     turn.full_result_sha256 = createHash('sha256').update(turn.full_result, 'utf8').digest('hex');
@@ -698,6 +731,22 @@ export class Runtime {
   constructor({ env = process.env, roots = readRoots(env), fetchModels = globalThis.fetch, readModelAuth = readFile } = {}) {
     this.env = env; this.roots = roots; this.sessions = new Map(); this.live = new Set();
     this.fetchModels = fetchModels; this.readModelAuth = readModelAuth; this.discovery = null; this.closed = false;
+  }
+  persistTokenUsage() {
+    const destination = evalTokenUsageSidecarPath(this.env?.CURSOR_EVAL_MCP_EVIDENCE);
+    if (!destination) return;
+    try {
+      const sessions = [...this.sessions.values()].map((session) => ({
+        session_id: session.id,
+        cursor_session_id: session.cursor_session_id,
+        reporting: session.usageTurns.length ? 'provider' : 'not_reported',
+        turns: session.usageTurns,
+      }));
+      mkdirSync(dirname(destination), { recursive: true });
+      const temporary = `${destination}.${process.pid}.tmp`;
+      writeFileSync(temporary, JSON.stringify({ schema_version: 1, sessions }));
+      renameSync(temporary, destination);
+    } catch { /* eval sidecar is observational and must not fail the ACP session */ }
   }
   async readApiKey(signal, required = false) {
     let auth;

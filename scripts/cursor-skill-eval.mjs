@@ -12,6 +12,7 @@ export const EVAL_LIMITS = Object.freeze({ stdoutBytes: 16_384, evidenceBytes: 1
 const EVALUATOR_INPUTS = Object.freeze([
   '.codex-plugin/plugin.json', 'README.md',
   'scripts/codex-app-server-client.mjs', 'scripts/cursor-eval-scenario.mjs',
+  'scripts/eval-token-usage.mjs',
   'scripts/cursor-skill-eval.mjs', 'scripts/cursor-subagent-bootstrap.mjs',
   'scripts/cursor-subagent-mcp.mjs', 'scripts/cursor-model-adapter.mjs', 'scripts/eval/run-cursor-skill-eval-matrix.mjs',
   'scripts/node-test-reporter-v22.mjs', 'scripts/recording-mcp-proxy.mjs',

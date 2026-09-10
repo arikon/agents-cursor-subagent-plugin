@@ -75,7 +75,19 @@ const finishPrompt = (id, text) => {
   if (process.env.FAKE_ACP_PERSISTED_SESSION) writeFileSync(process.env.FAKE_ACP_PERSISTED_SESSION,
     JSON.stringify({ sessionId: 'fake', configOptions: modelSelection() }));
   send({ jsonrpc: '2.0', method: 'session/update', params: { sessionId: 'fake', update: { sessionUpdate: 'agent_message_chunk', content: { text } } } });
-  send({ jsonrpc: '2.0', id, result: { stopReason: process.env.FAKE_ACP_BAD_PROMPT_RESULT ? 'unknown' : (process.env.FAKE_ACP_STOP_REASON || 'end_turn') } });
+  const billedUsage = process.env.FAKE_ACP_PROMPT_USAGE ? JSON.parse(process.env.FAKE_ACP_PROMPT_USAGE) : null;
+  if (billedUsage && Number.isSafeInteger(billedUsage.used) && Number.isSafeInteger(billedUsage.size)) {
+    send({ jsonrpc: '2.0', method: 'session/update', params: { sessionId: 'fake', update: {
+      sessionUpdate: 'usage_update', used: billedUsage.used, size: billedUsage.size } } });
+  }
+  if (billedUsage && billedUsage.inputTokens !== undefined) {
+    send({ jsonrpc: '2.0', method: 'session/update', params: { sessionId: 'fake', update: {
+      sessionUpdate: 'state_update', state: 'idle', usage: billedUsage } } });
+  }
+  send({ jsonrpc: '2.0', id, result: {
+    stopReason: process.env.FAKE_ACP_BAD_PROMPT_RESULT ? 'unknown' : (process.env.FAKE_ACP_STOP_REASON || 'end_turn'),
+    ...(billedUsage && billedUsage.inputTokens !== undefined ? { usage: billedUsage } : {}),
+  } });
   safeEvidence({ event: 'prompt_result', request_id: id });
 };
 let programStepIndex = 0;

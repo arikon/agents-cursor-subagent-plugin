@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import { admitScenarioCorpus, evaluateScenario, materializeScenario, parseScenarioCorpus } from '../scripts/cursor-eval-scenario.mjs';
 import { assertEvalResultV1 } from '../scripts/cursor-skill-eval.mjs';
+import { emptyEvalTokenUsage } from '../scripts/eval-token-usage.mjs';
 import { cli, parseChildResult, publishFinalEvidence, runEval, runHarness } from '../scripts/run-cursor-skill-eval.mjs';
 
 const run = fileURLToPath(new URL('../scripts/run-cursor-skill-eval.mjs', import.meta.url));
@@ -109,6 +110,7 @@ const childResult = (scenarioId = 'model-question', options = {}) => {
       installed_payload: provenance.installed_payload, client: provenance.client, model: provenance.model },
     observations: { ...observationsFor(scenario, options), captured_finals: capturedFinals }, transcript: transcriptFor(scenario),
     provider_oracle: { request_count: 8, skill_context_seen: true, terminal_result_matched: true, tool_sequence: toolSequence, request_trace: requestTrace },
+    token_usage: emptyEvalTokenUsage(),
   };
 };
 const passHarness = async (config, env) => ({ code: 0, signal: null, failure: null,

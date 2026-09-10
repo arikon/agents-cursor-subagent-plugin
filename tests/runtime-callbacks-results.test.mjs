@@ -670,3 +670,37 @@ test('malformed and nonobject ACP frames follow init and active-turn failure lif
     const activeRuntime = withFake(t, { env: { FAKE_ACP_INVALID_FRAME: frame } }); const session = await activeRuntime.call('cursor_start_session', { cwd, mode: 'ask' }); const turn = await activeRuntime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'bad frame' }); const terminal = await waitTerminal(activeRuntime, session.session_id, turn.turn_id); const tombstone = await waitSessionState(activeRuntime, session.session_id, 'tombstone'); assert.equal(terminal.turn_status, 'failed'); assert.equal(Object.hasOwn(terminal, 'failure_kind'), false); assert.equal(tombstone.failure_kind, null);
   }
 });
+
+test('eval sidecar records Cursor billed prompt usage and ignores context-window used/size', async (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'cursor-runtime-usage-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const runtime = withFake(t, { roots: [realpathSync(root)], env: {
+    CURSOR_EVAL_MCP_EVIDENCE: join(root, 'mcp.json'),
+    FAKE_ACP_PROMPT_USAGE: JSON.stringify({
+      inputTokens: 11, outputTokens: 4, thoughtTokens: 2, cachedReadTokens: 1, totalTokens: 18, used: 50, size: 200,
+    }),
+  } });
+  const session = await runtime.call('cursor_start_session', { cwd: root, mode: 'ask' });
+  const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'count' });
+  await waitTerminal(runtime, session.session_id, turn.turn_id);
+  await runtime.call('cursor_close_session', { session_id: session.session_id });
+  const sidecar = JSON.parse(readFileSync(join(root, 'token-usage.json'), 'utf8'));
+  assert.equal(sidecar.sessions.length, 1);
+  assert.equal(sidecar.sessions[0].reporting, 'provider');
+  assert.deepEqual(sidecar.sessions[0].turns[0], {
+    turn_id: turn.turn_id, source: 'session/prompt',
+    input_tokens: 11, cached_input_tokens: 1, output_tokens: 4, thought_tokens: 2, total_tokens: 18,
+  });
+});
+
+test('eval token-usage sidecar failure does not fail an allocated Cursor session', async (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'cursor-runtime-usage-block-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  writeFileSync(join(root, 'blocked'), 'not-a-directory');
+  const runtime = withFake(t, { roots: [realpathSync(root)], env: {
+    CURSOR_EVAL_MCP_EVIDENCE: join(root, 'blocked', 'mcp.json'),
+  } });
+  const session = await runtime.call('cursor_start_session', { cwd: root, mode: 'ask' });
+  assert.equal(session.session_state, 'live');
+  await runtime.call('cursor_close_session', { session_id: session.session_id });
+});

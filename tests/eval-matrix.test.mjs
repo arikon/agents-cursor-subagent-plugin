@@ -167,6 +167,12 @@ test('eval matrix emits per-scenario progress and writes atomic aggregate statis
   assert.equal(summary.results[0].process.artifact_root, relative(root, `${output}.artifacts/serial-1/model-question-attempt-1`));
   assert.equal(summary.results[0].evidence_ref,
     relative(root, `${output}.artifacts/serial-1/model-question-attempt-1/evidence/fake-evidence.json`));
+  assert.equal(summary.token_usage.reporting.codex, 'provider');
+  assert.equal(summary.token_usage.reporting.cursor, 'not_reported');
+  assert.equal(summary.token_usage.totals.codex.input_tokens, 10 * modelCount);
+  assert.equal(summary.token_usage.totals.codex.output_tokens, 5 * modelCount);
+  assert.equal(summary.token_usage.totals.cursor.total_tokens, 0);
+  assert.equal(summary.results[0].token_usage.totals.codex.input_tokens, 10);
   await readFile(join(root, summary.results[0].process.artifact_root, 'driver-stdout.txt'), 'utf8');
   await readFile(join(root, summary.results[0].process.artifact_root, 'driver-stderr.txt'), 'utf8');
   assert.equal(events.filter(({ event }) => event === 'scenario_started').length, modelCount);
