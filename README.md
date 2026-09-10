@@ -55,23 +55,32 @@ provides the current CLI. The plugin has been tested with Cursor Agent
 required ACP interface, but have not yet been verified. The plugin checks ACP
 compatibility at startup without requiring an exact Cursor version.
 
-### Sign in with file-backed credentials
+### Configure API key authentication
 
-Sign in through the browser using the file-backed credential store:
+Before using the plugin, create an API key in the
+[Cursor dashboard](https://cursor.com/dashboard/api). Configure
+`~/.cursor/auth.json` under the same OS user that runs Codex or Claude Code.
+The file must contain only the `apiKey` field, with no other fields:
+
+```json
+{
+  "apiKey": "YOUR_CURSOR_API_KEY"
+}
+```
+
+Verify authentication using the file-backed credential store:
 
 ```bash
-AGENT_CLI_CREDENTIAL_STORE=file cursor-agent login
 AGENT_CLI_CREDENTIAL_STORE=file cursor-agent status --format json
 ```
 
-Complete the browser login and confirm that the status command reports you as
-authenticated before starting a delegated task. Both plugin configurations set
-`AGENT_CLI_CREDENTIAL_STORE=file`, so use that same setting for login and status.
-On macOS this selects file storage instead of Keychain. If you previously signed
-in using Keychain, run the file-backed login above as well.
+Confirm that the status command reports you as authenticated before starting a
+delegated task. Both plugin configurations set `AGENT_CLI_CREDENTIAL_STORE=file`,
+so use that same setting for status. On macOS this selects file storage instead
+of Keychain; a previous Keychain login does not replace this setup.
 
 The official [Cursor authentication guide](https://cursor.com/docs/cli/reference/authentication)
-explains browser login and status checks. The file-store environment variable is
+explains authentication and status checks. The file-store environment variable is
 an option of the supported Cursor Agent version used by this plugin; it is not
 documented on that page.
 
