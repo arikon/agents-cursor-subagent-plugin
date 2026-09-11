@@ -15,6 +15,8 @@ import { readEvaluatorInventory } from '../scripts/cursor-skill-eval.mjs';
 import { buildEvalTokenUsage } from '../scripts/eval-token-usage.mjs';
 import { parseChildResult, runHarness } from '../scripts/run-cursor-skill-eval.mjs';
 
+import { summarizeSkillRequests } from './codex-request-measurement.mjs';
+
 const repository = fileURLToPath(new URL('..', import.meta.url));
 const codex = process.env.CURSOR_EVAL_CODEX_EXECUTABLE || '/Applications/ChatGPT.app/Contents/Resources/codex';
 const adapter = fileURLToPath(new URL('./fixtures/codex-v01534-adapter.mjs', import.meta.url));
@@ -1387,6 +1389,7 @@ test('credential-free client integration completes the installed-skill MCP loop 
     CURSOR_EVAL_PROVIDER_EVIDENCE: providerEvidence, CURSOR_EVAL_MCP_EVIDENCE: join(evidenceRoot, 'mcp.json'),
     FAKE_ACP_SAFE_EVIDENCE: safeEvidencePath,
     CURSOR_EVAL_TIMEOUT_PRELOAD: await fakeCursorPreload(fixture),
+    CURSOR_EVAL_MEASURE_SKILL_PATH: join(fixture.managed, 'plugins/agents-cursor-subagent-plugin/skills/cursor-subagent/SKILL.md'),
     CURSOR_EVAL_WARMUP: '1', CURSOR_EVAL_DEFERRED_TOOL_SEARCH: '0', CURSOR_EVAL_PROVIDER_PORT: '0' };
   await configureFakeAgent(fixture.fakeAgent, { CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH: programPath, FAKE_ACP_SAFE_EVIDENCE: safeEvidencePath });
   const installed = await runBootstrap(['install', '--source-root', fixture.source,
@@ -1431,6 +1434,23 @@ test('credential-free client integration completes the installed-skill MCP loop 
     const evidence = await waitForProviderEvidence(providerEvidence, 5);
     assert.equal(evidence.provider_request_seen, true);
     assert.equal(evidence.requests, 5);
+    assert.equal(evidence.request_measurements.length, evidence.requests);
+    for (const measurement of evidence.request_measurements) {
+      assert.equal(measurement.skill_sha256, fixture.skillSha256);
+      assert.equal(measurement.skill_body_bytes, fixture.skillBytes);
+      assert.ok(measurement.skill_occurrences > 0);
+    }
+    if (process.env.CURSOR_EVAL_MEASUREMENT_OUTPUT) {
+      const output = process.env.CURSOR_EVAL_MEASUREMENT_OUTPUT;
+      assert.ok(isAbsolute(output), 'measurement output must be absolute');
+      const measurement = { format: 1, run_id: randomUUID(), scenario_id: outer.scenario.scenario_id,
+        scenario: outer.consumedScenario, corpus: outer.consumedCorpus, evaluator,
+        client: proof.client, installed_skill: proof.managed_installed_skill, installed_payload: proof.installed_payload,
+        requests: evidence.request_measurements, summary: summarizeSkillRequests(evidence.request_measurements) };
+      const temporary = `${output}.${process.pid}.tmp`;
+      await writeFile(temporary, JSON.stringify(measurement, null, 2) + '\n');
+      await rename(temporary, output);
+    }
     const expectedToolSequence = ['cursor_delegate', 'cursor_wait', 'cursor_close_session', 'final'];
     assert.deepEqual(evidence.tool_sequence, ['warmup', ...expectedToolSequence], JSON.stringify(evidence));
     assert.deepEqual(evidence.request_trace, expectedToolSequence.map((tool, index) => ({

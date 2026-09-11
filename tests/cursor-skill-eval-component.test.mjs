@@ -11,7 +11,7 @@ import test from 'node:test';
 import { assertEvalResultV1, assertEvidenceManifestV1, classifyEval, classifyScenario, evalResult, publishEvidence, readEvaluatorInventory, writeEvalResult } from '../scripts/cursor-skill-eval.mjs';
 import { evaluateScenario, findRecoveredCalls, parseScenarioCorpus, validRecoveryContext } from '../scripts/cursor-eval-scenario.mjs';
 import { canonicalJson } from '../scripts/cursor-subagent-bootstrap.mjs';
-import { observationsFromEvidence } from './codex-client-oracle-support.mjs';
+import { observationsFromEvidence, scoreWithCapturedFinals } from './codex-client-oracle-support.mjs';
 
 const recorder = fileURLToPath(new URL('../scripts/recording-mcp-proxy.mjs', import.meta.url));
 
@@ -177,11 +177,49 @@ test('recovery variation table distinguishes grounded repairs from changed inten
   }
 });
 
+test('pre-allocation invalid_args launch repair is one session, not a fallback', () => {
+  const hash = (byte) => byte.repeat(64);
+  const transcript = {
+    calls: [
+      { tool: 'cursor_delegate', request: { mode: 'ask', arguments_without_session_turn_sha256: hash('a') },
+        response: { ok: false, error_code: 'invalid_args' } },
+      { tool: 'cursor_delegate', request: { mode: 'ask', arguments_without_session_turn_sha256: hash('b') },
+        response: { ok: true, session_id: 'S', turn_id: 'T' } },
+      { tool: 'cursor_wait', request: { session_id: 'S', turn_id: 'T', arguments_without_session_turn_sha256: hash('c') },
+        response: { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'completed' } },
+      { tool: 'cursor_close_session', request: { session_id: 'S', arguments_without_session_turn_sha256: hash('c') },
+        response: { ok: true, session_id: 'S' } },
+    ], dropped_calls: 0, unexpected_input_requests: 0, turn_call_ranges: [{ start: 0, end: 4 }],
+  };
+  assert.deepEqual(findRecoveredCalls(transcript, 1), [{
+    failed_call_index: 1, successful_call_index: 2, codex_turn_index: 1,
+    tool: 'cursor_delegate', error_code: 'invalid_args', correction_kind: 'launch_args',
+  }]);
+  const scenario = { scenario_kind: 'programmed', followups: [], report_checks: [],
+    program: { steps: [{ type: 'terminal', step_id: 'done', turn_status: 'completed' }] },
+    expected_trace: [{ kind: 'session.allocated', mode: 'ask' }, { kind: 'turn.started' },
+      { kind: 'turn.completed', step_id: 'done' }, { kind: 'session.close-attempted' }],
+    expected_actual_task_outcome: 'succeeded', expected_enabled_eval_status: 'pass' };
+  const observations = observationsFromEvidence(scenario, transcript, [{ event: 'prompt_result', step_id: 'done' }],
+    { actual_task_outcome: 'succeeded', reported_task_outcome: 'not_checked' });
+  assert.equal(observations.trace[0].kind, 'session.allocated');
+  assert.equal(scoreWithCapturedFinals(scenario, observations).eval_status, 'pass');
+  const scope = structuredClone(transcript);
+  scope.calls[0].response.error_code = 'scope_rejected';
+  assert.deepEqual(findRecoveredCalls(scope, 1), []);
+  const healedEffort = structuredClone(transcript);
+  healedEffort.calls[0].request.effort = 'high';
+  assert.deepEqual(findRecoveredCalls(healedEffort, 1), []);
+  const changedMode = structuredClone(transcript);
+  changedMode.calls[1].request.mode = 'plan';
+  assert.deepEqual(findRecoveredCalls(changedMode, 1), []);
+});
+
 test('candidate inventory detects oracle drift independently of skill and excludes host roots', async () => {
   const load = async (path) => Buffer.from(path.endsWith('/cursor-eval-scenario.mjs') ? 'oracle-v1' : 'unchanged');
   const first = await readEvaluatorInventory('/first-checkout', load);
   assert.deepEqual(await readEvaluatorInventory('/another-checkout', load), first);
-  for (const input of ['scripts/cursor-eval-scenario.mjs', 'scripts/eval-token-usage.mjs', 'scripts/cursor-model-adapter.mjs',
+  for (const input of ['tests/codex-request-measurement.mjs', 'scripts/cursor-eval-scenario.mjs', 'scripts/eval-token-usage.mjs', 'scripts/cursor-model-adapter.mjs',
     'tests/fixtures/release-model-discovery-preload.mjs', 'tests/fixtures/cursor-eval-model-catalog.json',
     'tests/fixtures/cursor-model-catalog-1.0.31.json', 'tests/fixtures/fake-codex-cli-v01521.mjs',
     'tests/codex-client-oracle-support.mjs', 'tests/release-e2e-oracle-support.mjs', 'tests/fixtures/release-generation-acp.mjs']) {

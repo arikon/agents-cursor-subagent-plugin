@@ -10,6 +10,7 @@ import { canonicalJson, parseScenarioCorpus, validRecoveryContext } from '../cur
 
 const repository = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const ARGUMENTS = ['freeze', 'diagnostic', 'high', 'medium', 'coverage-audit', 'baseline', 'report', 'tasks', 'output'];
+const DEFAULT_TASK_IDS = ['5.8', '5.9', '5.10', '5.11'];
 const PUBLIC_RESULT_KEYS = ['schema_version', 'error_code', 'message', 'evidence_ref', 'scenario_id', 'lane', 'eval_status',
   'actual_task_outcome', 'reported_task_outcome', 'fixture_assertion_outcome', 'evidence_publication_status', 'cleanup_status', 'failure_stage'];
 const PROCESS_KEYS = ['code', 'signal', 'duration_ms', 'artifact_root'];
@@ -46,19 +47,29 @@ async function assertBundlePath(bundleRoot, path, fs = {}) {
   if (parentReal !== rootReal && !contained(parentReal, rootReal)) fail('authoritative path escapes the real output bundle');
 }
 
+function resolveTaskIds(value) {
+  const ids = value === undefined ? [...DEFAULT_TASK_IDS] : typeof value === 'string' ? value.split(',') : [];
+  if (!ids.length || ids.some((id) => !/^[0-9]+(?:\.[0-9]+)+$/.test(id) || id !== id.trim()) || new Set(ids).size !== ids.length) {
+    fail('--task-ids must contain unique comma-separated numeric dotted task IDs');
+  }
+  return ids;
+}
+
 export function parseFinalizeArgs(argv) {
   const values = {};
   for (let index = 0; index < argv.length; index += 2) {
     const flag = argv[index]; const value = argv[index + 1];
-    if (!flag?.startsWith('--') || value === undefined || !ARGUMENTS.includes(flag.slice(2)) || values[flag.slice(2)]) fail('invalid closeout arguments');
+    if (!flag?.startsWith('--') || value === undefined || ![...ARGUMENTS, 'task-ids'].includes(flag.slice(2)) || Object.hasOwn(values, flag.slice(2))) fail('invalid closeout arguments');
     values[flag.slice(2)] = value;
   }
-  if (argv.length !== ARGUMENTS.length * 2 || ARGUMENTS.some((name) => !values[name])) fail('all closeout paths are required');
-  for (const [name, path] of Object.entries(values)) {
+  if (ARGUMENTS.some((name) => !values[name])) fail('all closeout paths are required');
+  for (const name of ARGUMENTS) {
+    const path = values[name];
     if (!isAbsolute(path)) fail(`--${name} must be absolute`);
     values[name] = resolve(path);
   }
-  if (new Set(Object.values(values)).size !== ARGUMENTS.length) fail('closeout paths must be distinct');
+  if (new Set(ARGUMENTS.map((name) => values[name])).size !== ARGUMENTS.length) fail('closeout paths must be distinct');
+  resolveTaskIds(values['task-ids']);
   return values;
 }
 
@@ -307,19 +318,19 @@ function renderReport(seed, acceptance) {
   return `${seed.replace(/\s*$/, '')}\n\n${block}\n`;
 }
 
-function taskSeed(original) {
+function taskSeed(original, taskIds) {
   let output = original;
-  for (const task of ['5.8', '5.9', '5.10', '5.11']) {
-    const checked = new RegExp(`^- \\[x\\] ${task.replace('.', '\\.')}(?=\\s)`, 'gm');
+  for (const task of taskIds) {
+    const checked = new RegExp(`^- \\[x\\] ${task.replaceAll('.', '\\.')}(?=\\s)`, 'gm');
     output = output.replace(checked, `- [ ] ${task}`);
   }
   return output;
 }
 
-function completeTasks(seed) {
+function completeTasks(seed, taskIds) {
   let output = seed;
-  for (const task of ['5.8', '5.9', '5.10', '5.11']) {
-    const pattern = new RegExp(`^- \\[ \\] ${task.replace('.', '\\.')}(?=\\s)`, 'gm');
+  for (const task of taskIds) {
+    const pattern = new RegExp(`^- \\[ \\] ${task.replaceAll('.', '\\.')}(?=\\s)`, 'gm');
     const matches = output.match(pattern) || [];
     if (matches.length === 1) output = output.replace(pattern, `- [x] ${task}`);
     else fail(`task ${task} anchor is missing or duplicated`);
@@ -345,6 +356,7 @@ function validateFrozenInputs(freeze) {
 }
 
 export async function buildCloseout(paths, fs = {}) {
+  const taskIds = resolveTaskIds(paths['task-ids']);
   const bundleRoot = dirname(paths.output);
   const outputInfo = await (fs.lstat || lstat)(paths.output).catch(() => null);
   if (outputInfo && !outputInfo.isFile()) fail('--output must be a regular proof file');
@@ -390,7 +402,7 @@ export async function buildCloseout(paths, fs = {}) {
   const baselineSeedValue = { ...baselineLoaded.value }; delete baselineSeedValue.current_acceptance;
   const baselineSeed = `${JSON.stringify(baselineSeedValue, null, 2)}\n`;
   const reportSeedText = reportSeed(reportLoaded.bytes.toString('utf8'));
-  const taskSeedText = taskSeed(tasksLoaded.bytes.toString('utf8'));
+  const taskSeedText = taskSeed(tasksLoaded.bytes.toString('utf8'), taskIds);
   const snapshotRoot = resolve(bundleRoot, `${basename(paths.output)}.inputs`);
   const snapshotInfo = await (fs.lstat || lstat)(snapshotRoot).catch(() => null);
   if (snapshotInfo && !snapshotInfo.isDirectory()) fail('closeout snapshot root is invalid');
@@ -403,7 +415,7 @@ export async function buildCloseout(paths, fs = {}) {
     diagnostic, high, medium, coverage, local_verification: localVerification };
   const baseline = `${JSON.stringify({ ...baselineSeedValue, current_acceptance: acceptance }, null, 2)}\n`;
   const report = renderReport(reportSeedText, acceptance);
-  const tasks = completeTasks(taskSeedText);
+  const tasks = completeTasks(taskSeedText, taskIds);
   const publishedSnapshots = [
     { role: 'baseline_published', path: resolve(snapshotRoot, 'published-baseline.json'), content: baseline },
     { role: 'report_published', path: resolve(snapshotRoot, 'published-report.md'), content: report },
@@ -416,7 +428,7 @@ export async function buildCloseout(paths, fs = {}) {
     inputs: { freeze: portableRef(bundleRoot, paths.freeze, freezeLoaded.digest),
       normalized_seeds: Object.fromEntries(seedSnapshots.map(({ role, ref }) => [role, ref])) },
     published_documents: Object.fromEntries(publishedSnapshots.map(({ role, ref }) => [role, ref])),
-    current_acceptance: acceptance, completed_tasks: ['5.8', '5.9', '5.10', '5.11'], semantic_checks: 'not_checked' };
+    current_acceptance: acceptance, completed_tasks: taskIds, semantic_checks: 'not_checked' };
   return { paths, proof: `${JSON.stringify(proof, null, 2)}\n`, baseline, report, tasks, snapshots };
 }
 

@@ -685,6 +685,7 @@ test('fake behavior provider checks prompt constraint polarity without retaining
       kind: 'prompt.contract', step_id: 'prompt-1', matched: expected,
       missing_fragment_indexes: expected ? [] : [1],
       forbidden_fragment_indexes: expected ? [] : [0],
+      ...(expected ? {} : { missing_fragment_diagnostics: [{ fragment_index: 1, format_normalized_match: false, missing_token_indexes: [0, 2, 3, 4, 5, 9] }] }),
     });
     assert.doesNotMatch(readFileSync(evidence, 'utf8'), /read\/search|writes\/network|private transcript/);
   }
@@ -712,6 +713,11 @@ test('fake behavior provider checks prompt constraint polarity without retaining
       kind: 'prompt.contract', step_id: 'snapshot-1', matched: expected,
       missing_fragment_indexes: expected ? [] : [0, 1, 2],
       forbidden_fragment_indexes: expected ? [] : [0, 1, 2],
+      ...(expected ? {} : { missing_fragment_diagnostics: [
+        { fragment_index: 0, format_normalized_match: false, missing_token_indexes: [0, 1] },
+        { fragment_index: 1, format_normalized_match: false, missing_token_indexes: [0, 1] },
+        { fragment_index: 2, format_normalized_match: false, missing_token_indexes: [0, 1] },
+      ] }),
     });
   }
 
@@ -738,7 +744,36 @@ test('fake behavior provider checks prompt constraint polarity without retaining
       kind: 'prompt.contract', step_id: 'write-boundary-1', matched: expected,
       missing_fragment_indexes: expected ? [] : [1],
       forbidden_fragment_indexes: expected ? [] : [0, 1],
+      ...(expected ? {} : { missing_fragment_diagnostics: [{ fragment_index: 1, format_normalized_match: false, missing_token_indexes: [0, 2, 4, 5, 7, 8] }] }),
     });
+  }
+  for (const [label, fragment, prompt, normalized, missingTokens] of [
+    ['format', 'AUTHORIZED_ACTIONS: write result.txt with exact content done only.', 'AUTHORIZED_ACTIONS: write `result.txt`\nwith exact content "done" only.', true, []],
+    ['marker', 'AUTHORIZED_ACTIONS: write result.txt with exact content done only.', 'write result.txt with exact content done only.', false, [0]],
+    ['path', 'AUTHORIZED_ACTIONS: write result.txt with exact content done only.', 'AUTHORIZED_ACTIONS: write other.txt with exact content done only.', false, [2]],
+    ['content', 'AUTHORIZED_ACTIONS: write result.txt with exact content done only.', 'AUTHORIZED_ACTIONS: write result.txt with exact content changed only.', false, [6]],
+    ['content-space', 'AUTHORIZED_ACTIONS: write result.txt with exact content two  words only.', 'AUTHORIZED_ACTIONS: write result.txt with exact content two words only.', true, []],
+    ['content-quote', 'AUTHORIZED_ACTIONS: write result.txt with exact content "done" only.', 'AUTHORIZED_ACTIONS: write result.txt with exact content done only.', true, [6]],
+    ['token-order', 'AUTHORIZED_ACTIONS: write result.txt with exact content done only.', 'AUTHORIZED_ACTIONS: result.txt write with exact content done only.', false, []],
+  ]) {
+    writeFileSync(program, JSON.stringify({ kind: 'fake-acp', steps: [
+      { type: 'prompt-check', step_id: 'diagnostic-1', required_fragments: [fragment], forbidden_fragments: [] },
+      { type: 'terminal', step_id: 'terminal-1', turn_status: 'completed', result_text: 'done' },
+    ] }));
+    const evidence = join(root, `${label}.jsonl`);
+    const runtime = withInjectedFake(t, { roots: [realpathSync(root)], env: {
+      CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH: program, FAKE_ACP_SAFE_EVIDENCE: evidence,
+    } });
+    const session = await runtime.call('cursor_start_session', { cwd: root, mode: 'agent' });
+    const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: `${prompt}\nPRIVATE_DIAGNOSTIC_SENTINEL` });
+    await waitTerminal(runtime, session.session_id, turn.turn_id);
+    await runtime.call('cursor_close_session', { session_id: session.session_id });
+    assert.deepEqual(readJsonLines(evidence).find(({ kind }) => kind === 'prompt.contract'), {
+      kind: 'prompt.contract', step_id: 'diagnostic-1', matched: false,
+      missing_fragment_indexes: [0], forbidden_fragment_indexes: [],
+      missing_fragment_diagnostics: [{ fragment_index: 0, format_normalized_match: normalized, missing_token_indexes: missingTokens }],
+    });
+    assert.doesNotMatch(readFileSync(evidence, 'utf8'), /PRIVATE_DIAGNOSTIC_SENTINEL|AUTHORIZED_ACTIONS|result\.txt|other\.txt|changed|two\s+words/);
   }
 });
 

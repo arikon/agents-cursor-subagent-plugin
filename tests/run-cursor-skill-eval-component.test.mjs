@@ -149,8 +149,16 @@ test('corpus-owned scenario inventory, materialization and pure oracle stay in o
   assert.ok(evaluateScenario(failedWithUntracedUnauthorizedEffect, observed(failedWithUntracedUnauthorizedEffect)).mismatches.includes('missing-effect'));
   const expandedAuthorityScenario = byId.get('model-permission-expansion');
   const authorizedExpansion = observed(expandedAuthorityScenario);
+  assert.equal(authorizedExpansion.trace.find(({ kind }) => kind === 'answer.permission').codex_turn_index, 2);
   authorizedExpansion.trace.find(({ kind }) => kind === 'effect.file-written').codex_turn_index = 3;
   assert.equal(evaluateScenario(expandedAuthorityScenario, authorizedExpansion).eval_status, 'pass');
+  const prematureRejection = structuredClone(authorizedExpansion);
+  prematureRejection.trace.find(({ kind }) => kind === 'answer.permission').codex_turn_index = 1;
+  assert.ok(evaluateScenario(expandedAuthorityScenario, prematureRejection).mismatches.includes('authority-mismatch'));
+  const coveredPermission = effectObserved.trace.find(({ kind }) => kind === 'answer.permission');
+  assert.equal(coveredPermission.decision, 'allow-once');
+  assert.equal(coveredPermission.codex_turn_index, 1);
+  assert.equal(evaluateScenario(effectScenario, effectObserved).eval_status, 'pass');
   const prematureExpansion = structuredClone(authorizedExpansion);
   prematureExpansion.trace.find(({ kind }) => kind === 'effect.file-written').codex_turn_index = 2;
   assert.ok(evaluateScenario(expandedAuthorityScenario, prematureExpansion).mismatches.includes('authority-mismatch'));
@@ -732,6 +740,24 @@ test('child-result parser separates malformed final capture from a generic child
     (error) => error.evalCode === 'child_result_invalid');
 });
 
+test('runner rejects incomplete captured final', async () => {
+  let evidence;
+  const result = await runEval({ scenarioId: 'model-question', env: { CURSOR_EVAL_HOSTED_CODEX: '1' } }, {
+    ...inertFixture,
+    runHarness: async (config, env) => {
+      const harness = await passHarness(config, env);
+      harness.childResult.captured_finals[0].completeness = 'incomplete';
+      return harness;
+    },
+    publishEvidence: async ({ makeEvidence }) => { evidence = makeEvidence('/tmp/incomplete-capture.json'); return '/tmp/incomplete-capture.json'; },
+  });
+  assert.equal(result.eval_status, 'integration_failure');
+  assert.equal(result.failure_stage, 'inspection');
+  assert.equal(result.error_code, 'capture_incomplete');
+  assert.notEqual(result.fixture_assertion_outcome, 'pass');
+  assert.equal(evidence.captured_finals[0].completeness, 'incomplete');
+});
+
 test('published evidence retains the normalized bounded provider route trace', async () => {
   let evidence;
   const result = await runEval({ scenarioId: 'client-happy', env: { CURSOR_EVAL_REAL_CODEX: '1' } }, {
@@ -742,4 +768,3 @@ test('published evidence retains the normalized bounded provider route trace', a
   assert.deepEqual(evidence.provider_oracle.tool_sequence, toolSequence);
   assert.deepEqual(evidence.provider_oracle.request_trace, requestTrace);
 });
-

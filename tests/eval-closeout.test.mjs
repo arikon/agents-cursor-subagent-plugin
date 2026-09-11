@@ -391,3 +391,37 @@ test('historical high retains full evidence validation and current diagnostic an
     }), /evidence|final|capture/i);
   }
 });
+
+test('selected task IDs preserve other tasks and recover an interrupted tasks-last publication', async (t) => {
+  const fixtureData = await fixture(t); const paths = { ...fixtureData.paths, 'task-ids': '3.4,3.4.1' };
+  const original = '- [ ] 3.4 acceptance\n- [x] 3.4.1 nested acceptance\n- [ ] 3.5 review\n- [x] 5.8 historical\n- [ ] 3x4 unrelated\n';
+  await writeFile(paths.tasks, original);
+  const staged = await buildCloseout(paths);
+  assert.deepEqual(JSON.parse(staged.proof).completed_tasks, ['3.4', '3.4.1']);
+  await assert.rejects(publishCloseout(staged, { rename: async (from, to) => {
+    if (to === paths.tasks) throw new Error('tasks publication interrupted');
+    return rename(from, to);
+  } }), /tasks publication interrupted/);
+  assert.equal(await readFile(paths.tasks, 'utf8'), original);
+  assert.equal(JSON.parse(await readFile(paths.output)).status, 'passed');
+  await finalizeCloseout(paths);
+  assert.equal(await readFile(paths.tasks, 'utf8'), original.replace('- [ ] 3.4 acceptance', '- [x] 3.4 acceptance'));
+  const published = await snapshot(paths); await finalizeCloseout(paths);
+  assert.deepEqual(await snapshot(paths), published);
+});
+
+test('selected task IDs reject malformed lists and missing or duplicate anchors without publication', async (t) => {
+  const { paths } = await fixture(t); const argv = Object.entries(paths).flatMap(([name, path]) => [`--${name}`, path]);
+  const before = await snapshot(paths);
+  for (const value of ['', '3.4,', ',3.4', '3.4,3.4', '3', '3..4', '3.4, 3.5', '3x4', '3.4\n', null, ['3.4']]) {
+    await assert.rejects(buildCloseout({ ...paths, 'task-ids': value }), /numeric dotted task IDs/);
+    if (typeof value === 'string') assert.throws(() => parseFinalizeArgs([...argv, '--task-ids', value]), /numeric dotted task IDs/);
+    assert.deepEqual(await snapshot(paths), before);
+  }
+  assert.throws(() => parseFinalizeArgs([...argv, '--task-ids', '3.4', '--task-ids', '3.5']), /invalid closeout arguments/);
+  for (const tasks of ['- [ ] 3.5 review\n', '- [ ] 3.4 first\n- [x] 3.4 duplicate\n']) {
+    await writeFile(paths.tasks, tasks); const unchanged = await snapshot(paths);
+    await assert.rejects(finalizeCloseout({ ...paths, 'task-ids': '3.4' }), /task 3.4 anchor is missing or duplicated/);
+    assert.deepEqual(await snapshot(paths), unchanged);
+  }
+});

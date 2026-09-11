@@ -29,3 +29,27 @@ test('hosted credential resolution supports explicit and portable paths with a c
   assert.deepEqual(seen, ['/fixture/auth.json', '/portable/home/.codex/auth.json']);
 });
 
+
+import { measureSkillRequest, summarizeSkillRequests } from './codex-request-measurement.mjs';
+
+test('request measurement requires complete installed bytes in context and counts repeated inclusion', () => {
+  const skill = '---\nname: fixture\n---\nИнструкция\n';
+  const request = { instructions: 'prefix' + skill, input: [{ content: [{ text: skill + skill }] }], tools: [{ name: skill }] };
+  const measured = measureSkillRequest(request, skill);
+  assert.equal(measured.skill_occurrences, 3);
+  assert.equal(measured.skill_bytes, Buffer.byteLength(skill) * 3);
+  assert.equal(measured.other_context_string_bytes, 6);
+  assert.equal(measured.tools_json_bytes, Buffer.byteLength(JSON.stringify(request.tools)));
+  assert.throws(() => measureSkillRequest({ input: skill.slice(1), tools: [skill] }, skill), /body missing/);
+  assert.throws(() => measureSkillRequest(request, ''), /nonempty/);
+  const single = measureSkillRequest({ input: skill }, skill);
+  const rows = [{ request: 1, phase: 'warmup', ...single }, { request: 2, phase: 'evaluated', ...measured }, { request: 3, phase: 'evaluated', ...single }];
+  const summary = summarizeSkillRequests(rows);
+  assert.deepEqual(summary.first_evaluated_request, rows[1]);
+  assert.equal(summary.warmup.skill_occurrences, 1);
+  assert.equal(summary.evaluated.skill_occurrences, 4);
+  assert.equal(summary.total.skill_occurrences, 5);
+  assert.equal(summary.total.requests, 3);
+  assert.throws(() => summarizeSkillRequests([]), /missing/);
+  assert.throws(() => summarizeSkillRequests(rows.slice(0, 1)), /missing/);
+});

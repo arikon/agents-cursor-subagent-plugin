@@ -806,22 +806,23 @@ test('stdio recording proxy publishes an empty startup transcript and replaces i
 });
 
 for (const [name, target, expectedCode] of [
-  ['SIGTERM', `process.stdout.write(String(process.pid) + '\\n'); process.stdin.resume(); process.once('SIGTERM', () => process.exit(0));`, 0],
-  ['SIGKILL fallback', `process.stdout.write(String(process.pid) + '\\n'); process.stdin.resume(); process.on('SIGTERM', () => {});`, 1],
-]) {
-  test(`stdio recording proxy stops its child with ${name}`, async (t) => {
+  ['SIGTERM', `process.stdin.resume(); process.once('SIGTERM', () => process.exit(0)); process.stdout.write(String(process.pid) + '\\n');`, 0],
+  ['SIGKILL fallback', `process.stdin.resume(); process.on('SIGTERM', () => {}); process.stdout.write(String(process.pid) + '\\n');`, 1],
+]) for (const signalCount of [1, 2]) {
+  test(`stdio recording proxy stops its child with ${name} after ${signalCount} signal(s)`, async (t) => {
     const proxy = spawn(process.execPath, [recorder, '-e', target], { stdio: ['pipe', 'pipe', 'pipe'] });
     t.after(() => { if (proxy.exitCode === null && proxy.signalCode === null) proxy.kill('SIGKILL'); });
     const lines = createInterface({ input: proxy.stdout });
     const [pidLine] = await once(lines, 'line'); const targetPid = Number(pidLine);
     assert.ok(Number.isSafeInteger(targetPid));
-    proxy.kill('SIGTERM');
+    const closed = once(proxy, 'close');
     // Repeated ownership-loss signals are a real parent/terminal race.
-    proxy.kill('SIGTERM');
-    const [code, signal] = await once(proxy, 'close');
+    for (let index = 0; index < signalCount; index += 1) proxy.kill('SIGTERM');
+    const [code, signal] = await closed;
     // A repeated SIGTERM can win the proxy's terminal race. Both terminal
     // forms preserve the contract under test: its target is no longer alive.
-    if (signal === null) assert.equal(code, expectedCode);
+    if (signalCount === 1) { assert.equal(code, expectedCode); assert.equal(signal, null); }
+    else if (signal === null) assert.equal(code, expectedCode);
     else { assert.equal(signal, 'SIGTERM'); assert.equal(code, null); }
     let targetGone = false;
     for (let attempt = 0; attempt < 40; attempt += 1) {

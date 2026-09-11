@@ -17,3 +17,13 @@ test('closeout CLI accepts only explicit paths and publishes its proof', async (
   assert.notEqual(failure.code, 0); assert.equal(failure.stdout, ''); assert.deepEqual(await snapshot(paths), before);
 });
 
+
+test('closeout CLI selects explicit task IDs and leaves independent review open', async (t) => {
+  const fixtureData = await fixture(t); const paths = { ...fixtureData.paths, 'task-ids': '3.4' };
+  await writeFile(paths.tasks, '- [ ] 3.4 acceptance\n- [ ] 3.5 review\n');
+  const success = await runCli(paths);
+  assert.equal(success.code, 0, success.stderr);
+  assert.deepEqual(parseFinalizeArgs(success.argv), paths);
+  assert.deepEqual(JSON.parse(await readFile(paths.output)).completed_tasks, ['3.4']);
+  assert.equal(await readFile(paths.tasks, 'utf8'), '- [x] 3.4 acceptance\n- [ ] 3.5 review\n');
+});

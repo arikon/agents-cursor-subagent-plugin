@@ -17,6 +17,20 @@ const changeIds = Object.freeze({
 export const PROJECT_SEMANTIC_REGISTRY = Object.freeze({
   changes: Object.freeze([
     Object.freeze({
+      id: "compact-cursor-subagent-skill",
+      capability: "cursor-subagent-skill-evals",
+      specDirectory: "cursor-subagent-skill-evals",
+      ownedRequirements: Object.freeze([]),
+      ownerClaim: "`cursor-task-delegation` сохраняет владение operator workflow и workspace discipline.",
+      modified: Object.freeze([
+        Object.freeze({"capability": "cursor-subagent-skill-evals", "requirement": "Immutable evidence manifest", "replacementReason": "Allow user-selected existing task anchors in the same closeout consumer while preserving historical defaults and evidence gates.", "sourceDigest": "1b2e9249b8f9604a050c8eb49f3afc68af04e1f8ff252d567ea3d90f25d943fe", "replacementDigest": "4b2ebaad4c101720cd72ec05b2a9493c7ec4d2743de398fa3d3e400e9c5b22aa"}),
+      ]),
+      references: Object.freeze([
+        Object.freeze({ ownerChange: changeIds.facade, capability: "cursor-task-delegation", requirementId: "DLG-3", requirement: "Skill workflow делегирования" }),
+        Object.freeze({ ownerChange: changeIds.facade, capability: "cursor-task-delegation", requirementId: "DLG-2", requirement: "Workspace discipline делегирования" }),
+      ]),
+    }),
+    Object.freeze({
       id: changeIds.runtime,
       capability: "cursor-acp-session-runtime",
       specDirectory: "cursor-acp-session-runtime",

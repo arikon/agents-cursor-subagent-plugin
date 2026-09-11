@@ -718,8 +718,9 @@ export function validRecoveryContext(transcript, expectedTurns) {
 }
 
 // Runtime owns rejection boundaries. These existing-session address lookups,
-// wait validation and local mode validation precede tool-specific effects.
-// Launch, provider transitions and answer-content repairs have other proof needs.
+// wait validation, local mode validation and pre-allocation launch invalid_args
+// precede tool-specific effects. scope_rejected, knob healing and a second
+// delegate after a live session remain outside this classifier.
 const SESSION_LOOKUP_TOOLS = new Set(['cursor_wait', 'cursor_session_status', 'cursor_read_result',
   'cursor_set_mode', 'cursor_cancel', 'cursor_close_session', 'cursor_send_prompt',
   'cursor_answer_question', 'cursor_answer_plan', 'cursor_answer_permission']);
@@ -737,6 +738,10 @@ function exactArgumentProjection(request, fields) {
   return argumentTag(request) === createHash('sha256').update(canonicalJson(projection)).digest('hex');
 }
 
+function sameLaunchField(before, after, field) {
+  return before?.[field] === after?.[field];
+}
+
 export function findRecoveredCalls(transcript, expectedTurns) {
   if (!validRecoveryContext(transcript, expectedTurns) || transcript.dropped_calls !== 0
     || transcript.unexpected_input_requests !== 0) return [];
@@ -749,6 +754,22 @@ export function findRecoveredCalls(transcript, expectedTurns) {
         sessionId = call.response.session_id; turnId = call.response.turn_id;
       } else if (call.tool === 'cursor_send_prompt' && call.request?.session_id === sessionId) {
         turnId = call.response.turn_id;
+      }
+      continue;
+    }
+    if (!sessionId && ['cursor_delegate', 'cursor_start_session'].includes(call.tool)
+      && call.response?.ok === false && call.response.error_code === 'invalid_args'
+      && !call.response.provider_error) {
+      const rangeIndex = transcript.turn_call_ranges.findIndex(({ start, end }) => start <= index && index < end);
+      const next = rangeIndex >= 0 ? transcript.calls[index + 1] : null;
+      if (rangeIndex >= 0 && index + 1 < transcript.turn_call_ranges[rangeIndex].end
+        && next?.tool === call.tool && next.response?.ok === true && !next.response.error_code
+        && !next.response.provider_error
+        && ['mode', 'model', 'effort', 'fast', 'optimize_for', 'plugin_dirs_count']
+          .every((field) => sameLaunchField(call.request, next.request, field))) {
+        recovered.push({ failed_call_index: index + 1, successful_call_index: index + 2,
+          codex_turn_index: rangeIndex + 1, tool: call.tool, error_code: 'invalid_args',
+          correction_kind: 'launch_args' });
       }
       continue;
     }
@@ -927,6 +948,11 @@ export function evaluateScenario(scenario, { trace = [], callbacks = [], effects
       if (observation.kind === 'answer.permission' && observation.decision === 'allow-once') {
         const step = planned.get(observation.step_id);
         if (step && !authority.has(`${step.action.operation}\0${step.action.path}`)) add('authority-mismatch');
+      }
+      if (observation.kind === 'answer.permission' && observation.decision === 'reject-once') {
+        const decisionFollowup = scenario.followups.findIndex(({ after_kind, after_step }) =>
+          after_kind === 'pending' && after_step === observation.step_id);
+        if (decisionFollowup >= 0 && observation.codex_turn_index < decisionFollowup + 2) add('authority-mismatch');
       }
     }
     if (observation.kind === 'prompt.contract' && observation.matched !== true) add('prompt-contract-mismatch');

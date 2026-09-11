@@ -71,7 +71,7 @@ const log = (message) => { if (process.env.FAKE_ACP_LOG) appendFileSync(process.
 const safeEvidence = (message) => {
   if (process.env.FAKE_ACP_SAFE_EVIDENCE) appendFileSync(process.env.FAKE_ACP_SAFE_EVIDENCE, `${JSON.stringify(message)}\n`);
 };
-const finishPrompt = (id, text) => {
+  const finishPrompt = (id, text) => {
   if (process.env.FAKE_ACP_PERSISTED_SESSION) writeFileSync(process.env.FAKE_ACP_PERSISTED_SESSION,
     JSON.stringify({ sessionId: 'fake', configOptions: modelSelection() }));
   send({ jsonrpc: '2.0', method: 'session/update', params: { sessionId: 'fake', update: { sessionUpdate: 'agent_message_chunk', content: { text } } } });
@@ -112,9 +112,19 @@ const advanceProgram = () => {
       folded.includes(fragment.toLocaleLowerCase('en-US')) ? [] : [index]);
     const forbiddenHits = step.forbidden_fragments.flatMap((fragment, index) =>
       folded.includes(fragment.toLocaleLowerCase('en-US')) ? [index] : []);
+    // Lexical hints only, not semantic equivalence: normalization can erase exact
+    // content differences, and token presence does not prove order.
+    const normalizedPrompt = folded.replace(/["'`]/g, '').replace(/\s+/g, ' ').trim();
+    const missingDiagnostics = missing.map((index) => {
+      const fragment = step.required_fragments[index].toLocaleLowerCase('en-US');
+      return { fragment_index: index,
+        format_normalized_match: normalizedPrompt.includes(fragment.replace(/["'`]/g, '').replace(/\s+/g, ' ').trim()),
+        missing_token_indexes: fragment.trim().split(/\s+/).flatMap((token, tokenIndex) => folded.includes(token) ? [] : [tokenIndex]) };
+    });
     safeEvidence({ kind: 'prompt.contract', step_id: step.step_id,
       matched: missing.length === 0 && forbiddenHits.length === 0,
-      missing_fragment_indexes: missing, forbidden_fragment_indexes: forbiddenHits });
+      missing_fragment_indexes: missing, forbidden_fragment_indexes: forbiddenHits,
+      ...(missing.length ? { missing_fragment_diagnostics: missingDiagnostics } : {}) });
     advanceProgram();
     return;
   }

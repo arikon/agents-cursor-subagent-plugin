@@ -204,6 +204,11 @@ To migrate to version `X.Y.Z`:
      --output <acceptance-bundle-root/closeout-proof.json>
    ```
 
+   For another change's task layout, add `--task-ids 3.4` (or a comma-separated
+   list of existing task IDs). Only those checkboxes are completed; omit review
+   tasks that the finalizer cannot prove. Without the option, the historical
+   `5.8,5.9,5.10,5.11` selection is preserved.
+
    It validates the candidate, scenario evidence, relative artifact hashes,
    captures, publication, cleanup and coverage audit before updating the
    additive baseline and Markdown history. It writes task checkboxes last and

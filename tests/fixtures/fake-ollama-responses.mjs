@@ -4,8 +4,13 @@
 // solely to recover opaque public IDs from tool output; it is never logged,
 // persisted, returned, or included in an error message.
 import { createServer } from 'node:http';
-import { rename, writeFile } from 'node:fs/promises';
+import { readFile, rename, writeFile } from 'node:fs/promises';
 
+import { measureSkillRequest } from '../codex-request-measurement.mjs';
+
+const measuredSkill = process.env.CURSOR_EVAL_MEASURE_SKILL_PATH
+  ? await readFile(process.env.CURSOR_EVAL_MEASURE_SKILL_PATH, 'utf8') : null;
+const measurements = [];
 const port = Number(process.env.CURSOR_EVAL_PROVIDER_PORT || '0');
 const state = { requests: 0, tool_sequence: [], declared_tool_names: [], declared_tool_types: [], request_trace: [], rejected_requests: [], skill_context_seen: false, terminal_result_matched: false };
 
@@ -14,7 +19,7 @@ async function publishSafeState() {
     const destination = process.env.CURSOR_EVAL_PROVIDER_EVIDENCE;
     const temporary = `${destination}.${process.pid}.tmp`;
     await writeFile(temporary, JSON.stringify({
-      provider_request_seen: state.requests > 0, requests: state.requests, tool_sequence: state.tool_sequence, declared_tool_names: state.declared_tool_names,
+      request_measurements: measurements, provider_request_seen: state.requests > 0, requests: state.requests, tool_sequence: state.tool_sequence, declared_tool_names: state.declared_tool_names,
       declared_tool_types: state.declared_tool_types,
       request_trace: state.request_trace, rejected_requests: state.rejected_requests,
       skill_context_seen: state.skill_context_seen, terminal_result_matched: state.terminal_result_matched,
@@ -160,6 +165,11 @@ const server = createServer(async (request, response) => {
   state.declared_tool_names = declaredToolNames(body);
   state.declared_tool_types = Array.isArray(body?.tools) ? body.tools.map(({ type }) => type) : [];
   const warmup = process.env.CURSOR_EVAL_WARMUP === '1';
+  if (measuredSkill !== null) {
+    try { measurements.push({ request: state.requests, phase: warmup && state.requests === 1 ? 'warmup' : 'evaluated', ...measureSkillRequest(body, measuredSkill) }); }
+    catch { state.rejected_requests.push({ step: state.requests, measurement_error: 'installed_skill_body_missing' });
+      await publishSafeState(); response.writeHead(422); return response.end(); }
+  }
   if (warmup && state.requests === 1) {
     state.skill_context_seen = body.tools?.some(({ type }) => type === 'tool_search')
       || state.declared_tool_names.some((name) => name.includes('cursor'));

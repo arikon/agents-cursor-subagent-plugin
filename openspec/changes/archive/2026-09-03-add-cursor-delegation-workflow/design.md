@@ -30,7 +30,7 @@ registry, tool family or state machine.
 **Non-goals.** Lifecycle registry, envelope/state ownership, pre-turn wait,
 semantic-success claim и VCS/worktree automation.
 
-**Public-invariant index.** «Высокоуровневое создание делегирования»; «Workspace discipline делегирования»; «Skill workflow делегирования». Runtime references are only the named requirements in the owner change.
+**Public-invariant index.** «Высокоуровневое создание делегирования»; `DLG-2` → «Workspace discipline делегирования»; `DLG-3` → «Skill workflow делегирования». Runtime references are only the named requirements in the owner change. DLG-2/DLG-3 — метки ссылок на существующие требования; новых требований или изменений поведения они не вводят.
 
 **Owner map.** Этот change owns only composition; runtime owns lifecycle, MCP
 schemas, wait and permission semantics; package owns installation/canary.
