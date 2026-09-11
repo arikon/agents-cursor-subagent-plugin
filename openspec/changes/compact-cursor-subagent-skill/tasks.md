@@ -38,6 +38,10 @@
 
 Coverage audit [v13](evidence/coverage-audit-v13/zero-counter-audit.json): **passed**, 48 zeros, 0 unclassified. Повтор 2026-09-10 23:11: unit PASS, coverage PASS (817), release PASS, `openspec validate --strict` PASS. [Измерение V13](evidence/measurement-v13.md): skill 13191 / **30.14%**, evaluator `8dbe14e07fa2540c498c810147a33d84c8f3b48dff20b0af9a51f3317fc11838`. Diagnostic/serial V12 с `ad62b4db…` нельзя reuse. Codex quota до **2026-09-16 13:36** (probe 23:11). Inventory: [evaluator-inventory-v13.md](evidence/hosted/evaluator-inventory-v13.md). [Resume](evidence/hosted/resume-after-quota.md). **3.4/3.5 открыты; closeout/archive не выполнялись.**
 
+## Hosted baseline GPT-5.6 Luna (`gpt-reserve`)
+
+Измеренная serial×3 серия на Luna Reserve: [gpt-5.6-luna-baseline](evidence/hosted/gpt-5.6-luna-baseline.md). high 70/81, xhigh 73/81, max 73/81. Не accepted 81/81. Систематические mismatch: `model-multiturn-review`, `model-critic-delta`, `model-mode-timeout`.
+
 ## Предыдущий результат V12 (oracle launch_args)
 
 Coverage audit [v11 sidecar](evidence/coverage-audit-v11/zero-counter-audit.json): **passed**, 34 zeros. [Измерение V12](evidence/measurement-v12.md): evaluator `ad62b4db…`. [Diagnostic high V12](evidence/hosted/diagnostic-high-v12.json): **27/27**. [High serial V12](evidence/hosted/high-v12.json): **13/81**, 68× `usageLimitExceeded`. Medium не запускался.
