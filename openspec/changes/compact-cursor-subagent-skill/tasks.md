@@ -42,6 +42,8 @@ Coverage audit [v13](evidence/coverage-audit-v13/zero-counter-audit.json): **pas
 
 Измеренная serial×3 серия на Luna Reserve: [gpt-5.6-luna-baseline](evidence/hosted/gpt-5.6-luna-baseline.md). high 70/81, xhigh 73/81, max 73/81. Не accepted 81/81. Систематические mismatch: `model-multiturn-review`, `model-critic-delta`, `model-mode-timeout`.
 
+После уточнения keep-live / `cursor_set_mode` / close-after-last-stage focused hosted `gpt-reserve` high (по одному прогону, critic-delta дважды): pass `model-multiturn-review`, `model-mode-timeout`, `model-critic-delta`, `model-permission-expansion`, `model-active-followup-provider-failure`. Полный 81×3 не перезапускался.
+
 ## Предыдущий результат V12 (oracle launch_args)
 
 Coverage audit [v11 sidecar](evidence/coverage-audit-v11/zero-counter-audit.json): **passed**, 34 zeros. [Измерение V12](evidence/measurement-v12.md): evaluator `ad62b4db…`. [Diagnostic high V12](evidence/hosted/diagnostic-high-v12.json): **27/27**. [High serial V12](evidence/hosted/high-v12.json): **13/81**, 68× `usageLimitExceeded`. Medium не запускался.

@@ -115,31 +115,27 @@ Cursor.
    - `failed`, including `terminal_result_limit` or a failed turn in a tombstoned
      session: retain the outcome/error and close idempotently. In the final,
      report the failure, any result-completeness limit, and that further Cursor
-     work requires a new user decision. Do not automatically retry, resume or
-     redelegate.
-   - `completed` + live + explicitly declared unfinished decision/follow-up/review
-     stage: report the outcome and keep the same runtime session for step 6,
-     If the caller will supply the next input later, report the received result
-     and end this Codex turn even if it is incomplete or off-task; await that
-     input without another prompt. Keep it open
-     only while that declared stage remains unfinished; after the last declared
-     stage completes, use the close branch below.
-     `reject-once` rejects only its pending action, not a separately declared stage.
+     work requires a new user decision. Do not automatically retry, resume,
+     redelegate, or send a later-stage prompt.
+   - `completed` + live + a named later stage (next message, later mode/plan/review,
+     wait for my decision): keep this runtime session; report; end this Codex turn
+     without `cursor_send_prompt` until that input. Do not close. `reject-once`
+     rejects only its pending action, not that named stage.
    - Otherwise retain outcome/limitations, close idempotently, then report.
      A completed turn in a tombstone is still completed; retain its provider ID
      for a later explicitly requested resume.
 
-   A merely possible future follow-up is not an unfinished stage. Use
-   `cursor_close_session` only when work is complete, abandoned/cancelled,
-   irrecoverably failed, or an idle wrapper needs changed launch settings
-   followed immediately by explicit resume. Close the current runtime ID,
-   including the new ID after resume.
-6. Continue an explicitly requested next stage on the retained live session
-   with `cursor_send_prompt`. If its required mode differs, first use
-   `cursor_set_mode` on that same wrapper (including `ask` → authorized `agent`);
-   otherwise omit the mode change. There is no active-turn steering: a follow-up
-   received while running waits for `completed` + `live` before sending the
-   supplied text. Every other terminal outcome follows step 5, without sending.
+   A merely possible future follow-up is not a named later stage. Close only when
+   work is complete, abandoned/cancelled, irrecoverably failed, or an idle wrapper
+   needs changed launch settings followed immediately by explicit resume. Close
+   the current runtime ID, including the new ID after resume.
+6. On a named later stage, keep the live session: `cursor_set_mode` first if the
+   required mode differs, then `cursor_send_prompt`. Never close+resume to change
+   mode. Do not claim a mode change without a successful `cursor_set_mode`.
+   After the last named stage completes, close idempotently. There is no
+   active-turn steering: a follow-up while running waits for `completed` +
+   `live` before sending. Every other terminal outcome follows step 5, without
+   sending.
 
    Launch-only `model`, `effort`, `fast`, `optimize_for`, `plugin_dirs` cannot
    change in place: close the idle wrapper and immediately explicitly resume
