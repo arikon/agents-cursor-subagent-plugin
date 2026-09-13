@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { emptyEvalTokenUsage } from '../scripts/eval-token-usage.mjs';
 import * as support from './eval-closeout-test-support.mjs';
 
 const { assert, spawn, createHash, once, cp, lstat, mkdir, mkdtemp, readFile, realpath, rename, rm, symlink, writeFile, tmpdir, dirname, join, relative, fileURLToPath, canonicalJson, parseScenarioCorpus, buildCloseout, finalizeCloseout, parseFinalizeArgs, publishCloseout, repository, closeoutScript, corpusBytes, corpus, scenarios, digest, json, fixed, START, END, write, publicResult, matrixFixture, fixture, historicalReferenceFixture, snapshot, runCli, mutateIndexedEvidence, mutateIndexedFile, mutationCase, rewriteCoverage } = support;
@@ -43,6 +44,63 @@ test('closeout validation rejects malformed paths and evidence without mutating 
   const candidateMatrix = JSON.parse(await readFile(paths.diagnostic)); candidateMatrix.candidate_digest.sha256 = '0'.repeat(64);
   await writeFile(paths.diagnostic, json(candidateMatrix));
   await assert.rejects(buildCloseout(paths), /candidate digest mismatch|candidate differs/); assert.deepEqual(await snapshot(paths), before);
+});
+
+test('closeout accepts the first run of the same complete high matrix as diagnostic', async (t) => {
+  const { paths } = await fixture(t);
+  // Current matrix output carries token usage alongside the unchanged public result.
+  for (const path of [paths.high, paths.medium]) {
+    const matrix = JSON.parse(await readFile(path));
+    for (const result of matrix.results) result.token_usage = emptyEvalTokenUsage();
+    await writeFile(path, json(matrix));
+  }
+  paths.diagnostic = paths.high;
+  const proof = await finalizeCloseout(paths);
+  const { diagnostic, high } = proof.current_acceptance;
+  assert.deepEqual(diagnostic.ref, high.ref);
+  assert.equal(diagnostic.serial, 1);
+  assert.equal(diagnostic.serial_index, 1);
+  assert.equal(diagnostic.counts.total, scenarios.length);
+  assert.equal(diagnostic.counts.pass, scenarios.length);
+  assert.equal(high.serial, 3);
+  assert.equal(high.counts.pass, scenarios.length * 3);
+});
+
+test('closeout validates optional token usage without admitting other additive result fields', async (t) => {
+  const { paths } = await fixture(t);
+  for (const kind of ['invalid-usage', 'unknown-field']) {
+    await mutationCase(paths, [paths.high], async () => {
+      const matrix = JSON.parse(await readFile(paths.high));
+      matrix.results[0].token_usage = emptyEvalTokenUsage();
+      if (kind === 'invalid-usage') matrix.results[0].token_usage.totals.codex.input_tokens = -1;
+      else matrix.results[0].unexpected = true;
+      await writeFile(paths.high, json(matrix));
+    }, /EvalTokenUsageV1 has an invalid contract|invalid matrix result shape/);
+  }
+});
+
+test('closeout rejects incomplete matrices and invalid shared diagnostic series before publishing', async (t) => {
+  const { paths } = await fixture(t);
+  for (const lane of ['diagnostic', 'high', 'medium']) {
+    await mutationCase(paths, [paths[lane]], async () => {
+      const matrix = JSON.parse(await readFile(paths[lane])); matrix.complete = false;
+      await writeFile(paths[lane], json(matrix));
+    }, /invalid matrix contract/);
+  }
+  paths.diagnostic = paths.high;
+  for (const kind of ['incomplete', 'run-incomplete', 'duplicate', 'mixed']) {
+    await mutationCase(paths, [paths.high], async () => {
+      const matrix = JSON.parse(await readFile(paths.high));
+      if (kind === 'incomplete') matrix.complete = false;
+      if (kind === 'run-incomplete') matrix.runs[0].complete = false;
+      if (kind === 'duplicate') matrix.results[0].serial_index = 2;
+      if (kind === 'mixed') matrix.runs[1].candidate_digest = fixed('a');
+      await writeFile(paths.high, json(matrix));
+    }, /invalid matrix contract|scenario set mismatch|matrix run summary mismatch/);
+  }
+  const historical = await historicalReferenceFixture(t);
+  historical.paths.diagnostic = historical.paths.high;
+  await assert.rejects(buildCloseout(historical.paths), /historical high cannot supply the current diagnostic/);
 });
 
 test('closeout rejects traversal, hash drift, incomplete finals, dropped calls, and incomplete coverage', async (t) => {

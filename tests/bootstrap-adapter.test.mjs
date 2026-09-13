@@ -2,7 +2,7 @@ import test from 'node:test';
 import { setImmediate as nextTurn } from 'node:timers/promises';
 import * as support from './bootstrap-test-support.mjs';
 
-const { assert, spawn, createHash, chmod, cp, lstat, mkdir, mkdtemp, readFile, readdir, realpath, rename, rm, symlink, writeFile, join, tmpdir, fileURLToPath, MARKER_NAME, canonicalJson, normalizeManifestBytes, parseArgs, runBootstrap, runPackageCommand, treeHashV1, validateTopology, runFakeCodexAdapterCommand, repository, bootstrapScript, adapter, versionedAdapter, adapterGolden, currentVersionedAdapter, currentAdapterGolden, fakeCodexCli, fakeCursorAgentStatus, killWaitCommand, adapterFixtureCall, adapterFixtureResult, runInProcessFakeAdapter, runInProcessBootstrap, bootstrapCli, fixture } = support;
+const { assert, spawn, createHash, chmod, cp, lstat, mkdir, mkdtemp, readFile, readdir, realpath, rename, rm, symlink, writeFile, join, tmpdir, fileURLToPath, MARKER_NAME, canonicalJson, normalizeManifestBytes, parseArgs, runBootstrap, runPackageCommand, treeHashV1, validateTopology, runFakeCodexAdapterCommand, repository, bootstrapScript, adapter, versionedAdapter, adapterGolden, currentVersionedAdapter, currentAdapterGolden, hostedVersionedAdapter, hostedAdapterGolden, fakeCodexCli, fakeCursorAgentStatus, killWaitCommand, adapterFixtureCall, adapterFixtureResult, runInProcessFakeAdapter, runInProcessBootstrap, bootstrapCli, fixture } = support;
 
 async function waitForPid(root, path) {
   const deadline = Date.now() + 10_000;
@@ -187,6 +187,39 @@ test('versioned Codex adapter admission and help match its checked-in golden sur
   assert.deepEqual(afterUnknown, [['--version']], 'unknown version must stop before read or mutation argv');
 });
 
+test('0.154.0-alpha.6.2 hosted adapter admits ChatGPT.app Codex and shares the v01521 implementation', async (t) => {
+  const context = await fixture(t);
+  const golden = JSON.parse(await readFile(hostedAdapterGolden, 'utf8'));
+  const shared = await readFile(versionedAdapter);
+  const wrapper = await readFile(hostedVersionedAdapter);
+  assert.deepEqual({
+    implementation_sha256: createHash('sha256').update(shared).digest('hex'),
+    implementation_bytes: shared.length,
+  }, { implementation_sha256: golden.implementation_sha256, implementation_bytes: golden.implementation_bytes });
+  assert.deepEqual({
+    wrapper_sha256: createHash('sha256').update(wrapper).digest('hex'),
+    wrapper_bytes: wrapper.length,
+  }, { wrapper_sha256: golden.wrapper_sha256, wrapper_bytes: golden.wrapper_bytes });
+  const codex = join(context.root, 'codex');
+  await cp(fakeCodexCli, codex);
+  await chmod(codex, 0o755);
+  const env = {
+    ...process.env,
+    CURSOR_EVAL_ADAPTER_TIMEOUT_MS: '60000',
+    FAKE_CODEX_CLI_LOG: join(context.root, 'codex-argv.log'),
+    FAKE_CODEX_CLI_STATE: join(context.root, 'versioned-state.json'),
+    FAKE_CODEX_CLI_VERSION: golden.codex_version,
+  };
+  const admission = await adapterFixtureCall(context.executable, 'admit', { codex_executable: codex }, env, hostedVersionedAdapter);
+  assert.equal(admission.admitted, true);
+  assert.equal(admission.codex_version, golden.codex_version);
+  assert.equal(admission.adapter_version, golden.adapter_version);
+  const plugins = await adapterFixtureCall(context.executable, 'plugin-list', { codex_executable: codex }, env, hostedVersionedAdapter);
+  assert.deepEqual(plugins, { registrations: [] });
+  const invocations = (await readFile(env.FAKE_CODEX_CLI_LOG, 'utf8')).trim().split('\n').map(JSON.parse);
+  assert.deepEqual(invocations.slice(-2), [['--version'], golden.cli_forms.plugin_list]);
+});
+
 test('versioned adapter bounds nested Cursor commands and waits for killed child close', async (t) => {
   const context = await fixture(t); const agent = join(context.root, 'agent'); await symlink(fakeCursorAgentStatus, agent);
   const pidPath = join(context.root, 'nested-agent.pid'); const timeoutMs = 2_000;
@@ -219,6 +252,53 @@ if (process.send) {
     ...process.env, FAKE_CURSOR_AGENT_OVERFLOW_ARGV: '--version',
   }, versionedAdapter);
   assert.equal(result.code, 1); assert.match(result.stderr, /nested command exceeded output limit/);
+});
+
+test('versioned adapter retains bounded plugin-list timeout diagnostics', async (t) => {
+  const context = await fixture(t);
+  const codex = join(context.root, 'codex');
+  const pidPath = join(context.root, 'plugin-list.pid');
+  await writeFile(codex, `#!/usr/bin/env node
+if (process.argv[2] === '--version') process.stdout.write('codex-cli 0.152.1');
+else {
+  process.stdout.write('partial-list:' + 'x'.repeat(2000), () => {
+    process.stderr.write('waiting-for-plugin-index', () => {
+      require('node:fs').writeFileSync(${JSON.stringify(pidPath)}, String(process.pid));
+    });
+  });
+  setInterval(() => {}, 1000);
+}
+`);
+  await chmod(codex, 0o755);
+  const preload = join(context.root, 'controlled-timeout.mjs');
+  await writeFile(preload, `import { mock } from 'node:test';
+if (process.send) {
+  mock.timers.enable({ apis: ['setTimeout'] });
+  process.once('message', () => { mock.timers.tick(2000); process.disconnect(); });
+  process.once('disconnect', () => { mock.timers.runAll(); mock.timers.runAll(); });
+}
+`);
+  const child = spawn(context.executable, ['--import', preload, versionedAdapter, 'plugin-list', JSON.stringify({ codex_executable: codex })], {
+    env: { ...process.env, CURSOR_EVAL_ADAPTER_TIMEOUT_MS: '2000' }, stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
+  });
+  const errors = []; child.stdout.resume(); child.stderr.on('data', (chunk) => errors.push(chunk));
+  const closed = new Promise((resolve, reject) => { child.once('close', resolve); child.once('error', reject); });
+  t.after(async () => { if (child.connected) child.disconnect(); await closed; });
+  const pid = await waitForPid(context.root, pidPath);
+  child.send('deadline');
+  assert.equal(await closed, 1);
+  const message = Buffer.concat(errors).toString('utf8');
+  const details = JSON.parse(message.slice(message.indexOf('diagnostics=') + 'diagnostics='.length));
+  assert.equal(details.operation, 'plugin-list');
+  assert.equal(details.command, 'plugin list --json');
+  assert.equal(details.timeout_ms, 2000);
+  assert.equal(Number.isFinite(details.elapsed_ms) && details.elapsed_ms >= 0, true);
+  assert.equal(details.stdout, 'partial-list:' + 'x'.repeat(512 - 'partial-list:'.length));
+  assert.equal(details.stdout_truncated, true);
+  assert.equal(details.stderr, 'waiting-for-plugin-index');
+  assert.equal(details.stderr_truncated, false);
+  assert.equal(Buffer.byteLength(message) < 8000, true, 'bootstrap diagnostics must retain the complete bounded payload');
+  assert.throws(() => process.kill(pid, 0), { code: 'ESRCH' });
 });
 
 test('package command waits for child close after timeout and output overflow kills', async (t) => {

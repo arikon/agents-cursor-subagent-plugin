@@ -4,6 +4,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { access, chmod, cp, mkdir, mkdtemp, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import { createInterface } from 'node:readline';
+import { createConnection, createServer } from 'node:net';
 import { isAbsolute, join } from 'node:path';
 import { homedir, tmpdir } from 'node:os';
 import test from 'node:test';
@@ -19,7 +20,8 @@ import { summarizeSkillRequests } from './codex-request-measurement.mjs';
 
 const repository = fileURLToPath(new URL('..', import.meta.url));
 const codex = process.env.CURSOR_EVAL_CODEX_EXECUTABLE || '/Applications/ChatGPT.app/Contents/Resources/codex';
-const adapter = fileURLToPath(new URL('./fixtures/codex-v01534-adapter.mjs', import.meta.url));
+const adapter = fileURLToPath(new URL('./fixtures/codex-v01540-adapter.mjs', import.meta.url));
+const adapterV01534 = fileURLToPath(new URL('./fixtures/codex-v01534-adapter.mjs', import.meta.url));
 const fakeAcp = fileURLToPath(new URL('./fixtures/release-fake-acp.mjs', import.meta.url));
 const fakeProvider = fileURLToPath(new URL('./fixtures/fake-ollama-responses.mjs', import.meta.url));
 const turnTimeoutPreload = fileURLToPath(new URL('./fixtures/accelerate-turn-timeout.mjs', import.meta.url));
@@ -180,6 +182,7 @@ test('installed eval MCP starts an explicit corpus model and resumes with change
   const node = await realpath(process.execPath);
   await configureFakeAgent(fixture.fakeAgent, { FAKE_ACP_PERSISTED_SESSION: join(fixture.root, 'persisted.json') });
   const env = { ...process.env, CODEX_HOME: fixture.home, FAKE_CODEX_CLI_VERSION: 'codex-cli 0.153.4',
+    CURSOR_EVAL_ADMITTED_CODEX_VERSION: '0.153.4',
     CURSOR_EVAL_TIMEOUT_PRELOAD: await fakeCursorPreload(fixture) };
   // Use the same adapter render and installed payload layout as the opt-in
   // client lanes, without a model provider or Codex installation operation.
@@ -189,12 +192,12 @@ test('installed eval MCP starts an explicit corpus model and resumes with change
   const installRoot = join(fixture.managed, 'plugins/agents-cursor-subagent-plugin');
   await mkdir(join(installRoot, '..'), { recursive: true });
   await cp(fixture.source, installRoot, { recursive: true });
-  const rendered = await runPackageCommand(node, [adapter, 'render', JSON.stringify({
+  const rendered = await runPackageCommand(node, [adapterV01534, 'render', JSON.stringify({
     codex_executable: fakeCodex,
     node_executable: node, install_root: installRoot, agent_executable: fixture.fakeAgent,
     allowed_workspace_roots: [fixture.workspace],
   })], { env });
-  assert.equal(rendered.code, 0, rendered.output);
+  assert.equal(rendered.code, 0, `${rendered.output}\n${rendered.error}`);
   for (const file of JSON.parse(rendered.output).files) {
     const destination = join(fixture.managed, file.path);
     await mkdir(join(destination, '..'), { recursive: true });
@@ -416,7 +419,7 @@ test('safe file effects keep their pre-follow-up authority provenance when termi
       { type: 'terminal', step_id: 'terminal-1', turn_status: 'completed', result_text: 'DONE' },
     ] },
     prior_authority: { kind: 'none' },
-    followups: [{ input: 'Теперь разрешаю запись.', granted_actions: [{ operation: 'write', path: 'late.txt' }] }],
+    followups: [{ input: 'I now authorize the write.', granted_actions: [{ operation: 'write', path: 'late.txt' }] }],
     expected_trace: [], fixture_predicate: { kind: 'none' },
     expected_actual_task_outcome: 'succeeded',
   };
@@ -595,7 +598,7 @@ async function finalizeChildResult(fixture, result, error = null, cleanupAlready
   catch { cleanupStatus = 'failed'; }
   const value = result
     ? { ...result, provenance: { ...result.provenance, cleanup_status: cleanupStatus } }
-    : { schema_version: 1, scenario_id: process.env.CURSOR_EVAL_SCENARIO_ID, error_code: 'child_failure', message: String(error?.message || 'child failed').slice(0, 8_000), cleanup_status: cleanupStatus };
+    : { schema_version: 1, scenario_id: process.env.CURSOR_EVAL_SCENARIO_ID, error_code: error?.code === 'usage_limit_exceeded' ? error.code : 'child_failure', message: String(error?.message || 'child failed').slice(0, 8_000), cleanup_status: cleanupStatus };
   await writeChildResult(value, destination);
   if (cleanupStatus === 'failed' && !error) throw new Error('integration child cleanup failed');
 }
@@ -746,12 +749,22 @@ async function persistHostedFailureDiagnostics({ diagnostics, evidenceRoot, mcpP
 
 async function captureHostedFailure(error, options, dependencies = {}) {
   const diagnostics = await hostedFailureDiagnostics(options.runner, options.threadId, options.turnId);
+  const quota = diagnostics.turn?.status === 'failed' && diagnostics.turn.error?.codex_error_info === 'usageLimitExceeded';
+  if (quota && process.env.CURSOR_EVAL_QUOTA_SOCKET) {
+    await new Promise((done) => {
+      const socket = createConnection(process.env.CURSOR_EVAL_QUOTA_SOCKET);
+      socket.setTimeout(5_000, () => { socket.destroy(); done(); });
+      socket.once('connect', () => socket.write('{"type":"usage_limit_exceeded"}\n'));
+      socket.once('error', () => { socket.destroy(); done(); });
+      socket.once('end', () => { socket.destroy(); done(); });
+    });
+  }
   try {
     const ref = await persistHostedFailureDiagnostics({ ...options, diagnostics, originalError: error }, dependencies);
-    return new Error(`hosted_diagnostics_ref=${JSON.stringify(ref)}; original_error=${boundedDiagnosticText(String(error?.message || error), 8_000)}`, { cause: error });
+    return Object.assign(new Error(`hosted_diagnostics_ref=${JSON.stringify(ref)}; original_error=${boundedDiagnosticText(String(error?.message || error), 8_000)}`, { cause: error }), quota ? { code: 'usage_limit_exceeded' } : {});
   } catch (persistenceError) {
     const persistence = { status: 'failed', message: boundedDiagnosticText(String(persistenceError?.message || persistenceError), 1_000) };
-    return new Error(`hosted_diagnostics_persistence=${JSON.stringify(persistence)}; original_error=${boundedDiagnosticText(String(error?.message || error), 8_000)}; hosted_diagnostics=${JSON.stringify(diagnostics)}`, { cause: error });
+    return Object.assign(new Error(`hosted_diagnostics_persistence=${JSON.stringify(persistence)}; original_error=${boundedDiagnosticText(String(error?.message || error), 8_000)}; hosted_diagnostics=${JSON.stringify(diagnostics)}`, { cause: error }), quota ? { code: 'usage_limit_exceeded' } : {});
   }
 }
 
@@ -925,9 +938,15 @@ function isConfirmedTerminalTurn(runner, turn) {
   return turn.status !== 'interrupted' || hasConfirmedInterruptedNotification(runner, turn.id);
 }
 
+function isRecoverableAppServerTransportError(error) {
+  return error?.code === 'ERR_STREAM_DESTROYED'
+    || /Codex app-server exited|transport is unavailable|stream was destroyed/.test(error?.message || '');
+}
+
 async function waitForExactTurnTerminal(runner, threadId, turnId, timeoutMs = 15_000) {
   const deadline = Date.now() + timeoutMs;
   let latest = null;
+  let reconnected = false;
   while (Date.now() < deadline) {
     try {
       const thread = await runner.request('thread/read', { threadId, includeTurns: true });
@@ -936,6 +955,11 @@ async function waitForExactTurnTerminal(runner, threadId, turnId, timeoutMs = 15
       // Codex 0.152.1 can transiently answer thread/read with this backend
       // capability error while the turn is being persisted. It is not a
       // scenario verdict; keep the bounded terminal poll alive.
+      if (!reconnected && typeof runner.reconnect === 'function' && isRecoverableAppServerTransportError(error)) {
+        await runner.reconnect();
+        reconnected = true;
+        continue;
+      }
       if (!isTransientThreadPersistenceError(error)) throw error;
     }
     if (isConfirmedTerminalTurn(runner, latest)) return latest;
@@ -955,6 +979,18 @@ test('terminal polling tolerates the transient Codex list_turns capability race'
   assert.deepEqual(await waitForExactTurnTerminal(runner, 'thread-1', 'turn-1', 2_500),
     { id: 'turn-1', status: 'completed' });
   assert.equal(calls, 3);
+});
+
+test('terminal polling reconnects once after an app-server transport loss', async () => {
+  let calls = 0; let reconnects = 0;
+  const runner = { request: async () => {
+    calls += 1;
+    if (calls === 1) throw Object.assign(new Error('Cannot call write after a stream was destroyed'), { code: 'ERR_STREAM_DESTROYED' });
+    return { thread: { turns: [{ id: 'turn-1', status: 'completed' }] } };
+  }, reconnect: async () => { reconnects += 1; } };
+  assert.deepEqual(await waitForExactTurnTerminal(runner, 'thread-1', 'turn-1', 2_500),
+    { id: 'turn-1', status: 'completed' });
+  assert.equal(reconnects, 1);
 });
 
 test('terminal polling ignores an unconfirmed interrupted persistence snapshot', async () => {
@@ -1125,6 +1161,50 @@ test('hosted failure sidecar preserves bounded raw evidence before fixture clean
   assert.deepEqual(sidecar.hosted.lifecycle_notifications[0].thread_status,
     { type: 'active', active_flags: ['waitingOnApproval'] });
   for (const sentinel of forbidden) assert.ok(!encoded.includes(Buffer.from(sentinel)), sentinel);
+});
+
+test('hosted quota classification uses failed structured usageLimitExceeded and survives publication failure', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'cursor-hosted-quota-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const socketPath = join('/tmp', `quota-test-${randomUUID()}.sock`);
+  let signalled = 0;
+  const server = createServer((socket) => socket.once('data', (data) => {
+    assert.equal(data.toString(), '{"type":"usage_limit_exceeded"}\n');
+    signalled += 1; socket.end();
+  }));
+  await new Promise((done, reject) => { server.once('error', reject); server.listen(socketPath, done); });
+  const previousSocket = process.env.CURSOR_EVAL_QUOTA_SOCKET;
+  process.env.CURSOR_EVAL_QUOTA_SOCKET = socketPath;
+  t.after(async () => {
+    if (previousSocket === undefined) delete process.env.CURSOR_EVAL_QUOTA_SOCKET;
+    else process.env.CURSOR_EVAL_QUOTA_SOCKET = previousSocket;
+    await new Promise((done) => server.close(done));
+    await rm(socketPath, { force: true });
+  });
+  for (const [status, info, expected] of [
+    ['failed', 'usageLimitExceeded', 'usage_limit_exceeded'],
+    ['failed', 'rateLimitExceeded', undefined],
+    ['inProgress', 'usageLimitExceeded', undefined],
+    ['failed', null, undefined],
+  ]) {
+    const runner = { request: async () => ({ thread: { turns: [{ id: 'turn-1', status,
+      error: { message: 'usageLimitExceeded', codexErrorInfo: info } }] } }), stderr: [] };
+    const captured = await captureHostedFailure(new Error('usageLimitExceeded'), {
+      runner, threadId: 'thread-1', turnId: 'turn-1', evidenceRoot: root,
+      mcpPath: join(root, 'missing'), safeEvidencePath: join(root, 'missing'), scenarioId: 'quota-test',
+    }, { writeFile: async () => {
+      assert.equal(signalled, 1, 'structured quota arrives before any publication or cleanup');
+      throw new Error('publication failed');
+    } });
+    assert.equal(captured.code, expected);
+    assert.equal(signalled, 1);
+    const fixtureRoot = join(root, 'fixture'); await mkdir(fixtureRoot);
+    const destination = join(root, 'child.json');
+    await finalizeChildResult({ root: fixtureRoot }, null, captured, true, destination);
+    const envelope = JSON.parse(await readFile(destination));
+    assert.equal(envelope.error_code, expected || 'child_failure');
+    assert.equal(envelope.cleanup_status, 'failed');
+  }
 });
 
 test('hosted failure source snapshot distinguishes missing and read errors', async () => {
@@ -1332,6 +1412,7 @@ test('hosted Codex actually calls the installed Cursor MCP tools', { skip: proce
       observations: { ...observations, reported_task_outcome: oracle.reported_task_outcome,
         assertion_outcome: oracle.assertion_outcome, eval_status: oracle.eval_status },
       captured_finals: capturedFinals,
+      projection_inputs: { safe_evidence: safeEvidence, turn_safe_evidence_starts: transcriptEvidence.turn_safe_evidence_starts },
       transcript: { calls: transcriptEvidence.calls, dropped_calls: transcriptEvidence.dropped_calls,
         turn_call_ranges: transcriptEvidence.turn_call_ranges,
         unexpected_input_requests: transcriptEvidence.unexpected_input_requests },
@@ -1485,6 +1566,7 @@ test('credential-free client integration completes the installed-skill MCP loop 
         assertion_outcome: oracle.assertion_outcome, eval_status: oracle.eval_status },
       captured_finals: capturedFinals,
       transcript: transcriptEvidence,
+      projection_inputs: { safe_evidence: safeEvidence, turn_safe_evidence_starts: [0] },
       provider_oracle: { request_count: evidence.requests, skill_context_seen: installedSkillSelected,
         terminal_result_matched: evidence.terminal_result_matched, tool_sequence: evidence.tool_sequence.slice(1), request_trace: evidence.request_trace },
       token_usage: await observedTokenUsage(runner, thread.thread.id, evidenceRoot),

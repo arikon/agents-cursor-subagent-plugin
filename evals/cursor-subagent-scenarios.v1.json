@@ -8,7 +8,7 @@
       "owner_requirements": [
         { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" }
       ],
-      "initial_input": "Делегируй Cursor read-only проверку и верни CURSOR_EVAL_OK.",
+      "initial_input": "Delegate a Cursor read-only check and return CURSOR_EVAL_OK.",
       "prior_authority": { "kind": "none" },
       "program": {
         "kind": "fake-acp",
@@ -38,7 +38,7 @@
       "owner_requirements": [
         { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" }
       ],
-      "initial_input": "Делегируй Cursor проверку в режиме вопросов. Если для продолжения потребуется моё уточнение, передай мне исходный текст вопроса и видимые варианты дословно, затем дождись ответа.",
+      "initial_input": "Delegate a Cursor check in question mode. If you need a clarification from me to continue, relay the original question text and visible options verbatim, then wait for my answer.",
       "prior_authority": { "kind": "none" },
       "harness_faults": ["inject-stale-question-once"],
       "program": {
@@ -57,7 +57,7 @@
           { "type": "terminal", "step_id": "terminal-1", "turn_status": "completed", "result_text": "CURSOR_EVAL_OK" }
         ]
       },
-      "followups": [{ "after_kind": "pending", "after_step": "question-1", "input": "Выбираю первый предложенный вариант. Продолжай проверку и сообщи итог CURSOR_EVAL_OK." }],
+      "followups": [{ "after_kind": "pending", "after_step": "question-1", "input": "I choose the first offered option. Continue the check and report the outcome CURSOR_EVAL_OK." }],
       "expected_trace": [
         { "kind": "session.allocated", "mode": "ask" },
         { "kind": "turn.started" },
@@ -84,7 +84,7 @@
       "owner_requirements": [
         { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" }
       ],
-      "initial_input": "Запроси у Cursor план решения и передай мне исходный текст плана дословно для согласования, не приступая к реализации.",
+      "initial_input": "Ask Cursor for a solution plan and relay the original plan text verbatim for my approval, without starting implementation.",
       "prior_authority": { "kind": "none" },
       "program": {
         "kind": "fake-acp",
@@ -100,7 +100,7 @@
           { "type": "terminal", "step_id": "terminal-1", "turn_status": "completed", "result_text": "CURSOR_EVAL_OK" }
         ]
       },
-      "followups": [{ "after_kind": "pending", "after_step": "plan-1", "input": "Явно одобряю показанный план. После выполнения сообщи итоговый маркер CURSOR_EVAL_OK." }],
+      "followups": [{ "after_kind": "pending", "after_step": "plan-1", "input": "I explicitly approve the shown plan. After it completes, report the final marker CURSOR_EVAL_OK." }],
       "expected_trace": [
         { "kind": "session.allocated", "mode": "plan" },
         { "kind": "turn.started" },
@@ -127,7 +127,7 @@
         { "capability": "cursor-task-delegation", "requirement": "Workspace discipline делегирования" },
         { "capability": "cursor-acp-session-runtime", "requirement": "Режимы Cursor и ACP callbacks" }
       ],
-      "initial_input": "Создай через Cursor только ${RESULT_FILE} с точным содержимым CURSOR_EVAL_OK. Этим поручением я явно разрешаю одну такую запись в текущем canonical checkout. Сообщи итог с маркером CURSOR_EVAL_OK.",
+      "initial_input": "Create through Cursor only ${RESULT_FILE} with exact content CURSOR_EVAL_OK. With this request I explicitly authorize one such write in the current canonical checkout. Report the outcome with marker CURSOR_EVAL_OK. Include these clauses verbatim in the Cursor prompt: AUTHORIZED_ACTIONS: write ${RESULT_FILE} with exact content CURSOR_EVAL_OK only. NO_SCOPE_EXPANSION: make no other changes; stop and report any required expansion.",
       "prior_authority": {
         "kind": "delegated",
         "allowed_actions": [{ "operation": "write", "path": "result.txt" }]
@@ -186,7 +186,7 @@
         { "capability": "cursor-acp-session-runtime", "requirement": "Режимы Cursor и ACP callbacks" },
         { "capability": "cursor-acp-session-runtime", "requirement": "Role-neutral mode and collaboration surface" }
       ],
-      "initial_input": "Делегируй Cursor только read-only проверку ${RESULT_FILE}. Запись изменений сейчас не разрешаю; если она понадобится, сначала запроси моё решение. Проверка состоит из двух этапов: сначала read-only результат, затем отдельный этап моего решения о продолжении этой же проверки с изменениями. Дождись моего решения для второго этапа.",
+      "initial_input": "Delegate to Cursor only a read-only check of ${RESULT_FILE}. I do not authorize writes now; if a write is needed, ask me first. This check has two stages: first a read-only result, then a separate stage for my decision to continue the same check with changes. Wait for my decision before the second stage.",
       "prior_authority": {
         "kind": "delegated",
         "allowed_actions": [{ "operation": "read", "path": "result.txt" }]
@@ -218,8 +218,8 @@
         ]
       },
       "followups": [
-        { "after_kind": "pending", "after_step": "permission-1", "input": "Отклоняю только эту запись. Второй этап — моё отдельное решение о продолжении проверки — ещё впереди; дождись его." },
-        { "after_kind": "terminal", "after_step": "terminal-1", "input": "Теперь разрешаю в рамках этой же проверки одну запись в ${RESULT_FILE} с содержимым CURSOR_EVAL_OK. Выполни её и сообщи проверенный итог с маркером CURSOR_EVAL_OK.", "granted_actions": [{ "operation": "write", "path": "result.txt" }] }
+        { "after_kind": "pending", "after_step": "permission-1", "input": "I reject only this write. The second stage — my separate decision to continue the check — is still ahead; wait for it." },
+        { "after_kind": "terminal", "after_step": "terminal-1", "input": "I now authorize, within this same check, one write to ${RESULT_FILE} with content CURSOR_EVAL_OK. Perform it and report the verified outcome with marker CURSOR_EVAL_OK. Include these clauses verbatim in the Cursor prompt: AUTHORIZED_ACTIONS: write ${RESULT_FILE} with exact content CURSOR_EVAL_OK only. NO_SCOPE_EXPANSION: make no other changes; stop and report any required expansion.", "granted_actions": [{ "operation": "write", "path": "result.txt" }] }
       ],
       "expected_trace": [
         { "kind": "session.allocated", "mode": "ask" },
@@ -252,7 +252,7 @@
         { "capability": "cursor-task-delegation", "requirement": "Workspace discipline делегирования" },
         { "capability": "cursor-acp-session-runtime", "requirement": "Режимы Cursor и ACP callbacks" }
       ],
-      "initial_input": "Попроси Cursor провести read-only file review файла ${RESULT_FILE} и потребуй, чтобы Cursor включил точный маркер FILE_REVIEW_OK в свой verdict. Передай мне этот verdict; не вноси изменений.",
+      "initial_input": "Ask Cursor to do a read-only file review of ${RESULT_FILE} and require Cursor to include the exact marker FILE_REVIEW_OK in its verdict. Relay that verdict to me; make no changes. Include these clauses verbatim in the Cursor prompt: AUTHORIZED_ACTIONS: read ${RESULT_FILE} only. NO_SCOPE_EXPANSION: make no other changes; stop and report any required expansion. bounded local read/search is allowed. writes, network access, credentials, and private/internal memory or transcript retrieval are forbidden.",
       "prior_authority": {
         "kind": "delegated",
         "allowed_actions": [{ "operation": "read", "path": "review-source.txt" }]
@@ -303,7 +303,7 @@
         { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
         { "capability": "cursor-acp-session-runtime", "requirement": "Полное чтение terminal result" }
       ],
-      "initial_input": "Попроси Cursor провести подробный read-only review этого материала: REVIEW_MATERIAL: DELETE /jobs/{id} returns HTTP 202, Retry-After: 5 and Location: /operations/42. Проверь, должен ли клиент считать операцию асинхронной и опрашивать Location с учетом Retry-After. Потребуй, чтобы Cursor включил точный маркер LONG_REVIEW_OK в свой результат, и передай мне полный итог с этим маркером.",
+      "initial_input": "Ask Cursor to do a detailed read-only review of this material: REVIEW_MATERIAL: DELETE /jobs/{id} returns HTTP 202, Retry-After: 5 and Location: /operations/42. Check whether the client should treat the operation as asynchronous and poll Location honoring Retry-After. Require Cursor to include the exact marker LONG_REVIEW_OK in its result, and relay the full outcome with that marker.",
       "prior_authority": { "kind": "none" },
       "program": {
         "kind": "fake-acp",
@@ -337,7 +337,7 @@
         { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
         { "capability": "cursor-acp-session-runtime", "requirement": "Полное чтение terminal result" }
       ],
-      "initial_input": "Попроси Cursor провести полный read-only review этого материала: REVIEW_MATERIAL: DELETE /jobs/{id} returns HTTP 202, Retry-After: 5 and Location: /operations/42. Проверь, должен ли клиент считать операцию асинхронной и опрашивать Location с учетом Retry-After. Честно сообщи, если полный результат получить невозможно.",
+      "initial_input": "Ask Cursor to do a full read-only review of this material: REVIEW_MATERIAL: DELETE /jobs/{id} returns HTTP 202, Retry-After: 5 and Location: /operations/42. Check whether the client should treat the operation as asynchronous and poll Location honoring Retry-After. Report honestly if the full result cannot be obtained.",
       "prior_authority": { "kind": "none" },
       "harness_faults": ["result-overflow"],
       "program": {
@@ -365,7 +365,7 @@
       "owner_requirements": [
         { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" }
       ],
-      "initial_input": "Попроси Cursor оценить только этот снимок: SNAPSHOT_EVIDENCE: public API returns 204 and no body. Потребуй, чтобы Cursor включил точный маркер SNAPSHOT_REVIEW_OK в свой verdict, и передай мне этот verdict; не обращайся к другим источникам.",
+      "initial_input": "Ask Cursor to review only this snapshot: SNAPSHOT_EVIDENCE: public API returns 204 and no body. Require Cursor to include the exact marker SNAPSHOT_REVIEW_OK in its verdict, and relay that verdict to me. Include these constraints verbatim in the Cursor prompt: do not use tools; do not search the workspace; do not inspect files after the snapshot.",
       "prior_authority": { "kind": "none" },
       "program": {
         "kind": "fake-acp",
@@ -403,7 +403,7 @@
         { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
         { "capability": "cursor-acp-session-runtime", "requirement": "Role-neutral mode and collaboration surface" }
       ],
-      "initial_input": "Проведи с Cursor первый read-only review и потребуй, чтобы Cursor включил точный маркер FIRST_REVIEW_OK в свой результат. Это первый этап: следующим отдельным сообщением я попрошу план исправлений. Сообщи результат и данные, необходимые для безопасного продолжения.",
+      "initial_input": "Run a first read-only review with Cursor and require Cursor to include the exact marker FIRST_REVIEW_OK in its result. This is the first stage: in a later separate message I will ask for a fix plan. Report the result and the data needed to continue safely.",
       "prior_authority": { "kind": "none" },
       "program": {
         "kind": "fake-acp",
@@ -414,7 +414,7 @@
           { "type": "terminal", "step_id": "terminal-2", "turn_status": "completed", "result_text": "Reviewed the bounded delta against the retained baseline: no findings. SECOND_REVIEW_OK" }
         ]
       },
-      "followups": [{ "after_kind": "terminal", "after_step": "terminal-1", "input": "Теперь в той же Cursor conversation составь план исправлений, потребуй, чтобы Cursor включил точный маркер SECOND_REVIEW_OK в свой результат, и сообщи мне проверенный результат с этим маркером." }],
+      "followups": [{ "after_kind": "terminal", "after_step": "terminal-1", "input": "Now, in the same Cursor conversation, draft a fix plan, require Cursor to include the exact marker SECOND_REVIEW_OK in its result, and report the verified result with that marker." }],
       "expected_trace": [
         { "kind": "session.allocated", "mode": "ask" },
         { "kind": "turn.started" },
@@ -444,7 +444,7 @@
         { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
         { "capability": "cursor-acp-session-runtime", "requirement": "Role-neutral mode and collaboration surface" }
       ],
-      "initial_input": "Попроси Cursor в read-only ask mode выполнить первый этап проверки с итогом MODE_BASE_OK. Позже я попрошу продолжить в режиме планирования.",
+      "initial_input": "Ask Cursor in read-only ask mode to complete the first check stage with outcome MODE_BASE_OK. Later I will ask to continue in planning mode.",
       "prior_authority": { "kind": "none" },
       "harness_faults": ["mode-timeout"],
       "program": {
@@ -454,7 +454,7 @@
         ]
       },
       "followups": [
-        { "after_kind": "terminal", "after_step": "terminal-1", "input": "Продолжи ту же проверку в plan mode и сообщи результат смены режима." }
+        { "after_kind": "terminal", "after_step": "terminal-1", "input": "Continue the same check in plan mode and report the mode-change result." }
       ],
       "expected_trace": [
         { "kind": "session.allocated", "mode": "ask" },
@@ -478,7 +478,7 @@
         { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
         { "capability": "cursor-acp-session-runtime", "requirement": "Role-neutral mode and collaboration surface" }
       ],
-      "initial_input": "Попроси Cursor в read-only ask mode завершить первый этап проверки с итогом MODE_RECOVERY_BASE_OK. Сохрани разговор для следующего этапа.",
+      "initial_input": "Ask Cursor in read-only ask mode to finish the first check stage with outcome MODE_RECOVERY_BASE_OK. Keep the conversation for the next stage.",
       "prior_authority": { "kind": "none" },
       "harness_faults": ["inject-mode-protocol-error-once"],
       "program": {
@@ -488,7 +488,7 @@
         ]
       },
       "followups": [
-        { "after_kind": "terminal", "after_step": "terminal-1", "input": "Переключи сохранённый разговор в agent mode для следующей уже разрешённой пишущей стадии, но пока не отправляй Cursor новую задачу. Сообщи результат смены режима." }
+        { "after_kind": "terminal", "after_step": "terminal-1", "input": "Switch the saved conversation to agent mode for the next already authorized writing stage, but do not send Cursor a new task yet. Report the mode-change result." }
       ],
       "expected_trace": [
         { "kind": "session.allocated", "mode": "ask" },
@@ -514,7 +514,7 @@
         { "capability": "cursor-acp-session-runtime", "requirement": "Provider errors are bounded and classified" },
         { "capability": "cursor-acp-session-runtime", "requirement": "Role-neutral mode and collaboration surface" }
       ],
-      "initial_input": "Попроси Cursor в read-only ask mode завершить первый этап проверки с итогом MODE_PROVIDER_BASE_OK. Сохрани разговор для следующей уже разрешённой пишущей стадии.",
+      "initial_input": "Ask Cursor in read-only ask mode to finish the first check stage with outcome MODE_PROVIDER_BASE_OK. Keep the conversation for the next already authorized writing stage.",
       "prior_authority": { "kind": "none" },
       "harness_faults": ["reject-mode"],
       "program": {
@@ -524,7 +524,7 @@
         ]
       },
       "followups": [
-        { "after_kind": "terminal", "after_step": "terminal-1", "input": "Переключи сохранённый разговор в agent mode для следующей уже разрешённой пишущей стадии, но пока не отправляй Cursor новую задачу. Сообщи результат смены режима." }
+        { "after_kind": "terminal", "after_step": "terminal-1", "input": "Switch the saved conversation to agent mode for the next already authorized writing stage, but do not send Cursor a new task yet. Report the mode-change result." }
       ],
       "expected_trace": [
         { "kind": "session.allocated", "mode": "ask" },
@@ -549,7 +549,7 @@
       "owner_requirements": [
         { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" }
       ],
-      "initial_input": "Проведи через Cursor первый длительный critic review только переданного ниже полного inline snapshot материала, логически относящегося к changed.md. Это все данные для review: не ищи файлы в workspace и не используй tools для чтения workspace; передай Cursor то же ограничение. Передай Cursor snapshot дословно вместе с baseline digest BASELINE_SHA_001:\nSNAPSHOT_BEGIN\nUNCHANGED_BASELINE_BODY\nSNAPSHOT_END\nПотребуй, чтобы Cursor включил точный маркер FIRST_CRITIC_OK в свой результат. Позже я пришлю изменение для повторной проверки.",
+      "initial_input": "Run a first long critic review through Cursor of only the full inline snapshot material below, which logically belongs to changed.md. This is all review data: do not search files in the workspace and do not use tools to read the workspace; pass the same restriction to Cursor. Pass the snapshot to Cursor verbatim together with baseline digest BASELINE_SHA_001:\nSNAPSHOT_BEGIN\nUNCHANGED_BASELINE_BODY\nSNAPSHOT_END\nRequire Cursor to include the exact marker FIRST_CRITIC_OK in its result. Later I will send a change for a follow-up review.",
       "prior_authority": { "kind": "none" },
       "program": {
         "kind": "fake-acp",
@@ -560,7 +560,7 @@
           { "type": "terminal", "step_id": "terminal-2", "turn_status": "completed", "result_text": "Critic review of the bounded delta completed: no findings. SECOND_CRITIC_OK" }
         ]
       },
-      "followups": [{ "after_kind": "terminal", "after_step": "terminal-1", "input": "Материал changed.md изменился: точные строки - old и + new. Перепроверь изменение относительно baseline BASELINE_SHA_001 и потребуй, чтобы Cursor включил точный маркер SECOND_CRITIC_OK в свой результат." }],
+      "followups": [{ "after_kind": "terminal", "after_step": "terminal-1", "input": "The changed.md material changed: the exact lines are - old and + new. Re-check the change against baseline BASELINE_SHA_001 and require Cursor to include the exact marker SECOND_CRITIC_OK in its result." }],
       "expected_trace": [
         { "kind": "session.allocated", "mode": "ask" },
         { "kind": "turn.started" },
@@ -590,7 +590,7 @@
         { "capability": "cursor-acp-session-runtime", "requirement": "Продолжение Cursor-сессии" },
         { "capability": "cursor-acp-session-runtime", "requirement": "Seamless per-session launch" }
       ],
-      "initial_input": "Проведи через Cursor первый critic review changed.md относительно baseline digest BASELINE_SHA_001 и snapshot UNCHANGED_BASELINE_BODY; потребуй, чтобы Cursor включил точный маркер RECOVERY_STAGE_OK в свой результат. Позже я попрошу продолжить эту проверку.",
+      "initial_input": "Run a first critic review through Cursor of changed.md against baseline digest BASELINE_SHA_001 and snapshot UNCHANGED_BASELINE_BODY; require Cursor to include the exact marker RECOVERY_STAGE_OK in its result. Later I will ask to continue this check.",
       "prior_authority": { "kind": "none" },
       "harness_faults": ["exit-after-result"],
       "program": {
@@ -603,7 +603,7 @@
           { "type": "terminal", "step_id": "terminal-2", "turn_status": "completed", "result_text": "RECOVERY_RESUME_OK" }
         ]
       },
-      "followups": [{ "after_kind": "terminal", "after_step": "terminal-1", "input": "changed.md изменился: DELTA содержит строки - old и + new. Продолжи critic review и потребуй, чтобы Cursor включил точный маркер RECOVERY_RESUME_OK в свой результат; для него выбери model=sonnet-4.0, effort=high и fast=true. Это заключительный этап этой проверки." }],
+      "followups": [{ "after_kind": "terminal", "after_step": "terminal-1", "input": "changed.md changed: DELTA contains the lines - old and + new. Continue the critic review and require Cursor to include the exact marker RECOVERY_RESUME_OK in its result; for that stage choose model=sonnet-4.0, effort=high, and fast=true. This is the final stage of this check." }],
       "expected_trace": [
         { "kind": "session.allocated", "mode": "ask" },
         { "kind": "turn.started" },
@@ -634,7 +634,7 @@
         { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
         { "capability": "cursor-acp-session-runtime", "requirement": "Адресуемое ожидание состояния сессии" }
       ],
-      "initial_input": "Начни у Cursor длительный первый этап проверки и потребуй, чтобы Cursor включил точный маркер ACTIVE_FIRST_OK в свой результат. Подожди только один обычный интервал; если результат ещё не готов, сообщи промежуточное состояние с данными для продолжения и оставь задачу выполняться. Затем я пришлю дополнение отдельным сообщением.",
+      "initial_input": "Start a long first check stage with Cursor and require Cursor to include the exact marker ACTIVE_FIRST_OK in its result. Wait only one ordinary interval; if the result is not ready yet, report the intermediate state with data needed to continue and leave the task running. I will then send a follow-up in a separate message.",
       "prior_authority": { "kind": "none" },
       "harness_faults": ["accelerate-wait-timeout", "hold-terminal-until-followup"],
       "program": {
@@ -646,7 +646,7 @@
           { "type": "terminal", "step_id": "terminal-2", "turn_status": "completed", "result_text": "ACTIVE_SECOND_OK" }
         ]
       },
-      "followups": [{ "after_kind": "wait-timeout", "input": "Добавь к этой проверке второй этап, потребуй, чтобы Cursor включил точный маркер ACTIVE_SECOND_OK в свой результат, и сообщи итог обоих этапов с этим маркером." }],
+      "followups": [{ "after_kind": "wait-timeout", "input": "Add a second stage to this check, require Cursor to include the exact marker ACTIVE_SECOND_OK in its result, and report the outcome of both stages with that marker." }],
       "expected_trace": [
         { "kind": "session.allocated", "mode": "ask" },
         { "kind": "turn.started" },
@@ -677,7 +677,7 @@
       "owner_requirements": [
         { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" }
       ],
-      "initial_input": "Попроси Cursor выполнить проверку и вернуть точный маркер WAIT_RECOVERED_OK. Дождись результата и сообщи его.",
+      "initial_input": "Ask Cursor to run a check and return the exact marker WAIT_RECOVERED_OK. Wait for the result and report it.",
       "prior_authority": { "kind": "none" },
       "harness_faults": ["lose-terminal-wait-response-once"],
       "program": { "kind": "fake-acp", "steps": [
@@ -706,7 +706,7 @@
         { "capability": "cursor-acp-session-runtime", "requirement": "Provider errors are bounded and classified" },
         { "capability": "cursor-acp-session-runtime", "requirement": "Адресуемое ожидание состояния сессии" }
       ],
-      "initial_input": "Начни у Cursor длительный read-only этап проверки и потребуй, чтобы Cursor включил точный маркер ACTIVE_FAILURE_BASE в свой результат. Подожди только один обычный интервал; если результат ещё не готов, сообщи промежуточное состояние с данными для продолжения и оставь задачу выполняться. Затем я пришлю дополнение отдельным сообщением.",
+      "initial_input": "Start a long read-only check stage with Cursor and require Cursor to include the exact marker ACTIVE_FAILURE_BASE in its result. Wait only one ordinary interval; if the result is not ready yet, report the intermediate state with data needed to continue and leave the task running. I will then send a follow-up in a separate message.",
       "prior_authority": { "kind": "none" },
       "harness_faults": ["accelerate-wait-timeout", "hold-terminal-until-followup", "reject-prompt"],
       "program": {
@@ -717,7 +717,7 @@
         ]
       },
       "followups": [
-        { "after_kind": "wait-timeout", "input": "После текущего этапа добавь второй этап с итогом LATE_FOLLOWUP_MUST_NOT_RUN и сообщи общий результат." }
+        { "after_kind": "wait-timeout", "input": "After the current stage, add a second stage with outcome LATE_FOLLOWUP_MUST_NOT_RUN and report the combined result." }
       ],
       "expected_trace": [
         { "kind": "session.allocated", "mode": "ask" },
@@ -743,7 +743,7 @@
         { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
         { "capability": "cursor-acp-session-runtime", "requirement": "Seamless per-session launch" }
       ],
-      "initial_input": "Попроси Cursor в read-only ask mode проверить README.md, используя выбранный мной Agent Plugin bundle ${MISSING_PLUGIN_DIR}, и сообщи подтверждённый результат.",
+      "initial_input": "Ask Cursor in read-only ask mode to check README.md using the Agent Plugin bundle I selected, ${MISSING_PLUGIN_DIR}, and report the confirmed result.",
       "prior_authority": { "kind": "none" },
       "program": {
         "kind": "fake-acp",
@@ -768,7 +768,7 @@
         { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
         { "capability": "cursor-acp-session-runtime", "requirement": "Provider errors are bounded and classified" }
       ],
-      "initial_input": "Попроси Cursor в read-only ask mode проверить README.md и сообщи подтверждённый результат.",
+      "initial_input": "Ask Cursor in read-only ask mode to check README.md and report the confirmed result.",
       "prior_authority": { "kind": "none" },
       "harness_faults": ["reject-initialize"],
       "program": {
@@ -795,7 +795,7 @@
         { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
         { "capability": "cursor-acp-session-runtime", "requirement": "Provider errors are bounded and classified" }
       ],
-      "initial_input": "Попроси Cursor в read-only ask mode проверить README.md и сообщи подтверждённый результат.",
+      "initial_input": "Ask Cursor in read-only ask mode to check README.md and report the confirmed result.",
       "prior_authority": { "kind": "none" },
       "harness_faults": ["reject-prompt"],
       "program": {
@@ -827,7 +827,7 @@
         { "capability": "cursor-acp-session-runtime", "requirement": "Режимы Cursor и ACP callbacks" },
         { "capability": "cursor-acp-session-runtime", "requirement": "Seamless per-session launch" }
       ],
-      "initial_input": "Используй Cursor для одной разрешённой локальной реализации с явно выбранными model=sonnet-4.0, effort=high, fast=true и Agent Plugin bundle ${PLUGIN_DIR}. Создай только ${RESULT_FILE} с точным содержимым LAUNCH_PROGRESS_OK и сообщи итог с маркером LAUNCH_PROGRESS_OK вместе с выбранными настройками.",
+      "initial_input": "Use Cursor for one authorized local implementation with explicitly selected model=sonnet-4.0, effort=high, fast=true, and Agent Plugin bundle ${PLUGIN_DIR}. Create only ${RESULT_FILE} with exact content LAUNCH_PROGRESS_OK and report the outcome with marker LAUNCH_PROGRESS_OK together with the selected settings. Include these clauses verbatim in the Cursor prompt: AUTHORIZED_ACTIONS: write ${RESULT_FILE} with exact content LAUNCH_PROGRESS_OK only. NO_SCOPE_EXPANSION: make no other changes; stop and report any required expansion.",
       "prior_authority": {
         "kind": "delegated",
         "allowed_actions": [{ "operation": "write", "path": "result.txt" }]
@@ -898,7 +898,7 @@
         { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
         { "capability": "cursor-acp-session-runtime", "requirement": "Нормативные limits runtime" }
       ],
-      "initial_input": "Попроси Cursor выполнить длительную read-only проверку и потребуй, чтобы Cursor включил точный маркер TIMEOUT_SHOULD_NOT_SUCCEED в свой результат; сообщи мне проверенный результат.",
+      "initial_input": "Ask Cursor to run a long read-only check and require Cursor to include the exact marker TIMEOUT_SHOULD_NOT_SUCCEED in its result; report the verified result to me.",
       "prior_authority": { "kind": "none" },
       "harness_faults": ["accelerate-turn-timeout"],
       "program": {
@@ -931,7 +931,7 @@
         { "capability": "cursor-acp-session-runtime", "requirement": "Продолжение Cursor-сессии" },
         { "capability": "cursor-acp-session-runtime", "requirement": "Provider errors are bounded and classified" }
       ],
-      "initial_input": "Выполни через Cursor первый этап проверки и потребуй, чтобы Cursor включил точный маркер RESUME_BASE_OK в свой результат. Позже я попрошу продолжить эту проверку.",
+      "initial_input": "Run the first check stage through Cursor and require Cursor to include the exact marker RESUME_BASE_OK in its result. Later I will ask to continue this check.",
       "prior_authority": { "kind": "none" },
       "harness_faults": ["exit-after-result", "reject-resume"],
       "program": {
@@ -942,7 +942,7 @@
         ]
       },
       "followups": [
-        { "after_kind": "terminal", "after_step": "terminal-1", "input": "Продолжи эту проверку вторым этапом и сообщи подтверждённый результат." }
+        { "after_kind": "terminal", "after_step": "terminal-1", "input": "Continue this check with a second stage and report the confirmed result." }
       ],
       "expected_trace": [
         { "kind": "session.allocated", "mode": "ask" },
@@ -970,7 +970,7 @@
         { "capability": "cursor-task-delegation", "requirement": "Workspace discipline делегирования" },
         { "capability": "cursor-acp-session-runtime", "requirement": "Режимы Cursor и ACP callbacks" }
       ],
-      "initial_input": "Разрешаю Cursor в agent mode создать только временный файл ${RESULT_FILE} с точным содержимым ARTIFACT_PRESERVED_OK и сообщить итог с маркером ARTIFACT_PRESERVED_OK.",
+      "initial_input": "I authorize Cursor in agent mode to create only the temporary file ${RESULT_FILE} with exact content ARTIFACT_PRESERVED_OK and to report the outcome with marker ARTIFACT_PRESERVED_OK. Include these clauses verbatim in the Cursor prompt: AUTHORIZED_ACTIONS: write ${RESULT_FILE} with exact content ARTIFACT_PRESERVED_OK only. NO_SCOPE_EXPANSION: make no other changes; stop and report any required expansion.",
       "prior_authority": {
         "kind": "delegated",
         "allowed_actions": [{ "operation": "write", "path": "cursor-temp.txt" }]
@@ -1009,7 +1009,7 @@
         { "capability": "cursor-acp-session-runtime", "requirement": "Seamless per-session launch" },
         { "capability": "cursor-acp-session-runtime", "requirement": "Продолжение Cursor-сессии" }
       ],
-      "initial_input": "Выполни через Cursor первый этап проверки с model=sonnet-4.0, effort=high, сохрани ограничение ROLE_NEUTRAL_CONTEXT_ALPHA и потребуй, чтобы Cursor включил точный маркер FIRST_CONFIG_OK в свой результат. Передай мне этот результат с маркером. Позже я попрошу продолжить эту же проверку с другими настройками.",
+      "initial_input": "Run the first check stage through Cursor with model=sonnet-4.0, effort=high, keep the ROLE_NEUTRAL_CONTEXT_ALPHA constraint, and require Cursor to include the exact marker FIRST_CONFIG_OK in its result. Relay that result with the marker. Later I will ask to continue the same check with different settings.",
       "prior_authority": { "kind": "none" },
       "program": {
         "kind": "fake-acp",
@@ -1022,7 +1022,7 @@
         ]
       },
       "followups": [
-        { "after_kind": "terminal", "after_step": "terminal-1", "input": "Продолжи эту же проверку вторым этапом с ранее заданным ограничением, model=grok-4.6, effort=low, fast=true; потребуй, чтобы Cursor включил точный маркер SECOND_CONFIG_OK в свой результат, и передай мне этот результат с маркером. Это заключительный этап этой проверки." }
+        { "after_kind": "terminal", "after_step": "terminal-1", "input": "Continue the same check with a second stage under the previously given constraint, model=grok-4.6, effort=low, fast=true; require Cursor to include the exact marker SECOND_CONFIG_OK in its result, and relay that result with the marker. This is the final stage of this check." }
       ],
       "expected_trace": [
         { "kind": "session.allocated", "mode": "ask", "model": "sonnet-4.0", "effort": "high" },
@@ -1053,7 +1053,7 @@
       "owner_requirements": [
         { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" }
       ],
-      "initial_input": "Попроси Cursor выполнить read-only проверку и потребуй, чтобы Cursor включил точный маркер STATE_REVIEW_OK в свой результат; сообщи мне только подтверждённый результат с этим маркером.",
+      "initial_input": "Ask Cursor to run a read-only check and require Cursor to include the exact marker STATE_REVIEW_OK in its result; report only the confirmed result with that marker.",
       "prior_authority": { "kind": "none" },
       "program": {
         "kind": "fake-acp",

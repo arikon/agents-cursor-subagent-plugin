@@ -4,6 +4,8 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createConnection } from 'node:net';
+import { runHarness } from '../../scripts/run-cursor-skill-eval.mjs';
 import { readEvaluatorInventory } from '../../scripts/cursor-skill-eval.mjs';
 import { aggregateTokenUsage, makeUsageSession, makeUsageTurn, parseCodexTurnUsage } from '../../scripts/eval-token-usage.mjs';
 
@@ -13,8 +15,23 @@ const digest = async (path) => {
   const content = await readFile(join(repository, path));
   return { sha256: createHash('sha256').update(content).digest('hex'), bytes: content.length };
 };
-const fault = process.env.FAKE_EVAL_MATRIX_ALL_FAULTS || JSON.parse(process.env.FAKE_EVAL_MATRIX_FAULTS || '{}')[process.argv[2]];
-const failed = process.argv[2] === process.env.FAKE_EVAL_MATRIX_FAILURE_SCENARIO || ['zero-failure', 'signalled-failure'].includes(fault);
+let fault = process.env.FAKE_EVAL_MATRIX_ALL_FAULTS || JSON.parse(process.env.FAKE_EVAL_MATRIX_FAULTS || '{}')[process.argv[2]];
+if (fault === 'coordinated-quota') {
+  const socket = createConnection(process.env.FAKE_EVAL_QUOTA_COORDINATOR);
+  const command = await new Promise((done, reject) => { socket.once('error', reject); socket.once('data', (data) => done(data.toString())); });
+  if (command === 'hold') {
+    const stopped = new Promise((done) => process.once('SIGTERM', done));
+    socket.write('ready');
+    await stopped;
+    await new Promise((done) => socket.end('cancelled', done));
+    socket.destroy();
+    fault = 'zero-failure';
+  } else {
+    socket.destroy();
+    fault = 'quota-cleanup';
+  }
+}
+const failed = process.argv[2] === process.env.FAKE_EVAL_MATRIX_FAILURE_SCENARIO || ['zero-failure', 'signalled-failure', 'quota', 'quota-cleanup'].includes(fault);
 const result = {
   schema_version: 1,
   scenario_id: process.argv[2],
@@ -25,7 +42,7 @@ const result = {
   fixture_assertion_outcome: failed ? 'not_observed' : 'pass',
   evidence_publication_status: 'published', cleanup_status: 'succeeded',
   failure_stage: failed ? 'runner' : null, message: failed ? 'injected failure' : null,
-  error_code: failed ? 'injected_failure' : null,
+  error_code: fault === 'quota' ? 'usage_limit_exceeded' : fault === 'quota-cleanup' ? 'cleanup_failed' : failed ? 'injected_failure' : null,
   evidence_ref: `${process.env.CURSOR_EVAL_EVIDENCE_ROOT}/fake-evidence.json`,
 };
 await mkdir(process.env.CURSOR_EVAL_EVIDENCE_ROOT, { recursive: true });
@@ -58,6 +75,13 @@ if (fault === 'wrong-final') evidence.final_result.actual_task_outcome = 'failed
 if (fault === 'wrong-evidence-version') evidence.schema_version = 2;
 if (fault === 'oversized-evidence') evidence.padding = 'x'.repeat(1_048_576);
 await writeFile(result.evidence_ref, JSON.stringify(evidence));
+if (fault === 'quota-cleanup') await runHarness({ test: 'tests/codex-client-integration.test.mjs', pattern: 'fixture' }, {}, {
+  runSupervisor: async ({ onQuotaExceeded }) => {
+    onQuotaExceeded();
+    return { verdict: 'failed', terminal_cause: 'exit_nonzero', child: { code: 1, signal: null } };
+  },
+  readFile: async () => { throw new Error('publication failed after quota'); },
+});
 if (fault === 'outside-evidence') result.evidence_ref = '/outside-attempt.json';
 if (fault === 'missing-evidence') {
   result.evidence_ref = null;

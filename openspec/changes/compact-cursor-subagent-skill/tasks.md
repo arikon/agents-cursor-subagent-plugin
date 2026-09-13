@@ -36,11 +36,27 @@
 
 ## Текущий результат V13 (token_usage + новый evaluator digest)
 
+- [x] 4.1 По «Cost-aware execution policy» реализовать разрешённую остановку всей acceptance при подтверждённом usageLimitExceeded через harness/runner/matrix/suite, сохранив cleanup, completed evidence и явную неполноту; проверить focused и complete deterministic coverage. [Доказательства](../../../evals/evidence/acceptance-review-2026-09-12/quota-verification.json): final coverage 836/836, raw audit 49/49, architect CLEAR; hosted acceptance 3.4/3.5 остаётся открытой.
+- [x] 4.2 Разобрать все 11 поведенческих сбоев Spark medium по исходным inputs/traces/reports, отделить корневые нарушения от следствий и пробелов oracle; сохранить ссылки без изменения исторических verdicts. [Разбор](../../../evals/evidence/acceptance-review-2026-09-12/spark-behavior-review.md) проверен независимым architect: implementation_concern, без расширения baseline.
+
 Coverage audit [v13](evidence/coverage-audit-v13/zero-counter-audit.json): **passed**, 48 zeros, 0 unclassified. Повтор 2026-09-10 23:11: unit PASS, coverage PASS (817), release PASS, `openspec validate --strict` PASS. [Измерение V13](evidence/measurement-v13.md): skill 13191 / **30.14%**, evaluator `8dbe14e07fa2540c498c810147a33d84c8f3b48dff20b0af9a51f3317fc11838`. Diagnostic/serial V12 с `ad62b4db…` нельзя reuse. Codex quota до **2026-09-16 13:36** (probe 23:11). Inventory: [evaluator-inventory-v13.md](evidence/hosted/evaluator-inventory-v13.md). [Resume](evidence/hosted/resume-after-quota.md). **3.4/3.5 открыты; closeout/archive не выполнялись.**
 
 ## Hosted baseline GPT-5.6 Luna (`gpt-reserve`)
 
-Измеренная serial×3 серия на Luna Reserve: [gpt-5.6-luna-baseline](evidence/hosted/gpt-5.6-luna-baseline.md). high 70/81, xhigh 73/81, max 73/81. Не accepted 81/81. Систематические mismatch: `model-multiturn-review`, `model-critic-delta`, `model-mode-timeout`.
+- [x] 4.5 Реализовать разрешённую экономию quota: объявленная series с первым diagnostic run, pause/review/resume без смешивания trials, остановка будущих serial runs после non-pass и заранее выбранный distribution mode; согласовать finalizer и проверить негативные scenarios.
+- [x] 4.6 Сохранить exact oracle inputs для successful/failed artifacts и реализовать diagnostic replay с проверкой достаточности capture, input drift и hashes; originals и hosted trial counts неизменны. Проверить текущую legacy series без восстановления отсутствующих данных. Capture включает исходную safe evidence и границы ходов для повторного построения projection. [Проверка](../../../evals/evidence/luna-high-repair-2026-09-12/process-review.md): critic OKAY, coverage 852/852, raw audit 50/50.
+- [x] 4.7 После v4 pre-model `plugin list` timeout устранить слишком широкий `plugin list` при default matrix concurrency 16: version-specific 0.154 adapter использует подтверждённый `--marketplace` argv, без изменения timeout или retry policy. Проверить golden argv и lifecycle через injected adapter runner.
+
+- [x] 4.3 Исправить Luna high по разбору: уточнить live critic delta без потери требований пользователя; сохранить фактически доставленный progress и разделить причины mismatch; сохранить bounded install-timeout diagnostics. Проверить focused, полный coverage/raw audit и installed skill contract. [Raw audit](../../../evals/evidence/luna-high-repair-2026-09-12/coverage-audit/final/zero-counter-audit.json): 840/840, 49/49 counters; release PASS, architect CLEAR. Hosted доказательство отдельно в 4.4.
+- [ ] 4.4 На разрешённой пользователем Luna high выполнить focused active-followup/critic-delta ×3, review всех reports; только при PASS продолжить diagnostic и baseline по «Cost-aware execution policy». При quota остановить всю эту приёмку, сохранить failures и не переключать модель.
+
+Текущий v4: focused 6/6 и независимый review CLEAR; первый полный run 25 PASS / 2 install-timeout до модели / 0 behavioral mismatch. Оставшиеся 54 trials не запускались, baseline не принят. Полный capture подтвердил replay 25/25 без модели; incomplete trials сохранены. [Результат и ограничения](../../../evals/evidence/luna-high-repair-2026-09-12/baseline-v4-review.md).
+
+Первый repaired candidate: focused 6/6, diagnostic 27/27, baseline 78/81 (25/27, 26/27, 27/27), без инфраструктурных ошибок; [review всех 81](../../../evals/evidence/luna-high-repair-2026-09-12/baseline-review.md). Приёмка открыта. Follow-up уточняет ask→agent перед разрешённой записью и по запросу пользователя сохраняет безопасную причину invalid_args в recorder; исходную причину malformed resume это задним числом не восстанавливает. Доказательства нового candidate хранятся отдельно.
+
+Актуальный разбор 2026-09-12: [единый acceptance report](../../../evals/cursor-skill-eval-acceptance-2026-09-12.md). Завершённый Luna high78/81; Spark medium18/81 и high0/81 разделены на quota/install failures и нарушения поведения. Xhigh без атомарного агрегата не принят. Новых проверок или изменений продукта в рамках сводки нет; 3.4/3.5 остаются открытыми.
+
+Published owner: [evals/cursor-skill-eval-baseline-gpt-5.6-luna-2026-09-11.md](../../../evals/cursor-skill-eval-baseline-gpt-5.6-luna-2026-09-11.md). English corpus serial×3: high 79/81, xhigh 79/81, max 81/81. Не accepted 81/81. Mismatch: `model-critic-delta`, `model-active-followup`, `model-runtime-recovery`.
 
 После уточнения keep-live / `cursor_set_mode` / close-after-last-stage focused hosted `gpt-reserve` high (по одному прогону, critic-delta дважды): pass `model-multiturn-review`, `model-mode-timeout`, `model-critic-delta`, `model-permission-expansion`, `model-active-followup-provider-failure`. Полный 81×3 не перезапускался.
 

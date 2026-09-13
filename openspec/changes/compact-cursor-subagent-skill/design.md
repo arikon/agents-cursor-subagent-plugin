@@ -14,17 +14,27 @@ Main specs и установленный интерфейс, прочитанн�
 
 **Goal.** Редакторски сократить установленный skill и доказать сохранение текущего workflow на существующем корпусе.
 
-**Non-goals.** Границы перечислены в Goals / Non-Goals; кроме разрешённого пользователем ниже выбора task anchors в существующем finalizer, требования не изменяются.
+**Non-goals.** Границы перечислены в Goals / Non-Goals; исключения — прямо разрешённые пользователем ниже task anchors, quota stop и экономия hosted execution через объявленную series и diagnostic replay.
 
-**Public-invariant index.** `EVAL-CLOSEOUT` → «Immutable evidence manifest»; `DLG-3` → «Skill workflow делегирования»; `DLG-2` → «Workspace discipline делегирования». Это reference labels соответствующих существующих owners; IUX-3 обозначает последующее уточнение workflow requirements, WD ниже — краткое обозначение workspace requirement.
+**Public-invariant index.** `EVAL-COST` → «Cost-aware execution policy»; `EVAL-CLOSEOUT` → «Immutable evidence manifest»; `DLG-3` → «Skill workflow делегирования»; `DLG-2` → «Workspace discipline делегирования». Это reference labels соответствующих существующих owners; IUX-3 обозначает последующее уточнение workflow requirements, WD ниже — краткое обозначение workspace requirement.
 
-**Owner map.** `cursor-task-delegation` сохраняет владение operator workflow и workspace discipline. Runtime сохраняет lifecycle, MCP wire, schemas, IDs, bounds и result retention; facade только компонует его операции. Package владеет доставкой/discovery установленного payload. Eval владеет scenario/oracle, measurement и доказательствами загрузки; AGENTS.md — governance и acceptance. Этот change не приобретает новых owners; он модифицирует только выбор task anchors в existing eval closeout requirement.
+**Owner map.** `cursor-task-delegation` сохраняет владение operator workflow и workspace discipline. Runtime сохраняет lifecycle, MCP wire, schemas, IDs, bounds и result retention; facade только компонует его операции. Package владеет доставкой/discovery установленного payload. Eval владеет scenario/oracle, measurement, series execution и evidence/replay; AGENTS.md — governance и acceptance. Этот change не приобретает новых owners; разрешённые изменения находятся в EVAL-COST/EVAL-CLOSEOUT.
 
 **Implementation-ready exit.** Все артефакты согласованы, structural и механический semantic gate проходят; независимый critic не обнаруживает baseline_violation, architect подтверждает классификации и минимальность. Открытых архитектурных развилок нет; численные результаты измеряются при реализации, а не объявляются заранее.
 
 **Future-change candidates.** Семантические вместо literal prompt predicates с отдельным изменением requirements; условный repeated-review reference при доказанной выгоде; result delivery, исследуемая отдельно. Ни один кандидат не входит в текущий baseline.
 
 ## Decisions
+
+### Экономия hosted quota — разрешённое расширение 2026-09-12
+
+Пользователь одобрил объединение diagnostic с первым run, раннюю остановку будущих series runs и проверку replay; затем явно попросил сохранять все необходимые observations. Классификация — user-authorized `new_scope`, проверенная architect. Нормативные условия находятся только у EVAL-COST/EVAL-CLOSEOUT и acceptance owner AGENTS.md.
+
+Existing matrix сохраняет declaration и checkpoint рядом с output; pause после diagnostic даёт время на review, resume проверяет ту же history и inputs. Finalizer может принять один high matrix одновременно как diagnostic reference. Existing scenario publication сохраняет oracle inputs; отдельный credential-free replay consumer вызывает тот же pure oracle и публикует derived diagnostic с исходными hashes. Для legacy evidence без observations возвращается причина нового hosted запуска. Это не новый scheduler, lifecycle runtime или второй inventory; новые replay files имеют собственный digest и не выдаются за hosted dependency, если hosted lane их не вызывает.
+
+После v4 два `plugin list --json` timeout произошли до model execution при concurrency 12, тогда как isolated parallel-list probe не воспроизвёл зависание. Installed ChatGPT.app Codex `0.154.0-alpha.6.2` подтверждает `plugin list --marketplace <name> --json`; version-specific adapter использует эту узкую форму, как уже делает для 0.153.4. Default matrix concurrency остаётся 16 по пользовательскому требованию. Timeout, retry и oracle не меняются; фактическая concurrency фиксируется в declaration/evidence.
+
+Проверка: injected matrix tests доказывают отсутствие лишних serial launches и невозможность сменить inputs/history при resume; closeout tests отклоняют incomplete/mixed evidence; replay tests проверяют полный capture, drift/integrity rejection и неизменность originals. Model-facing изменения по-прежнему требуют свежих trials.
 
 ### Один файл и один порядок действий
 
@@ -72,6 +82,12 @@ Measurement не заменяет package proof, behavioral eval или coverage
 
 ## Risks / Trade-offs
 
+### Luna high repairs — 2026-09-12
+
+Пользователь разрешил минимальные исправления после разбора Luna high. Классификация — `implementation_concern`: существующая обязанность передавать требования пользователя сохраняется; уточняется область `send only` в live critic delta. Hosted recording сохраняет bounded фактически доставленный progress с digest, oracle различает расхождение fixture/response и response/final без превращения любого из них в PASS. Версионный install adapter сохраняет bounded timeout diagnostics с effective limit и elapsed time; timeout и retry policy не меняются. MCP runtime/wire остаётся у прежнего owner. Изменённые transitive evaluator inputs проверяются по существующему inventory; старые hosted verdicts не переиспользуются для нового candidate. Новая явно разрешённая проверка ограничена Luna high.
+
+Первая repaired series: 78/81, исходные три сценария проходят ×3; новые failures — два пропуска ask→agent и один лишний invalid-argument resume. Минимальный follow-up уточняет существующий mode transition; по запросу пользователя recorder сохраняет безопасно распознанную причину tool validation и resume mode. Это diagnostic projection ответа runtime, не второй validator; неизвестные причины не угадываются, значения аргументов не сохраняются. Историческую причину invalid_args восстановить нельзя. Owner contracts и oracle остаются прежними.
+
 - Сжатие стирает условие recovery → перед каждым удалением сопоставить сохранённое правило; проверить failure и live-idle различия.
 - Exact шаблоны ограничивают размер → сохранить их; смысловая либерализация вне baseline.
 - Меньший файл не означает меньший контекст → request-level measurement, отдельные bytes/tools/calls, без ложных token claims.
@@ -102,3 +118,9 @@ A/B `model-initial-provider-failure` (три high и три medium на исхо
 - явное сообщение о необходимости нового решения — требование к пользовательскому отчёту; существующий oracle держит `outcome_report: not_checked`, а `REPORT_CATEGORIES` допускает только `interaction`. Расширение evaluator outcome-категорией или exact report literal не входит в этот baseline: оно добавило бы новый exact template и отдельную schema-ветку. Пока report остаётся предметом независимого review, automatic PASS не утверждает его.
 
 Skill больше не требует caller close для init/spawn tombstone без `turn_id`. Close после allocated turn с `turn_id` не меняется. Цель ≥30% и запрет ослаблять no-retry gates сохраняются.
+
+## Baseline update — quota stop, 2026-09-12
+
+Пользователь явно потребовал остановку всей приёмки при `usageLimitExceeded`; архитектор классифицировал расширение как разрешённый new_scope. Owner — существующая «Cost-aware execution policy»: harness передаёт подтверждённую structured quota, runner сохраняет её отдельно от cleanup/publication verdict, matrix прекращает очередь и будущие serial runs, suite прекращает остальные конфигурации. Завершённые данные сохраняются, частичный aggregate не принимается как полный baseline. Никакой глобальной registry, process scan в продукте или изменения runtime Cursor не требуется. Независимые процессы той же приёмки останавливает caller по подтверждённой принадлежности.
+
+Первичный schema evidence: сохранённый hosted failure Spark содержит `hosted.turn.error.codex_error_info: usageLimitExceeded`; текст stdout/prompt не является основанием остановки. Проверки используют credential-free fixtures для quota propagation, остановки sibling/queued work, cleanup и атомарной публикации неполного результата. Обычный behavior mismatch следует текущему EVAL-COST: заканчивается текущий run, следующие не запускаются, если заранее не выбран distribution mode.

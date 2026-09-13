@@ -23,6 +23,7 @@ const EVALUATOR_INPUTS = Object.freeze([
   'tests/fixtures/codex-app-server-v01521.golden.json', 'tests/fixtures/node-test-reporter-v22.23.1.golden.json',
   'tests/fixtures/codex-v01521-adapter.mjs', 'tests/fixtures/codex-v01521-adapter.golden.json',
   'tests/fixtures/codex-v01534-adapter.mjs', 'tests/fixtures/codex-v01534-adapter.golden.json',
+  'tests/fixtures/codex-v01540-adapter.mjs', 'tests/fixtures/codex-v01540-adapter.golden.json',
   'tests/fixtures/cursor-agent-v20260825.golden.json', 'tests/fixtures/fake-acp.mjs',
   'tests/fixtures/fake-ollama-responses.mjs', 'tests/fixtures/fake-codex-adapter.mjs', 'tests/fixtures/fake-codex-adapter-core.mjs', 'tests/fixtures/fake-mcp-version.mjs',
   'tests/fixtures/release-fake-acp.mjs',

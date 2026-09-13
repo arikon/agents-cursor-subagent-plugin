@@ -43,16 +43,25 @@ const emit = (event) => process.stdout.write(`${JSON.stringify({ timestamp: new 
 const startedAt = new Date().toISOString();
 const startedMs = Date.now();
 const results = Array(plan.rows.length);
+let quotaStopped = false;
+const activeChildren = new Set();
+const stopForQuota = (source) => {
+  if (quotaStopped) return;
+  quotaStopped = true;
+  for (const child of activeChildren) if (child !== source && child.connected) child.send({ type: 'usage_limit_exceeded' }, () => {});
+};
 const rowPassed = ({ process: child, summary }) => child.code === 0 && child.signal === null
-  && summary?.counts?.total > 0 && summary.counts.pass === summary.counts.total && summary.digest_stable === true;
+  && summary?.complete !== false && summary?.counts?.total > 0 && summary.counts.pass === summary.counts.total && summary.digest_stable === true;
 
 const runRow = async (row, index) => {
   const rowOutput = resolve(rowDirectory, `${row.model}-${row.effort}.json`);
   const started = Date.now();
   emit({ event: 'row_started', index, total: plan.rows.length, model: row.model, effort: row.effort, output: rowOutput });
   const child = spawn(process.execPath, [matrixRunner, row.model, row.effort, rowOutput], {
-    cwd: repository, env: process.env, stdio: ['ignore', 'pipe', 'pipe'],
+    cwd: repository, env: process.env, stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
   });
+  activeChildren.add(child);
+  child.on('message', (message) => { if (message?.type === 'usage_limit_exceeded') stopForQuota(child); });
   const stdout = []; const stderr = [];
   child.stdout.on('data', (chunk) => {
     stdout.push(chunk);
@@ -64,10 +73,12 @@ const runRow = async (row, index) => {
   });
   child.stderr.on('data', (chunk) => stderr.push(chunk));
   const [code, signal] = await once(child, 'close');
+  activeChildren.delete(child);
   let summary = null;
   let error = null;
   try { summary = JSON.parse(await readFile(rowOutput, 'utf8')); }
   catch { error = Buffer.concat(stderr).toString('utf8').slice(-4_000) || 'matrix summary was not published'; }
+  if (summary?.stop_reason === 'usage_limit_exceeded') stopForQuota(child);
   const result = { ...row, output: rowOutput, process: { code, signal, duration_ms: Date.now() - started }, summary, error };
   emit({ event: 'row_completed', index, total: plan.rows.length, model: row.model, effort: row.effort,
     eval_status: rowPassed(result) ? 'pass' : 'failed',
@@ -79,21 +90,24 @@ await mkdir(rowDirectory);
 let nextOffset = 0;
 emit({ event: 'suite_started', plan: plan.name, total: plan.rows.length, concurrency, output });
 const worker = async () => {
-  while (nextOffset < plan.rows.length) {
+  while (!quotaStopped && nextOffset < plan.rows.length) {
     const offset = nextOffset++;
     results[offset] = await runRow(plan.rows[offset], offset + 1);
   }
 };
 await Promise.all(Array.from({ length: Math.min(concurrency, plan.rows.length) }, () => worker()));
-const counts = { total: results.length, passed: 0, failed: 0 };
-for (const result of results) {
+const completed = results.filter(Boolean);
+const counts = { total: completed.length, passed: 0, failed: 0 };
+for (const result of completed) {
   if (rowPassed(result)) counts.passed += 1;
   else counts.failed += 1;
 }
 const summary = { schema_version: 1, plan: { name: plan.name, rows: plan.rows }, concurrency,
   started_at: startedAt, finished_at: new Date().toISOString(), duration_ms: Date.now() - startedMs,
-  counts, results };
+  counts, results: completed,
+  ...(quotaStopped ? { complete: false, stop_reason: 'usage_limit_exceeded', planned_total: plan.rows.length,
+    not_started_total: plan.rows.length - completed.length } : {}) };
 await writeFile(`${output}.tmp`, `${JSON.stringify(summary, null, 2)}\n`, { flag: 'wx' });
 await rename(`${output}.tmp`, output);
 emit({ event: 'suite_completed', output, counts, duration_ms: summary.duration_ms });
-process.exitCode = counts.failed === 0 ? 0 : 1;
+process.exitCode = !quotaStopped && counts.failed === 0 ? 0 : 1;

@@ -12,8 +12,8 @@ import { emptyEvalTokenUsage, mergeEvalTokenUsage, readTokenUsageFromEvidence } 
 
 const repository = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const [model, effort, outputArg] = process.argv.slice(2);
-if (!/^[A-Za-z0-9._-]+$/.test(model || '') || !/^(low|medium|high)$/.test(effort || '') || !outputArg) {
-  throw new Error('usage: node scripts/eval/run-cursor-skill-eval-matrix.mjs <model> <low|medium|high> <output.json>');
+if (!/^[A-Za-z0-9._-]+$/.test(model || '') || !/^(low|medium|high|xhigh|max)$/.test(effort || '') || !outputArg) {
+  throw new Error('usage: node scripts/eval/run-cursor-skill-eval-matrix.mjs <model> <low|medium|high|xhigh|max> <output.json>');
 }
 
 const output = resolve(outputArg);
@@ -29,7 +29,7 @@ if (!Number.isSafeInteger(progressMs) || progressMs < 10 || progressMs > 30_000)
   throw new Error('CURSOR_EVAL_MATRIX_PROGRESS_MS must be an integer from 10 through 30000');
 }
 const concurrency = process.env.CURSOR_EVAL_MATRIX_CONCURRENCY === undefined
-  ? 12 : Number(process.env.CURSOR_EVAL_MATRIX_CONCURRENCY);
+  ? 16 : Number(process.env.CURSOR_EVAL_MATRIX_CONCURRENCY);
 if (!Number.isSafeInteger(concurrency) || concurrency < 1 || concurrency > 16) {
   throw new Error('CURSOR_EVAL_MATRIX_CONCURRENCY must be an integer from 1 through 16');
 }
@@ -38,6 +38,10 @@ const serial = process.env.CURSOR_EVAL_MATRIX_SERIAL === undefined
 if (!Number.isSafeInteger(serial) || serial < 1 || serial > 10) {
   throw new Error('CURSOR_EVAL_MATRIX_SERIAL must be an integer from 1 through 10');
 }
+const resume = process.env.CURSOR_EVAL_MATRIX_RESUME === '1';
+const pauseAfterRun = process.env.CURSOR_EVAL_MATRIX_PAUSE_AFTER_RUN === '1';
+if (pauseAfterRun && (resume || serial !== 3)) throw new Error('pause requires a new three-run series');
+const continueOnFailure = process.env.CURSOR_EVAL_MATRIX_CONTINUE_ON_FAILURE === '1';
 const corpusPath = resolve(repository, 'evals/cursor-subagent-scenarios.v1.json');
 const skillPath = resolve(repository, 'skills/cursor-subagent/SKILL.md');
 const digest = async (path) => {
@@ -50,8 +54,43 @@ const initial = { corpus: await digest(corpusPath), skill: await digest(skillPat
 const corpus = parseScenarioCorpus(await readFile(corpusPath));
 const scenarioIds = corpus.scenarios.filter(({ lane }) => lane === 'model-behavior').map(({ scenario_id }) => scenario_id);
 await mkdir(bundleRoot, { recursive: true });
-await mkdir(artifactRoot);
-let candidate = null;
+if (!resume) {
+  await mkdir(artifactRoot);
+  try { await readFile(output); throw new Error('matrix output already exists'); }
+  catch (error) { if (error.code !== 'ENOENT') throw error; }
+}
+const declarationPath = resolve(artifactRoot, 'declaration.json');
+const checkpointPath = resolve(artifactRoot, 'checkpoint.json');
+const executionEnvironment = Object.fromEntries(Object.entries(process.env).filter(([key]) =>
+  (key.startsWith('CURSOR_EVAL_') || key === 'NODE_OPTIONS')
+  && !['CURSOR_EVAL_MATRIX_RESUME', 'CURSOR_EVAL_MATRIX_PAUSE_AFTER_RUN', 'CURSOR_EVAL_MATRIX_PROGRESS_MS'].includes(key)));
+const declaration = { schema_version: 1, model, effort, serial, concurrency, continue_on_failure: continueOnFailure,
+  initial, runner: await digest(evalRunner), scenarios: scenarioIds, node: process.version, platform: process.platform,
+  arch: process.arch, execution_environment_sha256: createHash('sha256').update(canonicalJson(executionEnvironment)).digest('hex'), hosted: process.env.CURSOR_EVAL_HOSTED_CODEX || null };
+let retained = null;
+if (resume) {
+  if (canonicalJson(JSON.parse(await readFile(declarationPath))) !== canonicalJson(declaration)) throw new Error('series declaration or inputs changed');
+  const checkpoint = JSON.parse(await readFile(checkpointPath));
+  if (canonicalJson(await digest(output)) !== canonicalJson(checkpoint.aggregate)) throw new Error('retained aggregate changed');
+  retained = JSON.parse(await readFile(output));
+  if (retained.stop_reason !== 'review_required' || retained.complete !== false || retained.runs.length !== 1
+    || retained.serial !== 3 || retained.runs[0].serial_index !== 1 || retained.counts.pass !== scenarioIds.length
+    || retained.counts.total !== scenarioIds.length || !retained.digest_stable
+    || new Set(retained.results.map(item => item.scenario_id)).size !== scenarioIds.length
+    || retained.results.some(item => item.serial_index !== 1 || item.eval_status !== 'pass' || !scenarioIds.includes(item.scenario_id))) {
+    throw new Error('retained series is not an eligible reviewed first run');
+  }
+  for (const artifact of retained.artifacts) {
+    const path = resolve(bundleRoot, artifact.path);
+    if (!path.startsWith(`${artifactRoot}/`) || canonicalJson(await digest(path)) !== canonicalJson({ sha256: artifact.sha256, bytes: artifact.bytes })) {
+      throw new Error('retained artifact changed');
+    }
+  }
+  await mkdir(resolve(artifactRoot, 'resume-lock'));
+} else {
+  await writeFile(declarationPath, `${JSON.stringify(declaration, null, 2)}\n`, { flag: 'wx' });
+}
+let candidate = retained ? JSON.parse(await readFile(resolve(artifactRoot, 'candidate.json'))) : null;
 const candidatePath = resolve(artifactRoot, 'candidate.json');
 const same = (left, right) => canonicalJson(left) === canonicalJson(right);
 const bindCandidate = (manifest) => {
@@ -79,9 +118,10 @@ const runOne = async (scenarioId, index, attempt, serialIndex) => {
       CURSOR_EVAL_HOSTED_REASONING_EFFORT: effort, NODE_TEST_ARTIFACT_ROOT: attemptArtifactRoot,
       CURSOR_EVAL_EVALUATOR_SHA256: initial.evaluator.sha256, CURSOR_EVAL_EVALUATOR_BYTES: String(initial.evaluator.bytes),
       CURSOR_EVAL_EVIDENCE_ROOT: resolve(attemptArtifactRoot, 'evidence') },
-    stdio: ['ignore', 'pipe', 'pipe'],
+    stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
   });
   activeChildren.add(child);
+  child.on('message', (message) => { if (message?.type === 'usage_limit_exceeded') stopForQuota(child); });
   const progress = setInterval(() => emit({ event: 'scenario_progress', serial_index: serialIndex, serial, scenario_id: scenarioId,
     index, total: scenarioIds.length, attempt, elapsed_ms: Date.now() - started }), progressMs);
   const stdout = []; const stderr = [];
@@ -149,13 +189,25 @@ const runOne = async (scenarioId, index, attempt, serialIndex) => {
     assertEvalResultV1(result);
   }
   const completed = { ...result, process: { code, signal, duration_ms: Date.now() - started, artifact_root: bundlePath(attemptArtifactRoot) }, token_usage: tokenUsage };
+  if (result.error_code === 'usage_limit_exceeded') stopForQuota();
   emit({ event: 'scenario_completed', serial_index: serialIndex, serial, scenario_id: scenarioId, index, total: scenarioIds.length, attempt,
     eval_status: completed.eval_status, error_code: completed.error_code, duration_ms: completed.process.duration_ms });
   return completed;
 };
 
 let interrupted = false;
+let quotaStopped = false;
 const activeChildren = new Set();
+const stopForQuota = (source) => {
+  if (quotaStopped) return;
+  quotaStopped = true;
+  interrupted = true;
+  if (process.connected) process.send({ type: 'usage_limit_exceeded' });
+  emit({ event: 'quota_exhausted', error_code: 'usage_limit_exceeded' });
+  for (const child of activeChildren) if (child !== source) child.kill('SIGTERM');
+};
+const onMessage = (message) => { if (message?.type === 'usage_limit_exceeded') stopForQuota(); };
+process.on('message', onMessage);
 const interrupt = (signal) => {
   if (interrupted) return;
   interrupted = true;
@@ -167,7 +219,7 @@ process.once('SIGTERM', onInterrupt);
 const runMatrix = async (serialIndex) => {
   const startedAt = new Date().toISOString();
   const startedMs = Date.now();
-  const results = Array(scenarioIds.length);
+  const slots = Array(scenarioIds.length);
   let nextOffset = 0;
   emit({ event: 'matrix_started', serial_index: serialIndex, serial, total: scenarioIds.length, output, concurrency });
   const worker = async () => {
@@ -179,7 +231,7 @@ const runMatrix = async (serialIndex) => {
       let result = await runOne(scenarioId, index, 1, serialIndex);
       if (result === null) break;
       attempts.push(result);
-      results[offset] = {
+      slots[offset] = {
         ...result,
         artifact_root: result.process.artifact_root,
         attempts: attempts.map(({ eval_status, error_code, process }) => ({ eval_status, error_code, process })),
@@ -187,6 +239,7 @@ const runMatrix = async (serialIndex) => {
     }
   };
   await Promise.all(Array.from({ length: Math.min(concurrency, scenarioIds.length) }, () => worker()));
+  const results = slots.filter(Boolean);
   const final = { corpus: await digest(corpusPath), skill: await digest(skillPath), evaluator: (await readEvaluatorInventory()).digest };
   const counts = Object.fromEntries(['pass', 'agent_behavior_mismatch', 'integration_failure', 'skipped']
     .map((status) => [status, results.filter(({ eval_status }) => eval_status === status).length]));
@@ -197,32 +250,52 @@ const runMatrix = async (serialIndex) => {
     attempted_runs: results.reduce((sum, item) => sum + item.attempts.length, 0), results,
     token_usage: mergeEvalTokenUsage(results.map((item) => item.token_usage)),
     candidate_digest: candidate?.digest || null,
+    ...(quotaStopped ? { complete: false, stop_reason: 'usage_limit_exceeded', planned_total: scenarioIds.length,
+      not_started_total: scenarioIds.length - results.length } : {}),
   };
   emit({ event: 'matrix_completed', serial_index: serialIndex, serial, output, counts: summary.counts, pass_rate: summary.pass_rate,
     duration_ms: summary.duration_ms, digest_stable: summary.digest_stable });
   return summary;
 };
-const suiteStartedAt = new Date().toISOString();
-const suiteStartedMs = Date.now();
-const runs = [];
-for (let serialIndex = 1; serialIndex <= serial && !interrupted; serialIndex += 1) runs.push(await runMatrix(serialIndex));
+const suiteStartedAt = retained?.started_at || new Date().toISOString();
+// Whole-series wall time includes the explicit review pause before resume.
+const suiteStartedMs = Date.parse(suiteStartedAt);
+const runs = retained ? retained.runs.map(run => ({ ...run, results: retained.results.filter(item => item.serial_index === run.serial_index) })) : [];
+let serialStopReason = null;
+for (let serialIndex = runs.length + 1; serialIndex <= serial && !interrupted; serialIndex += 1) {
+  const run = await runMatrix(serialIndex);
+  runs.push(run);
+  if (pauseAfterRun && serialIndex === 1 && run.digest_stable && run.counts.pass === scenarioIds.length && !interrupted) {
+    serialStopReason = 'review_required';
+    interrupted = true;
+  }
+  if (serialIndex < serial && !continueOnFailure && (run.complete === false || !run.digest_stable
+    || run.counts.agent_behavior_mismatch > 0 || run.counts.integration_failure > 0 || run.counts.skipped > 0
+    || run.counts.pass !== run.counts.total)) {
+    serialStopReason = run.complete === false ? run.stop_reason
+      : !run.digest_stable ? 'digest_drift' : 'nonpass';
+    interrupted = true;
+  }
+}
 process.removeListener('SIGINT', onInterrupt);
 process.removeListener('SIGTERM', onInterrupt);
-if (interrupted) {
+process.removeListener('message', onMessage);
+if (process.connected) process.disconnect();
+if (interrupted && !serialStopReason && !quotaStopped) {
   process.exitCode = 130;
 }
-if (!interrupted) {
+if (!interrupted || quotaStopped || serialStopReason) {
 const counts = Object.fromEntries(['pass', 'agent_behavior_mismatch', 'integration_failure', 'skipped']
   .map((status) => [status, runs.reduce((total, run) => total + run.counts[status], 0)]));
-const first = runs[0];
+const first = runs[0] || { schema_version: 1, initial, final: initial };
 const results = runs.flatMap((run) => run.results.map((result) => ({ ...result, serial_index: run.serial_index })));
 const runSummaries = runs.map(({ results: _results, ...run }) => run);
 const summary = {
   schema_version: first.schema_version, model, effort, concurrency, serial,
   started_at: suiteStartedAt, finished_at: new Date().toISOString(), duration_ms: Date.now() - suiteStartedMs,
-  initial: first.initial, final: runs.at(-1).final,
+  initial: first.initial, final: runs.at(-1)?.final || initial,
   digest_stable: runs.every(({ digest_stable: stable }) => stable), counts: { total: results.length, ...counts },
-  pass_rate: counts.pass / results.length,
+  pass_rate: results.length ? counts.pass / results.length : 0,
   attempted_runs: runs.reduce((total, run) => total + run.attempted_runs, 0),
   results,
   token_usage: mergeEvalTokenUsage(runs.map((run) => run.token_usage)),
@@ -230,8 +303,10 @@ const summary = {
   candidate_digest: candidate?.digest || null,
   candidate_ref: candidate ? bundlePath(candidatePath) : null,
   attempt_policy: 'one-attempt-per-scenario-run',
+  ...((quotaStopped || serialStopReason) ? { complete: false, stop_reason: quotaStopped ? 'usage_limit_exceeded' : serialStopReason,
+    planned_total: scenarioIds.length * serial, not_started_total: scenarioIds.length * serial - results.length } : {}),
 };
-await writeFile(candidatePath, `${JSON.stringify(candidate || { schema_version: 1, inputs: inventory.files, initial }, null, 2)}\n`, { flag: 'wx' });
+if (!resume) await writeFile(candidatePath, `${JSON.stringify(candidate || { schema_version: 1, inputs: inventory.files, initial }, null, 2)}\n`, { flag: 'wx' });
 const artifacts = [];
 const indexArtifacts = async (directory) => {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -245,7 +320,8 @@ await indexArtifacts(artifactRoot);
 summary.artifacts = artifacts.sort((a, b) => a.path.localeCompare(b.path));
 await writeFile(`${output}.tmp`, `${JSON.stringify(summary, null, 2)}\n`, { flag: 'wx' });
 await rename(`${output}.tmp`, output);
+if (serialStopReason === 'review_required') await writeFile(checkpointPath, JSON.stringify({ aggregate: await digest(output) }), { flag: 'wx' });
 emit({ event: 'matrix_completed', output, counts: summary.counts, pass_rate: summary.pass_rate,
   duration_ms: summary.duration_ms, digest_stable: summary.digest_stable });
-process.exitCode = counts.pass === summary.counts.total && summary.digest_stable && candidate ? 0 : 1;
+process.exitCode = !interrupted && !quotaStopped && counts.pass === summary.counts.total && summary.digest_stable && candidate ? 0 : 1;
 }

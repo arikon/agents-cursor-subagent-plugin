@@ -3,6 +3,60 @@ import * as support from './run-cursor-skill-eval-test-support.mjs';
 
 const { assert, execFile, createHash, EventEmitter, mkdtemp, readFile, rm, writeFile, tmpdir, join, promisify, fileURLToPath, admitScenarioCorpus, evaluateScenario, materializeScenario, parseScenarioCorpus, assertEvalResultV1, cli, parseChildResult, publishFinalEvidence, runEval, runHarness, run, execute, transcript, toolSequence, requestTrace, rawCorpus, admittedCorpus, corpusDigest, scenarioById, fixedDigest, evaluatorDigest, observedTraceFor, observedCallbacksFor, transcriptFor, reportChecksFor, capturedFinalsFor, observationsFor, childResult, passHarness, published, removed, inertFixture, encodedChildResult, supervisorResult } = support;
 
+test('active progress distinguishes delivered evidence from final transcription failures', () => {
+  const scenario = scenarioById.get('model-active-followup');
+  const expected = scenario.program.steps.find(({ progress_text }) => progress_text !== undefined).progress_text;
+  const score = (delivered, reported, mutate = () => {}) => {
+    const observations = { ...observationsFor(scenario), captured_finals: capturedFinalsFor(scenario), transcript: structuredClone(transcriptFor(scenario)) };
+    const response = observations.transcript.calls[0].response;
+    response.progress_excerpt = { text: delivered, truncated: false, text_bytes: Buffer.byteLength(delivered),
+      text_sha256: createHash('sha256').update(delivered).digest('hex') };
+    observations.captured_finals[0].text = reported;
+    mutate(observations);
+    return evaluateScenario(scenario, observations).mismatches;
+  };
+  assert.deepEqual(score(expected, expected), []);
+  assert.ok(score(expected, expected.slice(0, -1)).includes('progress-report-mismatch'));
+  const deliveryFailure = score(expected.slice(0, -1), expected.slice(0, -1));
+  assert.ok(deliveryFailure.includes('progress-delivery-mismatch'));
+  assert.ok(!deliveryFailure.includes('progress-report-mismatch'));
+  for (const mutate of [
+    (o) => { delete o.transcript.calls[0].response.progress_excerpt; },
+    (o) => { o.transcript.calls[0].response.progress_excerpt.truncated = true; },
+    (o) => { o.transcript.turn_call_ranges[0].end = 0; },
+  ]) assert.ok(score(expected, expected, mutate).includes('progress-delivery-mismatch'));
+});
+
+test('corrupt progress capture is an inspection failure in both oracle and runner', async () => {
+  const scenario = scenarioById.get('model-active-followup');
+  for (const mutate of [
+    (p) => { p.text_sha256 = '0'.repeat(64); },
+    (p) => { p.text_bytes += 1; },
+    (p) => { p.text = '\ud800'; },
+    (p) => { p.truncated = 'false'; },
+  ]) {
+    const proof = structuredClone(transcriptFor(scenario));
+    mutate(proof.calls[0].response.progress_excerpt);
+    const verdict = evaluateScenario(scenario, { ...observationsFor(scenario), captured_finals: capturedFinalsFor(scenario), transcript: proof });
+    assert.equal(verdict.eval_status, 'integration_failure');
+    assert.equal(verdict.failure_stage, 'inspection');
+    assert.deepEqual(verdict.mismatches, ['invalid-progress-evidence']);
+    assert.equal(verdict.components.evidence_admission, 'fail');
+    const result = await runEval({ scenarioId: scenario.scenario_id, env: { CURSOR_EVAL_HOSTED_CODEX: '1' } }, {
+      ...inertFixture,
+      runHarness: async (config, env) => {
+        const harness = await passHarness(config, env);
+        harness.childResult.transcript = proof;
+        return harness;
+      },
+      publishEvidence: published,
+    });
+    assert.equal(result.eval_status, 'integration_failure');
+    assert.equal(result.failure_stage, 'inspection');
+    assert.notEqual(result.fixture_assertion_outcome, 'pass');
+  }
+});
+
 test('corpus-owned scenario inventory, materialization and pure oracle stay in one process', { timeout: 2_000 }, async (t) => {
   const corpus = parseScenarioCorpus(rawCorpus);
   assert.equal(admitScenarioCorpus(JSON.parse(rawCorpus)).scenarios.length, corpus.scenarios.length,
@@ -66,6 +120,24 @@ test('corpus-owned scenario inventory, materialization and pure oracle stay in o
   const wrongResume = observed(byId.get('model-launch-change'));
   wrongResume.trace.find(({ kind }) => kind === 'session.resumed').effort = 'fabricated-effort';
   assert.ok(evaluateScenario(byId.get('model-launch-change'), wrongResume).mismatches.includes('trace-mismatch'));
+  for (const kind of ['session.allocated', 'session.resumed']) {
+    const defaultModelScenario = structuredClone(byId.get('model-runtime-recovery'));
+    delete defaultModelScenario.expected_trace.find((entry) => entry.kind === kind).model;
+    const explicitAuto = observed(defaultModelScenario);
+    explicitAuto.trace.find((entry) => entry.kind === kind).model = 'auto';
+    assert.equal(evaluateScenario(defaultModelScenario, explicitAuto).eval_status, 'pass', kind);
+    const omittedModel = observed(defaultModelScenario);
+    defaultModelScenario.expected_trace.find((entry) => entry.kind === kind).model = 'auto';
+    assert.equal(evaluateScenario(defaultModelScenario, omittedModel).eval_status, 'pass', kind);
+    for (const model of ['fabricated-model', null]) {
+      const differentModel = structuredClone(omittedModel);
+      differentModel.trace.find((entry) => entry.kind === kind).model = model;
+      assert.ok(evaluateScenario(defaultModelScenario, differentModel).mismatches.includes('trace-mismatch'), kind);
+    }
+    defaultModelScenario.expected_trace.find((entry) => entry.kind === kind).model = 'sonnet-4.0';
+    assert.ok(evaluateScenario(defaultModelScenario, omittedModel).mismatches.includes('trace-mismatch'), kind);
+    assert.ok(evaluateScenario(defaultModelScenario, explicitAuto).mismatches.includes('trace-mismatch'), kind);
+  }
   const explicitFirstWait = observed(byId.get('model-active-followup'));
   explicitFirstWait.trace.find(({ kind }) => kind === 'turn.wait-timeout').timeout_omitted = false;
   assert.ok(evaluateScenario(byId.get('model-active-followup'), explicitFirstWait).mismatches.includes('trace-mismatch'));
@@ -239,7 +311,7 @@ test('corpus-owned scenario inventory, materialization and pure oracle stay in o
     (_candidate, scenario) => { scenario.harness_faults = ['inject-stale-question-once', 'inject-stale-question-once']; },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-plan').harness_faults = ['inject-stale-question-once']; },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-plan').initial_input += ' cursor_wait'; },
-    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-plan').followups[0].input += ' закрой runtime session'; },
+    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-plan').followups[0].input += ' close the runtime session'; },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-file-review').harness_faults = ['exit-after-result']; },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-file-review').harness_faults = ['accelerate-turn-timeout']; },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-question').expected_trace = candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-question').expected_trace.filter(({ kind }) => kind !== 'answer.rejected-stale'); },

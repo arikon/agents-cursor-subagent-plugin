@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { once } from 'node:events';
-import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
@@ -222,7 +222,8 @@ test('candidate inventory detects oracle drift independently of skill and exclud
   for (const input of ['tests/codex-request-measurement.mjs', 'scripts/cursor-eval-scenario.mjs', 'scripts/eval-token-usage.mjs', 'scripts/cursor-model-adapter.mjs',
     'tests/fixtures/release-model-discovery-preload.mjs', 'tests/fixtures/cursor-eval-model-catalog.json',
     'tests/fixtures/cursor-model-catalog-1.0.31.json', 'tests/fixtures/fake-codex-cli-v01521.mjs',
-    'tests/codex-client-oracle-support.mjs', 'tests/release-e2e-oracle-support.mjs', 'tests/fixtures/release-generation-acp.mjs']) {
+    'tests/codex-client-oracle-support.mjs', 'tests/release-e2e-oracle-support.mjs', 'tests/fixtures/release-generation-acp.mjs',
+    'tests/fixtures/codex-v01540-adapter.mjs', 'tests/fixtures/codex-v01540-adapter.golden.json']) {
     const changed = await readEvaluatorInventory('/first-checkout', async (path) =>
       path === `/first-checkout/${input}` ? Buffer.from('changed evaluator input') : load(path));
     assert.notDeepEqual(changed.digest, first.digest, input);
@@ -244,6 +245,78 @@ test('recording MCP proxy rejects an omitted target before opening a child trans
   const [code] = await once(child, 'close');
   assert.notEqual(code, 0);
   assert.match(Buffer.concat(stderr).toString('utf8'), /MCP proxy target is required/);
+});
+
+test('recording proxy retains delivered progress and digest without changing its wire response', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'progress-recording-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const target = join(root, 'target.mjs'); const evidence = join(root, 'evidence.json');
+  const excerpts = [{ text: 'Прогресс 3', truncated: false }, { text: 'x'.repeat(8_001), truncated: true },
+    { text: 'invalid', truncated: 'false' }];
+  await writeFile(target, `import { createInterface } from 'node:readline';
+const excerpts = ${JSON.stringify(excerpts)};
+for await (const line of createInterface({input:process.stdin})) { const request=JSON.parse(line); process.stdout.write(JSON.stringify({jsonrpc:'2.0',id:request.id,result:{isError:false,content:[{type:'text',text:JSON.stringify({wait_timeout:true,progress_excerpt:excerpts.shift()})}]}})+'\\n'); }
+`);
+  const child = spawn(process.execPath, [recorder, target], { env: { ...process.env, CURSOR_EVAL_MCP_EVIDENCE: evidence }, stdio: ['pipe', 'pipe', 'pipe'] });
+  const output = []; const errors = [];
+  child.stdout.on('data', (chunk) => output.push(chunk)); child.stderr.on('data', (chunk) => errors.push(chunk));
+  const closed = once(child, 'close');
+  for (let id = 0; id < excerpts.length; id += 1) child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id, method: 'tools/call', params: { name: 'cursor_wait', arguments: {} } })}\n`);
+  child.stdin.end();
+  assert.equal((await closed)[0], 0, Buffer.concat(errors).toString());
+  assert.deepEqual(Buffer.concat(output).toString().trim().split('\n').map((line) => JSON.parse(JSON.parse(line).result.content[0].text).progress_excerpt), excerpts);
+  const recorded = JSON.parse(await readFile(evidence, 'utf8')).transcript;
+  assert.deepEqual(recorded[0].response.progress_excerpt, { ...excerpts[0], text_bytes: Buffer.byteLength(excerpts[0].text), text_sha256: createHash('sha256').update(excerpts[0].text).digest('hex') });
+  assert.equal(recorded[1].response.progress_excerpt, undefined);
+  assert.equal(recorded[2].response.progress_excerpt, undefined);
+});
+
+test('recording proxy captures returned validation reasons without retaining arbitrary error text', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'validation-recording-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const target = join(root, 'target.mjs'); const evidence = join(root, 'evidence.json');
+  const cases = [
+    ['missing argument: mode', 'missing_argument', 'mode'],
+    ['invalid cursor_session_id', 'invalid_field', 'cursor_session_id'],
+    ['invalid mode: ask|plan|agent', 'invalid_field', 'mode'],
+    ['cwd must be an absolute string', 'absolute_path_required', 'cwd'],
+    ['plugin_dir must be an absolute string', 'absolute_path_required', 'plugin_dirs'],
+    ['plugin_dirs must be a nonempty array', 'nonempty_array_required', 'plugin_dirs'],
+    ['invalid effort token', 'invalid_token', 'effort'],
+    ['model must not contain parameter brackets', 'parameter_brackets', 'model'],
+    ['auto-smart requires explicit optimize_for; other models forbid it', 'model_optimization_constraint'],
+    ['default model policy does not accept model parameters', 'default_model_parameters'],
+    ['arguments must be an object', 'invalid_arguments_object'],
+    ['arguments must be JSON-serializable', 'non_json_arguments'],
+    ['aggregate arguments limit exceeded', 'arguments_limit'],
+    ['unknown argument: private-secret-value', 'unknown_argument'],
+    ['unknown tool: private-secret-value', 'unknown_tool'],
+    ['missing argument: private-secret-value', 'unrecognized'],
+    ['private-secret-value', 'unrecognized'],
+    [null, 'unrecognized'],
+  ];
+  const responses = cases.map(([message]) => ({ result: { isError: true, content: [{ type: 'text', text: JSON.stringify({ error_code: 'invalid_args', message }) }] } }));
+  responses.push({ error: { code: -32602, message: 'private-secret-value' } });
+  await writeFile(target, `import { createInterface } from 'node:readline';
+const responses = ${JSON.stringify(responses)};
+for await (const line of createInterface({input:process.stdin})) { const request=JSON.parse(line); process.stdout.write(JSON.stringify({jsonrpc:'2.0',id:request.id,...responses.shift()})+'\\n'); }
+`);
+  const child = spawn(process.execPath, [recorder, target], { env: { ...process.env, CURSOR_EVAL_MCP_EVIDENCE: evidence }, stdio: ['pipe', 'pipe', 'pipe'] });
+  const output = []; const errors = [];
+  child.stdout.on('data', (chunk) => output.push(chunk)); child.stderr.on('data', (chunk) => errors.push(chunk));
+  const closed = once(child, 'close');
+  for (let id = 0; id < responses.length; id += 1) child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id, method: 'tools/call', params: { name: 'cursor_resume_session', arguments: { mode: id === 0 ? 'plan' : 'private-secret-value' } } })}\n`);
+  child.stdin.end();
+  assert.equal((await closed)[0], 0, Buffer.concat(errors).toString());
+  assert.deepEqual(Buffer.concat(output).toString().trim().split('\n').map((line) => { const { jsonrpc, id, ...response } = JSON.parse(line); return response; }), responses);
+  const serialized = await readFile(evidence, 'utf8');
+  assert.ok(!serialized.includes('private-secret-value'));
+  const recorded = JSON.parse(serialized).transcript;
+  assert.equal(recorded[0].request.mode, 'plan');
+  assert.equal(recorded[1].request.mode, undefined);
+  for (const [index, [, violation, field]] of cases.entries()) assert.deepEqual(recorded[index].response.validation_reason,
+    { source: 'tool_error', violation, ...(field ? { field } : {}) });
+  assert.deepEqual(recorded.at(-1).response, { ok: false, rpc_error_code: -32602 });
 });
 
 test('EvalResultV1 enforces its exact bounded public contract', () => {
@@ -511,7 +584,7 @@ test('launch trace constrains declared effort and fast fields without inventing 
   const withOptionalFields = observedTrace(unspecified);
   Object.assign(withOptionalFields[0], { effort: 'high', fast: false });
   assert.equal(evaluate(unspecified, withOptionalFields, ['LONG_REVIEW_OK']).eval_status, 'pass');
-  for (const extra of [{ model: 'auto' }, { plugin_dirs_count: 1, plugin_dirs_matched: true }]) {
+  for (const extra of [{ model: 'sonnet-4.0' }, { plugin_dirs_count: 1, plugin_dirs_matched: true }]) {
     const trace = structuredClone(withOptionalFields);
     Object.assign(trace[0], extra);
     assert.deepEqual(evaluate(unspecified, trace, ['LONG_REVIEW_OK']).mismatches, ['trace-mismatch']);

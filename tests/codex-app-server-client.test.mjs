@@ -437,8 +437,33 @@ test('app-server client rejects a request issued after its transport has exited'
     { closeGraceMs: 10, killGraceMs: 10 },
   );
   await once(client.child, 'close');
-  await assert.rejects(client.startThread({}), /write after end|destroyed|closed|EPIPE/i);
+  await assert.rejects(client.startThread({}), /write after end|destroyed|closed|EPIPE|exited/i);
   await client.close();
+});
+
+test('app-server client reconnects after a destroyed transport without repeating the prior request', async () => {
+  const server = `
+    const { createInterface } = require('node:readline');
+    const reply = (id, result) => process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id, result }) + '\\n');
+    (async () => {
+      for await (const line of createInterface({ input: process.stdin })) {
+        const request = JSON.parse(line);
+        if (request.method === 'initialize') reply(request.id, { userAgent: 'reconnect-test' });
+        else if (process.env.APP_SERVER_RECONNECT_TEST_MODE === 'first') process.exit(0);
+        else reply(request.id, { thread: { turns: [{ id: 'turn-1', status: 'completed' }] } });
+      }
+    })();
+  `;
+  const env = { ...process.env, APP_SERVER_RECONNECT_TEST_MODE: 'first' };
+  const client = new CodexAppServerClient(process.execPath, ['-e', server], env, { closeGraceMs: 10, killGraceMs: 10 });
+  try {
+    await client.initialize();
+    await assert.rejects(client.request('thread/read', { threadId: 'thread-1' }), /exited/);
+    env.APP_SERVER_RECONNECT_TEST_MODE = 'second';
+    await client.reconnect();
+    assert.deepEqual(await client.request('thread/read', { threadId: 'thread-1' }),
+      { thread: { turns: [{ id: 'turn-1', status: 'completed' }] } });
+  } finally { await client.close(); }
 });
 
 test('app-server client rejects spawn failure', async () => {

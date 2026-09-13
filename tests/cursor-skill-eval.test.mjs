@@ -66,7 +66,7 @@ test('stdio recording proxy atomically publishes bounded lifecycle evidence with
   const raw = await readFile(evidence, 'utf8'); const published = JSON.parse(raw);
   assert.equal(Buffer.byteLength(raw), raw.length);
   assert.deepEqual(published, { schema_version: 1, dropped_calls: 0, transcript: [
-    { direction: 'request', tool: 'cursor_delegate', call_id: 1, request: recordedRequest(calls[0].arguments, { mode: 'agent' }), response: { ok: true, session_id: 'S', turn_id: 'T', cursor_session_id: 'C', model: 'auto', effort: 'high', fast: false, turn_status: 'running', last_event_id: 3 } },
+    { direction: 'request', tool: 'cursor_delegate', call_id: 1, request: recordedRequest(calls[0].arguments, { mode: 'agent', cwd_sha256: createHash('sha256').update('/secret/workspace').digest('hex') }), response: { ok: true, session_id: 'S', turn_id: 'T', cursor_session_id: 'C', model: 'auto', effort: 'high', fast: false, turn_status: 'running', last_event_id: 3 } },
     { direction: 'request', tool: 'cursor_wait', call_id: 2, request: recordedRequest(calls[1].arguments, { session_id: 'S', turn_id: 'T', timeout_ms: 1_000 }), response: { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'waiting_for_input', last_event_id: 6, wait_timeout: false, pending: [{ request_id: 'R', kind: 'permission' }, { request_id: 'R2' }, { request_id: 'R3' }] } },
     { direction: 'request', tool: 'cursor_answer_permission', call_id: 3, request: recordedRequest(calls[2].arguments, { session_id: 'S', turn_id: 'T', request_id: 'R', decision: 'allow-once' }), response: { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'running', last_event_id: 7 } },
     { direction: 'request', tool: 'cursor_wait', call_id: 4, request: recordedRequest(calls[3].arguments, { session_id: 'S', turn_id: 'T', timeout_ms: 1_000 }), response: { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'completed', last_event_id: 10, wait_timeout: false, terminal_reason: { text: 'provider stopped', truncated: false }, terminal_receipt: { session_id: 'S', turn_id: 'T', turn_status: 'completed', last_event_id: 10, result_sha256: 'a'.repeat(64), result_truncated: false }, result: { text_bytes: 14, text_sha256: '65eb05dc0fa59c8ac6150c3fe6d3d7634471290d68fa38ae770b18c2ec2cc4cf', truncated: false } } },
@@ -178,7 +178,7 @@ test('recording proxy proves only an exact sequential full-result read through E
   assert.deepEqual(responses.slice(0, 8), [
     { ok: true, result_read: { complete: false, eof: false } },
     { ok: true, result_read: { complete: true, eof: true, total_bytes: 9, sha256: digest('alphabeta') } },
-    { ok: false, error_code: 'invalid_args' },
+    { ok: false, error_code: 'invalid_args', validation_reason: { source: 'tool_error', violation: 'unrecognized' } },
     { ok: true, result_read: { complete: false, eof: true } },
     { ok: true, result_read: { complete: false, eof: false } },
     { ok: true, result_read: { complete: false, eof: false } },
@@ -205,9 +205,9 @@ test('recording MCP proxy preserves UTF-8 split across transport chunks in both 
     const readline = require('node:readline');
     readline.createInterface({ input: process.stdin }).on('line', (line) => {
       const call = JSON.parse(line);
-      const exact = call.params.arguments.prompt === 'проверка-🙂';
+      const exact = call.params.arguments.prompt === 'check-🙂';
       const frame = Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: call.id, result: { isError: false,
-        content: [{ type: 'text', text: JSON.stringify({ session_id: exact ? 'сессия-🙂' : 'corrupted', turn_id: 'T' }) }] } }) + '\\n');
+        content: [{ type: 'text', text: JSON.stringify({ session_id: exact ? 'session-🙂' : 'corrupted', turn_id: 'T' }) }] } }) + '\\n');
       const marker = Buffer.from('🙂'); const split = frame.indexOf(marker) + 1;
       process.stdout.write(frame.subarray(0, split));
       setImmediate(() => process.stdout.write(frame.subarray(split)));
@@ -218,15 +218,15 @@ test('recording MCP proxy preserves UTF-8 split across transport chunks in both 
   const stdout = []; const stderr = [];
   child.stdout.on('data', (chunk) => stdout.push(chunk)); child.stderr.on('data', (chunk) => stderr.push(chunk));
   const request = Buffer.from(`${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: {
-    name: 'cursor_delegate', arguments: { mode: 'agent', prompt: 'проверка-🙂' },
+    name: 'cursor_delegate', arguments: { mode: 'agent', prompt: 'check-🙂' },
   } })}\n`);
   const marker = Buffer.from('🙂'); const split = request.indexOf(marker) + 1;
   child.stdin.write(request.subarray(0, split)); child.stdin.end(request.subarray(split));
   const [code] = await once(child, 'close');
   assert.equal(code, 0, Buffer.concat(stderr).toString('utf8'));
   const response = JSON.parse(Buffer.concat(stdout).toString('utf8'));
-  assert.equal(JSON.parse(response.result.content[0].text).session_id, 'сессия-🙂');
-  assert.equal(JSON.parse(await readFile(evidence, 'utf8')).transcript[0].response.session_id, 'сессия-🙂');
+  assert.equal(JSON.parse(response.result.content[0].text).session_id, 'session-🙂');
+  assert.equal(JSON.parse(await readFile(evidence, 'utf8')).transcript[0].response.session_id, 'session-🙂');
 });
 
 test('recording MCP proxy observes final request and response frames without trailing newlines', async (t) => {
@@ -351,7 +351,7 @@ test('recording MCP proxy proves the exact plugin roots by digest without retain
     recordedRequest({ mode: 'agent', plugin_dirs: ['/private/wrong/plugin'] },
       { mode: 'agent', plugin_dirs_count: 1, plugin_dirs_matched: false }),
     recordedRequest({ mode: 'agent', plugin_dirs: expectedRoots, cursor_session_id: 'cursor-session', model: 'grok-4.6', effort: 'low', fast: true },
-      { cursor_session_id: 'cursor-session', model: 'grok-4.6', effort: 'low', fast: true, plugin_dirs_count: 1, plugin_dirs_matched: true }),
+      { mode: 'agent', cursor_session_id: 'cursor-session', model: 'grok-4.6', effort: 'low', fast: true, plugin_dirs_count: 1, plugin_dirs_matched: true }),
   ]);
   assert.doesNotMatch(raw, /\/private\/|expected|wrong/);
 

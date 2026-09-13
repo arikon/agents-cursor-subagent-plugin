@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "kind": "cursor-skill-eval-baseline",
+  "model": "gpt-5.6-luna",
+  "hosted_model_slug": "gpt-reserve",
+  "hosted_model_note": "ChatGPT Codex catalog slug gpt-reserve is Luna Reserve: GPT-5.6 Luna fallback after regular quota. Not a separate public model.",
+  "accepted_green": true,
+  "note": "xhigh and max repair closeout: each declared full series ran three times at concurrency 16 and passed 81/81.",
+  "captured_at": "2026-09-13T14:57:32.793Z",
+  "reference_root": ".",
+  "candidate_digest": {
+    "sha256": "be68796d0b6c4b2b942c624a90b3ffc76a360d2e1a6fa1f677650b27902e331f",
+    "bytes": 569
+  },
+  "final": {
+    "corpus": { "sha256": "0348da67f038ca6c147f63623dbc1ad4c0d081171a7eeded24ee7907b9b0e637", "bytes": 74875 },
+    "skill": { "sha256": "ae46e1d428ed3d518746fbf039929df23b256557075a3ac2bd06e35a9d3074fc", "bytes": 14110 },
+    "evaluator": { "sha256": "c611ed3380037455ffc7081871cd54d5db4e643565a41a2c47ddf73eea3fd429", "bytes": 6031 }
+  },
+  "series": [
+    {
+      "effort": "max",
+      "path": "evidence/luna-efforts-repair-2026-09-13/baseline-v15-max-x3.json",
+      "bytes": 656471,
+      "sha256": "58551f4c2d48a00860b0317bc8b87e65cf8ff409bd1b0e957355fffefb92958b",
+      "started_at": "2026-09-13T14:37:48.407Z",
+      "finished_at": "2026-09-13T14:48:41.132Z",
+      "duration_ms": 652725,
+      "concurrency": 16,
+      "serial": 3,
+      "counts": { "total": 81, "pass": 81, "agent_behavior_mismatch": 0, "integration_failure": 0, "skipped": 0 },
+      "pass_rate": 1,
+      "digest_stable": true
+    },
+    {
+      "effort": "xhigh",
+      "path": "evidence/luna-efforts-repair-2026-09-13/baseline-v15-xhigh-x3.json",
+      "bytes": 657829,
+      "sha256": "76175a4e3d053ebc1678d11fa499e5dd5720a7c820996befc3f41b8efdafb63f",
+      "started_at": "2026-09-13T14:48:52.597Z",
+      "finished_at": "2026-09-13T14:57:32.793Z",
+      "duration_ms": 520196,
+      "concurrency": 16,
+      "serial": 3,
+      "counts": { "total": 81, "pass": 81, "agent_behavior_mismatch": 0, "integration_failure": 0, "skipped": 0 },
+      "pass_rate": 1,
+      "digest_stable": true
+    }
+  ]
+}

@@ -18,6 +18,8 @@ const versionedAdapter = fileURLToPath(new URL('./fixtures/codex-v01521-adapter.
 const adapterGolden = fileURLToPath(new URL('./fixtures/codex-v01521-adapter.golden.json', import.meta.url));
 const currentVersionedAdapter = fileURLToPath(new URL('./fixtures/codex-v01534-adapter.mjs', import.meta.url));
 const currentAdapterGolden = fileURLToPath(new URL('./fixtures/codex-v01534-adapter.golden.json', import.meta.url));
+const hostedVersionedAdapter = fileURLToPath(new URL('./fixtures/codex-v01540-adapter.mjs', import.meta.url));
+const hostedAdapterGolden = fileURLToPath(new URL('./fixtures/codex-v01540-adapter.golden.json', import.meta.url));
 const fakeCodexCli = fileURLToPath(new URL('./fixtures/fake-codex-cli-v01521.mjs', import.meta.url));
 const fakeCursorAgentStatus = fileURLToPath(new URL('./fixtures/fake-cursor-agent-status.mjs', import.meta.url));
 const killWaitCommand = fileURLToPath(new URL('./fixtures/kill-wait-command.mjs', import.meta.url));
@@ -70,6 +72,6 @@ async function fixture(t) {
 export {
   assert, spawn, createHash, chmod, cp, lstat, mkdir, mkdtemp, readFile, readdir, realpath, rename, rm, symlink, writeFile,
   join, tmpdir, fileURLToPath, MARKER_NAME, canonicalJson, normalizeManifestBytes, parseArgs, runBootstrap, runPackageCommand, treeHashV1, validateTopology, runFakeCodexAdapterCommand,
-  repository, bootstrapScript, adapter, versionedAdapter, adapterGolden, currentVersionedAdapter, currentAdapterGolden, fakeCodexCli, fakeCursorAgentStatus, killWaitCommand,
+  repository, bootstrapScript, adapter, versionedAdapter, adapterGolden, currentVersionedAdapter, currentAdapterGolden, hostedVersionedAdapter, hostedAdapterGolden, fakeCodexCli, fakeCursorAgentStatus, killWaitCommand,
   adapterFixtureCall, adapterFixtureResult, runInProcessFakeAdapter, runInProcessBootstrap, bootstrapCli, fixture,
 };

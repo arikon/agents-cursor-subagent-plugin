@@ -6,6 +6,7 @@ import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promis
 import { tmpdir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
 import { PassThrough } from 'node:stream';
+import { createConnection, createServer } from 'node:net';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { cli, LANES, SCRUBBED_ENV, parseArgs, runSupervisor } from '../scripts/run-node-tests.mjs';
@@ -20,6 +21,90 @@ async function artifactRoot(t) {
   t.after(() => rm(path, { recursive: true, force: true }));
   return path;
 }
+
+test('eval quota socket delivers before child close and is removed after cleanup', async (t) => {
+  let socketPath; let notified = 0; let childClosed = false;
+  let connections = 0; let partialRead;
+  const partialReceived = new Promise((done) => { partialRead = done; });
+  let pendingClosed;
+  const result = await runSupervisor({ laneName: 'eval', tests: ['tests/codex-client-integration.test.mjs'],
+    artifactRoot: await artifactRoot(t), env: {},
+    onQuotaExceeded: () => { assert.equal(childClosed, false); notified += 1; },
+    dependencies: { createServer: (accept) => createServer((socket) => {
+      accept(socket);
+      connections += 1;
+      if (connections === 1) socket.destroy(Object.assign(new Error('peer reset'), { code: 'ECONNRESET' }));
+      socket.on('data', (chunk) => { if (chunk.toString() === '{"type":') partialRead(); });
+    }), spawn: (command, args, options) => {
+      socketPath = options.env.CURSOR_EVAL_QUOTA_SOCKET;
+      const child = new EventEmitter(); child.stderr = new PassThrough(); child.pid = 424242;
+      queueMicrotask(async () => {
+        for (const message of ['', 'x'.repeat(129)]) {
+          await new Promise((done) => {
+            const socket = createConnection(socketPath);
+            socket.resume();
+            socket.on('error', () => {});
+            socket.once('connect', () => { if (message) socket.write(message); });
+            socket.once('close', done);
+          });
+        }
+        await new Promise((done, reject) => {
+          const socket = createConnection(socketPath);
+          socket.once('error', reject);
+          socket.once('connect', async () => {
+            socket.write('{"type":');
+            await partialReceived;
+            assert.equal(notified, 0);
+            socket.write('"usage_limit_exceeded"}\n');
+          });
+          socket.once('end', () => { socket.destroy(); done(); });
+        });
+        for (const message of ['{"type":"other"}\n', '{"type":"usage_limit_exceeded","extra":true}\n', '{"type":"usage_limit_exceeded"}\n', '{"type":"usage_limit_exceeded"}\n']) {
+          await new Promise((done, reject) => {
+            const socket = createConnection(socketPath);
+            socket.once('error', reject);
+            socket.once('connect', () => socket.write(message));
+            socket.once('end', () => { socket.destroy(); done(); });
+          });
+        }
+        assert.equal(notified, 1);
+        const pending = createConnection(socketPath);
+        pending.resume();
+        pendingClosed = new Promise((done) => pending.once('close', done));
+        await new Promise((done) => pending.once('connect', done));
+        const fixture = fakeSpawn()(command, args, options);
+        fixture.stderr.pipe(child.stderr);
+        fixture.once('close', (...values) => { childClosed = true; child.emit('close', ...values); });
+        fixture.on('error', (error) => child.emit('error', error));
+      });
+      return child;
+    } },
+  });
+  assert.equal(result.verdict, 'passed');
+  assert.equal(notified, 1);
+  await pendingClosed;
+  await assert.rejects(readFile(socketPath), { code: 'ENOENT' });
+});
+
+test('eval quota socket bind failure prevents child launch', async (t) => {
+  let spawned = false; let closed = false;
+  const result = await runSupervisor({ laneName: 'eval', tests: ['tests/codex-client-integration.test.mjs'],
+    artifactRoot: await artifactRoot(t), env: {}, onQuotaExceeded: () => {},
+    dependencies: {
+      createServer: () => {
+        const server = new EventEmitter();
+        server.listen = () => queueMicrotask(() => server.emit('error', Object.assign(new Error('bind failed'), { code: 'EACCES' })));
+        server.close = () => { closed = true; };
+        return server;
+      },
+      spawn: () => { spawned = true; throw new Error('unexpected spawn'); },
+    },
+  });
+  assert.equal(result.verdict, 'runner_error');
+  assert.equal(result.terminal_cause, 'quota_signal_unavailable');
+  assert.equal(spawned, false);
+  assert.equal(closed, true);
+});
 
 function reporterPath(args) {
   const prefix = '--test-reporter-destination=';
@@ -170,8 +255,8 @@ test('lane matrix produces the exact child argv and keeps parent deadlines fixed
     'tests/codex-client-integration-component.test.mjs', 'tests/facade.test.mjs', 'tests/release-e2e-component.test.mjs', 'tests/codex-client-oracle-component.test.mjs', 'tests/run-cursor-skill-eval-component.test.mjs', 'tests/bootstrap-component.test.mjs', 'tests/codex-app-server-client-component.test.mjs', 'tests/node-test-reporter-v22.test.mjs',
   ];
   const integrationTests = [
-    'tests/bootstrap-cli.test.mjs', 'tests/cursor-skill-eval.test.mjs', 'tests/cursor-skill-eval-component.test.mjs', 'tests/eval-closeout.test.mjs', 'tests/bootstrap-adapter.test.mjs', 'tests/bootstrap-lifecycle.test.mjs', 'tests/bootstrap-recovery.test.mjs', 'tests/codex-app-server-client.test.mjs', 'tests/eval-matrix.test.mjs', 'tests/eval-closeout-cli.test.mjs',
-    'tests/mcp-smoke.test.mjs', 'tests/mcp-transport.test.mjs', 'tests/node-test-supervisor.test.mjs',
+    'tests/bootstrap-cli.test.mjs', 'tests/cursor-skill-eval.test.mjs', 'tests/cursor-skill-eval-component.test.mjs', 'tests/eval-closeout.test.mjs', 'tests/bootstrap-adapter.test.mjs', 'tests/bootstrap-lifecycle.test.mjs', 'tests/bootstrap-recovery.test.mjs', 'tests/codex-app-server-client.test.mjs', 'tests/eval-matrix.test.mjs', 'tests/eval-closeout-cli.test.mjs', 'tests/publish-model-baseline.test.mjs',
+    'tests/mcp-smoke.test.mjs', 'tests/mcp-transport.test.mjs', 'tests/node-test-supervisor.test.mjs', 'tests/eval-replay.test.mjs',
     'tests/run-cursor-skill-eval.test.mjs', 'tests/runtime-admission.test.mjs', 'tests/runtime-interaction.test.mjs',
   'tests/runtime-callbacks-results.test.mjs', 'tests/runtime-lifecycle.test.mjs', 'tests/model-discovery.test.mjs',
   ];
@@ -181,7 +266,7 @@ test('lane matrix produces the exact child argv and keeps parent deadlines fixed
     'scripts/cursor-subagent-bootstrap.mjs', 'scripts/cursor-subagent-mcp.mjs', 'scripts/cursor-model-adapter.mjs', 'scripts/node-test-reporter-v22.mjs',
     'scripts/recording-mcp-proxy.mjs', 'scripts/run-cursor-skill-eval.mjs', 'scripts/run-node-tests.mjs', 'scripts/run-unit-coverage.mjs',
     'scripts/eval/run-cursor-skill-eval-matrix.mjs', 'scripts/eval/run-cursor-skill-eval-suite.mjs',
-    'scripts/audit-node-coverage.mjs', 'scripts/eval/finalize-cursor-skill-eval.mjs',
+    'scripts/audit-node-coverage.mjs', 'scripts/eval/finalize-cursor-skill-eval.mjs', 'scripts/eval/publish-model-baseline.mjs', 'scripts/eval/replay-cursor-skill-eval.mjs',
   ];
   const cases = [
     { lane: 'component', concurrency: 4, tests: componentTests, timeoutMs: 120_000, deadlineMs: 600_000, coverage: false },

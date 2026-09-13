@@ -28,7 +28,9 @@ function captureFailure(turnId, turnStatus, errorCode, source = 'thread/turns/li
 
 export class CodexAppServerClient {
   constructor(command, args = ['app-server', '--stdio'], env = process.env, options = {}) {
-    this.child = spawn(command, args, { env, stdio: ['pipe', 'pipe', 'pipe'] });
+    this.command = command;
+    this.args = args;
+    this.env = env;
     this.outputLimit = options.outputLimit ?? OUTPUT_LIMIT;
     this.requestTimeoutMs = options.requestTimeoutMs ?? 10_000;
     this.closeGraceMs = options.closeGraceMs ?? 1_000;
@@ -47,13 +49,23 @@ export class CodexAppServerClient {
     this.outputBytes = 0;
     this.closed = false;
     this.closePromise = null;
-    this.child.stderr.on('data', (chunk) => this.stderr.push(chunk));
+    this.transportError = null;
+    this.#startTransport();
+  }
+
+  #startTransport() {
+    const child = spawn(this.command, this.args, { env: this.env, stdio: ['pipe', 'pipe', 'pipe'] });
+    this.child = child;
+    this.outputBytes = 0;
+    child.stderr.on('data', (chunk) => this.stderr.push(chunk));
     const rejectAll = (error) => {
+      if (this.child !== child) return;
+      this.transportError ||= error;
       for (const { reject, timer } of this.pending.values()) { clearTimeout(timer); reject(error); }
       this.pending.clear();
     };
-    this.child.once('error', rejectAll);
-    this.child.once('close', (code, signal) => rejectAll(new Error(`Codex app-server exited (${code ?? signal})`)));
+    child.once('error', rejectAll);
+    child.once('close', (code, signal) => rejectAll(new Error(`Codex app-server exited (${code ?? signal})`)));
     const decoder = new StringDecoder('utf8'); let buffered = '';
     const respondToServerRequest = async (message) => {
       const record = { method: message.method, id: message.id, params: message.params ?? null };
@@ -61,9 +73,9 @@ export class CodexAppServerClient {
       try {
         if (typeof this.onServerRequest !== 'function') throw new Error(`unsupported server request: ${message.method}`);
         const result = await this.onServerRequest(record);
-        this.child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: message.id, result })}\n`);
+        child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: message.id, result })}\n`);
       } catch (error) {
-        this.child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: message.id, error: { code: -32601, message: error.message } })}\n`);
+        child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: message.id, error: { code: -32601, message: error.message } })}\n`);
       }
     };
     const receive = (line) => {
@@ -79,9 +91,9 @@ export class CodexAppServerClient {
       if (message.error) waiter.reject(new Error(message.error.message || 'Codex app-server request failed'));
       else waiter.resolve(message.result);
     };
-    this.child.stdout.on('data', (chunk) => {
+    child.stdout.on('data', (chunk) => {
       this.outputBytes += chunk.length;
-      if (this.outputBytes > this.outputLimit) { this.child.kill('SIGKILL'); rejectAll(new Error('Codex app-server exceeded output limit')); return; }
+      if (this.outputBytes > this.outputLimit) { child.kill('SIGKILL'); rejectAll(new Error('Codex app-server exceeded output limit')); return; }
       buffered += decoder.write(chunk);
       for (;;) { const newline = buffered.indexOf('\n'); if (newline < 0) break; receive(buffered.slice(0, newline)); buffered = buffered.slice(newline + 1); }
     });
@@ -89,6 +101,9 @@ export class CodexAppServerClient {
 
   request(method, params, timeoutMs = this.requestTimeoutMs) {
     if (this.closed) return Promise.reject(new Error('Codex app-server is closed'));
+    if (this.transportError || this.child.stdin.destroyed) {
+      return Promise.reject(this.transportError || new Error('Codex app-server transport is unavailable'));
+    }
     const id = `client-${this.nextId++}`;
     this.clientRequests.push({
       id,
@@ -100,9 +115,28 @@ export class CodexAppServerClient {
       const timer = setTimeout(() => { this.pending.delete(String(id)); reject(new Error(`Codex app-server ${method} timed out`)); }, timeoutMs);
       this.pending.set(String(id), { resolve, reject, timer });
       this.child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`, (error) => {
+        if (error) this.transportError ||= error;
         if (error && this.pending.delete(String(id))) { clearTimeout(timer); reject(error); }
       });
     });
+  }
+
+  async reconnect() {
+    if (this.closed) throw new Error('Codex app-server is closed');
+    if (!this.transportError && !this.child.stdin.destroyed) throw new Error('Codex app-server transport is still available');
+    const child = this.child;
+    if (child.exitCode === null && child.signalCode === null) {
+      const closed = once(child, 'close');
+      child.kill('SIGTERM');
+      const graceful = await Promise.race([closed.then(() => true), this.captureSleep(this.closeGraceMs).then(() => false)]);
+      if (!graceful && child.exitCode === null && child.signalCode === null) {
+        child.kill('SIGKILL');
+        await Promise.race([closed, this.captureSleep(this.killGraceMs)]);
+      }
+    }
+    this.transportError = null;
+    this.#startTransport();
+    await this.initialize();
   }
 
   async initialize() {

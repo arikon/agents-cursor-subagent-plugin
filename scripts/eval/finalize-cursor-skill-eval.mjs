@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { verifyPublishedAudit } from '../audit-node-coverage.mjs';
 import { assertEvalResultV1, assertEvidenceManifestV1 } from '../cursor-skill-eval.mjs';
 import { canonicalJson, parseScenarioCorpus, validRecoveryContext } from '../cursor-eval-scenario.mjs';
+import { assertEvalTokenUsageV1 } from '../eval-token-usage.mjs';
 
 const repository = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const ARGUMENTS = ['freeze', 'diagnostic', 'high', 'medium', 'coverage-audit', 'baseline', 'report', 'tasks', 'output'];
@@ -122,7 +123,7 @@ function recomputeCounts(results) {
 
 async function validateMatrix(path, expected, corpus, freeze, bundleRoot, fs) {
   const loaded = await loadJson(path, fs); const matrix = loaded.value; const base = dirname(path);
-  if (matrix.schema_version !== 1 || matrix.model !== 'gpt-5.6-terra' || matrix.effort !== expected.effort
+  if (matrix.schema_version !== 1 || matrix.complete === false || matrix.model !== 'gpt-5.6-terra' || matrix.effort !== expected.effort
     || matrix.serial !== expected.serial || !Number.isSafeInteger(matrix.concurrency) || matrix.concurrency < 1
     || matrix.attempt_policy !== 'one-attempt-per-scenario-run' || matrix.digest_stable !== true) fail(`invalid matrix contract: ${path}`);
   const frozen = { corpus: freeze.corpus, skill: freeze.skill, evaluator: freeze.evaluator.digest };
@@ -152,13 +153,15 @@ async function validateMatrix(path, expected, corpus, freeze, bundleRoot, fs) {
   if (!same(candidate.digest, { bytes: payloadBytes.length, sha256: sha256(payloadBytes) })) fail(`candidate digest mismatch: ${path}`);
   const bySerial = new Map(Array.from({ length: expected.serial }, (_, index) => [index + 1, []]));
   for (const result of matrix.results) {
-    if (!exact(result, [...PUBLIC_RESULT_KEYS, 'process', 'artifact_root', 'attempts', 'serial_index'])
+    const hasTokenUsage = result != null && Object.hasOwn(result, 'token_usage');
+    if (!exact(result, [...PUBLIC_RESULT_KEYS, 'process', 'artifact_root', 'attempts', 'serial_index', ...(hasTokenUsage ? ['token_usage'] : [])])
       || !exact(result.process, PROCESS_KEYS) || !Number.isSafeInteger(result.process.duration_ms) || result.process.duration_ms < 0
       || !validRelative(result.process.artifact_root) || !Number.isSafeInteger(result.serial_index)
       || !Array.isArray(result.attempts) || result.attempts.length !== 1
       || !exact(result.attempts[0], ['eval_status', 'error_code', 'process']) || !exact(result.attempts[0].process, PROCESS_KEYS)) {
       fail(`invalid matrix result shape: ${result?.scenario_id || 'unknown'}`);
     }
+    if (hasTokenUsage) assertEvalTokenUsageV1(result.token_usage);
     assertEvalResultV1(publicResult(result));
     if (result.lane !== 'model-behavior' || result.eval_status !== 'pass' || result.evidence_publication_status !== 'published'
       || result.cleanup_status !== 'succeeded' || result.process?.code !== 0 || result.process?.signal !== null
@@ -217,7 +220,7 @@ async function validateMatrix(path, expected, corpus, freeze, bundleRoot, fs) {
   if (!same(counts, matrix.counts) || matrix.attempted_runs !== matrix.results.length || matrix.pass_rate !== 1) fail(`matrix aggregate mismatch: ${path}`);
   for (const [index, run] of matrix.runs.entries()) {
     const runResults = matrix.results.filter(({ serial_index: serialIndex }) => serialIndex === index + 1);
-    if (run.schema_version !== 1 || run.serial_index !== index + 1 || run.model !== matrix.model || run.effort !== matrix.effort || run.concurrency !== matrix.concurrency
+    if (run.schema_version !== 1 || run.complete === false || run.serial_index !== index + 1 || run.model !== matrix.model || run.effort !== matrix.effort || run.concurrency !== matrix.concurrency
       || !same(run.candidate_digest, matrix.candidate_digest) || !same(run.counts, recomputeCounts(runResults))
       || run.attempted_runs !== runResults.length || run.pass_rate !== 1 || run.digest_stable !== true
       || !same(run.initial, frozen) || !same(run.final, frozen)) fail(`matrix run summary mismatch: ${path}`);
@@ -371,10 +374,17 @@ export async function buildCloseout(paths, fs = {}) {
   if (!same(corpusLoaded.digest, freeze.corpus)) fail('current corpus differs from freeze');
   const corpus = parseScenarioCorpus(corpusLoaded.bytes);
   const coverage = await validateCoverage(paths['coverage-audit'], freeze, bundleRoot, fs);
-  const diagnostic = await validateMatrix(paths.diagnostic, { effort: 'high', serial: 1 }, corpus, freeze, bundleRoot, fs);
+  const sharedDiagnostic = resolve(paths.diagnostic) === resolve(paths.high);
+  if (sharedDiagnostic && Object.hasOwn(freeze, 'high_reference')) fail('historical high cannot supply the current diagnostic');
+  const separateDiagnostic = sharedDiagnostic ? null
+    : await validateMatrix(paths.diagnostic, { effort: 'high', serial: 1 }, corpus, freeze, bundleRoot, fs);
   const reference = Object.hasOwn(freeze, 'high_reference')
     ? await validateHighReference(freeze, bundleRoot, fs) : null;
   const high = await validateMatrix(paths.high, { effort: 'high', serial: 3 }, reference?.corpus || corpus, reference?.source || freeze, bundleRoot, fs);
+  // Full validation proves every serial contains the same complete, passing scenario set.
+  // Bind the diagnostic to serial 1 of that exact matrix rather than running a fourth copy.
+  const diagnostic = separateDiagnostic || { ...high, serial: 1, serial_index: 1,
+    counts: { ...high.counts, total: high.scenario_ids.length, pass: high.scenario_ids.length } };
   const medium = await validateMatrix(paths.medium, { effort: 'medium', serial: 3 }, corpus, freeze, bundleRoot, fs);
   const candidateIdentity = ({ digest: candidateDigest, payload }) => ({ digest: candidateDigest, payload });
   if (diagnostic.concurrency !== medium.concurrency

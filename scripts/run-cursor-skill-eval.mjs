@@ -151,6 +151,7 @@ export function parseChildResult(encoded, scenarioId, expected = {}) {
     catch { throw Object.assign(new Error('child result has an invalid evidence contract'), { evalCode: 'child_result_invalid' }); }
   }
   return { provenance, manifest, captured_finals: captures,
+    projection_inputs: result.projection_inputs ?? null,
     observations: { ...normalizedObservations, captured_finals: captures }, transcript: normalizedTranscript, provider_oracle: result.provider_oracle || null,
     token_usage: tokenUsage };
 }
@@ -170,18 +171,33 @@ export async function runHarness(config, env, dependencies = {}) {
   const loadFile = dependencies.readFile || readFile;
   const supervise = dependencies.runSupervisor || runNodeTestSupervisor;
   const test = relative(repository, config.test);
+  let quotaSeen = false;
+  const notifyQuota = () => {
+    if (quotaSeen) return;
+    quotaSeen = true;
+    if (dependencies.notifyQuota) dependencies.notifyQuota();
+    else if (process.connected) process.send({ type: 'usage_limit_exceeded' });
+  };
   const supervised = await supervise({ laneName: 'eval', tests: [test], testNamePattern: config.pattern, env,
+    onQuotaExceeded: notifyQuota,
     ...(dependencies.artifactRoot ? { artifactRoot: dependencies.artifactRoot } : {}) });
   let childResult = null; let childResultFailure = null;
   try {
-    childResult = parseChildResult(await loadFile(env.CURSOR_EVAL_CHILD_RESULT, 'utf8'), env.CURSOR_EVAL_SCENARIO_ID, {
+    const encoded = await loadFile(env.CURSOR_EVAL_CHILD_RESULT, 'utf8');
+    const envelope = JSON.parse(encoded);
+    if (envelope.schema_version === 1 && envelope.scenario_id === env.CURSOR_EVAL_SCENARIO_ID
+      && envelope.error_code === 'usage_limit_exceeded') {
+      notifyQuota();
+      childResultFailure = envelope.cleanup_status === 'failed' ? 'cleanup_failed' : 'usage_limit_exceeded';
+    }
+    childResult = parseChildResult(encoded, env.CURSOR_EVAL_SCENARIO_ID, {
       scenario: config.scenario,
       ...(env.CURSOR_EVAL_SCENARIO_SHA256 ? { scenarioDigest: { sha256: env.CURSOR_EVAL_SCENARIO_SHA256, bytes: Number(env.CURSOR_EVAL_SCENARIO_BYTES) } } : {}),
       ...(env.CURSOR_EVAL_CORPUS_SHA256 ? { corpusDigest: { sha256: env.CURSOR_EVAL_CORPUS_SHA256, bytes: Number(env.CURSOR_EVAL_CORPUS_BYTES) } } : {}),
       ...(env.CURSOR_EVAL_EVALUATOR_SHA256 ? { evaluatorDigest: { sha256: env.CURSOR_EVAL_EVALUATOR_SHA256, bytes: Number(env.CURSOR_EVAL_EVALUATOR_BYTES) } } : {}),
     });
   }
-  catch (error) { childResultFailure = error.evalCode || 'child_result_missing'; }
+  catch (error) { childResultFailure ||= error.evalCode || 'child_result_missing'; }
   const code = supervised.child?.code ?? null;
   const signal = supervised.child?.signal ?? null;
   const behaviorMismatch = childResult?.observations.eval_status === 'agent_behavior_mismatch';
@@ -195,7 +211,8 @@ export async function runHarness(config, env, dependencies = {}) {
           : behaviorMismatch && supervised.terminal_cause === 'exit_nonzero' ? 'scenario_contract_mismatch'
             : 'harness_failure';
   const infrastructureFailure = ['harness_timeout', 'harness_spawn_failure', 'harness_infrastructure_failure', 'hosted_turn_interrupted'].includes(supervisorFailure) ? supervisorFailure : null;
-  return { code, signal, failure: infrastructureFailure || childResultFailure || supervisorFailure, childResult,
+  return { code, signal, failure: childResultFailure === 'cleanup_failed' ? childResultFailure
+    : quotaSeen ? 'usage_limit_exceeded' : infrastructureFailure || childResultFailure || supervisorFailure, childResult,
     diagnostics: bounded((supervised.failureDetails || []).join('\n')) };
 }
 
@@ -256,6 +273,7 @@ export async function runEval({ scenarioId = null, env = process.env } = {}, dep
   let childResult = null;
   let harnessEvidence = null;
   let fixtureOracle = null;
+  let replayInputs = null;
   try {
     await makeDirectory(workspace, { recursive: true });
     const materialized = materializeScenario(scenario, { workspace });
@@ -285,13 +303,19 @@ export async function runEval({ scenarioId = null, env = process.env } = {}, dep
     };
     const harness = await executeHarness(config, harnessEnv);
     childResult = harness.childResult || null;
+    if (childResult && scenario.scenario_kind === 'programmed') replayInputs = {
+      scenario: materialized.materializedScenario, workspace,
+      projection_inputs: childResult.projection_inputs ?? null,
+      observations: Object.fromEntries(['trace', 'callbacks', 'effects', 'actual_task_outcome']
+        .map((key) => [key, childResult.observations[key]])),
+    };
     harnessEvidence = { exit_code: harness.code, signal: harness.signal, failure: harness.failure, diagnostics_sha256: createHash('sha256').update(harness.diagnostics || '').digest('hex') };
     const oracle = childResult && scenario.scenario_kind === 'programmed'
       ? evaluateScenario(materialized.materializedScenario, { ...childResult.observations, transcript: childResult.transcript })
       : childResult?.observations || null;
     fixtureOracle = oracle;
     const actual = oracle?.actual_task_outcome || 'not_observed';
-    const childCleanupFailed = childResult?.provenance.cleanup_status === 'failed';
+    const childCleanupFailed = childResult?.provenance.cleanup_status === 'failed' || harness.failure === 'cleanup_failed';
     const captureIncomplete = harness.failure === 'capture_invalid' || childResult?.captured_finals?.some(({ completeness }) => completeness === 'incomplete');
     const invalidProof = harness.failure === 'child_result_invalid';
     const evaluatorMismatch = Boolean(childResult) && (!sameDigest(childResult.provenance.evaluator, evaluator.digest)
@@ -328,6 +352,7 @@ export async function runEval({ scenarioId = null, env = process.env } = {}, dep
         transcript: childResult?.transcript || { calls: [], dropped_calls: 0 }, provider_oracle: childResult?.provider_oracle || null,
         captured_finals: childResult?.captured_finals || [],
         fixture_oracle: fixtureOracle,
+        replay_inputs: replayInputs,
         token_usage: childResult?.token_usage || emptyEvalTokenUsage(),
         harness: harnessEvidence, final_result: { ...publishedResult, evidence_ref: basename(ref) },
         manifest: childResult.manifest };

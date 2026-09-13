@@ -23,7 +23,8 @@ export const PROJECT_SEMANTIC_REGISTRY = Object.freeze({
       ownedRequirements: Object.freeze([]),
       ownerClaim: "`cursor-task-delegation` сохраняет владение operator workflow и workspace discipline.",
       modified: Object.freeze([
-        Object.freeze({"capability": "cursor-subagent-skill-evals", "requirement": "Immutable evidence manifest", "replacementReason": "Allow user-selected existing task anchors in the same closeout consumer while preserving historical defaults and evidence gates.", "sourceDigest": "1b2e9249b8f9604a050c8eb49f3afc68af04e1f8ff252d567ea3d90f25d943fe", "replacementDigest": "4b2ebaad4c101720cd72ec05b2a9493c7ec4d2743de398fa3d3e400e9c5b22aa"}),
+        Object.freeze({"capability": "cursor-subagent-skill-evals", "requirement": "Cost-aware execution policy", "replacementReason": "User-authorized quota stop, predeclared diagnostic-first series and conservative diagnostic replay without extra hosted trials.", "sourceDigest": "6f7a15ff928dc2e573406d49d38ed3340bc654921d219da7c099fbee50ed1c51", "replacementDigest": "5cf20513b9c40c6c83447f26d3ffa1518ad0ce6fc54cba5ba765d057186f1bcf"}),
+        Object.freeze({"capability": "cursor-subagent-skill-evals", "requirement": "Immutable evidence manifest", "replacementReason": "User-authorized shared diagnostic reference, immutable series continuation and retained replay inputs, preserving historical task anchors.", "sourceDigest": "1b2e9249b8f9604a050c8eb49f3afc68af04e1f8ff252d567ea3d90f25d943fe", "replacementDigest": "04e1fdb8a8b7bd492f5cebcc64fd3e69943df93c9daec5043191dfe5053ece43"}),
       ]),
       references: Object.freeze([
         Object.freeze({ ownerChange: changeIds.facade, capability: "cursor-task-delegation", requirementId: "DLG-3", requirement: "Skill workflow делегирования" }),

@@ -5,6 +5,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { createWriteStream } from 'node:fs';
 import { mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
+import { createServer } from 'node:net';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -22,8 +23,8 @@ const componentTests = Object.freeze([
   'tests/codex-client-integration-component.test.mjs', 'tests/facade.test.mjs', 'tests/release-e2e-component.test.mjs', 'tests/codex-client-oracle-component.test.mjs', 'tests/run-cursor-skill-eval-component.test.mjs', 'tests/bootstrap-component.test.mjs', 'tests/codex-app-server-client-component.test.mjs', 'tests/node-test-reporter-v22.test.mjs',
 ]);
 const integrationTests = Object.freeze([
-  'tests/bootstrap-cli.test.mjs', 'tests/cursor-skill-eval.test.mjs', 'tests/cursor-skill-eval-component.test.mjs', 'tests/eval-closeout.test.mjs', 'tests/bootstrap-adapter.test.mjs', 'tests/bootstrap-lifecycle.test.mjs', 'tests/bootstrap-recovery.test.mjs', 'tests/codex-app-server-client.test.mjs', 'tests/eval-matrix.test.mjs', 'tests/eval-closeout-cli.test.mjs',
-  'tests/mcp-smoke.test.mjs', 'tests/mcp-transport.test.mjs', 'tests/node-test-supervisor.test.mjs',
+  'tests/bootstrap-cli.test.mjs', 'tests/cursor-skill-eval.test.mjs', 'tests/cursor-skill-eval-component.test.mjs', 'tests/eval-closeout.test.mjs', 'tests/bootstrap-adapter.test.mjs', 'tests/bootstrap-lifecycle.test.mjs', 'tests/bootstrap-recovery.test.mjs', 'tests/codex-app-server-client.test.mjs', 'tests/eval-matrix.test.mjs', 'tests/eval-closeout-cli.test.mjs', 'tests/publish-model-baseline.test.mjs',
+  'tests/mcp-smoke.test.mjs', 'tests/mcp-transport.test.mjs', 'tests/node-test-supervisor.test.mjs', 'tests/eval-replay.test.mjs',
   'tests/run-cursor-skill-eval.test.mjs', 'tests/runtime-admission.test.mjs', 'tests/runtime-interaction.test.mjs',
   'tests/runtime-callbacks-results.test.mjs', 'tests/runtime-lifecycle.test.mjs', 'tests/model-discovery.test.mjs',
 ]);
@@ -40,7 +41,7 @@ const productSources = Object.freeze([
   'scripts/cursor-subagent-bootstrap.mjs', 'scripts/cursor-subagent-mcp.mjs', 'scripts/cursor-model-adapter.mjs', 'scripts/node-test-reporter-v22.mjs',
   'scripts/recording-mcp-proxy.mjs', 'scripts/run-cursor-skill-eval.mjs', 'scripts/run-node-tests.mjs', 'scripts/run-unit-coverage.mjs',
   'scripts/eval/run-cursor-skill-eval-matrix.mjs', 'scripts/eval/run-cursor-skill-eval-suite.mjs',
-  'scripts/audit-node-coverage.mjs', 'scripts/eval/finalize-cursor-skill-eval.mjs',
+  'scripts/audit-node-coverage.mjs', 'scripts/eval/finalize-cursor-skill-eval.mjs', 'scripts/eval/publish-model-baseline.mjs', 'scripts/eval/replay-cursor-skill-eval.mjs',
 ]);
 const coverageThresholds = Object.freeze({ lines: 90, branches: 90, functions: 90 });
 const focusedTestPath = /^tests\/[A-Za-z0-9_.-]+\.test\.mjs$/;
@@ -174,7 +175,7 @@ export function parseArgs(argv) {
   return { laneName, tests: tests.length ? tests : null, testNamePattern };
 }
 
-export async function runSupervisor({ laneName, tests = null, testNamePattern = null, env = process.env, artifactRoot = env.NODE_TEST_ARTIFACT_ROOT || join(tmpdir(), 'codex-node-test-artifacts'), dependencies = {} }) {
+export async function runSupervisor({ laneName, tests = null, testNamePattern = null, env = process.env, artifactRoot = env.NODE_TEST_ARTIFACT_ROOT || join(tmpdir(), 'codex-node-test-artifacts'), onQuotaExceeded = null, dependencies = {} }) {
   const now = dependencies.now || (() => Date.now());
   const startedAt = now();
   const artifactLabel = String(laneName).replace(/[^a-zA-Z0-9_-]/g, '-') || 'invalid';
@@ -217,6 +218,7 @@ export async function runSupervisor({ laneName, tests = null, testNamePattern = 
   }
   const state = { terminalCause: null, infrastructure: null, timedOut: false, interrupted: false, signal: null };
   const childEnv = { ...env };
+  delete childEnv.CURSOR_EVAL_QUOTA_SOCKET;
   for (const key of SCRUBBED_ENV) delete childEnv[key];
   for (const key of DETERMINISTIC_ENV_REMOVALS) delete childEnv[key];
   if (compatibleOptIns) for (const key of enabledOptIns) childEnv[key] = '1';
@@ -236,9 +238,50 @@ export async function runSupervisor({ laneName, tests = null, testNamePattern = 
       return earlyFailure('coverage_gate', { stage: 'coverage', cause: 'source_snapshot_error', error: errorRecord(error) });
     }
   }
+  let quotaServer = null;
+  let quotaSocket = null;
+  let quotaSeen = false;
+  const quotaConnections = new Set();
+  if (laneName === 'eval' && typeof onQuotaExceeded === 'function') {
+    quotaSocket = join('/tmp', `cursor-eval-quota-${randomUUID()}.sock`);
+    quotaServer = (dependencies.createServer || createServer)((socket) => {
+      quotaConnections.add(socket);
+      socket.once('close', () => quotaConnections.delete(socket));
+      let payload = '';
+      socket.setEncoding('utf8');
+      socket.on('error', () => {});
+      socket.on('data', (chunk) => {
+        payload += chunk;
+        if (payload.length > 128) { socket.destroy(); return; }
+        if (!payload.endsWith('\n')) return;
+        if (payload === '{"type":"usage_limit_exceeded"}\n' && !quotaSeen) {
+          quotaSeen = true;
+          onQuotaExceeded();
+        }
+        socket.end();
+      });
+    });
+    try {
+      await new Promise((resolveListen, rejectListen) => {
+        quotaServer.once('error', rejectListen);
+        quotaServer.listen(quotaSocket, resolveListen);
+      });
+    } catch (error) {
+      quotaServer.close();
+      await rm(quotaSocket, { force: true });
+      return earlyFailure('quota_signal_unavailable', { stage: 'preflight', cause: 'quota_signal_unavailable', error: errorRecord(error) });
+    }
+    childEnv.CURSOR_EVAL_QUOTA_SOCKET = quotaSocket;
+  }
+  const closeQuota = async () => {
+    for (const socket of quotaConnections) socket.destroy();
+    if (quotaServer) await new Promise((done) => quotaServer.close(done));
+    if (quotaSocket) await rm(quotaSocket, { force: true });
+  };
   let child;
   try { child = spawnProcess(process.execPath, args, { cwd: root, env: childEnv, stdio: ['ignore', 'ignore', 'pipe'], detached: true }); }
   catch (error) {
+    await closeQuota();
     return earlyFailure('spawn_error', { stage: 'spawn', cause: 'spawn_error', error: errorRecord(error) });
   }
   const stderr = createWriteStream(paths.stderr, { flags: 'wx' });
@@ -256,6 +299,7 @@ export async function runSupervisor({ laneName, tests = null, testNamePattern = 
   const onInterrupt = (signal) => { void stop(signal); };
   process.once('SIGINT', onInterrupt); process.once('SIGTERM', onInterrupt);
   const closed = await new Promise((resolveClose) => child.once('close', (code, signal) => resolveClose({ code, signal })));
+  await closeQuota();
   clearTimeout(deadline); if (killTimer) clearTimeout(killTimer); process.removeListener('SIGINT', onInterrupt); process.removeListener('SIGTERM', onInterrupt);
   let sourceDiagnostic = null;
   if (lane.coverage) {

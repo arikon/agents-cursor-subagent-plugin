@@ -18,8 +18,7 @@ const FORBIDDEN_MODEL_PROMPT_FRAGMENTS = Object.freeze([
   ...PUBLIC_MCP_TOOL_NAMES, 'after_event_id', 'after_progress_revision', 'resume_after_event_id',
   'last_event_id', 'timeout_ms', 'wait_timeout', 'events_lost', 'observation_gap',
   'history_reconstructed', 'evidence_scope', 'verification:unverifiable', 'unknown_request',
-  'turn_id', 'session_id', 'cursor_session_id', 'закрой runtime session',
-  'не повторяй операцию', 'не создавай замену', 'close the runtime session', 'do not retry',
+  'turn_id', 'session_id', 'cursor_session_id', 'close the runtime session', 'do not retry',
   'do not create a replacement',
 ]);
 
@@ -643,6 +642,7 @@ function comparableTrace(trace, expectedTrace = null) {
   const expected = expectedTrace === null ? null : comparableTrace(expectedTrace);
   return filtered.map((observation, index) => {
     const projected = traceProjection(observation);
+    if (['session.allocated', 'session.resumed'].includes(observation.kind) && !('model' in projected)) projected.model = 'auto';
     if (['session.allocated', 'session.resumed'].includes(observation.kind)
       && expected?.[index]?.kind === observation.kind) {
       if (!('effort' in expected[index])) delete projected.effort;
@@ -862,7 +862,17 @@ export function evaluateScenario(scenario, { trace = [], callbacks = [], effects
   const add = (code) => { if (!mismatches.includes(code)) mismatches.push(code); };
   if (!Array.isArray(trace) || !Array.isArray(callbacks) || !Array.isArray(effects)) throw new TypeError('oracle observations must be arrays');
   const reports = reportEvaluation(scenario, capturedFinals);
-  if (reports.invalid) {
+  const invalidProgressEvidence = transcript?.calls?.some(({ response }) => {
+    if (!response || !Object.hasOwn(response, 'progress_excerpt')) return false;
+    const progress = response.progress_excerpt;
+    return !(typeof progress?.text === 'string'
+      && Buffer.byteLength(progress.text, 'utf8') <= 8_000
+      && Buffer.from(progress.text, 'utf8').toString('utf8') === progress.text
+      && typeof progress.truncated === 'boolean'
+      && progress.text_bytes === Buffer.byteLength(progress.text, 'utf8')
+      && progress.text_sha256 === createHash('sha256').update(progress.text).digest('hex'));
+  });
+  if (reports.invalid || invalidProgressEvidence) {
     return {
       assertion_outcome: 'not_observed',
       actual_task_outcome: actualTaskOutcome ?? 'not_observed',
@@ -870,7 +880,7 @@ export function evaluateScenario(scenario, { trace = [], callbacks = [], effects
       eval_status: 'integration_failure',
       failure_stage: 'inspection',
       error_code: 'capture_invalid',
-      mismatches: ['invalid-report-evidence'],
+      mismatches: [reports.invalid ? 'invalid-report-evidence' : 'invalid-progress-evidence'],
       recovered_calls: [],
       components: {
         evidence_admission: 'fail', execution_trace: 'not_applicable', continuation_handoff: 'not_applicable',
@@ -996,13 +1006,32 @@ export function evaluateScenario(scenario, { trace = [], callbacks = [], effects
     }
   }
   if (effects.some(({ step_id: stepId }) => planned.get(stepId)?.type !== 'effect')) add('unexpected-effect');
+  // The hold fault exposes the first programmed terminal's progress in the
+  // first Codex turn, before the follow-up releases that same terminal.
+  if (scenario.harness_faults?.includes('hold-terminal-until-followup')) {
+    const expectedProgress = scenario.program.steps.find(({ type }) => type === 'terminal')?.progress_text;
+    const firstRange = transcript?.turn_call_ranges?.[0];
+    const calls = Array.isArray(transcript?.calls) ? transcript.calls : [];
+    const firstWait = firstRange?.start === 0 && Number.isSafeInteger(firstRange.end)
+      && firstRange.end > 0 && firstRange.end <= calls.length
+      ? calls.slice(0, firstRange.end).find(({ tool, response }) => tool === 'cursor_wait'
+        && response?.ok === true && response.wait_timeout === true) : null;
+    const progress = firstWait?.response?.progress_excerpt;
+    const validProgress = progress !== undefined && progress.text.length > 0;
+    if (!validProgress || progress.truncated || progress.text !== expectedProgress) add('progress-delivery-mismatch');
+    const progressReportRequired = scenario.report_checks?.some(({ turn_index, required_fragments }) => turn_index === 1
+      && required_fragments.some((fragment) => fragment === expectedProgress));
+    if (progressReportRequired && validProgress && !capturedFinals.find(({ turn_index }) => turn_index === 1)?.text.includes(progress.text)) {
+      add('progress-report-mismatch');
+    }
+  }
   if (actualTaskOutcome !== scenario.expected_actual_task_outcome) add('actual-outcome-mismatch');
-  const interactionFailed = reports.deliveryMissing
+  const interactionFailed = mismatches.includes('progress-report-mismatch') || reports.deliveryMissing
     || reports.diagnostics.some(({ category, matched }) => category === 'interaction' && !matched);
   if (interactionFailed) add('interaction-report-mismatch');
   const continuationCodes = new Set(['answer-before-pending', 'authority-mismatch', 'callback-mismatch', 'effect-callback-error', 'effect-callback-id-mismatch', 'id-mismatch', 'missing-callback', 'missing-effect-callback']);
   const continuationApplicable = scenario.followups.length > 0 || scenario.program.steps.some(({ type }) => type === 'pending');
-  const nonReportMismatches = mismatches.filter((code) => code !== 'interaction-report-mismatch');
+  const nonReportMismatches = mismatches.filter((code) => !['interaction-report-mismatch', 'progress-report-mismatch'].includes(code));
   return {
     assertion_outcome: mismatches.length === 0 ? 'pass' : 'fail',
     recovered_calls: recoveredCalls,

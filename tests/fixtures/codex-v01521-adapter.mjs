@@ -16,26 +16,38 @@ const [, , operation, raw] = process.argv;
 const request = JSON.parse(raw || '{}');
 
 async function runExecutable(command, args, { allowNonzero = false } = {}) {
+  const started = performance.now();
   const result = await new Promise((resolveRun) => {
     const child = spawn(command, args, { env: process.env, stdio: ['ignore', 'pipe', 'pipe'] });
     if (process.env.CURSOR_EVAL_ADAPTER_NESTED_PID_PATH) appendFileSync(process.env.CURSOR_EVAL_ADAPTER_NESTED_PID_PATH, `${child.pid}\n`);
     const stdout = []; const stderr = []; let bytes = 0; let killReason = null; let settled = false; let timer; let closeTimer;
+    const captured = () => ({ stdout: Buffer.concat(stdout).toString('utf8').trim(), stderr: Buffer.concat(stderr).toString('utf8').trim() });
     const finish = (value) => { if (!settled) { settled = true; clearTimeout(timer); clearTimeout(closeTimer); resolveRun(value); } };
     const killAndWait = (reason) => {
       if (killReason) return;
       killReason = reason; child.kill('SIGKILL');
-      closeTimer = setTimeout(() => finish({ code: null, stdout: '', stderr: '', closeTimeout: true, [reason]: true }), 1_000);
+      closeTimer = setTimeout(() => finish({ code: null, ...captured(), closeTimeout: true, [reason]: true }), 1_000);
     };
     for (const [stream, chunks] of [[child.stdout, stdout], [child.stderr, stderr]]) stream.on('data', (chunk) => {
       bytes += chunk.length;
       if (bytes > 1_048_576) killAndWait('overflow'); else chunks.push(chunk);
     });
     child.once('error', (error) => finish({ code: null, stdout: '', stderr: error.message }));
-    child.once('close', (code) => finish({ code, stdout: Buffer.concat(stdout).toString('utf8').trim(),
-      stderr: Buffer.concat(stderr).toString('utf8').trim(), timeout: killReason === 'timeout', overflow: killReason === 'overflow' }));
+    child.once('close', (code) => finish({ code, ...captured(), timeout: killReason === 'timeout', overflow: killReason === 'overflow' }));
     timer = setTimeout(() => killAndWait('timeout'), NESTED_COMMAND_TIMEOUT_MS);
   });
-  if (result.timeout) throw new Error(`nested command timed out (${args.join(' ')})`);
+  if (result.timeout) {
+    // Keep even JSON-escaped excerpts within the bootstrap's bounded error message.
+    // Capture only this command's output, never the inherited environment or request.
+    const diagnostic = { operation, timeout_ms: NESTED_COMMAND_TIMEOUT_MS, elapsed_ms: Math.round(performance.now() - started),
+      close_timeout: result.closeTimeout === true };
+    for (const [name, value, limit] of [['command', args.join(' '), 128], ['stdout', result.stdout, 512], ['stderr', result.stderr, 512]]) {
+      const bytes = Buffer.from(value);
+      diagnostic[name] = bytes.subarray(0, limit).toString('utf8');
+      diagnostic[`${name}_truncated`] = bytes.length > limit;
+    }
+    throw new Error(`nested command timed out; diagnostics=${JSON.stringify(diagnostic)}`);
+  }
   if (result.overflow) throw new Error(`nested command exceeded output limit (${args.join(' ')})`);
   if (result.closeTimeout) throw new Error(`nested command did not close after SIGKILL (${args.join(' ')})`);
   if (result.code !== 0 && !allowNonzero) throw new Error(`nested command failed (${args.join(' ')}): ${result.stderr}`);
@@ -102,7 +114,7 @@ async function main() {
     return { registrations: result.marketplaces.map(({ name, root }) => ({ id: name, path: root })) };
   }
   if (operation === 'plugin-list') {
-    const args = VERSION === 'codex-cli 0.153.4'
+    const args = ['codex-cli 0.153.4', 'codex-cli 0.154.0-alpha.6.2'].includes(VERSION)
       ? ['plugin', 'list', '--marketplace', ID, '--json']
       : ['plugin', 'list', '--json'];
     const result = await json(args);

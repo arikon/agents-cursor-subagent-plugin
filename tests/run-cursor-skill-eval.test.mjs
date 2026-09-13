@@ -452,7 +452,7 @@ test('harness returns validated child evidence and bounded diagnostics after a s
     readFile: async () => encodedChildResult('client-happy'),
   });
   assert.equal(result.failure, null);
-  assert.deepEqual(result.childResult, childResult('client-happy'));
+  assert.deepEqual(result.childResult, { ...childResult('client-happy'), projection_inputs: null });
   assert.equal(Buffer.byteLength(result.diagnostics, 'utf8') <= 8_000, true);
   assert.equal(result.diagnostics.includes('\uFFFD'), false);
 });
@@ -491,7 +491,7 @@ test('harness routes its configured test through the canonical Node supervisor',
     { artifactRoot: '/tmp/eval-artifacts', runSupervisor: async (value) => { invocation = value; return supervisorResult(); }, readFile: async () => encodedChildResult('client-happy') },
   );
   assert.equal(result.failure, null);
-  assert.deepEqual(result.childResult, childResult('client-happy'));
+  assert.deepEqual(result.childResult, { ...childResult('client-happy'), projection_inputs: null });
   assert.deepEqual({ laneName: invocation.laneName, tests: invocation.tests, testNamePattern: invocation.testNamePattern, artifactRoot: invocation.artifactRoot }, {
     laneName: 'eval', tests: ['tests/codex-client-integration.test.mjs'], testNamePattern: 'hosted Codex', artifactRoot: '/tmp/eval-artifacts',
   });
@@ -546,6 +546,37 @@ test('harness distinguishes generic child failure from a scenario-contract misma
     runSupervisor: async () => supervisorResult({ verdict: 'failed', terminal_cause: 'exit_nonzero', code: 1 }), readFile: async () => encodedChildResult('client-happy', { actual: 'failed', status: 'agent_behavior_mismatch' }),
   });
   assert.deepEqual([generic.failure, mismatch.failure], ['harness_failure', 'scenario_contract_mismatch']);
+});
+
+test('harness retains early quota when child result publication fails', async () => {
+  let notified = 0;
+  const result = await runHarness({ pattern: 'scenario', test: '/tmp/test.mjs' }, {
+    CURSOR_EVAL_CHILD_RESULT: '/tmp/missing.json', CURSOR_EVAL_SCENARIO_ID: 'model-question',
+  }, {
+    runSupervisor: async ({ onQuotaExceeded }) => {
+      onQuotaExceeded(); onQuotaExceeded();
+      return supervisorResult({ verdict: 'failed', terminal_cause: 'exit_nonzero', code: 1 });
+    },
+    readFile: async () => { throw new Error('publication failed'); },
+    notifyQuota: () => { notified += 1; },
+  });
+  assert.equal(notified, 1);
+  assert.equal(result.failure, 'usage_limit_exceeded');
+});
+
+test('harness propagates structured quota before cleanup failure classification', async () => {
+  for (const cleanup of ['succeeded', 'failed']) {
+    let notified = 0;
+    const result = await runHarness({ pattern: 'scenario', test: '/tmp/test.mjs' }, {
+      CURSOR_EVAL_CHILD_RESULT: '/tmp/result.json', CURSOR_EVAL_SCENARIO_ID: 'model-question',
+    }, {
+      runSupervisor: async () => supervisorResult({ verdict: 'failed', terminal_cause: 'exit_nonzero', code: 1 }),
+      readFile: async () => JSON.stringify({ schema_version: 1, scenario_id: 'model-question', error_code: 'usage_limit_exceeded', cleanup_status: cleanup }),
+      notifyQuota: () => { notified += 1; },
+    });
+    assert.equal(notified, 1);
+    assert.equal(result.failure, cleanup === 'failed' ? 'cleanup_failed' : 'usage_limit_exceeded');
+  }
 });
 
 test('harness preserves a hosted turn interruption instead of reporting invalid child JSON', async () => {

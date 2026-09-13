@@ -58,7 +58,14 @@ const observedCallbacksFor = (scenario) => scenario.program.steps.flatMap((step)
   if (step.type === 'pending' || step.type === 'effect') return [{ step_id: step.step_id, callback_id: step.callback_id, ...step.expected_callback }];
   return [];
 });
-const transcriptFor = (scenario) => !scenario.harness_faults?.includes('lose-terminal-wait-response-once') ? transcript : {
+const transcriptFor = (scenario) => scenario.harness_faults?.includes('hold-terminal-until-followup') ? {
+  calls: [{ tool: 'cursor_wait', response: { ok: true, wait_timeout: true, progress_excerpt: {
+    text: scenario.program.steps.find((step) => step.progress_text !== undefined).progress_text,
+    truncated: false,
+    text_bytes: Buffer.byteLength(scenario.program.steps.find((step) => step.progress_text !== undefined).progress_text),
+    text_sha256: createHash('sha256').update(scenario.program.steps.find((step) => step.progress_text !== undefined).progress_text).digest('hex'),
+  } } }], dropped_calls: 0, unexpected_input_requests: 0, turn_call_ranges: [{ start: 0, end: 1 }, { start: 1, end: 1 }],
+} : !scenario.harness_faults?.includes('lose-terminal-wait-response-once') ? transcript : {
   calls: [
     { tool: 'cursor_delegate', response: { ok: true, session_id: 'S', turn_id: 'T' } },
     { tool: 'cursor_wait', request: lossWaitRequest, response: { ok: false, error_code: 'eval_wait_response_lost', message: 'cursor_wait response unavailable' }, withheld_response: lossWaitResponse },

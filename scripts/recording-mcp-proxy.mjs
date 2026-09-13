@@ -65,6 +65,30 @@ function compactBoundedText(value) {
     || typeof value.truncated !== 'boolean') return null;
   return { text: value.text, truncated: value.truncated };
 }
+function compactValidationReason(message) {
+  // Project the runtime's returned diagnosis, never infer it from arguments.
+  // Dynamic unknown argument/tool names can contain user text and are omitted.
+  if (typeof message !== 'string') return { source: 'tool_error', violation: 'unrecognized' };
+  const field = /^(missing argument: |invalid )(cwd|mode|cursor_session_id|session_id|turn_id|request_id|prompt|model|effort|fast|optimize_for|timeout_ms|question_id|selected_option_id)$/.exec(message);
+  if (field) return { source: 'tool_error', violation: field[1] === 'missing argument: ' ? 'missing_argument' : 'invalid_field', field: field[2] };
+  if (message.startsWith('unknown argument: ')) return { source: 'tool_error', violation: 'unknown_argument' };
+  if (message.startsWith('unknown tool: ')) return { source: 'tool_error', violation: 'unknown_tool' };
+  const known = {
+    'arguments must be an object': ['invalid_arguments_object'],
+    'arguments must be JSON-serializable': ['non_json_arguments'],
+    'aggregate arguments limit exceeded': ['arguments_limit'],
+    'invalid mode: ask|plan|agent': ['invalid_field', 'mode'],
+    'cwd must be an absolute string': ['absolute_path_required', 'cwd'],
+    'plugin_dir must be an absolute string': ['absolute_path_required', 'plugin_dirs'],
+    'plugin_dirs must be a nonempty array': ['nonempty_array_required', 'plugin_dirs'],
+    'invalid effort token': ['invalid_token', 'effort'],
+    'model must not contain parameter brackets': ['parameter_brackets', 'model'],
+    'auto-smart requires explicit optimize_for; other models forbid it': ['model_optimization_constraint'],
+    'default model policy does not accept model parameters': ['default_model_parameters'],
+  };
+  const reason = Object.hasOwn(known, message) ? known[message] : null;
+  return { source: 'tool_error', violation: reason?.[0] || 'unrecognized', ...(reason?.[1] ? { field: reason[1] } : {}) };
+}
 function compactRequest(tool, args) {
   let argumentsDigest = null;
   if (isPlainObject(args)) {
@@ -75,6 +99,10 @@ function compactRequest(tool, args) {
   const request = compactIds(args);
   if (argumentsDigest !== null) request.arguments_without_session_turn_sha256 = argumentsDigest;
   if ((tool === 'cursor_delegate' || tool === 'cursor_set_mode') && boundedId(args?.mode) !== null) request.mode = args.mode;
+  if (tool === 'cursor_delegate' && typeof args?.cwd === 'string') {
+    request.cwd_sha256 = createHash('sha256').update(args.cwd).digest('hex');
+  }
+  if (tool === 'cursor_resume_session' && ['ask', 'plan', 'agent'].includes(args?.mode)) request.mode = args.mode;
   if (tool === 'cursor_delegate' || tool === 'cursor_resume_session') {
     if (boundedId(args?.model) !== null) request.model = args.model;
     if (boundedId(args?.effort) !== null) request.effort = args.effort;
@@ -140,6 +168,7 @@ function compactResponse(message, entry) {
     if (boundedId(payload.effort) !== null) response.effort = payload.effort;
     if (typeof payload.fast === 'boolean') response.fast = payload.fast;
     for (const key of ['session_state', 'turn_status', 'error_code', 'failure_kind']) if (boundedId(payload[key]) !== null) response[key] = payload[key];
+    if (message.result?.isError === true && payload.error_code === 'invalid_args') response.validation_reason = compactValidationReason(payload.message);
     if (payload.error_code === 'eval_wait_response_lost' && payload.message === 'cursor_wait response unavailable') response.message = payload.message;
     const providerMessage = compactBoundedText(payload.provider_error?.message);
     if (Number.isSafeInteger(payload.provider_error?.code) && providerMessage) {
@@ -149,6 +178,8 @@ function compactResponse(message, entry) {
     if (terminalReason) response.terminal_reason = terminalReason;
     if (Number.isSafeInteger(payload.last_event_id)) response.last_event_id = payload.last_event_id;
     if (typeof payload.wait_timeout === 'boolean') response.wait_timeout = payload.wait_timeout;
+    const progress = compactBoundedText(payload.progress_excerpt);
+    if (progress) response.progress_excerpt = { ...progress, ...compactResult(progress) };
     if (Object.hasOwn(payload, 'active_turn')) response.active_turn_present = payload.active_turn !== null;
     if (Array.isArray(payload.pending)) response.pending = compactPending(payload.pending);
     if (typeof payload.result?.text === 'string') response.result = compactResult(payload.result);

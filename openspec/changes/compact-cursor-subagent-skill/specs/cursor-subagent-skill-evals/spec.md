@@ -100,7 +100,7 @@ Manifest MUST описывать реально использованные
 байты каждого child, а не только digest исходников до/после matrix. Drift любого
 входа делает acceptance непригодной. Число repeats и условие reproducibly green
 имеют единственного owner в `AGENTS.md`; counts выводятся из admitted corpus.
-Results разных runs MUST NOT собираться в одну зелёную серию. Исторические
+Results из отдельно выбранных series MUST NOT собираться в одну зелёную серию. До первого child matrix сохраняет declaration выбранных candidate, corpus, model/effort, serial count, concurrency и режима остановки. Pause после первого успешного полного run и resume допустимы только внутри этой же declaration с проверкой неизменности inputs, settings и всей сохранённой истории; failed series не возобновляется ради отбора успешных runs. Исторические
 retry-containing artifacts сохраняют все attempts, но не принимаются как
 доказательство нового acceptance policy.
 
@@ -112,6 +112,8 @@ Markdown summary и JSON index MUST отражать один и тот же п�
 старые descriptive snapshots не подменяются новым acceptance verdict и не
 выдаются за current evidence. Bundle не требует нового runtime registry или
 external storage service. Supervisor остаётся owner process/cleanup mechanics.
+
+Scenario evidence для successful и failed evaluation MUST сохранять exact materialized scenario и достаточные normalized observations, фактически переданные pure oracle, в существующих bounds publication. Transcript и captured finals сохраняют своих прежних owners; replay связывает эти данные с manifest и исходными artifact hashes. Отсутствующий или повреждённый replay input не восстанавливается из ожидаемого результата и не проходит replay admission. Raw credentials, environment dumps и произвольные model payloads не входят в этот capture. Legacy artifacts остаются immutable и могут быть признаны недостаточными для replay.
 
 Новый frozen input manifest MUST связать owner proof без второй source schema:
 `coverage_sources_digest` exact равен `coverage.sources.digest`, а mandatory
@@ -128,9 +130,9 @@ bindings не вводят all-lane source snapshot или registry.
 <mediumserial3.json> --coverage-audit <zero-counter-audit.json> --baseline
 <existingbaseline.json> --report <existingMarkdown.md> --tasks <tasks.md>
 --output <acceptance-bundle-root/closeout-proof.json> [--task-ids <id,id,...>]` MUST быть единственным deterministic closeout
-consumer. Он принимает один frozen input manifest, ровно один successful high
-diagnostic run, одну high series из трёх serial runs, одну medium series из трёх
-serial runs и один current successful coverage audit. До любой target mutation
+consumer. Он принимает один frozen input manifest, successful high
+diagnostic, одну high series из трёх serial runs, одну medium series из трёх
+serial runs и один current successful coverage audit. Для новой серии `--diagnostic` указывает на тот же matrix, что `--high`: diagnostic выводится из её первого serial run после проверки полной matrix и ссылается на тот же hash. Отдельный исторический serial=1 diagnostic поддерживается. Incomplete aggregate или run summary MUST отклоняться; общий diagnostic не создаёт четвёртый trial. До любой target mutation
 он MUST проверить один candidate во всех current eval inputs; явно одобренный
 historical high reference ниже проверяется против собственных inputs. Exact corpus-owned
 scenario-ID set без duplicates или omissions и admitted-corpus counts в каждом
@@ -236,3 +238,111 @@ workflow engine/registry и не выдаёт critic или architect approval.
 #### Scenario: Некорректные task IDs не публикуют closeout
 - **WHEN** выбранный список пуст, содержит дубли или некорректный ID, либо anchor отсутствует или встречается несколько раз
 - **THEN** validation завершается до изменения proof, baseline, report и tasks
+
+### Requirement: Cost-aware execution policy
+Corpus admission, canonical materialization, pure-oracle evaluation всех
+`programmed` rows и reference/selection/result/evidence plumbing единственного
+`package-canary-reference` MUST выполняться одним top-level table-driven unit
+test. Test body MUST иметь finite runaway bound, который MUST NOT трактоваться
+как standalone wall-clock SLO. Количества admission/materialization/oracle MUST вычисляться из
+admitted corpus; fixed row/programmed counts и полный scenario-ID allowlist вне
+corpus запрещены. Pure oracle MUST NOT вызываться для package reference.
+
+Одна side-effect-free scenario-contract module surface MUST предоставлять pure
+admission, materialization и oracle functions; imports MUST не создавать
+child process, сеть или credentials. Table-driven test вызывает только эти pure
+operations, без runner/harness и process-per-scenario. Real-Codex
+client-integration, hosted-model и full-live runs остаются отдельными foreground
+commands и не входят в unit coverage как scenario executions. Owner
+`node-test-supervision` MAY предоставлять dedicated `eval` lane и focused
+selection для этих explicit opt-in commands; eval capability не дублирует его
+process lifecycle, result artifacts или lane schema. Supervisor mapping
+проверяется cheap injected spawn/env contract test без вложенного `unit` или
+`coverage`. Полные foreground `unit` и `coverage` выполняются по одному разу в
+acceptance; duration и scenario count MAY быть только TAP diagnostics.
+
+Новые или изменённые eval/driver tests с реальным filesystem/process I/O MUST
+использовать per-test `mkdtemp` и не разделять mutable state между files;
+no-I/O contract tests MAY использовать inert injected path strings. Такие
+eval/driver tests MUST NOT изменять shared `process.env`.
+
+До candidate freeze MUST пройти детерминированная проверка изменённого oracle на
+admitted corpus и сохранённых report examples вместе с targeted focused
+reproductions. После freeze первый полный run заранее объявленной series служит hosted diagnostic выбранной конфигурации и засчитывается в baseline по `AGENTS.md`. Его reports/traces MUST быть проверены до продолжения той же series; самостоятельный successful diagnostic не переносится задним числом в другую series.
+После baseline failure следующий запуск MUST иметь конкретную проверяемую
+гипотезу и соответствующее изменение либо подтверждённое восстановление
+инфраструктуры; повторять behavior trials только ради удачного pass запрещено.
+Если новый дефект не локализован, публикуется непринятый результат с evidence,
+а не очередное обещание «финального» прогона. После обычного failure matrix завершает текущий full run, затем не запускает следующие serial runs и сохраняет incomplete aggregate с причиной и числом незапущенных scenarios. Режим полного распределения MUST выбираться до execution; он сохраняет обычные failures и выполняет оставшиеся runs. Подтверждённая quota-stop ветка ниже останавливает оба режима немедленно.
+
+Matrix MUST NOT автоматически повторять scenario после failure любого класса.
+Каждый запланированный scenario в serial run имеет одну попытку; любой non-pass
+делает этот run непринятым. После подтверждённого восстановления инфраструктуры
+или repair допускается новая отдельно объявленная series через её первый diagnostic run; предыдущий failed run остаётся историческим evidence.
+Перед новым hosted запуском для oracle/capture-only изменения MUST проверяться возможность deterministic replay. Replay MUST связывать исходные hashed artifacts, исходную trial identity и новый evaluator digest, не изменять исходный verdict и не выдаваться за новый independent run. Требуются достаточные исходные observations и подтверждённо неизменные model-facing inputs/materialized scenario по «Immutable evidence manifest»; отсутствие данных, skill/runtime/adapter drift или невозможность доказать equivalence дают `fresh_hosted_required`. Expected fixture output не восстанавливает отсутствующий capture. Derived diagnostic artifact сохраняет все исходные scenarios, в том числе ineligible/failed, и не публикует принятый baseline. Новый
+baseline требует high и medium three-run series frozen candidate,
+кроме явно одобренного historical high reference из «Immutable evidence manifest».
+
+Candidate provenance и долговечное хранение определены в «Immutable evidence
+manifest»; этот execution policy использует тот же manifest без второй схемы.
+После review первого diagnostic run high three-run series (свежая либо указанный
+historical reference) и свежая medium three-run series являются независимыми
+gates. По явному указанию пользователя fresh high и current medium MAY
+выполняться параллельно на одном frozen candidate; внутри каждой конфигурации
+три runs остаются serial. Historical reference проверяется против собственных
+inputs и не является текущим запуском; его validation MAY перекрываться с medium.
+Только после них deterministic finalizer из
+того же owner requirement может выполнить closeout; он не повторяет runs и не
+создаёт отдельный approval gate.
+
+#### Scenario: Изменение oracle обесценивает прежний acceptance
+- **WHEN** oracle или capture изменены при прежних skill и corpus
+- **THEN** прежние counts остаются историческим evidence; replay проверяет полный capture и неизменность model-facing inputs, сохраняет derived verdict либо причину `fresh_hosted_required`, не создавая нового hosted trial
+
+#### Scenario: Diagnostic является первым run объявленной series
+- **WHEN** первый полный run заранее объявленной baseline series проходит review
+- **THEN** продолжение проверяет declaration и сохранённые inputs/history, выполняет только оставшиеся runs; отдельные успешные series не объединяются
+
+#### Scenario: Обычный failure экономит последующие runs
+- **WHEN** полный run default acceptance series содержит non-pass
+- **THEN** следующие serial runs не запускаются, aggregate остаётся incomplete; заранее выбранный distribution mode сохраняет полное распределение, но также прекращается при quota
+
+#### Scenario: Пользователь сохраняет ранее принятый high как reference
+- **WHEN** пользователь явно сохраняет historical high по
+  «Immutable evidence manifest» после изменения candidate
+- **THEN** исходные high artifacts проверяются против собственных inputs,
+  verdicts остаются неизменными и обозначаются `preserved-reference` без
+  применимости к текущему candidate; diagnostic и medium проходят свежие runs
+
+#### Scenario: Неудачная диагностика не запускает цикл baseline
+- **WHEN** полный diagnostic run содержит mismatch
+- **THEN** причина и проверенный report сохраняются для targeted repair;
+  baseline не начинается до устранения диагностированного нарушения
+
+#### Scenario: Corpus проверяется дешёвым динамическим слоем
+- **WHEN** выполняется unit contract test
+- **THEN** один table-driven test принимает и материализует каждый admitted
+  row, оценивает oracle-ом каждый programmed row и проверяет plumbing одной
+  package reference без runner/harness, fixed counts и process-per-scenario
+
+#### Scenario: Exact-seven corpus проверяется дешёвым слоем
+- **WHEN** legacy scenario name проверяется после расширения corpus
+- **THEN** `Exact-seven` трактуется только как сохранённое имя scenario, а test
+  выводит все counts из admitted corpus и не требует legacy cardinality
+
+#### Scenario: Hosted scenario не включён явно
+- **WHEN** запускается обычный unit или coverage lane без hosted/live opt-in
+- **THEN** cheap contract подтверждает command mapping без запуска real-Codex,
+  hosted-model или full-live process
+
+При подтверждённом structured hosted `usageLimitExceeded` вся текущая acceptance MUST остановиться: matrix не начинает новые scenarios/serial runs, suite не начинает другие configurations и останавливает свои уже запущенные evaluations через существующий cleanup path. Неподтверждённый текст prompt/report/stderr MUST NOT служить quota signal. Quota signal MUST сохраняться даже при отдельной cleanup/publication failure; прежний приоритет ошибок cleanup не ослабляется.
+
+После quota matrix и suite MUST дождаться завершения собственных children, сохранить доступные evidence и атомарно опубликовать явно неполный non-passing aggregate. Незапущенные scenarios MUST NOT становиться фиктивными attempts или PASS; успешное подмножество MUST NOT считаться полным baseline. Остановка не затрагивает unrelated processes. Автоматический fallback на другую model/effort и автоматический retry запрещены. Возобновление требует подтверждённого восстановления квоты либо нового явного решения пользователя; старый partial run остаётся неизменным.
+
+#### Scenario: Quota stops acceptance across configurations
+- **WHEN** owned hosted evaluation returns confirmed usageLimitExceeded while sibling evaluations are running or queued
+- **THEN** no further scenario, serial run or configuration starts, owned running children finish cleanup, and completed evidence is retained in an explicitly incomplete failed aggregate
+
+#### Scenario: Other failures preserve the full series
+- **WHEN** a scenario fails without confirmed quota
+- **THEN** the existing one-attempt policy and planned series continue without automatic retry
