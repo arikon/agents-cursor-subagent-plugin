@@ -20,11 +20,10 @@ diagnostic и всеми тремя приёмочными runs; initial/final d
 
 Проверены все 730 индексированных артефактов, точный набор из 26 сценариев в
 каждом run, supervisor exit 0, полные final captures, отсутствие потери
-transcript, публикация evidence и успешный cleanup.
+transcript и успешный cleanup. Детальные evidence-артефакты остаются локальными
+и не входят в релиз.
 
-- [JSON baseline с хешированными ссылками](cursor-skill-eval-baseline-gpt-6-astra-low-2026-09-07.json)
-- [Полный результат приёмки](evidence/astra-low-acceptance-2026-09-07/acceptance/low.json)
-- [Проверка целостности evidence](evidence/astra-low-acceptance-2026-09-07/verification.json)
+- [JSON baseline](cursor-skill-eval-baseline-gpt-6-astra-low-2026-09-07.json)
 - [План матрицы: восемь конфигураций](cursor-skill-eval-matrix.plan.v1.json)
 
 Baseline относится к механике, evidence, восстановлению после ошибок и точной

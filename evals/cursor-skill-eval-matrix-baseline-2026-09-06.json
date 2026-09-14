@@ -426,12 +426,10 @@
       }
     },
     "matrix": {
-      "path": "evals/evidence/iux-acceptance-2026-09-07/acceptance-05/high.json",
       "bytes": 238341,
       "sha256": "bca278d07f9cae4791dbb479762fc1e1310ab4e0303b272517a80aa5691a4f0a"
     },
     "freeze": {
-      "path": "evals/evidence/iux-acceptance-2026-09-07/candidate/frozen-inputs-19.json",
       "bytes": 7060,
       "sha256": "dc4b11415af613c8d4fd677124724d720363aa10ff47c951ea2d81232a7470b3"
     },

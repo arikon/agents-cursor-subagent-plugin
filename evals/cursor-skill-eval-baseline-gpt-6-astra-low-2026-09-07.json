@@ -67,12 +67,10 @@
   },
   "inputs": {
     "freeze": {
-      "path": "evidence/astra-low-acceptance-2026-09-07/frozen-inputs.json",
       "bytes": 6468,
       "sha256": "41d9a68514282a599dccf3e3e7e224454916150858e74a97a7072c4a77ac225e"
     },
     "model_support": {
-      "path": "evidence/astra-low-acceptance-2026-09-07/model-support.json",
       "bytes": 2265,
       "sha256": "4c65672f7bb9a54d5bfde58485c5667dc5aaec4838bb422e38d8c885c436bfb2"
     },
@@ -85,12 +83,10 @@
   "diagnostic": {
     "kind": "diagnostic",
     "ref": {
-      "path": "evidence/astra-low-acceptance-2026-09-07/diagnostic/low.json",
       "bytes": 80278,
       "sha256": "e8d9befbf0add8ca6bee8e866726036be6cf1eedd2353c2e8ee9df4453336b2d"
     },
     "candidate": {
-      "path": "evidence/astra-low-acceptance-2026-09-07/diagnostic/low.json.artifacts/candidate.json",
       "bytes": 6268,
       "sha256": "e2d54b0f5953356034cd9b4ddff2b8a09caf1c81cb18fa151f1393e4e1f4318d"
     },
@@ -127,12 +123,10 @@
   "acceptance": {
     "kind": "acceptance",
     "ref": {
-      "path": "evidence/astra-low-acceptance-2026-09-07/acceptance/low.json",
       "bytes": 237464,
       "sha256": "cb63a8da367173739e5c68d1c434bb3c143d26eacc589e36ad3781b32bc6c851"
     },
     "candidate": {
-      "path": "evidence/astra-low-acceptance-2026-09-07/acceptance/low.json.artifacts/candidate.json",
       "bytes": 6268,
       "sha256": "e2d54b0f5953356034cd9b4ddff2b8a09caf1c81cb18fa151f1393e4e1f4318d"
     },
@@ -199,12 +193,10 @@
     "indexed_artifacts": 547
   },
   "verification": {
-    "path": "evidence/astra-low-acceptance-2026-09-07/verification.json",
     "bytes": 3929,
     "sha256": "73c008274e60c2b078905628d13a0e155bb071e56b4a945a1a6a4d5c9d8d2a81"
   },
   "coverage": {
-    "path": "evidence/iux-acceptance-2026-09-07/verification/candidate-22/coverage-accepted/zero-counter-audit.json",
     "bytes": 70477,
     "sha256": "d489b9880a02a77311ceee74c66e838ff8f2c5b9d886fa1af51167248bbf3bba"
   },

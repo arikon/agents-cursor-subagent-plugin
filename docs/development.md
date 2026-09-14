@@ -93,6 +93,8 @@ To migrate to version `X.Y.Z`:
    ```
 
 5. Run the authenticated model lane in its isolated temporary `CODEX_HOME`.
+   `evals/evidence/` is local and gitignored: retain detailed artifacts there,
+   but do not commit or release them.
    Acceptance requires `gpt-5.6-terra` at both `high` and `medium`. First run a
    diagnostic matrix, then three serial runs per configuration on the same
    unchanged candidate. Use a new durable output directory for each invocation:
