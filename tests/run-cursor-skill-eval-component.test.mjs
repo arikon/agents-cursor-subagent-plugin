@@ -310,6 +310,7 @@ test('corpus-owned scenario inventory, materialization and pure oracle stay in o
     (_candidate, scenario) => { scenario.harness_faults = ['unknown-fault']; },
     (_candidate, scenario) => { scenario.harness_faults = ['inject-stale-question-once', 'inject-stale-question-once']; },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-plan').harness_faults = ['inject-stale-question-once']; },
+    (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-long-result').program.steps.find(({ type }) => type === 'terminal').result_text = 'L'.repeat(10_002); },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-plan').initial_input += ' cursor_wait'; },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-plan').followups[0].input += ' close the runtime session'; },
     (candidate) => { candidate.scenarios.find(({ scenario_id: scenarioId }) => scenarioId === 'model-file-review').harness_faults = ['exit-after-result']; },
@@ -629,11 +630,11 @@ test('interaction and continuation components remain mechanical while prose sema
   assert.equal(questionCaptures[1].text.includes('session_id'), false, 'valid continuation does not require IDs in final prose');
 });
 
-test('long-result corpus rows keep the exact preview boundary and overflow recovery contract', () => {
+test('long-result corpus rows keep a post-coalescing continuation and overflow recovery contract', () => {
   const long = scenarioById.get('model-long-result');
   const terminal = long.program.steps.find(({ type }) => type === 'terminal');
   assert.equal(Buffer.byteLength(terminal.progress_text, 'utf8'), 512);
-  assert.equal(Buffer.byteLength(terminal.result_text, 'utf8'), 8_000);
+  assert.equal(Buffer.byteLength(terminal.result_text, 'utf8'), 10_001);
   assert.equal(terminal.result_text.endsWith('LONG_REVIEW_OK'), true);
   assert.equal(long.expected_trace.some(({ kind, complete }) => kind === 'turn.result-read' && complete === true), true);
 

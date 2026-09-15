@@ -25,6 +25,7 @@ const EXPECTED_TOOLS = [
 ];
 const MARKER_BYTES = 'CURSOR_AGENT_E2E_OK\n';
 const RELEASE_PROCESS_LIMITS = Object.freeze({ timeoutMs: 10_000, outputBytes: 1_048_576 });
+const COALESCED_PACKAGE_RESULT = `${'P'.repeat(8_336)} PACKAGE_RESULT`;
 const MANAGED_PLUGIN_ID = 'agents-cursor-subagent-plugin';
 const SHA256 = /^[0-9a-f]{64}$/;
 // Immutable evidence owner for the actual pre-SW runtime/skill pair, not a schema mock.
@@ -448,7 +449,8 @@ test('installed runtime and skill cross close/restart upgrade and rollback bound
     await copyPayload(layout.source, sourceRoot);
     const current = generation === 'current';
     const client = await installAndDiscover(layout, { node: executable, codex: executable, agent: executable },
-      [executable, fakeAdapter], env, { ...runtimeEnv, FAKE_ACP_HOLD_PROMPT: current ? undefined : '1' },
+      [executable, fakeAdapter], env, { ...runtimeEnv, FAKE_ACP_HOLD_PROMPT: current ? undefined : '1',
+        FAKE_ACP_RESULT: current ? COALESCED_PACKAGE_RESULT : undefined },
       generation === 'previous' ? 'install' : 'update');
     t.after(() => client.close());
     const tools = (await client.request('tools/list')).result.tools;
@@ -487,6 +489,15 @@ test('installed runtime and skill cross close/restart upgrade and rollback bound
       assert.deepEqual(recovered, client.withheldTerminal);
       assert.equal(recovered.turn_status, 'completed');
       assert.equal(recovered.session_id, turn.session_id); assert.equal(recovered.turn_id, turn.turn_id);
+      assert.equal(Object.hasOwn(recovered, 'result'), false);
+      assert.equal(recovered.result_page?.offset, 0);
+      assert.equal(recovered.result_page?.eof, true);
+      assert.equal(recovered.result_page?.text, COALESCED_PACKAGE_RESULT);
+      assert.equal(recovered.result_page?.total_bytes, Buffer.byteLength(COALESCED_PACKAGE_RESULT));
+      assert.equal(recovered.terminal_receipt?.result_truncated, true);
+      assert.deepEqual(await client.tool('cursor_read_result', {
+        session_id: turn.session_id, turn_id: turn.turn_id, offset: 0,
+      }), recovered.result_page);
     } else {
       const status = await client.tool('cursor_session_status', { session_id: turn.session_id });
       assert.equal(status.active_turn?.turn_status, 'running', 'old installed delegation remains active before close');

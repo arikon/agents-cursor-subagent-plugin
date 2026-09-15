@@ -132,8 +132,9 @@ is `{turn_id,turn_status,result:null|BoundedText,terminal_reason:null|BoundedTex
 `BoundedText` is `{text:string,truncated:boolean}`. Public input larger than 64 000
 UTF-8 bytes is rejected before allocation; Cursor/OS-derived result, reason and
 context text use the derived-text bound only through `BoundedText`.
-For a completed result this is a preview; full text is retained separately
-under «Полное чтение terminal result».
+For a completed TurnSnapshot result this remains a diagnostic preview; full text is retained separately
+under «Полное чтение terminal result». Terminal wait uses ResultPage as specified below;
+the derived-text BoundedText limit does not bound ResultPage.
 `PendingRequest` is `{request_id,kind,context}`. `context` is a bounded discriminated
 union: question `{title:null|BoundedText,questions:Question[]}`, plan
 `{title:null|BoundedText,body:BoundedText}`, permission
@@ -169,8 +170,13 @@ v1 scope; bounded pending context and terminal/result fields are the diagnostics
 `session_id,turn_id,turn_status,session_state,wait_timeout,pending`.
 `pending` содержит все актуальные normalized `PendingRequest` этого хода,
 включая bounded context, или пустой массив. Для terminal turn envelope MUST
-содержать `result:null|BoundedText`, `terminal_reason:null|BoundedText` и
-`terminal_receipt`; retained `provider_error` добавляется при наличии.
+содержать `result_page:null|ResultPage`, `terminal_reason:null|BoundedText` и
+`terminal_receipt`; retained `provider_error` добавляется при наличии. Поле
+`result` в WaitStateEnvelope MUST отсутствовать. Ненулевой result_page MUST
+содержать первую страницу адресованного turn по RP-2, с session_id/turn_id,
+совпадающими с envelope. При отсутствии terminal result result_page MUST быть
+null; это не пустой успешный результат. На nonterminal ветках result_page MUST
+отсутствовать.
 Для running turn на timeout `progress_excerpt` MUST присутствовать ровно тогда,
 когда сохранён непустой accepted agent text, и содержит текущий bounded excerpt
 по «Sparse wait and bounded progress». До первого такого текста и на остальных
@@ -198,15 +204,20 @@ remain bootstrap `SessionEnvelope` results.
 Every terminal `cursor_wait`, `cursor_cancel`, and
 `cursor_close_session` result MUST additionally contain `terminal_receipt` when a retained terminal turn exists.
 It is `{session_id,turn_id,turn_status,last_event_id,result_sha256:null|string,
-result_truncated:boolean}`. The hash is SHA-256 of the exact bounded public result
-text; it is `null` only when the terminal result is `null`. `last_event_id` is
+result_truncated:boolean}`. The hash remains SHA-256 of the exact bounded diagnostic preview
+text, including its existing truncation suffix; it is `null` only when the terminal result is `null`.
+`result_truncated` continues to describe that preview. Neither field describes
+ResultPage bytes, EOF or the full-result digest; consumers MUST NOT substitute
+the page/full digest for the preview digest. A complete first page may coexist
+with `result_truncated:true`. `last_event_id` is
 captured after the turn's terminal result event and the complete receipt MUST
 remain immutable while later turns add session events. Receipt creation MUST
 NOT read Cursor-private persistent stores or write a new persistent registry.
-Каждый terminal `cursor_wait` SHALL возвращать retained bounded result,
+Каждый terminal `cursor_wait` SHALL возвращать первую retained страницу или null,
 reason и immutable receipt независимо от предыдущих или параллельных reads.
 Mutation acknowledgements сохраняют compact receipt без повторной передачи result.
-Полный retained text остаётся доступен через `cursor_read_result`.
+Диагностический TurnSnapshot сохраняет прежний preview; wait MUST NOT дополнительно
+передавать его текст. Полный retained text остаётся доступен через `cursor_read_result`.
 `ResultPage` is the closed object
 `{session_id,turn_id,offset,next_offset,eof,text,total_bytes,sha256}`. Offsets
 and total are nonnegative safe integers in UTF-8 bytes; `offset` defaults to
@@ -279,6 +290,14 @@ State changes emit their stated event after storing the snapshot; eviction emits
   needed for the next workflow step; only delegate includes its one-time model
   bootstrap, and full snapshots remain available through explicit status
 
+#### Scenario: Первая страница вместо preview
+- **WHEN** caller получает terminal wait с непустым retained result
+- **THEN** envelope содержит один result_page по RP-2, без result/дублирующего preview; immutable receipt сохраняет прежний смысл независимо от EOF страницы
+
+#### Scenario: Пустой и отсутствующий результат
+- **WHEN** terminal outcome содержит пустой успешный текст либо не содержит результата
+- **THEN** wait возвращает соответственно пустую EOF-страницу по RP-2 либо result_page:null; это разные outcomes
+
 ### Requirement: Turn operations и permission options
 `prompt`, `answer` и `cursor_cancel(session_id, turn_id)` MUST адресоваться IDs
 и применять state-machine requirement. Pending permission хранит bounded adapter
@@ -328,7 +347,7 @@ errors до создания waiter/timer или provider effect. Допусти
 
 #### Scenario: Повторное ожидание terminal turn
 - **WHEN** caller повторяет wait после потери terminal response, пока turn retained
-- **THEN** result, reason и receipt доступны повторно для каждого terminal outcome
+- **THEN** result_page (включая null), reason и receipt доступны повторно для каждого terminal outcome по RP-1, без учёта предыдущей доставки
 
 #### Scenario: Два читателя
 - **WHEN** два admitted wait одновременно наблюдают retained turn
@@ -353,7 +372,7 @@ errors до создания waiter/timer или provider effect. Допусти
 
 #### Scenario: Ход Cursor завершился
 - **WHEN** ожидаемый ход успешно заканчивается
-- **THEN** wait возвращает completed snapshot с result и receipt, не завершая live session
+- **THEN** wait возвращает completed snapshot с result_page и receipt по RP-1, не завершая live session
 
 #### Scenario: Deadline хода превышен
 - **WHEN** runtime terminalizes ход по его execution deadline
@@ -363,6 +382,9 @@ errors до создания waiter/timer или provider effect. Допусти
 - **WHEN** ID больше не принадлежит активному или retained terminal turn
 - **THEN** новый wait получает `unknown_turn` и не затрагивает следующий ход
 
+#### Scenario: Принятый wait сохраняет страницу своего turn
+- **WHEN** принятый wait завершается после terminality, а более новый turn уже стал retained last terminal
+- **THEN** этот wait возвращает страницу своего захваченного turn; новый read прежнего turn получает существующий unknown_turn без переноса страницы нового turn
 ### Requirement: Изолированное состояние ходов и событий
 Сервер SHALL реализовать turn isolation и события согласно единой машине
 состояний. Все answer operations MUST проверять `session_id`, `turn_id`,
@@ -453,7 +475,8 @@ Runtime MUST применять следующую таблицу.
 | events | 256 | FIFO: lowest `event_id` |
 | shutdown grace / tombstone retention | 5 000 / 300 000 ms | shared shutdown / unknown after retention |
 | public input / derived text / FS file | 64 000 / 8 000 / 1 048 576 UTF-8 bytes | reject input / BoundedText truncation / resource_limit |
-| retained result per turn / result page | 1 048 576 / 8 000 UTF-8 bytes | explicit terminal failure / Unicode-safe page |
+| retained result per turn | 1 048 576 UTF-8 bytes | explicit terminal failure |
+| result page nominal / maximum | 8 000 / 10 000 UTF-8 bytes | Unicode-safe page / объединение остатка только по RP-2 |
 | ACP NDJSON frame / normalized pending context | 1 048 576 / 64 000 UTF-8 bytes | protocol_error / resource_limit before publication |
 
 These are internal constants, not operator configuration. Idle TTL starts after init success and terminal completion, stops while active
@@ -471,6 +494,10 @@ These values are not operator settings.
 - **WHEN** caller supplies integer `timeout_ms` in 1 000..180 000
 - **THEN** runtime admits it, while a value above 180 000 is rejected without
   allocation or state mutation
+
+#### Scenario: Отдельная граница результата
+- **WHEN** runtime возвращает расширенную result page
+- **THEN** её размер MUST не превышать result page maximum; derived-text, pending/context, retained-result и остальные bounds остаются независимыми и неизменными
 
 ### Requirement: Проверка scope рабочего каталога
 Сервер SHALL проверять все параметры независимо от MCP-схемы. Сессия MUST
@@ -763,16 +790,23 @@ Runtime MUST retain the exact concatenated normalized ACP agent-message text
 up to the retained-result bound, rather than truncating the accumulator to
 preview size. Thinking, tools and private archives are not result sources.
 This is the existing public agent-text stream, not a claim of provider-side
-final-phase separation. The bounded preview and its immutable terminal receipt
-remain compatible: receipt hash describes preview bytes, `ResultPage.sha256`
-describes the full retained result. Empty completed text is a valid full result.
+final-phase separation. Diagnostic preview and immutable terminal receipt сохраняют смысл по RP-1.
+`ResultPage.sha256` describes the full retained result. Empty completed text is a valid full result.
 
 `cursor_read_result` MUST synchronously read only the addressed retained last
 terminal turn with a non-null result. It MUST NOT call the provider, create a
 turn/event, or refresh idle/retention timers. It
-returns the largest whole-code-point prefix from `offset` within the page
-bound, with exact next offset; concatenating sequential pages from zero to EOF
-reproduces the result and its full digest without omission or duplication.
+MUST использовать одно правило для public read и первой страницы terminal wait:
+если оставшийся от offset текст не превышает максимальный result-page bound RP-3,
+страница содержит весь остаток; иначе она содержит наибольший whole-code-point
+prefix в пределах номинального result-page bound RP-3. Текст страницы MUST быть
+точным срезом retained текста без синтетического suffix и без Unicode normalization.
+Точный следующий offset равен offset плюс числу UTF-8 bytes возвращённого текста,
+либо null на EOF. Sequential pages от нуля до EOF воспроизводят результат и его
+полный digest без пропусков или дублирования. Для доступного retained turn первая
+страница wait MUST совпадать со всеми полями cursor_read_result(offset:0).
+Уже принятый wait сохраняет свой адресованный turn по RP-4; это не расширяет
+адресуемость последующих public reads.
 At `offset = total_bytes` return empty text and EOF. A negative, noninteger,
 out-of-range or non-code-point-boundary offset returns `invalid_args`.
 Unknown session/turn uses existing errors; an active turn or null result uses
@@ -791,7 +825,7 @@ A prefix is not recovered by asking the provider to regenerate the answer.
 
 #### Scenario: Long review remains completely readable
 - **WHEN** a completed review exceeds the preview bound within the retained limit
-- **THEN** terminal wait exposes the bounded preview according to «Публичный MCP tool contract»; sequential explicit
+- **THEN** terminal wait exposes the first ResultPage according to RP-1; only necessary continuation
   reads recover every finding including the tail, with a matching full digest
 
 #### Scenario: UTF-8 page and retention boundaries
@@ -804,6 +838,22 @@ A prefix is not recovered by asking the provider to regenerate the answer.
 - **WHEN** agent text crosses the retained-result cap
 - **THEN** the turn fails with `terminal_result_limit` and null result; caller
   cannot mistake a partial preview or digest for complete review evidence
+
+#### Scenario: Полный результат близок к номинальной странице
+- **WHEN** результат превышает nominal bound, но не превышает maximum bound RP-3
+- **THEN** terminal wait и read с нуля возвращают весь результат с EOF; отдельное чтение хвоста не требуется
+
+#### Scenario: Остаток объединяется с последней страницей
+- **WHEN** после первой страницы оставшийся текст не превышает maximum bound RP-3
+- **THEN** read по возвращённому next_offset отдаёт весь остаток, включая часть сверх nominal bound, с EOF
+
+#### Scenario: Верхняя граница объединения
+- **WHEN** остаток равен maximum bound RP-3 либо превышает его
+- **THEN** при равенстве возвращается весь остаток; при превышении возвращается только nominal whole-code-point prefix с continuation, без повышения maximum
+
+#### Scenario: Потеря адресуемости между страницами
+- **WHEN** после wait retained turn заменён либо session evicted до следующего read
+- **THEN** read возвращает существующий unknown_turn либо unknown_session; runtime не восстанавливает результат и не возвращает страницу другого turn
 
 ### Requirement: Получение моделей Cursor через MCP
 

@@ -33,7 +33,7 @@ test('agent message chunks produce the result before terminal session lifecycle 
   const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
   const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'one' });
   const completed = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 });
-  assert.equal(completed.result.text, 'from session update');
+  assert.equal(completed.result_page.text, 'from session update');
   assert.deepEqual(completed.pending, []);
   const closed = await runtime.call('cursor_close_session', { session_id: session.session_id });
   const afterClose = await runtime.call('cursor_wait', { session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000 });
@@ -167,7 +167,7 @@ test('explicit fake-ACP program mode sequences pending, effect and terminal step
   const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id);
 
   assert.equal(terminal.turn_status, 'completed');
-  assert.equal(terminal.result.text, 'CURSOR_EVAL_OK');
+  assert.equal(terminal.result_page.text, 'CURSOR_EVAL_OK');
   assert.equal(readFileSync(outputPath, 'utf8'), 'written');
   assert.deepEqual(readJsonLines(evidencePath).filter((entry) => entry.kind), [
     { kind: 'answer', step_id: 'question-1', callback_id: 'q-1', option_ids: ['choice-1'] },
@@ -201,7 +201,7 @@ test('programmed fake-ACP holds terminality until the separate follow-up gate is
   assert.equal(readJsonLines(evidencePath).some(({ event }) => event === 'prompt_result'), false);
   writeFileSync(releasePath, 'follow-up started');
   const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id);
-  assert.equal(terminal.result.text, 'still activeHELD_OK');
+  assert.equal(terminal.result_page.text, 'still activeHELD_OK');
   let events = [];
   for (let attempt = 0; attempt < 100 && events.length < 3; attempt += 1) {
     events = readJsonLines(evidencePath).filter(({ event }) => event);
@@ -214,8 +214,40 @@ test('programmed fake-ACP holds terminality until the separate follow-up gate is
     { event: 'terminal_armed', step_id: 'terminal-1', turn_status: 'completed' },
     { event: 'followup_received_active', step_id: 'terminal-1' },
     { event: 'prompt_result', step_id: 'terminal-1',
-      result_sha256: createHash('sha256').update('still activeHELD_OK').digest('hex') },
+      result_sha256: createHash('sha256').update('still activeHELD_OK').digest('hex'),
+      preview_sha256: createHash('sha256').update('still activeHELD_OK').digest('hex'), preview_truncated: false },
   ]);
+  await runtime.call('cursor_close_session', { session_id: session.session_id });
+});
+
+test('programmed fake-ACP records a bounded UTF-8 preview separately from the complete terminal page', async (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'cursor-runtime-preview-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const programPath = join(root, 'program.json'); const evidencePath = join(root, 'observations.jsonl');
+  const progress = `${'p'.repeat(7_995)}😀`; const result = 'DONE'; const full = `${progress}${result}`;
+  const preview = `${'p'.repeat(7_995)}…`;
+  writeFileSync(programPath, JSON.stringify({ kind: 'fake-acp', steps: [
+    { type: 'terminal', step_id: 'terminal-1', turn_status: 'completed', progress_text: progress, result_text: result },
+  ] }));
+  const runtime = withInjectedFake(t, { roots: [realpathSync(root)], env: {
+    CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH: programPath,
+    FAKE_ACP_SAFE_EVIDENCE: evidencePath,
+  } });
+  const session = await runtime.call('cursor_start_session', { cwd: root, mode: 'ask' });
+  const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'produce long result' });
+  const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id);
+  assert.equal(terminal.result_page.text, full);
+  assert.equal(terminal.result_page.eof, true);
+  let evidence = [];
+  for (let attempt = 0; attempt < 100 && evidence.length === 0; attempt += 1) {
+    evidence = readJsonLines(evidencePath).filter(({ event }) => event === 'prompt_result');
+    if (evidence.length === 0) await new Promise((resolveWait) => setTimeout(resolveWait, 5));
+  }
+  assert.deepEqual(evidence.map(({ request_id: ignored, ...entry }) => entry), [{
+    event: 'prompt_result', step_id: 'terminal-1',
+    result_sha256: createHash('sha256').update(full).digest('hex'),
+    preview_sha256: createHash('sha256').update(preview).digest('hex'), preview_truncated: true,
+  }]);
   await runtime.call('cursor_close_session', { session_id: session.session_id });
 });
 
@@ -234,7 +266,7 @@ test('programmed event burst waits for every distinct runtime acknowledgement be
   const session = await runtime.call('cursor_start_session', { cwd: root, mode: 'ask' });
   const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'acknowledge burst' });
   const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id);
-  assert.equal(terminal.result.text, 'BURST_OK');
+  assert.equal(terminal.result_page.text, 'BURST_OK');
   const acknowledgements = readJsonLines(evidencePath).filter(({ kind }) => kind === 'burst.ack');
   assert.equal(acknowledgements.length, 257);
   assert.equal(new Set(acknowledgements.map(({ callback_id: callbackId }) => callbackId)).size, 257);

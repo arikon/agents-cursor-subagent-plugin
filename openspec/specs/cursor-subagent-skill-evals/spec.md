@@ -59,6 +59,39 @@ dropped-call evidence без program-driven additions
 `agent_behavior_mismatch`
 - **THEN** stdout содержит один `EvalResultV1`, а процесс завершается nonzero
 
+Для runtime result harness MUST сохранять фактическое delivered-page evidence из
+terminal wait и cursor_read_result в одном существующем completeness proof.
+Compact evidence MUST различать metadata первой страницы, byte count/hash
+действительно полученного text и полный объявленный digest; raw текст результата
+не добавляется в compact diagnostics. Evidence MUST связывать response session/turn
+с request и, для wait-page, с enclosing envelope, и проверять последовательность
+returned offsets. Суммарные UTF-8 bytes и вычисленный по доставленному тексту
+SHA-256 на EOF MUST совпасть с total_bytes и full digest; неизменность total/digest
+проверяется между страницами. Совпадение одних объявленных metadata не является
+доказательством полноты.
+
+Withheld response потерянного wait MUST сохраняться только как loss evidence и
+MUST NOT считаться delivered первой страницей. Повторное получение offset zero
+MUST начать новую последовательность proof для того же адреса, не добавляя
+префикс дважды; первая фактически доставленная страница запускает обычный proof.
+Gap, неожиданный nonzero replay, смешанные IDs, malformed metadata или несовпадение
+bytes/hash MUST NOT давать complete:true. Завершённый proof не используется
+для другого turn. Preview receipt proof остаётся отдельным по RP-1, не выводится
+из page/full digest. Это evidence-проверка dataflow RP-2, а не другой алгоритм
+нарезки, retention или runtime lifecycle.
+
+#### Scenario: Доставленный wait и хвост дают full proof
+- **WHEN** фактически доставленная первая wait-page и последующие reads достигают EOF
+- **THEN** harness доказывает полноту по полученному тексту и IDs, включая вариант EOF уже в wait, без требования повторного offset-zero read
+
+#### Scenario: Withheld page не доказывает доставку
+- **WHEN** первая terminal wait-page скрыта fault, затем caller получает повторный wait
+- **THEN** только повторная delivered page участвует в completeness proof; withheld projection используется для сравнения loss recovery
+
+#### Scenario: Повтор и повреждение evidence
+- **WHEN** caller повторяет offset zero либо capture содержит gap, неожиданный nonzero replay или конфликт IDs/metadata/hash
+- **THEN** новый offset zero начинает отдельную непрерывную последовательность; повреждённая последовательность не признаётся полной
+
 ### Requirement: Изолированные и переносимые integration fixtures
 Credential-free scripted provider MUST получать endpoint, назначенный ОС для
 конкретного fixture, и клиент MUST использовать именно этот endpoint. Fixtures
@@ -550,9 +583,9 @@ return one. Provider `error.data` stays excluded.
   `not_checked`
 
 #### Scenario: Длинный review дочитывается до отчёта
-- **WHEN** обычная review-задача возвращает truncated preview с user-required
+- **WHEN** обычная review-задача возвращает неполную первую result_page с user-required
   marker только в хвосте полного runtime result
-- **THEN** Codex использует runtime IUX-20 read path до final report/close,
+- **THEN** Codex использует runtime RP-2 continuation path до final report/close,
   сообщает marker из прочитанного хвоста и не запускает provider regeneration;
   eval проверяет composition, не дублирует paging/лимиты runtime
 
@@ -661,7 +694,7 @@ The closed trace grammar admits:
   Full proof MUST иметь `dropped_calls:0`, `unexpected_input_requests:0` и
   ровно один `withheld_response`, принадлежащий lost call выбранного fault.
   Его compact terminal response и repeated response MUST содержать одинаковые
-  result projection и immutable receipt; caller-visible lost response MUST
+  result_page projection по RP-6 и immutable receipt; caller-visible lost response MUST
   соответствовать injected failure. Обычные IDs, receipt и result проверки
   применяются к repeated response. Только при полном таком proof lost error
   пропускается при semantic trace projection, сохраняясь в raw calls; это не
@@ -675,9 +708,11 @@ The closed trace grammar admits:
 - `turn.receipt` with a terminal `step_id`, `matched:true` and boolean
   `result_truncated`;
 - `turn.result-read` with `complete:true`, emitted only after actual
-  `cursor_read_result` calls reach EOF from offset zero using returned
-  continuation values for that turn; it proves workflow composition and does
-  not define a second paging/hash/retention algorithm;
+  delivered result pages reach EOF under RP-6, начиная с terminal wait-page
+  либо explicit cursor_read_result(offset:0) и используя returned continuation
+  для того же turn. EOF в самом wait также допустим; число reads не является
+  самостоятельным условием полноты. Observation доказывает composition,
+  не определяет второй paging/hash/retention algorithm;
 - `prompt.contract` with a prompt-check `step_id` and `matched:true`;
 - `effect.file-read` for the admitted read effect.
 - `turn.timed-out` for an observed terminal runtime status correlated with a
@@ -816,8 +851,8 @@ old-wrapper call, so an explicit resume can follow directly.
 - **WHEN** a between-turn mode call receives `protocol_error` while the wrapper
   remains live and idle
 - **THEN** exact trace/status evidence contains one diagnostic status read with
-  the live/no-active-turn state, no prompt, no replacement or resume, and a final
-  close of that still-live runtime session; free prose is not scored
+  the live/no-active-turn state, no prompt, close, replacement or resume; free
+  prose is not scored
 
 #### Scenario: Active follow-up не переживает failed terminal автоматически
 - **WHEN** a user follow-up arrives after a wait timeout but the addressed
@@ -861,6 +896,9 @@ old-wrapper call, so an explicit resume can follow directly.
 - **WHEN** в таком scenario отсутствует withheld response, полный raw transcript, либо повторный wait изменяет адрес или выполняется после другого effect
 - **THEN** oracle отклоняет proof; program/expected trace не восстанавливает недостающий факт и первый скрытый result не считается доставленным
 
+#### Scenario: Полная первая страница без дополнительных reads
+- **WHEN** result целиком доставлен в terminal wait по RP-2
+- **THEN** existing evidence projection допускает full-result proof по RP-6 без искусственного cursor_read_result; receipt сверяется отдельно с preview owner
 ### Requirement: Outcome model и диагностические доказательства
 Каждый eval run MUST написать в stdout ровно один `EvalResultV1` JSON object;
 diagnostics MUST идти только в stderr. `EvalResultV1` имеет schema version 1,

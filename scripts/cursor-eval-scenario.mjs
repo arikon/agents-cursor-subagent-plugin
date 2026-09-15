@@ -6,6 +6,7 @@ const REFERENCE_KEYS = ['expected_enabled_eval_status', 'lane', 'owner_requireme
 const HARNESS_FAULTS = new Set(['mode-timeout', 'accelerate-turn-timeout', 'accelerate-wait-timeout', 'exit-after-result', 'hold-terminal-until-followup', 'inject-mode-protocol-error-once', 'inject-stale-question-once', 'lose-terminal-wait-response-once', 'reject-initialize', 'reject-mode', 'reject-prompt', 'reject-resume', 'result-overflow']);
 const OUTCOMES = new Set(['succeeded', 'failed']);
 const REPORT_CATEGORIES = new Set(['interaction']);
+const MAX_TERMINAL_RESULT_BYTES = 10_001;
 const TRACE_KINDS = new Set(['session.allocated', 'session.start-rejected', 'session.resumed', 'session.resume-failed', 'session.tombstoned', 'session.mode-changed', 'session.mode-change-failed', 'session.mode-recovery-status', 'turn.started', 'turn.wait-timeout', 'turn.wait-recovered', 'turn.followup-received-active', 'turn.receipt', 'turn.result-read', 'session.close-attempted', 'prompt.contract', 'pending.question', 'pending.plan', 'pending.permission', 'effect.file-read', 'effect.file-written', 'turn.completed', 'turn.failed', 'turn.timed-out', 'answer.question', 'answer.plan', 'answer.permission', 'answer.rejected-stale']);
 const PLACEHOLDER = /\$\{([^}]+)\}/g;
 TRACE_KINDS.add('turn.wait-response-recovered');
@@ -172,7 +173,7 @@ function program(value, label) {
       closed(step, terminalKeys, `${label}.steps[${index}]`);
       if (!['completed', 'failed', 'timed_out'].includes(step.turn_status)
         || (step.turn_status === 'completed' && (step.result_text === null
-          || text(step.result_text, `${label}.steps[${index}].result_text`) !== step.result_text))
+          || text(step.result_text, `${label}.steps[${index}].result_text`, 1, MAX_TERMINAL_RESULT_BYTES) !== step.result_text))
         || (step.turn_status !== 'completed' && step.result_text !== null)) admission(`${label}.steps[${index}] is invalid`);
       if (step.delay_ms !== undefined && (!Number.isSafeInteger(step.delay_ms) || step.delay_ms < 1 || step.delay_ms > 5_000)) admission(`${label}.steps[${index}].delay_ms is invalid`);
       if (step.progress_text !== undefined) text(step.progress_text, `${label}.steps[${index}].progress_text`, 1, 512);
@@ -841,17 +842,24 @@ export function findTerminalWaitLossRecovery(scenario, transcript) {
     && response.session_id === sessionId && response.turn_id === turnId && !response.error_code && !response.provider_error
     && response.wait_timeout === false && Array.isArray(response.pending) && response.pending.length === 0
     && ['live', 'closing', 'tombstone'].includes(response.session_state)
-    && Number.isSafeInteger(response.result?.text_bytes) && response.result.text_bytes > 0 && /^[a-f0-9]{64}$/.test(response.result.text_sha256)
-    && typeof response.result.truncated === 'boolean'
+    && Number.isSafeInteger(response.result_page?.text_bytes) && response.result_page.text_bytes > 0
+    && Number.isSafeInteger(response.result_page.offset) && response.result_page.offset === 0
+    && response.result_page.next_offset === null && response.result_page.eof === true
+    && response.result_page.total_bytes === response.result_page.text_bytes
+    && /^[a-f0-9]{64}$/.test(response.result_page.text_sha256)
+    && response.result_page.sha256 === response.result_page.text_sha256
     && response.terminal_receipt?.session_id === sessionId && response.terminal_receipt.turn_id === turnId
     && response.terminal_receipt.turn_status === 'completed'
     && Number.isSafeInteger(response.terminal_receipt.last_event_id) && response.terminal_receipt.last_event_id >= 0
-    && response.terminal_receipt.result_sha256 === response.result.text_sha256
-    && response.terminal_receipt.result_truncated === response.result.truncated;
+    && /^[a-f0-9]{64}$/.test(response.terminal_receipt.result_sha256)
+    && typeof response.terminal_receipt.result_truncated === 'boolean';
   if (!range || index + 1 >= range.end || !admitted(lost) || !admitted(repeated)
     || canonicalJson(lost.response) !== canonicalJson({ ok: false, error_code: 'eval_wait_response_lost', message: 'cursor_wait response unavailable' })
     || !terminal(lost.withheld_response) || !terminal(repeated.response)
-    || canonicalJson(lost.withheld_response.result) !== canonicalJson(repeated.response.result)
+    || repeated.response.result_read?.complete !== true || repeated.response.result_read?.eof !== true
+    || repeated.response.result_read.total_bytes !== repeated.response.result_page.total_bytes
+    || repeated.response.result_read.sha256 !== repeated.response.result_page.sha256
+    || canonicalJson(lost.withheld_response.result_page) !== canonicalJson(repeated.response.result_page)
     || canonicalJson(lost.withheld_response.terminal_receipt) !== canonicalJson(repeated.response.terminal_receipt)) return null;
   return { lost_call_index: index + 1, repeated_call_index: index + 2 };
 }

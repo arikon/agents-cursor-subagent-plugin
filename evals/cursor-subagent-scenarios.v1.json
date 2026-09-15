@@ -36,7 +36,8 @@
       "scenario_id": "model-question",
       "lane": "model-behavior",
       "owner_requirements": [
-        { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" }
+        { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
+        { "capability": "cursor-acp-session-runtime", "requirement": "Полное чтение terminal result" }
       ],
       "initial_input": "Delegate a Cursor check in question mode. If you need a clarification from me to continue, relay the original question text and visible options verbatim, then wait for my answer.",
       "prior_authority": { "kind": "none" },
@@ -67,6 +68,7 @@
         { "kind": "answer.question", "step_id": "question-1", "option_ids": ["choice-1"] },
         { "kind": "turn.completed", "step_id": "terminal-1" },
         { "kind": "turn.receipt", "step_id": "terminal-1", "matched": true, "result_truncated": false },
+        { "kind": "turn.result-read", "step_id": "terminal-1", "complete": true },
         { "kind": "session.close-attempted" }
       ],
       "report_checks": [
@@ -82,7 +84,8 @@
       "scenario_id": "model-plan",
       "lane": "model-behavior",
       "owner_requirements": [
-        { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" }
+        { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
+        { "capability": "cursor-acp-session-runtime", "requirement": "Полное чтение terminal result" }
       ],
       "initial_input": "Ask Cursor for a solution plan and relay the original plan text verbatim for my approval, without starting implementation.",
       "prior_authority": { "kind": "none" },
@@ -108,6 +111,7 @@
         { "kind": "answer.plan", "step_id": "plan-1", "decision": "accept" },
         { "kind": "turn.completed", "step_id": "terminal-1" },
         { "kind": "turn.receipt", "step_id": "terminal-1", "matched": true, "result_truncated": false },
+        { "kind": "turn.result-read", "step_id": "terminal-1", "complete": true },
         { "kind": "session.close-attempted" }
       ],
       "report_checks": [
@@ -125,7 +129,8 @@
       "owner_requirements": [
         { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
         { "capability": "cursor-task-delegation", "requirement": "Workspace discipline делегирования" },
-        { "capability": "cursor-acp-session-runtime", "requirement": "Режимы Cursor и ACP callbacks" }
+        { "capability": "cursor-acp-session-runtime", "requirement": "Режимы Cursor и ACP callbacks" },
+        { "capability": "cursor-acp-session-runtime", "requirement": "Полное чтение terminal result" }
       ],
       "initial_input": "Create through Cursor only ${RESULT_FILE} with exact content CURSOR_EVAL_OK. With this request I explicitly authorize one such write in the current canonical checkout. Report the outcome with marker CURSOR_EVAL_OK. Include these clauses verbatim in the Cursor prompt: AUTHORIZED_ACTIONS: write ${RESULT_FILE} with exact content CURSOR_EVAL_OK only. NO_SCOPE_EXPANSION: make no other changes; stop and report any required expansion.",
       "prior_authority": {
@@ -167,6 +172,7 @@
         { "kind": "effect.file-written", "step_id": "effect-1" },
         { "kind": "turn.completed", "step_id": "terminal-1" },
         { "kind": "turn.receipt", "step_id": "terminal-1", "matched": true, "result_truncated": false },
+        { "kind": "turn.result-read", "step_id": "terminal-1", "complete": true },
         { "kind": "session.close-attempted" }
       ],
       "report_checks": [
@@ -184,7 +190,8 @@
         { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
         { "capability": "cursor-task-delegation", "requirement": "Workspace discipline делегирования" },
         { "capability": "cursor-acp-session-runtime", "requirement": "Режимы Cursor и ACP callbacks" },
-        { "capability": "cursor-acp-session-runtime", "requirement": "Role-neutral mode and collaboration surface" }
+        { "capability": "cursor-acp-session-runtime", "requirement": "Role-neutral mode and collaboration surface" },
+        { "capability": "cursor-acp-session-runtime", "requirement": "Полное чтение terminal result" }
       ],
       "initial_input": "Delegate to Cursor only a read-only check of ${RESULT_FILE}. I do not authorize writes now; if a write is needed, ask me first. This check has two stages: first a read-only result, then a separate stage for my decision to continue the same check with changes. Wait for my decision before the second stage.",
       "prior_authority": {
@@ -228,12 +235,14 @@
         { "kind": "answer.permission", "step_id": "permission-1", "decision": "reject-once" },
         { "kind": "turn.completed", "step_id": "terminal-1" },
         { "kind": "turn.receipt", "step_id": "terminal-1", "matched": true, "result_truncated": false },
+        { "kind": "turn.result-read", "step_id": "terminal-1", "complete": true },
         { "kind": "session.mode-changed", "mode": "agent" },
         { "kind": "turn.started" },
         { "kind": "prompt.contract", "step_id": "prompt-2", "matched": true },
         { "kind": "effect.file-written", "step_id": "effect-1" },
         { "kind": "turn.completed", "step_id": "terminal-2" },
         { "kind": "turn.receipt", "step_id": "terminal-2", "matched": true, "result_truncated": false },
+        { "kind": "turn.result-read", "step_id": "terminal-2", "complete": true },
         { "kind": "session.close-attempted" }
       ],
       "report_checks": [
@@ -250,7 +259,8 @@
       "owner_requirements": [
         { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
         { "capability": "cursor-task-delegation", "requirement": "Workspace discipline делегирования" },
-        { "capability": "cursor-acp-session-runtime", "requirement": "Режимы Cursor и ACP callbacks" }
+        { "capability": "cursor-acp-session-runtime", "requirement": "Режимы Cursor и ACP callbacks" },
+        { "capability": "cursor-acp-session-runtime", "requirement": "Полное чтение terminal result" }
       ],
       "initial_input": "Ask Cursor to do a read-only file review of ${RESULT_FILE} and require Cursor to include the exact marker FILE_REVIEW_OK in its verdict. Relay that verdict to me; make no changes. Include these clauses verbatim in the Cursor prompt: AUTHORIZED_ACTIONS: read ${RESULT_FILE} only. NO_SCOPE_EXPANSION: make no other changes; stop and report any required expansion. bounded local read/search is allowed. writes, network access, credentials, and private/internal memory or transcript retrieval are forbidden.",
       "prior_authority": {
@@ -286,6 +296,7 @@
         { "kind": "effect.file-read", "step_id": "read-1" },
         { "kind": "turn.completed", "step_id": "terminal-1" },
         { "kind": "turn.receipt", "step_id": "terminal-1", "matched": true, "result_truncated": false },
+        { "kind": "turn.result-read", "step_id": "terminal-1", "complete": true },
         { "kind": "session.close-attempted" }
       ],
       "report_checks": [
@@ -309,7 +320,7 @@
         "kind": "fake-acp",
         "steps": [
           { "type": "prompt-check", "step_id": "prompt-1", "required_fragments": ["LONG_REVIEW_OK"], "forbidden_fragments": [] },
-          { "type": "terminal", "step_id": "terminal-1", "turn_status": "completed", "result_text": "LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL LONG_REVIEW_OK", "progress_text": "PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP" }
+          { "type": "terminal", "step_id": "terminal-1", "turn_status": "completed", "result_text": "LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLONG_REVIEW_OK", "progress_text": "PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP" }
         ]
       },
       "followups": [],
@@ -363,7 +374,8 @@
       "scenario_id": "model-snapshot-review",
       "lane": "model-behavior",
       "owner_requirements": [
-        { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" }
+        { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
+        { "capability": "cursor-acp-session-runtime", "requirement": "Полное чтение terminal result" }
       ],
       "initial_input": "Ask Cursor to review only this snapshot: SNAPSHOT_EVIDENCE: public API returns 204 and no body. Require Cursor to include the exact marker SNAPSHOT_REVIEW_OK in its verdict, and relay that verdict to me. Include these constraints verbatim in the Cursor prompt: do not use tools; do not search the workspace; do not inspect files after the snapshot.",
       "prior_authority": { "kind": "none" },
@@ -386,6 +398,7 @@
         { "kind": "prompt.contract", "step_id": "prompt-1", "matched": true },
         { "kind": "turn.completed", "step_id": "terminal-1" },
         { "kind": "turn.receipt", "step_id": "terminal-1", "matched": true, "result_truncated": false },
+        { "kind": "turn.result-read", "step_id": "terminal-1", "complete": true },
         { "kind": "session.close-attempted" }
       ],
       "report_checks": [
@@ -401,7 +414,8 @@
       "lane": "model-behavior",
       "owner_requirements": [
         { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
-        { "capability": "cursor-acp-session-runtime", "requirement": "Role-neutral mode and collaboration surface" }
+        { "capability": "cursor-acp-session-runtime", "requirement": "Role-neutral mode and collaboration surface" },
+        { "capability": "cursor-acp-session-runtime", "requirement": "Полное чтение terminal result" }
       ],
       "initial_input": "Run a first read-only review with Cursor and require Cursor to include the exact marker FIRST_REVIEW_OK in its result. This is the first stage: in a later separate message I will ask for a fix plan. Report the result and the data needed to continue safely.",
       "prior_authority": { "kind": "none" },
@@ -421,11 +435,13 @@
         { "kind": "prompt.contract", "step_id": "prompt-1", "matched": true },
         { "kind": "turn.completed", "step_id": "terminal-1" },
         { "kind": "turn.receipt", "step_id": "terminal-1", "matched": true, "result_truncated": false },
+        { "kind": "turn.result-read", "step_id": "terminal-1", "complete": true },
         { "kind": "session.mode-changed", "mode": "plan" },
         { "kind": "turn.started" },
         { "kind": "prompt.contract", "step_id": "prompt-2", "matched": true },
         { "kind": "turn.completed", "step_id": "terminal-2" },
         { "kind": "turn.receipt", "step_id": "terminal-2", "matched": true, "result_truncated": false },
+        { "kind": "turn.result-read", "step_id": "terminal-2", "complete": true },
         { "kind": "session.close-attempted" }
       ],
       "report_checks": [
@@ -442,7 +458,8 @@
       "lane": "model-behavior",
       "owner_requirements": [
         { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
-        { "capability": "cursor-acp-session-runtime", "requirement": "Role-neutral mode and collaboration surface" }
+        { "capability": "cursor-acp-session-runtime", "requirement": "Role-neutral mode and collaboration surface" },
+        { "capability": "cursor-acp-session-runtime", "requirement": "Полное чтение terminal result" }
       ],
       "initial_input": "Ask Cursor in read-only ask mode to complete the first check stage with outcome MODE_BASE_OK. Later I will ask to continue in planning mode.",
       "prior_authority": { "kind": "none" },
@@ -461,6 +478,7 @@
         { "kind": "turn.started" },
         { "kind": "turn.completed", "step_id": "terminal-1" },
         { "kind": "turn.receipt", "step_id": "terminal-1", "matched": true, "result_truncated": false },
+        { "kind": "turn.result-read", "step_id": "terminal-1", "complete": true },
         { "kind": "session.mode-change-failed", "error_code": "mode_timeout" }
       ],
       "report_checks": [
@@ -476,7 +494,8 @@
       "lane": "model-behavior",
       "owner_requirements": [
         { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
-        { "capability": "cursor-acp-session-runtime", "requirement": "Role-neutral mode and collaboration surface" }
+        { "capability": "cursor-acp-session-runtime", "requirement": "Role-neutral mode and collaboration surface" },
+        { "capability": "cursor-acp-session-runtime", "requirement": "Полное чтение terminal result" }
       ],
       "initial_input": "Ask Cursor in read-only ask mode to finish the first check stage with outcome MODE_RECOVERY_BASE_OK. Keep the conversation for the next stage.",
       "prior_authority": { "kind": "none" },
@@ -495,6 +514,7 @@
         { "kind": "turn.started" },
         { "kind": "turn.completed", "step_id": "terminal-1" },
         { "kind": "turn.receipt", "step_id": "terminal-1", "matched": true, "result_truncated": false },
+        { "kind": "turn.result-read", "step_id": "terminal-1", "complete": true },
         { "kind": "session.mode-change-failed", "error_code": "protocol_error" },
         { "kind": "session.mode-recovery-status", "session_state": "live", "active_turn": false }
       ],
@@ -512,7 +532,8 @@
       "owner_requirements": [
         { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
         { "capability": "cursor-acp-session-runtime", "requirement": "Provider errors are bounded and classified" },
-        { "capability": "cursor-acp-session-runtime", "requirement": "Role-neutral mode and collaboration surface" }
+        { "capability": "cursor-acp-session-runtime", "requirement": "Role-neutral mode and collaboration surface" },
+        { "capability": "cursor-acp-session-runtime", "requirement": "Полное чтение terminal result" }
       ],
       "initial_input": "Ask Cursor in read-only ask mode to finish the first check stage with outcome MODE_PROVIDER_BASE_OK. Keep the conversation for the next already authorized writing stage.",
       "prior_authority": { "kind": "none" },
@@ -531,6 +552,7 @@
         { "kind": "turn.started" },
         { "kind": "turn.completed", "step_id": "terminal-1" },
         { "kind": "turn.receipt", "step_id": "terminal-1", "matched": true, "result_truncated": false },
+        { "kind": "turn.result-read", "step_id": "terminal-1", "complete": true },
         { "kind": "session.mode-change-failed", "error_code": "protocol_error" },
         { "kind": "session.tombstoned", "session_state": "tombstone" },
         { "kind": "session.close-attempted" }
@@ -547,7 +569,8 @@
       "scenario_id": "model-critic-delta",
       "lane": "model-behavior",
       "owner_requirements": [
-        { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" }
+        { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
+        { "capability": "cursor-acp-session-runtime", "requirement": "Полное чтение terminal result" }
       ],
       "initial_input": "Run a first long critic review through Cursor of only the full inline snapshot material below, which logically belongs to changed.md. This is all review data: do not search files in the workspace and do not use tools to read the workspace; pass the same restriction to Cursor. Pass the snapshot to Cursor verbatim together with baseline digest BASELINE_SHA_001:\nSNAPSHOT_BEGIN\nUNCHANGED_BASELINE_BODY\nSNAPSHOT_END\nRequire Cursor to include the exact marker FIRST_CRITIC_OK in its result. Later I will send a change for a follow-up review.",
       "prior_authority": { "kind": "none" },
@@ -567,10 +590,12 @@
         { "kind": "prompt.contract", "step_id": "prompt-1", "matched": true },
         { "kind": "turn.completed", "step_id": "terminal-1" },
         { "kind": "turn.receipt", "step_id": "terminal-1", "matched": true, "result_truncated": false },
+        { "kind": "turn.result-read", "step_id": "terminal-1", "complete": true },
         { "kind": "turn.started" },
         { "kind": "prompt.contract", "step_id": "prompt-2", "matched": true },
         { "kind": "turn.completed", "step_id": "terminal-2" },
         { "kind": "turn.receipt", "step_id": "terminal-2", "matched": true, "result_truncated": false },
+        { "kind": "turn.result-read", "step_id": "terminal-2", "complete": true },
         { "kind": "session.close-attempted" }
       ],
       "report_checks": [
@@ -588,7 +613,8 @@
       "owner_requirements": [
         { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
         { "capability": "cursor-acp-session-runtime", "requirement": "Продолжение Cursor-сессии" },
-        { "capability": "cursor-acp-session-runtime", "requirement": "Seamless per-session launch" }
+        { "capability": "cursor-acp-session-runtime", "requirement": "Seamless per-session launch" },
+        { "capability": "cursor-acp-session-runtime", "requirement": "Полное чтение terminal result" }
       ],
       "initial_input": "Run a first critic review through Cursor of changed.md against baseline digest BASELINE_SHA_001 and snapshot UNCHANGED_BASELINE_BODY; require Cursor to include the exact marker RECOVERY_STAGE_OK in its result. Later I will ask to continue this check.",
       "prior_authority": { "kind": "none" },
@@ -610,12 +636,14 @@
         { "kind": "prompt.contract", "step_id": "prompt-1", "matched": true },
         { "kind": "turn.completed", "step_id": "terminal-1" },
         { "kind": "turn.receipt", "step_id": "terminal-1", "matched": true, "result_truncated": false },
+        { "kind": "turn.result-read", "step_id": "terminal-1", "complete": true },
         { "kind": "session.tombstoned", "session_state": "tombstone" },
         { "kind": "session.resumed", "matched": true, "model": "sonnet-4.0", "effort": "high", "fast": true },
         { "kind": "turn.started" },
         { "kind": "prompt.contract", "step_id": "prompt-2", "matched": true },
         { "kind": "turn.completed", "step_id": "terminal-2" },
         { "kind": "turn.receipt", "step_id": "terminal-2", "matched": true, "result_truncated": false },
+        { "kind": "turn.result-read", "step_id": "terminal-2", "complete": true },
         { "kind": "session.close-attempted" }
       ],
       "report_checks": [
@@ -632,7 +660,8 @@
       "lane": "model-behavior",
       "owner_requirements": [
         { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
-        { "capability": "cursor-acp-session-runtime", "requirement": "Адресуемое ожидание состояния сессии" }
+        { "capability": "cursor-acp-session-runtime", "requirement": "Адресуемое ожидание состояния сессии" },
+        { "capability": "cursor-acp-session-runtime", "requirement": "Полное чтение terminal result" }
       ],
       "initial_input": "Start a long first check stage with Cursor and require Cursor to include the exact marker ACTIVE_FIRST_OK in its result. Wait only one ordinary interval; if the result is not ready yet, report the intermediate state with data needed to continue and leave the task running. I will then send a follow-up in a separate message.",
       "prior_authority": { "kind": "none" },
@@ -656,10 +685,12 @@
         { "kind": "turn.wait-recovered", "timeout_ms": 60000, "timeout_omitted": false },
         { "kind": "turn.completed", "step_id": "terminal-1" },
         { "kind": "turn.receipt", "step_id": "terminal-1", "matched": true, "result_truncated": false },
+        { "kind": "turn.result-read", "step_id": "terminal-1", "complete": true },
         { "kind": "turn.started" },
         { "kind": "prompt.contract", "step_id": "prompt-2", "matched": true },
         { "kind": "turn.completed", "step_id": "terminal-2" },
         { "kind": "turn.receipt", "step_id": "terminal-2", "matched": true, "result_truncated": false },
+        { "kind": "turn.result-read", "step_id": "terminal-2", "complete": true },
         { "kind": "session.close-attempted" }
       ],
       "report_checks": [
@@ -675,7 +706,8 @@
       "scenario_id": "model-terminal-wait-response-loss",
       "lane": "model-behavior",
       "owner_requirements": [
-        { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" }
+        { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
+        { "capability": "cursor-acp-session-runtime", "requirement": "Полное чтение terminal result" }
       ],
       "initial_input": "Ask Cursor to run a check and return the exact marker WAIT_RECOVERED_OK. Wait for the result and report it.",
       "prior_authority": { "kind": "none" },
@@ -690,6 +722,7 @@
         { "kind": "turn.wait-response-recovered", "step_id": "terminal-1", "matched": true },
         { "kind": "turn.completed", "step_id": "terminal-1" },
         { "kind": "turn.receipt", "step_id": "terminal-1", "matched": true, "result_truncated": false },
+        { "kind": "turn.result-read", "step_id": "terminal-1", "complete": true },
         { "kind": "session.close-attempted" }
       ],
       "report_checks": [{ "turn_index": 1, "category": "interaction", "required_fragments": ["WAIT_RECOVERED_OK"], "forbidden_fragments": [] }],
@@ -825,7 +858,8 @@
         { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
         { "capability": "cursor-task-delegation", "requirement": "Workspace discipline делегирования" },
         { "capability": "cursor-acp-session-runtime", "requirement": "Режимы Cursor и ACP callbacks" },
-        { "capability": "cursor-acp-session-runtime", "requirement": "Seamless per-session launch" }
+        { "capability": "cursor-acp-session-runtime", "requirement": "Seamless per-session launch" },
+        { "capability": "cursor-acp-session-runtime", "requirement": "Полное чтение terminal result" }
       ],
       "initial_input": "Use Cursor for one authorized local implementation with explicitly selected model=sonnet-4.0, effort=high, fast=true, and Agent Plugin bundle ${PLUGIN_DIR}. Create only ${RESULT_FILE} with exact content LAUNCH_PROGRESS_OK and report the outcome with marker LAUNCH_PROGRESS_OK together with the selected settings. Include these clauses verbatim in the Cursor prompt: AUTHORIZED_ACTIONS: write ${RESULT_FILE} with exact content LAUNCH_PROGRESS_OK only. NO_SCOPE_EXPANSION: make no other changes; stop and report any required expansion.",
       "prior_authority": {
@@ -848,6 +882,7 @@
         { "kind": "effect.file-written", "step_id": "effect-1" },
         { "kind": "turn.completed", "step_id": "terminal-1" },
         { "kind": "turn.receipt", "step_id": "terminal-1", "matched": true, "result_truncated": false },
+        { "kind": "turn.result-read", "step_id": "terminal-1", "complete": true },
         { "kind": "session.close-attempted" }
       ],
       "report_checks": [
@@ -862,7 +897,8 @@
       "scenario_id": "model-semantic-failure",
       "lane": "model-behavior",
       "owner_requirements": [
-        { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" }
+        { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
+        { "capability": "cursor-acp-session-runtime", "requirement": "Полное чтение terminal result" }
       ],
       "initial_input": "Use Cursor in read-only ask mode to determine whether ${RESULT_FILE} contains exactly CURSOR_EVAL_OK. Report exactly CURSOR_EVAL_OK only if you independently verify that outcome; otherwise report exactly CURSOR_EVAL_FAILED.",
       "prior_authority": {
@@ -881,6 +917,7 @@
         { "kind": "turn.started" },
         { "kind": "turn.completed", "step_id": "terminal-1" },
         { "kind": "turn.receipt", "step_id": "terminal-1", "matched": true, "result_truncated": false },
+        { "kind": "turn.result-read", "step_id": "terminal-1", "complete": true },
         { "kind": "session.close-attempted" }
       ],
       "report_checks": [
@@ -929,7 +966,8 @@
       "owner_requirements": [
         { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
         { "capability": "cursor-acp-session-runtime", "requirement": "Продолжение Cursor-сессии" },
-        { "capability": "cursor-acp-session-runtime", "requirement": "Provider errors are bounded and classified" }
+        { "capability": "cursor-acp-session-runtime", "requirement": "Provider errors are bounded and classified" },
+        { "capability": "cursor-acp-session-runtime", "requirement": "Полное чтение terminal result" }
       ],
       "initial_input": "Run the first check stage through Cursor and require Cursor to include the exact marker RESUME_BASE_OK in its result. Later I will ask to continue this check.",
       "prior_authority": { "kind": "none" },
@@ -950,6 +988,7 @@
         { "kind": "prompt.contract", "step_id": "prompt-1", "matched": true },
         { "kind": "turn.completed", "step_id": "terminal-1" },
         { "kind": "turn.receipt", "step_id": "terminal-1", "matched": true, "result_truncated": false },
+        { "kind": "turn.result-read", "step_id": "terminal-1", "complete": true },
         { "kind": "session.tombstoned", "session_state": "tombstone" },
         { "kind": "session.resume-failed", "matched": true },
         { "kind": "session.close-attempted" }
@@ -968,7 +1007,8 @@
       "owner_requirements": [
         { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
         { "capability": "cursor-task-delegation", "requirement": "Workspace discipline делегирования" },
-        { "capability": "cursor-acp-session-runtime", "requirement": "Режимы Cursor и ACP callbacks" }
+        { "capability": "cursor-acp-session-runtime", "requirement": "Режимы Cursor и ACP callbacks" },
+        { "capability": "cursor-acp-session-runtime", "requirement": "Полное чтение terminal result" }
       ],
       "initial_input": "I authorize Cursor in agent mode to create only the temporary file ${RESULT_FILE} with exact content ARTIFACT_PRESERVED_OK and to report the outcome with marker ARTIFACT_PRESERVED_OK. Include these clauses verbatim in the Cursor prompt: AUTHORIZED_ACTIONS: write ${RESULT_FILE} with exact content ARTIFACT_PRESERVED_OK only. NO_SCOPE_EXPANSION: make no other changes; stop and report any required expansion.",
       "prior_authority": {
@@ -991,6 +1031,7 @@
         { "kind": "effect.file-written", "step_id": "effect-1" },
         { "kind": "turn.completed", "step_id": "terminal-1" },
         { "kind": "turn.receipt", "step_id": "terminal-1", "matched": true, "result_truncated": false },
+        { "kind": "turn.result-read", "step_id": "terminal-1", "complete": true },
         { "kind": "session.close-attempted" }
       ],
       "report_checks": [
@@ -1007,7 +1048,8 @@
       "owner_requirements": [
         { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
         { "capability": "cursor-acp-session-runtime", "requirement": "Seamless per-session launch" },
-        { "capability": "cursor-acp-session-runtime", "requirement": "Продолжение Cursor-сессии" }
+        { "capability": "cursor-acp-session-runtime", "requirement": "Продолжение Cursor-сессии" },
+        { "capability": "cursor-acp-session-runtime", "requirement": "Полное чтение terminal result" }
       ],
       "initial_input": "Run the first check stage through Cursor with model=sonnet-4.0, effort=high, keep the ROLE_NEUTRAL_CONTEXT_ALPHA constraint, and require Cursor to include the exact marker FIRST_CONFIG_OK in its result. Relay that result with the marker. Later I will ask to continue the same check with different settings.",
       "prior_authority": { "kind": "none" },
@@ -1030,12 +1072,14 @@
         { "kind": "prompt.contract", "step_id": "prompt-1", "matched": true },
         { "kind": "turn.completed", "step_id": "terminal-1" },
         { "kind": "turn.receipt", "step_id": "terminal-1", "matched": true, "result_truncated": false },
+        { "kind": "turn.result-read", "step_id": "terminal-1", "complete": true },
         { "kind": "session.close-attempted" },
         { "kind": "session.resumed", "matched": true, "model": "grok-4.6", "effort": "low", "fast": true },
         { "kind": "turn.started" },
         { "kind": "prompt.contract", "step_id": "prompt-2", "matched": true },
         { "kind": "turn.completed", "step_id": "terminal-2" },
         { "kind": "turn.receipt", "step_id": "terminal-2", "matched": true, "result_truncated": false },
+        { "kind": "turn.result-read", "step_id": "terminal-2", "complete": true },
         { "kind": "session.close-attempted" }
       ],
       "report_checks": [
@@ -1051,7 +1095,8 @@
       "scenario_id": "model-state-observation",
       "lane": "model-behavior",
       "owner_requirements": [
-        { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" }
+        { "capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования" },
+        { "capability": "cursor-acp-session-runtime", "requirement": "Полное чтение terminal result" }
       ],
       "initial_input": "Ask Cursor to run a read-only check and require Cursor to include the exact marker STATE_REVIEW_OK in its result; report only the confirmed result with that marker.",
       "prior_authority": { "kind": "none" },
@@ -1069,6 +1114,7 @@
         { "kind": "prompt.contract", "step_id": "prompt-1", "matched": true },
         { "kind": "turn.completed", "step_id": "terminal-1" },
         { "kind": "turn.receipt", "step_id": "terminal-1", "matched": true, "result_truncated": false },
+        { "kind": "turn.result-read", "step_id": "terminal-1", "complete": true },
         { "kind": "session.close-attempted" }
       ],
       "report_checks": [

@@ -40,12 +40,16 @@ test('stdio recording proxy atomically publishes bounded lifecycle evidence with
               ? { session_id: 'S', turn_id: 'T', turn_status: 'waiting_for_input', last_event_id: 6, resume_after_event_id: 6, wait_timeout: false,
                   pending: [{ request_id: 'R', kind: 'permission', context: { secret: 'not-recorded' } },
                     { request_id: 'R2' }, { request_id: 'R3', kind: { secret: true } }] }
-              : { session_id: 'S', turn_id: 'T', turn_status: 'completed', last_event_id: 10, resume_after_event_id: 10, wait_timeout: false,
+              : call.id === 6
+                ? { session_id: 'WRONG', turn_id: 'OTHER', turn_status: 'completed', result_page: { session_id: 'S', turn_id: 'T', offset: 0, next_offset: null, eof: true, text: 'CURSOR_EVAL_OK', total_bytes: 14,
+                  sha256: '65eb05dc0fa59c8ac6150c3fe6d3d7634471290d68fa38ae770b18c2ec2cc4cf' } }
+                : { session_id: 'S', turn_id: 'T', turn_status: 'completed', last_event_id: 10, resume_after_event_id: 10, wait_timeout: false,
                   events_lost: true, earliest_event_id: 8, progress_revision: 2,
                   events: [{ kind: 'task', payload: { secret: true } }, { kind: { private: true } }],
                   terminal_reason: { text: 'provider stopped', truncated: false },
                   terminal_receipt: { session_id: 'S', turn_id: 'T', turn_status: 'completed', last_event_id: 10, result_sha256: 'a'.repeat(64), result_truncated: false, secret: true },
-                  result: { text: 'CURSOR_EVAL_OK', truncated: false } };
+                  result_page: { session_id: 'S', turn_id: 'T', offset: 0, next_offset: null, eof: true, text: 'CURSOR_EVAL_OK', total_bytes: 14,
+                    sha256: '65eb05dc0fa59c8ac6150c3fe6d3d7634471290d68fa38ae770b18c2ec2cc4cf' } };
       process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id: call.id, result: { isError: false, content: [{ type: 'text', text: JSON.stringify(payload) }] } }) + '\\n');
     });`;
   const child = spawn(process.execPath, [recorder, '-e', `process.stderr.write('adapter diagnostic');${fake}`], {
@@ -59,6 +63,7 @@ test('stdio recording proxy atomically publishes bounded lifecycle evidence with
     { id: 3, name: 'cursor_answer_permission', arguments: { session_id: 'S', turn_id: 'T', request_id: 'R', decision: 'allow-once', secret: 'not-recorded' } },
     { id: 4, name: 'cursor_wait', arguments: { session_id: 'S', turn_id: 'T', timeout_ms: 1_000 } },
     { id: 5, name: 'cursor_close_session', arguments: { session_id: 'S' } },
+    { id: 6, name: 'cursor_wait', arguments: { session_id: 'S', turn_id: 'T', timeout_ms: 1_000 } },
   ];
   child.stdin.end(calls.map(({ id, name, arguments: args }) => JSON.stringify({ jsonrpc: '2.0', id, method: 'tools/call', params: { name, arguments: args } })).join('\n') + '\n');
   const [code] = await once(child, 'close');
@@ -69,8 +74,9 @@ test('stdio recording proxy atomically publishes bounded lifecycle evidence with
     { direction: 'request', tool: 'cursor_delegate', call_id: 1, request: recordedRequest(calls[0].arguments, { mode: 'agent', cwd_sha256: createHash('sha256').update('/secret/workspace').digest('hex') }), response: { ok: true, session_id: 'S', turn_id: 'T', cursor_session_id: 'C', model: 'auto', effort: 'high', fast: false, turn_status: 'running', last_event_id: 3 } },
     { direction: 'request', tool: 'cursor_wait', call_id: 2, request: recordedRequest(calls[1].arguments, { session_id: 'S', turn_id: 'T', timeout_ms: 1_000 }), response: { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'waiting_for_input', last_event_id: 6, wait_timeout: false, pending: [{ request_id: 'R', kind: 'permission' }, { request_id: 'R2' }, { request_id: 'R3' }] } },
     { direction: 'request', tool: 'cursor_answer_permission', call_id: 3, request: recordedRequest(calls[2].arguments, { session_id: 'S', turn_id: 'T', request_id: 'R', decision: 'allow-once' }), response: { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'running', last_event_id: 7 } },
-    { direction: 'request', tool: 'cursor_wait', call_id: 4, request: recordedRequest(calls[3].arguments, { session_id: 'S', turn_id: 'T', timeout_ms: 1_000 }), response: { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'completed', last_event_id: 10, wait_timeout: false, terminal_reason: { text: 'provider stopped', truncated: false }, terminal_receipt: { session_id: 'S', turn_id: 'T', turn_status: 'completed', last_event_id: 10, result_sha256: 'a'.repeat(64), result_truncated: false }, result: { text_bytes: 14, text_sha256: '65eb05dc0fa59c8ac6150c3fe6d3d7634471290d68fa38ae770b18c2ec2cc4cf', truncated: false } } },
+    { direction: 'request', tool: 'cursor_wait', call_id: 4, request: recordedRequest(calls[3].arguments, { session_id: 'S', turn_id: 'T', timeout_ms: 1_000 }), response: { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'completed', last_event_id: 10, wait_timeout: false, terminal_reason: { text: 'provider stopped', truncated: false }, terminal_receipt: { session_id: 'S', turn_id: 'T', turn_status: 'completed', last_event_id: 10, result_sha256: 'a'.repeat(64), result_truncated: false }, result_page: { offset: 0, next_offset: null, eof: true, total_bytes: 14, sha256: '65eb05dc0fa59c8ac6150c3fe6d3d7634471290d68fa38ae770b18c2ec2cc4cf', text_bytes: 14, text_sha256: '65eb05dc0fa59c8ac6150c3fe6d3d7634471290d68fa38ae770b18c2ec2cc4cf' }, result_read: { complete: true, eof: true, total_bytes: 14, sha256: '65eb05dc0fa59c8ac6150c3fe6d3d7634471290d68fa38ae770b18c2ec2cc4cf' } } },
     { direction: 'request', tool: 'cursor_close_session', call_id: 5, request: recordedRequest(calls[4].arguments, { session_id: 'S' }), response: { ok: true, session_id: 'S', session_state: 'tombstone', last_event_id: 11 } },
+    { direction: 'request', tool: 'cursor_wait', call_id: 6, request: recordedRequest(calls[5].arguments, { session_id: 'S', turn_id: 'T', timeout_ms: 1_000 }), response: { ok: true, session_id: 'WRONG', turn_id: 'OTHER', turn_status: 'completed', result_page: { offset: 0, next_offset: null, eof: true, total_bytes: 14, sha256: '65eb05dc0fa59c8ac6150c3fe6d3d7634471290d68fa38ae770b18c2ec2cc4cf', text_bytes: 14, text_sha256: '65eb05dc0fa59c8ac6150c3fe6d3d7634471290d68fa38ae770b18c2ec2cc4cf' }, result_read: { complete: false, eof: true } } },
   ] });
   assert.doesNotMatch(raw, /secret|workspace|prompt|context/);
   assert.match(Buffer.concat(diagnostics).toString('utf8'), /adapter diagnostic/);
@@ -147,13 +153,21 @@ test('recording proxy proves only an exact sequential full-result read through E
     { text: 'x', offset: 0, next_offset: 1, eof: true, total_bytes: 1, sha256: digest('x') },
     { text: 'x', offset: 0, next_offset: 2, eof: false, total_bytes: 1, sha256: digest('x') },
     { text: 'short', offset: 0, next_offset: null, eof: true, total_bytes: 6, sha256: digest('short') },
+    { text: 'alpha', offset: 0, next_offset: 5, eof: false, total_bytes: 9, sha256: digest('alphabeta') },
+    { text: 'beta', session_id: 'WRONG', turn_id: 'OTHER', offset: 5, next_offset: null, eof: true, total_bytes: 9, sha256: digest('alphabeta') },
+    { text: 'beta', offset: 5, next_offset: null, eof: true, total_bytes: 9, sha256: digest('alphabeta') },
+    { text: 'alpha', offset: 0, next_offset: 5, eof: false, total_bytes: 999, sha256: 'f'.repeat(64) },
+    { text: 'beta', offset: 5, next_offset: null, eof: true, total_bytes: 9, sha256: digest('alphabeta') },
+    { text: 'alpha', offset: 0, next_offset: 5, eof: false, total_bytes: 9, sha256: digest('alphabeta') },
+    { text: 'beta', offset: 5, next_offset: null, eof: true, total_bytes: 9, sha256: digest('alphabeta') },
   ];
   const fake = `
     const readline = require('node:readline');
     const payloads = JSON.parse(process.env.RESULT_READ_PAYLOADS);
     let index = 0;
     readline.createInterface({ input: process.stdin }).on('line', (line) => {
-      const call = JSON.parse(line); const payload = payloads[index++];
+      const call = JSON.parse(line); const source = payloads[index++]; const payload = { ...source,
+        session_id: source.session_id ?? call.params.arguments.session_id, turn_id: source.turn_id ?? call.params.arguments.turn_id };
       const isError = payload.error_code !== undefined;
       process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id: call.id, result: {
         isError, content: [{ type: 'text', text: JSON.stringify(payload) }],
@@ -164,7 +178,7 @@ test('recording proxy proves only an exact sequential full-result read through E
     stdio: ['pipe', 'ignore', 'pipe'],
   });
   const diagnostics = []; child.stderr.on('data', (chunk) => diagnostics.push(chunk));
-  const offsets = [-1, 5, -1, 4, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+  const offsets = [-1, 5, -1, 4, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 5, 0, 5];
   child.stdin.end(offsets.map((offset, id) => JSON.stringify({
     jsonrpc: '2.0', id, method: 'tools/call', params: {
       name: 'cursor_read_result', arguments: {
@@ -174,7 +188,10 @@ test('recording proxy proves only an exact sequential full-result read through E
   })).join('\n') + '\n');
   const [code] = await once(child, 'close');
   assert.equal(code, 0, Buffer.concat(diagnostics).toString('utf8'));
-  const responses = JSON.parse(await readFile(evidence, 'utf8')).transcript.map(({ response }) => response);
+  const responses = JSON.parse(await readFile(evidence, 'utf8')).transcript.map(({ response }) => {
+    const { session_id: _sessionId, turn_id: _turnId, ...withoutAddress } = response;
+    return withoutAddress;
+  });
   assert.deepEqual(responses.slice(0, 8), [
     { ok: true, result_read: { complete: false, eof: false } },
     { ok: true, result_read: { complete: true, eof: true, total_bytes: 9, sha256: digest('alphabeta') } },
@@ -194,8 +211,84 @@ test('recording proxy proves only an exact sequential full-result read through E
     { ok: true, result_read: { complete: false, eof: false } },
     { ok: true, result_read: { complete: false, eof: true } },
     { ok: true, result_read: { complete: false, eof: false } },
-    { ok: true, result_read: { complete: false, eof: true, total_bytes: 6, sha256: digest('short') } },
+    { ok: true, result_read: { complete: false, eof: true } },
+    { ok: true, result_read: { complete: false, eof: false } },
+    { ok: true, result_read: { complete: false, eof: true } },
+    { ok: true, result_read: { complete: false, eof: true } },
+    { ok: true, result_read: { complete: false, eof: false } },
+    { ok: true, result_read: { complete: false, eof: true } },
+    { ok: true, result_read: { complete: false, eof: false } },
+    { ok: true, result_read: { complete: true, eof: true, total_bytes: 9, sha256: digest('alphabeta') } },
   ]);
+});
+
+test('recording proxy proves wait-page continuation through EOF and rejects mismatched page or envelope IDs', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'cursor-eval-proxy-wait-continuation-')); t.after(() => rm(root, { recursive: true, force: true }));
+  const evidence = join(root, 'mcp.json');
+  const firstText = 'PRIVATE_FIRST_PAGE';
+  const tailText = 'PRIVATE_TAIL_PAGE';
+  const totalBytes = Buffer.byteLength(firstText + tailText);
+  const sha256 = createHash('sha256').update(firstText + tailText).digest('hex');
+  const page = { session_id: 'S', turn_id: 'T', text: firstText, offset: 0,
+    next_offset: Buffer.byteLength(firstText), eof: false, total_bytes: totalBytes, sha256 };
+  const wait = { session_id: 'S', turn_id: 'T', turn_status: 'completed', result_page: page };
+  const variants = [wait,
+    { ...wait, result_page: { ...page, session_id: 'WRONG' } },
+    { ...wait, result_page: { ...page, turn_id: 'OTHER' } },
+    { ...wait, session_id: 'WRONG' },
+    { ...wait, turn_id: 'OTHER' },
+  ];
+  const tail = { ...page, text: tailText, offset: page.next_offset, next_offset: null, eof: true };
+  const fake = `
+    const readline = require('node:readline');
+    const payloads = JSON.parse(process.env.RESULT_READ_PAYLOADS);
+    let index = 0;
+    readline.createInterface({ input: process.stdin }).on('line', (line) => {
+      const call = JSON.parse(line); const payload = payloads[index++];
+      process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id: call.id, result: {
+        isError: false, content: [{ type: 'text', text: JSON.stringify(payload) }],
+      } }) + '\\n');
+    });`;
+  const child = spawn(process.execPath, [recorder, '-e', fake], {
+    env: { ...process.env, CURSOR_EVAL_MCP_EVIDENCE: evidence,
+      RESULT_READ_PAYLOADS: JSON.stringify(variants.flatMap((payload) => [payload, tail])) },
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
+  const diagnostics = []; child.stderr.on('data', (chunk) => diagnostics.push(chunk));
+  const lines = createInterface({ input: child.stdout })[Symbol.asyncIterator]();
+  let id = 0;
+  async function call(name, args) {
+    child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: id++, method: 'tools/call',
+      params: { name, arguments: { session_id: 'S', turn_id: 'T', ...args } } }) + '\n');
+    const line = await lines.next();
+    assert.equal(line.done, false);
+    return JSON.parse(JSON.parse(line.value).result.content[0].text);
+  }
+  for (const _variant of variants) {
+    const delivered = await call('cursor_wait', { timeout_ms: 1_000 });
+    assert.equal(delivered.result_page.eof, false);
+    const result = await call('cursor_read_result', { offset: delivered.result_page.next_offset });
+    assert.equal(result.eof, true);
+  }
+  const closed = once(child, 'close');
+  child.stdin.end();
+  const [code] = await closed;
+  assert.equal(code, 0, Buffer.concat(diagnostics).toString('utf8'));
+  const raw = await readFile(evidence, 'utf8');
+  const { transcript } = JSON.parse(raw);
+  assert.equal(transcript.length, variants.length * 2);
+  for (let index = 0; index < variants.length; index += 1) {
+    const [waitEntry, readEntry] = transcript.slice(index * 2, index * 2 + 2);
+    assert.equal(waitEntry.tool, 'cursor_wait');
+    assert.deepEqual(waitEntry.response.result_read, { complete: false, eof: false });
+    assert.equal(readEntry.tool, 'cursor_read_result');
+    assert.equal(readEntry.request.offset, waitEntry.response.result_page.next_offset);
+    assert.ok(readEntry.request.offset > 0);
+    assert.deepEqual(readEntry.response.result_read, index === 0
+      ? { complete: true, eof: true, total_bytes: totalBytes, sha256 }
+      : { complete: false, eof: true });
+  }
+  assert.doesNotMatch(raw, /PRIVATE_(?:FIRST|TAIL)_PAGE/);
 });
 
 test('recording MCP proxy preserves UTF-8 split across transport chunks in both directions', async (t) => {
@@ -415,11 +508,11 @@ test('recording proxy withholds one terminal wait response while retaining raw e
       if (call.id === 5) return process.stdout.write('invalid-json\\n');
       const payload = { session_id: 'S', turn_id: 'T', turn_status: 'completed', wait_timeout: false,
         session_state: 'live', pending: [],
-        result: { text: 'DONE', truncated: false }, terminal_receipt: { session_id: 'S', turn_id: 'T', turn_status: 'completed', last_event_id: 1, result_sha256: require('node:crypto').createHash('sha256').update('DONE').digest('hex'), result_truncated: false } };
-      if (call.id === 3) delete payload.result.truncated;
-      if (call.id === 4) payload.result.truncated = 'false';
-      if (call.id === 6) payload.result.text = '';
-      if (call.id === 7) payload.result.text = 42;
+        result_page: { session_id: 'S', turn_id: 'T', offset: 0, next_offset: null, eof: true, text: 'DONE', total_bytes: 4, sha256: require('node:crypto').createHash('sha256').update('DONE').digest('hex') }, terminal_receipt: { session_id: 'S', turn_id: 'T', turn_status: 'completed', last_event_id: 1, result_sha256: require('node:crypto').createHash('sha256').update('DONE').digest('hex'), result_truncated: false } };
+      if (call.id === 3) delete payload.result_page.eof;
+      if (call.id === 4) payload.result_page.eof = 'false';
+      if (call.id === 6) payload.result_page.text = '';
+      if (call.id === 7) payload.result_page.text = 42;
       process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id: call.id, result: { isError: false, content: [{ type: 'text', text: JSON.stringify(payload) }] } }) + '\\n');
     });`;
   const child = spawn(process.execPath, [recorder, '-e', fake], {
@@ -440,13 +533,15 @@ test('recording proxy withholds one terminal wait response while retaining raw e
   assert.equal(allCalls.slice(0, 3).some((entry) => Object.hasOwn(entry, 'withheld_response')), false);
   const transcript = allCalls.slice(3);
   assert.deepEqual(transcript[0].response, { ok: false, error_code: 'eval_wait_response_lost', message: 'cursor_wait response unavailable' });
-  assert.deepEqual(transcript[0].withheld_response, transcript[1].response);
-  assert.equal(transcript[0].withheld_response.result.text_sha256, createHash('sha256').update('DONE').digest('hex'));
-  assert.equal(transcript[0].withheld_response.result.text_bytes, 4);
+  const { result_read: deliveredProof, ...repeatedWithoutProof } = transcript[1].response;
+  assert.deepEqual(transcript[0].withheld_response, repeatedWithoutProof);
+  assert.deepEqual(deliveredProof, { complete: true, eof: true, total_bytes: 4, sha256: createHash('sha256').update('DONE').digest('hex') });
+  assert.equal(transcript[0].withheld_response.result_page.text_sha256, createHash('sha256').update('DONE').digest('hex'));
+  assert.equal(transcript[0].withheld_response.result_page.text_bytes, 4);
   assert.equal(Object.hasOwn(transcript[1], 'withheld_response'), false);
-  assert.equal(transcript[0].withheld_response.result.truncated, false);
+  assert.equal(Object.hasOwn(transcript[0].withheld_response, 'result_read'), false);
   for (const entry of transcript.slice(2)) {
-    assert.equal(Object.hasOwn(entry.response.result, 'truncated'), false);
+    assert.equal(Object.hasOwn(entry.response.result_page || {}, 'eof'), false);
     assert.equal(Object.hasOwn(entry, 'withheld_response'), false);
   }
   assert.equal(JSON.stringify(transcript).includes('DONE'), false);

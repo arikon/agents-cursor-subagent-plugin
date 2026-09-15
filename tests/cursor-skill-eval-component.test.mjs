@@ -416,10 +416,10 @@ test('terminal wait loss proof rejects missing evidence, wrong addresses, interl
   const request = { session_id: 'S', turn_id: 'T', arguments_without_session_turn_sha256: createHash('sha256').update('{}').digest('hex') };
   const terminal = { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'completed', wait_timeout: false,
     pending: [], session_state: 'live',
-    result: { text_bytes: 17, text_sha256: 'a'.repeat(64), truncated: false },
+    result_page: { text_bytes: 17, text_sha256: 'a'.repeat(64), offset: 0, next_offset: null, eof: true, total_bytes: 17, sha256: 'a'.repeat(64) },
     terminal_receipt: { session_id: 'S', turn_id: 'T', turn_status: 'completed', last_event_id: 1, result_sha256: 'a'.repeat(64), result_truncated: false } };
   const loss = { tool: 'cursor_wait', request, response: { ok: false, error_code: 'eval_wait_response_lost', message: 'cursor_wait response unavailable' }, withheld_response: terminal };
-  const retry = { tool: 'cursor_wait', request: structuredClone(request), response: structuredClone(terminal) };
+  const retry = { tool: 'cursor_wait', request: structuredClone(request), response: { ...structuredClone(terminal), result_read: { complete: true, eof: true, total_bytes: 17, sha256: 'a'.repeat(64) } } };
   const input = {
     trace: scenario.expected_trace.map((entry) => ({ ...entry, ...(entry.kind === 'turn.wait-response-recovered' ? { lost_call_index: 2, repeated_call_index: 3 } : {}) })), callbacks: [], effects: [], actual_task_outcome: 'succeeded',
     captured_finals: [
@@ -440,13 +440,13 @@ test('terminal wait loss proof rejects missing evidence, wrong addresses, interl
   laterTurn.transcript.turn_call_ranges[0].end += 2;
   Object.assign(laterTurn.trace.find(({ kind }) => kind === 'turn.wait-response-recovered'), { lost_call_index: 4, repeated_call_index: 5 });
   assert.equal(evaluateScenario(scenario, laterTurn).mismatches.includes('terminal-wait-loss-recovery-mismatch'), false);
-  const safeEvidence = [{ event: 'prompt_result', step_id: 'terminal-1', result_sha256: 'a'.repeat(64) }];
+  const safeEvidence = [{ event: 'prompt_result', step_id: 'terminal-1', result_sha256: 'a'.repeat(64), preview_sha256: 'a'.repeat(64), preview_truncated: false }];
   const projected = observationsFromEvidence(scenario, input.transcript, safeEvidence, []);
   assert.deepEqual(projected.trace.filter(({ kind }) => kind.startsWith('turn.')).map(({ kind }) => kind),
-    ['turn.started', 'turn.wait-response-recovered', 'turn.completed', 'turn.receipt']);
+    ['turn.started', 'turn.wait-response-recovered', 'turn.completed', 'turn.receipt', 'turn.result-read']);
   const corruptDelivery = structuredClone(input.transcript);
   for (const response of [corruptDelivery.calls[1].withheld_response, corruptDelivery.calls[2].response]) {
-    response.result.text_sha256 = 'b'.repeat(64); response.terminal_receipt.result_sha256 = 'b'.repeat(64);
+    response.result_page.text_sha256 = 'b'.repeat(64); response.terminal_receipt.result_sha256 = 'b'.repeat(64);
   }
   assert.equal(observationsFromEvidence(scenario, corruptDelivery, safeEvidence, []).trace.find(({ kind }) => kind === 'turn.receipt').matched, false);
   for (const result_sha256 of [undefined, 'malformed']) {
@@ -466,12 +466,12 @@ test('terminal wait loss proof rejects missing evidence, wrong addresses, interl
     (value) => delete value.transcript.calls[2].response.terminal_receipt.last_event_id,
     (value) => { value.transcript.calls[2].response.wait_timeout = true; },
     (value) => { value.transcript.calls[2].response.pending = [{ request_id: 'P' }]; },
-    (value) => { value.transcript.calls[2].response.result.text_bytes = 0.5; },
-    (value) => { delete value.transcript.calls[1].withheld_response.result.truncated; delete value.transcript.calls[2].response.result.truncated; },
-    (value) => { value.transcript.calls[1].withheld_response.result.truncated = 'false'; value.transcript.calls[2].response.result.truncated = 'false'; },
+    (value) => { value.transcript.calls[2].response.result_page.text_bytes = 0.5; },
+    (value) => { delete value.transcript.calls[1].withheld_response.result_page.eof; delete value.transcript.calls[2].response.result_page.eof; },
+    (value) => { value.transcript.calls[1].withheld_response.result_page.eof = 'false'; value.transcript.calls[2].response.result_page.eof = 'false'; },
     (value) => { value.transcript.calls[2].response.session_state = 'unknown'; },
     (value) => { value.trace.find(({ kind }) => kind === 'turn.wait-response-recovered').lost_call_index = 1; },
-    (value) => { value.transcript.calls[2].response.result.text_sha256 = 'b'.repeat(64); },
+    (value) => { value.transcript.calls[2].response.result_page.text_sha256 = 'b'.repeat(64); },
     (value) => { value.transcript.calls[2].response.terminal_receipt.result_sha256 = 'b'.repeat(64); },
     (value) => { value.transcript.calls[2].withheld_response = terminal; },
     (value) => { value.transcript.calls[1].response.message = 'other'; },
@@ -605,8 +605,8 @@ test('launch trace constrains declared effort and fast fields without inventing 
   for (const mutate of [
     (trace) => { delete trace[0].effort; },
     (trace) => { trace[0].effort = 'low'; },
-    (trace) => { delete trace[6].fast; },
-    (trace) => { trace[6].fast = false; },
+    (trace) => { delete trace.find(({ kind }) => kind === 'session.resumed').fast; },
+    (trace) => { trace.find(({ kind }) => kind === 'session.resumed').fast = false; },
   ]) {
     const trace = structuredClone(base);
     mutate(trace);

@@ -31,6 +31,17 @@ function observationsFromEvidence(scenario, transcriptEvidence, safeEvidence, ou
   const completedTurnIds = new Set();
   const completeResultReadTurns = new Set();
   const fullResultDigestByTurn = new Map();
+  const observeResultRead = (response, ids, callOutcome) => {
+    if (response?.result_read?.eof !== true) return;
+    const expected = fullResultDigestByTurn.get(ids.turn_id);
+    const complete = response.result_read.complete === true
+      && typeof expected?.sha256 === 'string' && response.result_read.sha256 === expected.sha256;
+    if (!complete || !completeResultReadTurns.has(ids.turn_id)) {
+      trace.push({ kind: 'turn.result-read', complete,
+        step_id: expected?.step_id || 'unobserved:terminal', ...ids, call_outcome: callOutcome });
+      if (complete) completeResultReadTurns.add(ids.turn_id);
+    }
+  };
   const codexTurnIndexForCall = (callIndex) => {
     const rangeIndex = transcriptEvidence.turn_call_ranges?.findIndex(({ start, end }) => callIndex >= start && callIndex < end) ?? -1;
     return rangeIndex < 0 ? 1 : rangeIndex + 1;
@@ -183,33 +194,26 @@ function observationsFromEvidence(scenario, transcriptEvidence, safeEvidence, ou
           ...ids, call_outcome: callOutcome });
         if (call.response?.terminal_receipt) {
           const receipt = call.response?.terminal_receipt;
-          const expectedDigest = call.response?.result?.text_sha256 ?? terminalProof?.result_sha256 ?? null;
+          const expectedDigest = terminalProof?.preview_sha256 ?? null;
+          const expectedTruncated = terminalProof?.preview_truncated ?? (terminalStatus === 'completed' ? undefined : false);
           trace.push({ kind: 'turn.receipt', step_id: terminalStepId,
             matched: receipt?.result_sha256 === expectedDigest
               && (waitLossRecovery?.repeated_call_index !== callIndex + 1
                 || /^[a-f0-9]{64}$/.test(terminalProof?.result_sha256 ?? ''))
-              && (call.response?.result?.truncated !== false || !terminalProof?.result_sha256
-                || call.response.result.text_sha256 === terminalProof.result_sha256),
+              && receipt?.result_truncated === expectedTruncated,
             result_truncated: receipt?.result_truncated === true,
             ...ids, call_outcome: callOutcome });
         }
+        observeResultRead(call.response, ids, callOutcome);
         if (terminalStatus === 'completed' && call.response?.session_state === 'tombstone') {
           trace.push({ kind: 'session.tombstoned', session_state: 'tombstone',
             session_id: ids.session_id, call_outcome: callOutcome });
         }
+      } else if (terminalAlreadyObserved && call.response?.result_read?.eof === true) {
+        observeResultRead(call.response, ids, callOutcome);
       }
     } else if (call.tool === 'cursor_read_result') {
-      if (call.response?.result_read?.eof === true) {
-        const expected = fullResultDigestByTurn.get(ids.turn_id);
-        const complete = call.response.result_read.complete === true
-          && typeof expected?.sha256 === 'string' && call.response.result_read.sha256 === expected.sha256;
-        if (!complete || !completeResultReadTurns.has(ids.turn_id)) {
-          trace.push({ kind: 'turn.result-read', complete,
-            step_id: expected?.step_id || 'unobserved:terminal',
-            ...ids, call_outcome: callOutcome });
-          if (complete) completeResultReadTurns.add(ids.turn_id);
-        }
-      }
+      observeResultRead(call.response, ids, callOutcome);
     } else if (call.tool === 'cursor_session_status' && callOutcome === 'succeeded'
       && trace.findLast(({ kind }) => kind === 'session.mode-change-failed')?.error_code === 'protocol_error') {
       if (call.response?.session_state === 'tombstone') trace.push({ kind: 'session.tombstoned', session_state: 'tombstone',

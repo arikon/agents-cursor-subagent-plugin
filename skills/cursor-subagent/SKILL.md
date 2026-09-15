@@ -8,6 +8,44 @@ description: "Delegate a task to Cursor Agent through an interactive ACP session
 Use this skill when the user explicitly asks to delegate part of the work to
 Cursor.
 
+## Before every prompt
+
+Before every `cursor_delegate` or `cursor_send_prompt`, prepare the prompt
+at its action site:
+
+1. For a next turn, derive the target mode from its existing `ask`, `plan`,
+   or `agent` semantics; a later fix-plan stage uses `plan`. When it differs from a live wrapper, successfully
+   call `cursor_set_mode` before the prompt. An explicit write-capable
+   follow-up after `ask` therefore changes to `agent`; do not claim a mode
+   change without that result.
+2. If changed launch-only choices or wrapper loss require explicit resume, keep
+   the new runtime ID and restore the minimal bounded context/constraints
+   required by the next task, or report unverifiable. A repeated critic review
+   uses its full baseline/snapshot rule in step 6.
+3. Preserve user-required exact outcome markers in the prompt and requested
+   report. Copy their exact text directly from the source.
+4. Verify every write-capable prompt and every file review narrower than
+   `cwd` carries each authorized operation/path/content as
+   `AUTHORIZED_ACTIONS: <operation> <path-or-bounded-class> [with exact content
+   <content>] only.` plus `NO_SCOPE_EXPANSION: make no other changes; stop and
+   report any required expansion.` Use exactly `write` for
+   creation/modification, and `AUTHORIZED_ACTIONS: read <path> only.` for
+   bounded reads. Do not send until these clauses and the applicable review
+   boundary are present. When the user specifies exact content, the `with exact
+   content <content>` clause is required; preserve that content verbatim.
+   They coordinate scope; they are not a policy engine or OS sandbox.
+5. For a review, choose one evidence form:
+   - File: permit only authorized local read/search (full `cwd` only if
+     authorized). Include exactly `bounded local read/search is allowed` and
+     `writes, network access, credentials, and private/internal memory or
+     transcript retrieval are forbidden`, plus bounded-read clauses above
+     when narrower than `cwd`.
+   - Snapshot: supply all evidence in the prompt and include exactly `do not
+     use tools`; `do not search the workspace`; `do not inspect files after
+   the snapshot`.
+
+## Workflow
+
 1. Start with `cursor_delegate`. Choose `ask` for read-only work (including
    diagnosis/debugging), `plan` for a plan requiring approval, and `agent` only
    for explicitly authorized write-capable work. Use the MCP schemas for arguments.
@@ -31,26 +69,6 @@ Cursor.
    specified in step 4.
    Coordinate non-overlapping write scopes when sharing a worktree.
 
-   Before every `cursor_delegate` or `cursor_send_prompt`, verify every write-capable prompt and every file review
-   narrower than `cwd` carries each authorized operation/path/content as
-   `AUTHORIZED_ACTIONS: <operation> <path-or-bounded-class> [with exact content
-   <content>] only.` plus `NO_SCOPE_EXPANSION: make no other changes; stop and
-   report any required expansion.` Use exactly `write` for creation/modification,
-   and `AUTHORIZED_ACTIONS: read <path> only.` for bounded reads. Do not send the prompt
-   until these clauses and the applicable review boundaries below are present.
-   When the user specifies exact content, the `with exact content <content>`
-   clause is required; preserve that content verbatim.
-   They coordinate scope; they are not a policy engine or OS sandbox.
-   Preserve user-required exact outcome markers in the prompt and requested report.
-
-   For review, choose one evidence form:
-   - File: permit only authorized local read/search (full `cwd` only if authorized).
-     Include exactly `bounded local read/search is allowed` and `writes, network
-     access, credentials, and private/internal memory or transcript retrieval are
-     forbidden`, plus the bounded-read clauses above when narrower than `cwd`.
-   - Snapshot: supply all evidence in the prompt and include exactly `do not use
-     tools`; `do not search the workspace`; `do not inspect files after the snapshot`.
-
    Omit `plugin_dirs` unless the user supplied absolute local Agent Plugin roots;
    pass them unchanged, not installed-skill or inferred workspace paths. Runtime
    owns canonicalization, existence and allowed roots. Report `invalid_args` or
@@ -67,13 +85,17 @@ Cursor.
      `terminal_reason` and the need for a new user decision. Do not wait, retry,
      resume or redelegate. Runtime already stored the tombstone.
    - With `turn_id`: retain exact runtime `session_id`, provider `cursor_session_id`,
-     `turn_id` and launch choices in tool history. Observe live work below;
+     `turn_id` and launch choices in tool history. Copy retained session/turn IDs
+     into every later MCP call exactly; never retype, abbreviate, normalize, or
+     infer them. Observe live work below;
      handle terminality with step 5.
 
    For a live turn use
    `cursor_wait({session_id,turn_id})`: first timeout omitted, later no-change
    waits 60, 120, then at most 180 seconds. `wait_timeout:true` leaves work live;
-   report `progress_excerpt` verbatim when present. Pending is actionable: handle it
+   paste every byte of `progress_excerpt.text`, including its final character,
+   verbatim into the final report when
+   present—do not shorten, paraphrase, or replace it. Pending is actionable: handle it
    instead of spinning. Do not poll `cursor_session_status`. If the user limits
    observation to one interval, report work in progress and end the Codex turn
    with the Cursor turn active. Recovery is below.
@@ -91,10 +113,14 @@ Cursor.
    the same turn: next wait uses its retained IDs and `timeout_ms:60000`, not a
    restarted first-wait schedule. For stale/unknown pending IDs, fresh wait with
    those IDs and 60000 ms must supply full normalized context before another
-   answer. Never guess from a context-free recovery summary.
+   answer. Never guess from a context-free recovery summary. An explicit user
+   approval of a shown plan authorizes `cursor_answer_plan(...,decision:"accept")`
+   for that pending request; it does not authorize `cursor_set_mode` or a new
+   prompt while the plan remains pending.
 4. Before ending each Codex turn, report the semantic outcome and any pending
-   decision, observation gap or safety/completeness limit in the final; tool
-   results or commentary alone are insufficient. If this workflow requires
+   decision, observation gap or safety/completeness limit in the final; retain
+   and include any observed `progress_excerpt` in the later report for that turn.
+   Tool results or commentary alone are insufficient. If this workflow requires
    a new user decision, explicitly say that further provider work needs that
    decision; fixing a prerequisite does not authorize a retry.
    In the terminal report of an authorized write in canonical checkout include this exact sentence:
@@ -106,11 +132,12 @@ Cursor.
    stay in tool evidence; do not duplicate them in final unless requested.
 5. At terminality, protocol completion does not prove semantic success: verify
    the result/changes independently from available evidence, without an
-   unrequested provider turn or regeneration. For `result.truncated:true`, call
-   `cursor_read_result` with the same session/turn IDs and `offset:0`, following
-   each `next_offset` to `eof:true` before verification, another turn or close.
-   An unavailable result page must be reported as incomplete; a partial review
-   is not a full verdict. Terminal `turn_status:"timed_out"`
+   unrequested provider turn or regeneration. Retain terminal `result_page` as
+   the first result page. While its `eof:false`, call `cursor_read_result` with
+   the same session/turn IDs and the returned `next_offset`, retaining every
+   continuation through `eof:true` before verification, another turn or close.
+   At `eof:true` do not read again. A missing or unavailable page must be
+   reported as incomplete; a partial review is not a full verdict. Terminal `turn_status:"timed_out"`
    means interrupted work, unlike a live `wait_timeout:true`.
 
    Use the first matching terminal branch:
@@ -137,10 +164,10 @@ Cursor.
    failed, or an idle wrapper needs changed launch settings followed immediately
    by explicit resume. Close the current runtime ID; after a successful resume
    close only that new ID, never the pre-resume ID.
-6. On a named later stage, keep the live session. If the required mode differs,
-   including newly authorized writes after `ask`, call `cursor_set_mode` first,
-   then `cursor_send_prompt`. Never close+resume to change
-   mode. Do not claim a mode change without a successful `cursor_set_mode`.
+6. On a named later stage, keep the live session. The later user message
+   authorizes its `cursor_send_prompt` immediately after the completed turn.
+   Before that prompt, complete **Before every prompt**. Never close+resume to
+   change mode.
    After the last named stage completes, close idempotently. There is no
    active-turn steering: a follow-up while running waits for `completed` +
    `live` before sending. Every other terminal outcome follows step 5, without
@@ -153,9 +180,8 @@ Cursor.
    `optimize_for` or `plugin_dirs`; never carry wrapper `session_id`/`turn_id`
    or a prompt into resume. Use only fields admitted by the current tool schema.
    Wrapper loss/terminal close also uses explicit resume for a requested later
-   operation, without redundant close. Keep its new runtime ID. Resume proves
-   acceptance of the provider ID, not semantic memory: restore the minimal
-   bounded context/constraints required by the next task, or report unverifiable.
+   operation, without redundant close. Resume proves acceptance of the provider
+   ID, not semantic memory.
 
    For repeated critic review, keep one ephemeral manifest of frozen baseline,
    artifact paths and digest, not a session registry. Preserve every supplied

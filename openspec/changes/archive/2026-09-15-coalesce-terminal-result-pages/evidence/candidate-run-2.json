@@ -1,0 +1,49 @@
+{
+  "format": 1,
+  "scope": "terminal result delivery only; deterministic fake ACP; no model invocation",
+  "environment": {
+    "node": "v26.8.2",
+    "platform": "darwin",
+    "concurrency": 1
+  },
+  "fixture": {
+    "path": "openspec/changes/archive/2026-09-09-add-cursor-model-discovery/evidence/cursor-verification.md",
+    "bytes": 8353,
+    "sha256": "54c847eb7c47507f49cc997658038abed05206dbf4a4291cd5a93813243fb636"
+  },
+  "runtime": {
+    "path": "scripts/cursor-subagent-mcp.mjs",
+    "bytes": 74796,
+    "sha256": "d9881182fdb7ab25d062beae9352ebd5605a20919ed9a36a638d16220dc30309"
+  },
+  "skill": {
+    "path": "skills/cursor-subagent/SKILL.md",
+    "bytes": 14220,
+    "sha256": "0413e8b51f124268b9d83d76dae609ecfa23cc7aeb9c7fc0e440eca7b0e15b22"
+  },
+  "terminal_receipt": {
+    "session_id": "89caH3xxqiyLcAXRNg9OSQ",
+    "turn_id": "3Mm1JJFHjqYZqELM9lV1zg",
+    "turn_status": "completed",
+    "last_event_id": 3,
+    "result_sha256": "38fb6ecf3730dd13938a193c7fc118a1385b785c3cf6385df0db431f1622a0a5",
+    "result_truncated": true
+  },
+  "delivery": [
+    {
+      "tool": "cursor_wait",
+      "wire_json_bytes": 9390,
+      "sha256": "54c847eb7c47507f49cc997658038abed05206dbf4a4291cd5a93813243fb636",
+      "eof": true,
+      "next_offset": null,
+      "total_bytes": 8353,
+      "text_bytes": 8353
+    }
+  ],
+  "totals": {
+    "delivery_calls": 1,
+    "text_bytes": 8353,
+    "serialized_mcp_json_bytes": 9390,
+    "full_result_sha256": "54c847eb7c47507f49cc997658038abed05206dbf4a4291cd5a93813243fb636"
+  }
+}

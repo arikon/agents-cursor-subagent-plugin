@@ -1,0 +1,81 @@
+{
+  "format": 1,
+  "subject": "baseline-main",
+  "scope": "terminal result delivery only; deterministic fake ACP; no model invocation",
+  "environment": {
+    "node": "v26.8.2",
+    "platform": "darwin",
+    "concurrency": 1
+  },
+  "scenarios": {
+    "selected": [
+      "terminal-result-delivery"
+    ],
+    "executed": 1,
+    "skipped": 0
+  },
+  "fixture": {
+    "name": "archived-8353",
+    "source": "archived-model-discovery-cursor-verification",
+    "bytes": 8353,
+    "sha256": "54c847eb7c47507f49cc997658038abed05206dbf4a4291cd5a93813243fb636"
+  },
+  "runtime": {
+    "path": "scripts/cursor-subagent-mcp.mjs",
+    "bytes": 74567,
+    "sha256": "8bde75690138820d0e41fb648ba9a88549b38cb9a9115a373f2abe4fb85fe5b5"
+  },
+  "skill": {
+    "path": "skills/cursor-subagent/SKILL.md",
+    "bytes": 14110,
+    "sha256": "ae46e1d428ed3d518746fbf039929df23b256557075a3ac2bd06e35a9d3074fc"
+  },
+  "adapter": {
+    "path": "tests/fixtures/fake-acp.mjs",
+    "bytes": 38203,
+    "sha256": "d7161ac9fc959d5fd24b3877f88d38688ff23496321972d8cea4c16a46946ff6"
+  },
+  "terminal_receipt": {
+    "session_id": "GPC0pyVaEEikNcXX959eZg",
+    "turn_id": "rXuoeWAZ4lpfmmdf2BPKYQ",
+    "turn_status": "completed",
+    "last_event_id": 3,
+    "result_sha256": "38fb6ecf3730dd13938a193c7fc118a1385b785c3cf6385df0db431f1622a0a5",
+    "result_truncated": true
+  },
+  "delivery": [
+    {
+      "tool": "cursor_wait",
+      "wire_json_bytes": 8815,
+      "sha256": null,
+      "eof": false,
+      "next_offset": null,
+      "total_bytes": 8353,
+      "text_bytes": 7999
+    },
+    {
+      "tool": "cursor_read_result",
+      "wire_json_bytes": 8546,
+      "sha256": "54c847eb7c47507f49cc997658038abed05206dbf4a4291cd5a93813243fb636",
+      "eof": false,
+      "next_offset": 8000,
+      "total_bytes": 8353,
+      "text_bytes": 8000
+    },
+    {
+      "tool": "cursor_read_result",
+      "wire_json_bytes": 695,
+      "sha256": "54c847eb7c47507f49cc997658038abed05206dbf4a4291cd5a93813243fb636",
+      "eof": true,
+      "next_offset": null,
+      "total_bytes": 8353,
+      "text_bytes": 353
+    }
+  ],
+  "totals": {
+    "delivery_calls": 3,
+    "text_bytes": 16352,
+    "serialized_mcp_json_bytes": 18056,
+    "full_result_sha256": "54c847eb7c47507f49cc997658038abed05206dbf4a4291cd5a93813243fb636"
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "format": 1,
+  "subject": "baseline-main",
+  "scope": "terminal result delivery only; deterministic fake ACP; no model invocation",
+  "environment": {
+    "node": "v26.8.2",
+    "platform": "darwin",
+    "concurrency": 1
+  },
+  "scenarios": {
+    "selected": [
+      "terminal-result-delivery"
+    ],
+    "executed": 1,
+    "skipped": 0
+  },
+  "fixture": {
+    "name": "empty",
+    "source": "generated-ascii",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "runtime": {
+    "path": "scripts/cursor-subagent-mcp.mjs",
+    "bytes": 74567,
+    "sha256": "8bde75690138820d0e41fb648ba9a88549b38cb9a9115a373f2abe4fb85fe5b5"
+  },
+  "skill": {
+    "path": "skills/cursor-subagent/SKILL.md",
+    "bytes": 14110,
+    "sha256": "ae46e1d428ed3d518746fbf039929df23b256557075a3ac2bd06e35a9d3074fc"
+  },
+  "adapter": {
+    "path": "tests/fixtures/fake-acp.mjs",
+    "bytes": 38203,
+    "sha256": "d7161ac9fc959d5fd24b3877f88d38688ff23496321972d8cea4c16a46946ff6"
+  },
+  "terminal_receipt": {
+    "session_id": "B32CWyqpFtMmwZmjYikTKA",
+    "turn_id": "BiebZv_fLkhnoqjUfWABAw",
+    "turn_status": "completed",
+    "last_event_id": 3,
+    "result_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "result_truncated": false
+  },
+  "delivery": [
+    {
+      "tool": "cursor_wait",
+      "wire_json_bytes": 606,
+      "sha256": null,
+      "eof": true,
+      "next_offset": null,
+      "total_bytes": 0,
+      "text_bytes": 0
+    }
+  ],
+  "totals": {
+    "delivery_calls": 1,
+    "text_bytes": 0,
+    "serialized_mcp_json_bytes": 606,
+    "full_result_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}

@@ -134,23 +134,31 @@ function toolPayload(message) {
   if (typeof text !== 'string') return null;
   try { const value = JSON.parse(text); return value && !Array.isArray(value) && typeof value === 'object' ? value : null; } catch { return null; }
 }
-function compactResultRead(payload, entry) {
-  if (entry?.tool !== 'cursor_read_result' || typeof payload?.text !== 'string') return null;
+function compactResultRead(payload, entry, delivered = true, envelope = payload) {
+  if (!['cursor_wait', 'cursor_read_result'].includes(entry?.tool) || typeof payload?.text !== 'string') return null;
+  if (!delivered) return null;
   const { session_id: sessionId, turn_id: turnId } = entry.request;
-  const requestedOffset = entry.request.offset ?? 0;
+  const requestedOffset = entry.tool === 'cursor_wait' ? 0 : entry.request.offset ?? 0;
   const textBytes = Buffer.from(payload.text, 'utf8');
   const key = `${sessionId}\0${turnId}`;
-  let state = resultReads.get(key);
-  if (requestedOffset === 0) {
-    state = { nextOffset: 0, hash: createHash('sha256'), bytes: 0 };
-    resultReads.set(key, state);
-  }
+  const prior = resultReads.get(key);
+  const state = requestedOffset === 0 ? { nextOffset: 0, hash: createHash('sha256'), bytes: 0,
+    totalBytes: payload.total_bytes, sha256: payload.sha256 } : prior;
   const shapeMatched = state && requestedOffset === state.nextOffset && payload.offset === requestedOffset
+    && payload.session_id === sessionId && payload.turn_id === turnId
+    && envelope?.session_id === sessionId && envelope?.turn_id === turnId
     && Number.isSafeInteger(payload.total_bytes) && payload.total_bytes >= 0
     && typeof payload.sha256 === 'string' && /^[a-f0-9]{64}$/.test(payload.sha256)
+    && payload.total_bytes === state.totalBytes && payload.sha256 === state.sha256
     && typeof payload.eof === 'boolean'
-    && (payload.eof ? payload.next_offset === null : payload.next_offset === requestedOffset + textBytes.length);
-  if (!shapeMatched) return { complete: false, eof: payload.eof === true };
+    && textBytes.length <= payload.total_bytes - requestedOffset
+    && (payload.eof ? payload.next_offset === null && requestedOffset + textBytes.length === payload.total_bytes
+      : textBytes.length > 0 && payload.next_offset === requestedOffset + textBytes.length);
+  if (!shapeMatched) {
+    resultReads.delete(key);
+    return { complete: false, eof: payload.eof === true };
+  }
+  resultReads.set(key, state);
   state.hash.update(textBytes); state.bytes += textBytes.length; state.nextOffset = requestedOffset + textBytes.length;
   if (!payload.eof) return { complete: false, eof: false };
   const digest = state.hash.digest('hex');
@@ -158,7 +166,7 @@ function compactResultRead(payload, entry) {
   resultReads.delete(key);
   return { complete, eof: true, total_bytes: payload.total_bytes, sha256: payload.sha256 };
 }
-function compactResponse(message, entry) {
+function compactResponse(message, entry, delivered = true) {
   const payload = toolPayload(message);
   const response = { ok: message?.result?.isError === false && payload !== null };
   if (payload) {
@@ -183,7 +191,18 @@ function compactResponse(message, entry) {
     if (Object.hasOwn(payload, 'active_turn')) response.active_turn_present = payload.active_turn !== null;
     if (Array.isArray(payload.pending)) response.pending = compactPending(payload.pending);
     if (typeof payload.result?.text === 'string') response.result = compactResult(payload.result);
-    const resultRead = compactResultRead(payload, entry);
+    const resultPage = payload.result_page;
+    if (resultPage && !Array.isArray(resultPage) && typeof resultPage === 'object' && typeof resultPage.text === 'string') {
+      response.result_page = { ...compactResult(resultPage),
+        ...(Number.isSafeInteger(resultPage.offset) ? { offset: resultPage.offset } : {}),
+        ...(Number.isSafeInteger(resultPage.next_offset) ? { next_offset: resultPage.next_offset } : {}),
+        ...(resultPage.next_offset === null ? { next_offset: null } : {}),
+        ...(typeof resultPage.eof === 'boolean' ? { eof: resultPage.eof } : {}),
+        ...(Number.isSafeInteger(resultPage.total_bytes) ? { total_bytes: resultPage.total_bytes } : {}),
+        ...(typeof resultPage.sha256 === 'string' && /^[a-f0-9]{64}$/.test(resultPage.sha256) ? { sha256: resultPage.sha256 } : {}),
+      };
+    } else if (resultPage === null) response.result_page = null;
+    const resultRead = compactResultRead(entry?.tool === 'cursor_wait' ? resultPage : payload, entry, delivered, payload);
     if (resultRead) response.result_read = resultRead;
     if (payload.terminal_receipt && !Array.isArray(payload.terminal_receipt) && typeof payload.terminal_receipt === 'object') {
       const receipt = payload.terminal_receipt;
@@ -321,9 +340,9 @@ function withholdTerminalWaitResponse(frame) {
   const payload = toolPayload(message);
   if (entry?.tool !== 'cursor_wait' || !payload
     || message.result?.isError !== false || payload.turn_status !== 'completed'
-    || typeof payload.result?.text !== 'string' || payload.result.text.length === 0) return null;
+    || typeof payload.result_page?.text !== 'string' || payload.result_page.text.length === 0) return null;
   terminalWaitResponseWithheld = true;
-  entry.withheld_response = compactResponse(message, entry);
+  entry.withheld_response = compactResponse(message, entry, false);
   return { jsonrpc: '2.0', id: message.id, result: { isError: true, content: [{ type: 'text', text: JSON.stringify({
     error_code: 'eval_wait_response_lost', message: 'cursor_wait response unavailable',
   }) }] } };

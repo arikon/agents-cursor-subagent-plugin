@@ -130,16 +130,16 @@ test('runtime recovery trace proves the old wrapper tombstone without duplicatin
   const digest1 = 'a'.repeat(64); const digest2 = 'b'.repeat(64);
   const calls = [
     { tool: 'cursor_delegate', request: { mode: 'ask' }, response: { ok: true, session_id: 'session-1', turn_id: 'turn-1', cursor_session_id: 'cursor-1' } },
-    { tool: 'cursor_wait', request: { session_id: 'session-1', turn_id: 'turn-1' }, response: { ok: true, session_id: 'session-1', turn_id: 'turn-1', turn_status: 'completed', terminal_receipt: { result_sha256: digest1, result_truncated: false } } },
+    { tool: 'cursor_wait', request: { session_id: 'session-1', turn_id: 'turn-1' }, response: { ok: true, session_id: 'session-1', turn_id: 'turn-1', turn_status: 'completed', result_page: { text_bytes: 1, text_sha256: digest1, offset: 0, next_offset: null, eof: true, total_bytes: 1, sha256: digest1 }, terminal_receipt: { result_sha256: digest1, result_truncated: false } } },
     { tool: 'cursor_wait', request: { session_id: 'session-1', turn_id: 'turn-1' }, response: { ok: true, session_id: 'session-1', turn_id: 'turn-1', turn_status: 'completed', session_state: 'tombstone' } },
     { tool: 'cursor_resume_session', request: { cursor_session_id: 'cursor-1' }, response: { ok: true, session_id: 'session-2', cursor_session_id: 'cursor-1' } },
     { tool: 'cursor_send_prompt', request: { session_id: 'session-2' }, response: { ok: true, session_id: 'session-2', turn_id: 'turn-2' } },
-    { tool: 'cursor_wait', request: { session_id: 'session-2', turn_id: 'turn-2' }, response: { ok: true, session_id: 'session-2', turn_id: 'turn-2', turn_status: 'completed', terminal_receipt: { result_sha256: digest2, result_truncated: false } } },
+    { tool: 'cursor_wait', request: { session_id: 'session-2', turn_id: 'turn-2' }, response: { ok: true, session_id: 'session-2', turn_id: 'turn-2', turn_status: 'completed', result_page: { text_bytes: 1, text_sha256: digest2, offset: 0, next_offset: null, eof: true, total_bytes: 1, sha256: digest2 }, terminal_receipt: { result_sha256: digest2, result_truncated: false } } },
     { tool: 'cursor_close_session', request: { session_id: 'session-2' }, response: { ok: true, session_id: 'session-2' } },
   ];
   const safe = [
-    { event: 'prompt_result', step_id: 'terminal-1', result_sha256: digest1 },
-    { event: 'prompt_result', step_id: 'terminal-2', result_sha256: digest2 },
+    { event: 'prompt_result', step_id: 'terminal-1', result_sha256: digest1, preview_sha256: digest1, preview_truncated: false },
+    { event: 'prompt_result', step_id: 'terminal-2', result_sha256: digest2, preview_sha256: digest2, preview_truncated: false },
   ];
   const observations = observationsFromEvidence(scenario, { calls, dropped_calls: 0 }, safe,
     { actual_task_outcome: 'succeeded', reported_task_outcome: 'not_checked' });
@@ -169,6 +169,16 @@ test('runtime recovery trace proves the old wrapper tombstone without duplicatin
   const repeatedTombstone = observationsFromEvidence(scenario, { calls: repeatedTombstoneCalls, dropped_calls: 0 }, safe,
     { actual_task_outcome: 'succeeded', reported_task_outcome: 'not_checked' });
   assert.ok(scoreWithCapturedFinals(scenario, repeatedTombstone).mismatches.includes('operation-after-close'));
+  const corruptedRepeatedProofCalls = structuredClone(calls);
+  corruptedRepeatedProofCalls[1].response.result_read = { complete: true, eof: true, total_bytes: 1, sha256: digest1 };
+  corruptedRepeatedProofCalls.splice(2, 0, {
+    tool: 'cursor_wait', request: { session_id: 'session-1', turn_id: 'turn-1' },
+    response: { ok: true, session_id: 'session-1', turn_id: 'turn-1', turn_status: 'completed',
+      result_read: { complete: true, eof: true, total_bytes: 1, sha256: 'c'.repeat(64) } },
+  });
+  const corruptedRepeatedProof = observationsFromEvidence(scenario, { calls: corruptedRepeatedProofCalls, dropped_calls: 0 }, safe,
+    { actual_task_outcome: 'succeeded', reported_task_outcome: 'not_checked' });
+  assert.deepEqual(corruptedRepeatedProof.trace.filter(({ kind }) => kind === 'turn.result-read').map(({ complete }) => complete), [true, false]);
   const postCloseDelegateCalls = structuredClone(idempotentCloseCalls);
   postCloseDelegateCalls.splice(3, 0, {
     tool: 'cursor_delegate', request: { mode: 'ask' },

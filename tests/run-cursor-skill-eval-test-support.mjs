@@ -69,15 +69,16 @@ const transcriptFor = (scenario) => scenario.harness_faults?.includes('hold-term
   calls: [
     { tool: 'cursor_delegate', response: { ok: true, session_id: 'S', turn_id: 'T' } },
     { tool: 'cursor_wait', request: lossWaitRequest, response: { ok: false, error_code: 'eval_wait_response_lost', message: 'cursor_wait response unavailable' }, withheld_response: lossWaitResponse },
-    { tool: 'cursor_wait', request: lossWaitRequest, response: lossWaitResponse },
+    { tool: 'cursor_wait', request: lossWaitRequest, response: lossWaitDeliveredResponse },
   ], dropped_calls: 0, unexpected_input_requests: 0, turn_call_ranges: [{ start: 0, end: 3 }],
 };
 const lossWaitRequest = { session_id: 'S', turn_id: 'T', arguments_without_session_turn_sha256: createHash('sha256').update('{}').digest('hex') };
 const lossResultDigest = createHash('sha256').update('WAIT_RECOVERED_OK').digest('hex');
 const lossWaitResponse = { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'completed',
   wait_timeout: false, pending: [], session_state: 'live',
-  result: { text_bytes: 17, text_sha256: lossResultDigest, truncated: false },
+  result_page: { text_bytes: 17, text_sha256: lossResultDigest, offset: 0, next_offset: null, eof: true, total_bytes: 17, sha256: lossResultDigest },
   terminal_receipt: { session_id: 'S', turn_id: 'T', turn_status: 'completed', last_event_id: 1, result_sha256: lossResultDigest, result_truncated: false } };
+const lossWaitDeliveredResponse = { ...lossWaitResponse, result_read: { complete: true, eof: true, total_bytes: 17, sha256: lossResultDigest } };
 const reportChecksFor = (scenario) => scenario.report_checks || [];
 const capturedFinalsFor = (scenario) => {
   if (scenario.scenario_kind !== 'programmed') return [];

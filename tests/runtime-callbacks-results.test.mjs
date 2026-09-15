@@ -378,7 +378,10 @@ test('event eviction does not prevent retained turn observation', async (t) => {
 test('bounded result text preserves UTF-8 code points', async (t) => {
   const boundary = `${'a'.repeat(7_994)}😀xyz`;
   const resultRuntime = withFake(t, { env: { FAKE_ACP_RESULT: boundary } }); const resultSession = await resultRuntime.call('cursor_start_session', { cwd, mode: 'ask' }); const resultTurn = await resultRuntime.call('cursor_send_prompt', { session_id: resultSession.session_id, prompt: 'result' }); const terminal = await waitTerminal(resultRuntime, resultSession.session_id, resultTurn.turn_id);
-  assert.equal(terminal.result.truncated, true); assert.equal(Buffer.from(terminal.result.text, 'utf8').toString('utf8'), terminal.result.text); assert.ok(Buffer.byteLength(terminal.result.text, 'utf8') <= LIMITS.textBytes);
+  assert.equal(terminal.result_page.eof, true); assert.equal(terminal.result_page.text, boundary);
+  assert.equal(terminal.terminal_receipt.result_truncated, true);
+  const status = await resultRuntime.call('cursor_session_status', { session_id: resultSession.session_id });
+  assert.equal(Buffer.from(status.last_terminal_turn.result.text, 'utf8').toString('utf8'), status.last_terminal_turn.result.text); assert.ok(Buffer.byteLength(status.last_terminal_turn.result.text, 'utf8') <= LIMITS.textBytes);
   await resultRuntime.call('cursor_close_session', { session_id: resultSession.session_id });
 
   const providerRuntime = withFake(t, { env: { FAKE_ACP_INIT_RESPONSE_VARIANT: 'provider-error', FAKE_ACP_INIT_ERROR_MESSAGE: boundary } });
@@ -405,9 +408,10 @@ test('full terminal result is paged without losing its Unicode tail or mutating 
   const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
   const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'long result' });
   const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id);
-  assert.equal(terminal.result.truncated, true);
-  assert.equal(terminal.result.text.includes('TAIL_MARKER'), false);
-  assert.equal(terminal.terminal_receipt.result_sha256, createHash('sha256').update(terminal.result.text).digest('hex'));
+  assert.equal(terminal.result_page.eof, false);
+  assert.equal(terminal.result_page.text.includes('TAIL_MARKER'), false);
+  assert.equal(terminal.terminal_receipt.result_truncated, true);
+  assert.equal(terminal.terminal_receipt.result_sha256, createHash('sha256').update((await runtime.call('cursor_session_status', { session_id: session.session_id })).last_terminal_turn.result.text).digest('hex'));
 
   const record = runtime.sessions.get(session.session_id);
   const before = {
@@ -415,8 +419,8 @@ test('full terminal result is paged without losing its Unicode tail or mutating 
     idleTimer: record.idleTimer,
     providerMessages: readJsonLines(providerLog).length,
   };
-  const pages = [];
-  let offset = 0;
+  const pages = [terminal.result_page];
+  let offset = terminal.result_page.next_offset;
   do {
     const page = await runtime.call('cursor_read_result', { session_id: session.session_id, turn_id: turn.turn_id, offset });
     pages.push(page);
@@ -429,8 +433,8 @@ test('full terminal result is paged without losing its Unicode tail or mutating 
   assert.equal(pages.at(-1).total_bytes, Buffer.byteLength(full));
   assert.equal(pages.at(-1).sha256, createHash('sha256').update(full).digest('hex'));
   assert.deepEqual(await runtime.call('cursor_read_result', {
-    session_id: session.session_id, turn_id: turn.turn_id, offset: pages[0].next_offset,
-  }), pages[1]);
+    session_id: session.session_id, turn_id: turn.turn_id, offset: 0,
+  }), pages[0]);
   assert.deepEqual(await runtime.call('cursor_read_result', {
     session_id: session.session_id, turn_id: turn.turn_id, offset: Buffer.byteLength(full),
   }), {
@@ -450,6 +454,35 @@ test('full terminal result is paged without losing its Unicode tail or mutating 
   }, before);
 });
 
+test('terminal result pages coalesce a close tail within the fixed maximum', async (t) => {
+  for (const size of [LIMITS.resultPageBytes - 1, LIMITS.resultPageBytes, LIMITS.resultPageBytes + 1,
+    LIMITS.resultPageMaximumBytes - 1, LIMITS.resultPageMaximumBytes, LIMITS.resultPageMaximumBytes + 1]) {
+    const runtime = withInjectedFake(t, { env: { FAKE_ACP_RESULT: 'x'.repeat(size) } });
+    const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
+    const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: `result ${size}` });
+    const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id);
+    const first = terminal.result_page;
+    assert.deepEqual(first, await runtime.call('cursor_read_result', { session_id: session.session_id, turn_id: turn.turn_id }));
+    assert.equal(first.eof, size <= LIMITS.resultPageMaximumBytes);
+    assert.equal(Buffer.byteLength(first.text), size <= LIMITS.resultPageMaximumBytes ? size : LIMITS.resultPageBytes);
+    if (!first.eof) {
+      const tail = await runtime.call('cursor_read_result', { session_id: session.session_id, turn_id: turn.turn_id, offset: first.next_offset });
+      assert.equal(tail.eof, true); assert.equal(tail.text, 'x'.repeat(size - LIMITS.resultPageBytes));
+    }
+    await runtime.call('cursor_close_session', { session_id: session.session_id });
+  }
+
+  const unicode = `${'a'.repeat(LIMITS.resultPageBytes - 2)}😀${'b'.repeat(2_000)}`;
+  const runtime = withInjectedFake(t, { env: { FAKE_ACP_RESULT: unicode } });
+  const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
+  const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'unicode page boundary' });
+  const first = (await waitTerminal(runtime, session.session_id, turn.turn_id)).result_page;
+  assert.equal(Buffer.byteLength(first.text), LIMITS.resultPageBytes - 2); assert.equal(first.text.endsWith('😀'), false);
+  const tail = await runtime.call('cursor_read_result', { session_id: session.session_id, turn_id: turn.turn_id, offset: first.next_offset });
+  assert.equal(`${first.text}${tail.text}`, unicode); assert.equal(tail.eof, true);
+  await runtime.call('cursor_close_session', { session_id: session.session_id });
+});
+
 test('full result read handles empty, active, null, replaced and retained closed turns', async (t) => {
   const root = mkdtempSync(join(tmpdir(), 'cursor-result-retention-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
@@ -461,7 +494,12 @@ test('full result read handles empty, active, null, replaced and retained closed
   const emptyRuntime = withInjectedFake(t, { env: { CURSOR_EVAL_FAKE_ACP_PROGRAM_PATH: programPath } });
   const emptySession = await emptyRuntime.call('cursor_start_session', { cwd, mode: 'ask' });
   const emptyTurn = await emptyRuntime.call('cursor_send_prompt', { session_id: emptySession.session_id, prompt: 'empty' });
-  await waitTerminal(emptyRuntime, emptySession.session_id, emptyTurn.turn_id);
+  const emptyTerminal = await waitTerminal(emptyRuntime, emptySession.session_id, emptyTurn.turn_id);
+  assert.deepEqual(emptyTerminal.result_page, {
+    session_id: emptySession.session_id, turn_id: emptyTurn.turn_id, offset: 0,
+    next_offset: null, eof: true, text: '', total_bytes: 0,
+    sha256: createHash('sha256').update('').digest('hex'),
+  });
   assert.deepEqual(await emptyRuntime.call('cursor_read_result', {
     session_id: emptySession.session_id, turn_id: emptyTurn.turn_id,
   }), {
@@ -546,7 +584,7 @@ test('retained result overflow fails explicitly without publishing a partial res
   const terminal = await waitTerminal(runtime, session.session_id, turn.turn_id);
   assert.equal(terminal.turn_status, 'failed');
   assert.deepEqual(terminal.terminal_reason, { text: 'terminal_result_limit', truncated: false });
-  assert.equal(terminal.result, null);
+  assert.equal(terminal.result_page, null);
   assert.equal(terminal.terminal_receipt.result_sha256, null);
   assert.equal(terminal.terminal_receipt.result_truncated, false);
   const status = await runtime.call('cursor_session_status', { session_id: session.session_id });
@@ -573,7 +611,11 @@ test('prompt response seals one immutable terminal before later same-batch updat
       session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000,
     });
     assert.equal(terminal.turn_status, 'completed');
-    assert.deepEqual(terminal.result, { text: '', truncated: false });
+    assert.deepEqual(terminal.result_page, {
+      session_id: session.session_id, turn_id: turn.turn_id, offset: 0,
+      next_offset: null, eof: true, text: '', total_bytes: 0,
+      sha256: createHash('sha256').update('').digest('hex'),
+    });
     assert.equal((await runtime.call('cursor_read_result', {
       session_id: session.session_id, turn_id: turn.turn_id,
     })).text, '');

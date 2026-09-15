@@ -6,7 +6,7 @@ const { assert, spawn, createHash, chmodSync, existsSync, mkdirSync, mkdtempSync
 async function assertRepeatableTerminal(runtime, session_id, turn_id) {
   const args = { session_id, turn_id, timeout_ms: 1_000 };
   const first = await runtime.call('cursor_wait', args);
-  assert.equal(Object.hasOwn(first, 'result'), true);
+  assert.equal(Object.hasOwn(first, 'result_page'), true);
   assert.equal(Object.hasOwn(first, 'terminal_reason'), true);
   assert.equal(first.wait_timeout, false);
   assert.deepEqual(first.pending, []);
@@ -20,7 +20,7 @@ test('fixed resource limits remain the frozen v1 public values', () => {
     waitMinMs: 1_000, waitMaxMs: 180_000, live: 8, pending: 8, waiters: 8,
     tombstones: 64, events: 256, graceMs: 5_000, retentionMs: 300_000,
     inputBytes: 64_000, textBytes: 8_000, progressBytes: 512, fsBytes: 1_048_576,
-    resultBytes: 1_048_576, resultPageBytes: 8_000, frameBytes: 1_048_576,
+    resultBytes: 1_048_576, resultPageBytes: 8_000, resultPageMaximumBytes: 10_000, frameBytes: 1_048_576,
   });
 });
 
@@ -43,7 +43,7 @@ test('warning scenarios: prompt rejection preserves allocation boundary', async 
   assert.ok(Buffer.byteLength(terminal.provider_error.message.text, 'utf8') <= LIMITS.textBytes);
   await waitSessionState(runtime, session.session_id, 'tombstone');
   assert.equal((await runtime.call('cursor_session_status', { session_id: session.session_id })).session_state, 'tombstone');
-  assert.equal((await assertRepeatableTerminal(runtime, session.session_id, allocated.turn_id)).result, null);
+  assert.equal((await assertRepeatableTerminal(runtime, session.session_id, allocated.turn_id)).result_page, null);
 });
 
 test('turn deadline publishes timed_out before releasing the session', async (t) => {
@@ -65,7 +65,7 @@ test('turn deadline publishes timed_out before releasing the session', async (t)
   assert.equal(terminal.turn_status, 'timed_out');
   assert.equal(terminal.terminal_reason.text, 'turn deadline exceeded');
   await waitSessionState(runtime, session.session_id, 'tombstone');
-  assert.equal((await assertRepeatableTerminal(runtime, session.session_id, turn.turn_id)).result, null);
+  assert.equal((await assertRepeatableTerminal(runtime, session.session_id, turn.turn_id)).result_page, null);
 });
 
 test('warning scenarios: allowed roots distinguish absent, empty and malformed configuration', async (t) => {
@@ -119,7 +119,7 @@ test('late ACP result cannot rewrite a publicly cancelled turn', async (t) => {
   const retained = await runtime.call('cursor_session_status', { session_id: session.session_id });
   assert.equal(retained.last_terminal_turn.turn_status, 'cancelled');
   assert.equal(retained.last_terminal_turn.result, null);
-  assert.equal((await assertRepeatableTerminal(runtime, session.session_id, turn.turn_id)).result, null);
+  assert.equal((await assertRepeatableTerminal(runtime, session.session_id, turn.turn_id)).result_page, null);
 });
 
 test('answering one of multiple pending requests keeps the turn waiting', async (t) => {
@@ -273,7 +273,8 @@ test('child exit after a completed turn tombstones the session without rewriting
   }
   assert.equal(status.session_state, 'tombstone');
   assert.equal(status.last_terminal_turn.turn_status, 'completed');
-  assert.deepEqual(status.last_terminal_turn.result, completed.result);
+  assert.deepEqual(status.last_terminal_turn.result, { text: 'done', truncated: false });
+  assert.equal(completed.result_page.text, 'done');
 });
 
 test('unknown close preserves a live wrapper and valid close remains repeatable', async (t) => {
@@ -864,7 +865,7 @@ test('terminal wait is repeatable while later action acknowledgements omit the s
   const turn = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'one' });
   const completed = await waitTerminal(runtime, session.session_id, turn.turn_id);
   assert.equal(completed.turn_status, 'completed');
-  assert.equal(completed.result.text, 'done');
+  assert.equal(completed.result_page.text, 'done');
   assert.equal(Object.keys(completed).includes('last_terminal_turn'), false);
   assert.equal(completed.terminal_receipt.turn_id, turn.turn_id);
   assert.equal(completed.terminal_receipt.result_truncated, false);
@@ -882,6 +883,58 @@ test('terminal wait is repeatable while later action acknowledgements omit the s
   assert.equal(closed.terminal_receipt.turn_id, next.turn_id);
   assert.equal(closed.terminal_receipt.turn_status, 'cancelled');
   await runtime.call('cursor_session_status', { session_id: session.session_id });
+});
+
+test('parallel recovery waits retain their addressed terminal page until the next terminal turn', async (t) => {
+  const runtime = withInjectedFake(t, { env: { FAKE_ACP_RESULT: 'pinned result' } });
+  const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
+  const first = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'first' });
+  const completed = await waitTerminal(runtime, session.session_id, first.turn_id);
+  const second = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'second' });
+  const record = runtime.sessions.get(session.session_id);
+  const before = { events: record.nextEvent, waiters: record.waiters.size, providerCalls: record.rpc.size };
+  const repeated = await Promise.all([
+    runtime.call('cursor_wait', { session_id: session.session_id, turn_id: first.turn_id, timeout_ms: 1_000 }),
+    runtime.call('cursor_wait', { session_id: session.session_id, turn_id: first.turn_id, timeout_ms: 1_000 }),
+  ]);
+  assert.deepEqual(repeated, [completed, completed]);
+  assert.deepEqual({ events: record.nextEvent, waiters: record.waiters.size, providerCalls: record.rpc.size }, before);
+  await waitTerminal(runtime, session.session_id, second.turn_id);
+  await assert.rejects(runtime.call('cursor_wait', { session_id: session.session_id, turn_id: first.turn_id, timeout_ms: 1_000 }), { error_code: 'unknown_turn' });
+  await assert.rejects(runtime.call('cursor_read_result', { session_id: session.session_id, turn_id: first.turn_id }), { error_code: 'unknown_turn' });
+  await runtime.call('cursor_close_session', { session_id: session.session_id });
+});
+
+test('accepted running wait returns its first result page after a second terminal turn replaces retention', async (t) => {
+  const runtime = withInjectedFake(t, { env: { FAKE_ACP_HOLD_PROMPT: '1' } });
+  const session = await runtime.call('cursor_start_session', { cwd, mode: 'ask' });
+  const first = await runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'first' });
+  const record = runtime.sessions.get(session.session_id);
+  const waiting = runtime.call('cursor_wait', { session_id: session.session_id, turn_id: first.turn_id, timeout_ms: 1_000 });
+  assert.equal(record.active.turn_status, 'running');
+  assert.equal(record.waiters.size, 1, 'the first wait is registered before either completion');
+
+  // Keep both completions in this stack: the accepted wait cannot resume between them.
+  record.sessionUpdate({ params: { sessionId: record.cursorSessionId, update: { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: 'first result' } } } });
+  record.complete(record.active, { stopReason: 'end_turn' });
+  const secondDispatch = runtime.call('cursor_send_prompt', { session_id: session.session_id, prompt: 'second' });
+  const secondId = record.active.turn_id;
+  record.sessionUpdate({ params: { sessionId: record.cursorSessionId, update: { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: 'second result' } } } });
+  record.complete(record.active, { stopReason: 'end_turn' });
+  assert.equal(record.last.turn_id, secondId);
+  assert.equal(record.last.turn_status, 'completed');
+
+  const result = await waiting;
+  assert.equal(result.turn_id, first.turn_id);
+  assert.equal(result.turn_status, 'completed');
+  assert.equal(result.wait_timeout, false);
+  assert.equal(result.result_page.turn_id, first.turn_id);
+  assert.equal(result.result_page.text, 'first result');
+  assert.equal(result.result_page.sha256, createHash('sha256').update('first result', 'utf8').digest('hex'));
+  assert.equal((await secondDispatch).turn_id, secondId);
+  await assert.rejects(runtime.call('cursor_read_result', { session_id: session.session_id, turn_id: first.turn_id }), { error_code: 'unknown_turn' });
+  assert.equal((await runtime.call('cursor_read_result', { session_id: session.session_id, turn_id: secondId })).text, 'second result');
+  await runtime.call('cursor_close_session', { session_id: session.session_id });
 });
 
 test('close preserves an undelivered retained terminal receipt and repeats it idempotently', async (t) => {
@@ -1172,7 +1225,7 @@ test('cursor_wait ignores collaboration-event bursts while runtime acknowledges 
 
   const completed = await waitTerminal(runtime, session.session_id, turn.turn_id);
   assert.equal(completed.turn_status, 'completed');
-  assert.equal(completed.result.text, 'done');
+  assert.equal(completed.result_page.text, 'done');
   await runtime.call('cursor_close_session', { session_id: session.session_id });
 });
 

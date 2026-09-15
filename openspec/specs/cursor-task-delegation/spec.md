@@ -138,12 +138,22 @@ Each user-provided absolute Agent Plugin root MUST be forwarded unchanged via
 `plugin_dirs`; the skill MUST NOT copy or substitute it and MUST NOT pre-empt
 runtime-owned canonicalization, existence, or allowed-root validation. A
 runtime `invalid_args` or `scope_rejected` result is reported without fallback.
-Before a write-capable `cursor_delegate`, the skill MUST verify that the
-provider prompt contains one exact `AUTHORIZED_ACTIONS` line for every
-caller-authorized write plus the exact `NO_SCOPE_EXPANSION: make no other
-changes; stop and report any required expansion.` line, and MUST NOT delegate
-until those clauses are present. The operation token is exactly `write` for
-both file creation and modification and MUST NOT be replaced by a synonym.
+Before every `cursor_delegate` or `cursor_send_prompt`, the skill MUST
+prepare the mode, bounded context, and user-required exact text at the prompt
+action site. A next stage MUST use the mode implied by its existing
+`ask`/`plan`/`agent` semantics; when it differs from a live wrapper, a
+successful `cursor_set_mode` MUST precede the prompt. A resumed wrapper MUST
+restore the minimal bounded context/constraints required by the next task or
+report unverifiable; a repeated critic review after resume MUST restore its
+full bounded baseline/snapshot before any delta. Only an unchanged live critic
+conversation MAY compress that baseline. User-required exact outcome markers
+MUST be copied verbatim into the provider prompt and requested report.
+Before a write-capable prompt, the skill MUST verify that the provider prompt
+contains one exact `AUTHORIZED_ACTIONS` line for every caller-authorized
+write plus the exact `NO_SCOPE_EXPANSION: make no other changes; stop and
+report any required expansion.` line, and MUST NOT delegate or send until
+those clauses are present. The operation token is exactly `write` for both
+file creation and modification and MUST NOT be replaced by a synonym.
 A terminal turn MUST NOT be treated as a terminal delegation when the user has
 already declared a later decision, follow-up, or review stage. In that case the
 skill MUST preserve the same live runtime `session_id`, MUST NOT close or resume
@@ -264,10 +274,16 @@ When the caller explicitly limits observation to one wait
 interval, the skill MUST stop the later-wait schedule after the first
 `wait_timeout:true`, report that work remains in progress, end that Codex turn,
 and leave the Cursor turn active; continuation uses the retained tool results.
-When a terminal preview is truncated, the skill MUST call `cursor_read_result`
-through the runtime-owned «Полное чтение terminal result» read path before final verification/reporting
-or starting another turn. It MUST retain the complete result before required
-close, without provider regeneration, repeated wait or private archive access.
+Skill MUST принять result_page из terminal wait и при необходимости дочитать
+результат по runtime-owned RP-2 до final verification/reporting, следующего turn
+или required close. При eof:false skill MUST передать возвращённый next_offset
+в cursor_read_result для тех же session_id/turn_id и продолжать по returned
+continuation до eof:true; при eof:true дополнительное чтение MUST NOT требоваться.
+Skill MUST сохранить первую страницу вместе с дочитанным хвостом; обычное
+дочитывание MUST NOT начинаться повторно с нуля или использовать повторный wait
+для получения хвоста. Восстановление потерянного wait response остаётся SW-2.
+Признак полноты принадлежит RP-2, а не preview receipt. Skill MUST сохранить
+полный текст до required close, без provider regeneration или private archive access.
 If result retention failed or data is unavailable, report the completeness
 limitation; a partial review is not a complete verdict.
 At a required close boundary the skill MUST retain the semantic result and
@@ -427,3 +443,11 @@ introduced.
 #### Scenario: Ошибка модели имеет диагностику
 - **WHEN** allocation не создал turn и runtime вернул причину в terminal_reason
 - **THEN** пользователь получает эту причину вместе с нормализованной классификацией, без автоматической fallback-сессии
+
+#### Scenario: Полный результат доставлен первым wait
+- **WHEN** terminal wait содержит полную result_page по RP-2
+- **THEN** skill сохраняет её и переходит к существующему verification/terminal workflow без cursor_read_result
+
+#### Scenario: Первая страница и хвост до close
+- **WHEN** terminal wait содержит незавершённую result_page
+- **THEN** skill дочитывает по returned continuation с теми же IDs, сохраняет весь результат до verification/new turn/close; недоступный хвост сообщает как ограничение полноты без regeneration

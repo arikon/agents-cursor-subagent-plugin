@@ -244,6 +244,23 @@ export const PROJECT_SEMANTIC_REGISTRY = Object.freeze({
         Object.freeze({"capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования", "replacementReason": "Add the user-approved model discovery and bounded startup diagnostics without changing other runtime or workflow behavior.", "sourceDigest": "3f8e7fb5f3dcd228e1bab34f444e93e791f0fd600ddb2f6668ac416769254a4d", "replacementDigest": "4d5318db0fbf25ccee2ea6f5dfd9176969c0e57d93a77cbc53c961e8ab4e8796"}),
       ]),
     }),
+    Object.freeze({
+      id: "coalesce-terminal-result-pages",
+      capability: "cursor-acp-session-runtime",
+      specDirectory: "cursor-acp-session-runtime",
+      ownerClaim: "`cursor-acp-session-runtime` owns wire, paging и limits",
+      invariantIds: Object.freeze(["RP-1", "RP-2", "RP-3", "RP-4", "RP-5", "RP-6", "RP-7"]),
+      ownedRequirements: Object.freeze([]),
+      modified: Object.freeze([
+        Object.freeze({"capability": "cursor-acp-session-runtime", "requirement": "Публичный MCP tool contract", "replacementReason": "Первая точная страница в terminal wait и ограниченное объединение хвоста с сохранением существующих lifecycle, receipt и владельцев evidence.", "sourceDigest": "214d128558e158745049b827064429660c98b1804d3df62970e27e48b4118e7b", "replacementDigest": "c6b93bd6370b3abb948dd62b848d9d4ba363c0d95be697eff715065ae6634bef"}),
+        Object.freeze({"capability": "cursor-acp-session-runtime", "requirement": "Полное чтение terminal result", "replacementReason": "Первая точная страница в terminal wait и ограниченное объединение хвоста с сохранением существующих lifecycle, receipt и владельцев evidence.", "sourceDigest": "7d52fa7d8199508d3c4b39b6a8a3bdc423044ee92225165d91c22e797d3a37da", "replacementDigest": "7ab0ae2fe620e8ed0024f4703a363864f77d9646787e3c8a84177f6660e1c18d"}),
+        Object.freeze({"capability": "cursor-acp-session-runtime", "requirement": "Нормативные limits runtime", "replacementReason": "Первая точная страница в terminal wait и ограниченное объединение хвоста с сохранением существующих lifecycle, receipt и владельцев evidence.", "sourceDigest": "7e2216af0d7740e5c39eb4f27c2feb56664adafb8d78e1ce42adf3f1ed93a79d", "replacementDigest": "42c1af5c5c81248bbc7dc4149600feecf05b2e769d333484af34268dcf5931f9"}),
+        Object.freeze({"capability": "cursor-acp-session-runtime", "requirement": "Адресуемое ожидание состояния сессии", "replacementReason": "Первая точная страница в terminal wait и ограниченное объединение хвоста с сохранением существующих lifecycle, receipt и владельцев evidence.", "sourceDigest": "c45f67a8577f8bd62f1fbb854536b7992424dedf3a096b6bc61046ec9c9a7afa", "replacementDigest": "09fa421ea6f76dc524e2c8d138c39811061f33f5e1bee9e1bcbb32506d4b02a4"}),
+        Object.freeze({"capability": "cursor-task-delegation", "requirement": "Skill workflow делегирования", "replacementReason": "Первая точная страница в terminal wait и единый prompt preflight с сохранением lifecycle, receipt и владельцев evidence.", "sourceDigest": "b4b8571f6f599b8749348ab5a6f8678ac55291514e21d1106646b038ed1e5892", "replacementDigest": "d42c18352939c4099bed8333f1fd60c83511deeabcd211c2d374daf4af135c0c"}),
+        Object.freeze({"capability": "cursor-subagent-skill-evals", "requirement": "Eval transcript plumbing и process verdict", "replacementReason": "Первая точная страница в terminal wait и ограниченное объединение хвоста с сохранением существующих lifecycle, receipt и владельцев evidence.", "sourceDigest": "b94f9a45d9e242ba7ba94e53ef42ac4ef3c4536ffc20ee2019a21e6c72f20eca", "replacementDigest": "20e866be974e23861d509a8d2ef0acfe9cf6448f6606c50d628c5f9d0600a6b7"}),
+        Object.freeze({"capability": "cursor-subagent-skill-evals", "requirement": "Сценарный контракт поведения и authority-aware interaction", "replacementReason": "Первая точная страница в terminal wait и согласование protocol-error evidence с owner contract.", "sourceDigest": "f3b411c9a2c54ef6f32c49d507206f792f858ea4701bce1358176c4afba3ac93", "replacementDigest": "ac6c0feedb8173decc45a93e271ac9f9056e2b2bdb288ca1a4397c4cbfd69348"}),
+      ]),
+    }),
   ]),
   roles: changeIds,
 });

@@ -1,0 +1,90 @@
+{
+  "format": 1,
+  "subject": "baseline-main",
+  "scope": "terminal result delivery only; deterministic fake ACP; no model invocation",
+  "environment": {
+    "node": "v26.8.2",
+    "platform": "darwin",
+    "concurrency": 1
+  },
+  "scenarios": {
+    "selected": [
+      "terminal-result-delivery"
+    ],
+    "executed": 1,
+    "skipped": 0
+  },
+  "fixture": {
+    "name": "ascii-16353",
+    "source": "generated-ascii",
+    "bytes": 16353,
+    "sha256": "011308898ce1ebf5ccdd219f0542ee663be8aea9d7590a9551053b91a070f61c"
+  },
+  "runtime": {
+    "path": "scripts/cursor-subagent-mcp.mjs",
+    "bytes": 74567,
+    "sha256": "8bde75690138820d0e41fb648ba9a88549b38cb9a9115a373f2abe4fb85fe5b5"
+  },
+  "skill": {
+    "path": "skills/cursor-subagent/SKILL.md",
+    "bytes": 14110,
+    "sha256": "ae46e1d428ed3d518746fbf039929df23b256557075a3ac2bd06e35a9d3074fc"
+  },
+  "adapter": {
+    "path": "tests/fixtures/fake-acp.mjs",
+    "bytes": 38203,
+    "sha256": "d7161ac9fc959d5fd24b3877f88d38688ff23496321972d8cea4c16a46946ff6"
+  },
+  "terminal_receipt": {
+    "session_id": "ZVhLQlJafTg4-6cUPXP4eg",
+    "turn_id": "SchmFWA7PRvLAGEykd6SPg",
+    "turn_status": "completed",
+    "last_event_id": 3,
+    "result_sha256": "89f598bbb068dad945c30c95ef2dc452ed83985c45142265baafb0be130d0ee0",
+    "result_truncated": true
+  },
+  "delivery": [
+    {
+      "tool": "cursor_wait",
+      "wire_json_bytes": 8604,
+      "sha256": null,
+      "eof": false,
+      "next_offset": null,
+      "total_bytes": 16353,
+      "text_bytes": 8000
+    },
+    {
+      "tool": "cursor_read_result",
+      "wire_json_bytes": 8335,
+      "sha256": "011308898ce1ebf5ccdd219f0542ee663be8aea9d7590a9551053b91a070f61c",
+      "eof": false,
+      "next_offset": 8000,
+      "total_bytes": 16353,
+      "text_bytes": 8000
+    },
+    {
+      "tool": "cursor_read_result",
+      "wire_json_bytes": 8339,
+      "sha256": "011308898ce1ebf5ccdd219f0542ee663be8aea9d7590a9551053b91a070f61c",
+      "eof": false,
+      "next_offset": 16000,
+      "total_bytes": 16353,
+      "text_bytes": 8000
+    },
+    {
+      "tool": "cursor_read_result",
+      "wire_json_bytes": 691,
+      "sha256": "011308898ce1ebf5ccdd219f0542ee663be8aea9d7590a9551053b91a070f61c",
+      "eof": true,
+      "next_offset": null,
+      "total_bytes": 16353,
+      "text_bytes": 353
+    }
+  ],
+  "totals": {
+    "delivery_calls": 4,
+    "text_bytes": 24353,
+    "serialized_mcp_json_bytes": 25969,
+    "full_result_sha256": "011308898ce1ebf5ccdd219f0542ee663be8aea9d7590a9551053b91a070f61c"
+  }
+}

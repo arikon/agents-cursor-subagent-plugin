@@ -165,18 +165,20 @@ test('MCP keeps notifications silent and bounds untrusted tool errors', async (t
   assert.match(failure.message, /…$/);
 });
 
-test('MCP wires cursor_read_result through the public tool boundary', async (t) => {
+test('MCP terminal wait publishes the same first result page as cursor_read_result', async (t) => {
   const client = await transport(t, { FAKE_ACP_RESULT: 'wire-result' });
   await client.request('initialize');
   const session = await client.tool('cursor_start_session', { cwd: process.cwd(), mode: 'ask' });
   const turn = await client.tool('cursor_send_prompt', { session_id: session.session_id, prompt: 'Complete.' });
-  await client.tool('cursor_wait', {
+  const terminal = await client.tool('cursor_wait', {
     session_id: session.session_id, turn_id: turn.turn_id, timeout_ms: 1_000,
   });
+  assert.equal(Object.hasOwn(terminal, 'result'), false);
+  assert.equal(terminal.result_page.eof, true);
   const page = await client.tool('cursor_read_result', {
     session_id: session.session_id, turn_id: turn.turn_id,
   });
-  assert.equal(page.text, 'wire-result');
+  assert.deepEqual(page, terminal.result_page);
   await client.tool('cursor_close_session', { session_id: session.session_id });
 });
 

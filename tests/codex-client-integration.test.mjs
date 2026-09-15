@@ -301,14 +301,13 @@ test('observer separates preview receipt proof from complete full-result paging 
   const calls = [
     { tool: 'cursor_delegate', request: { mode: 'ask' }, response: { ok: true, session_id: 'S', turn_id: 'T' } },
     { tool: 'cursor_wait', request: { session_id: 'S', turn_id: 'T' }, response: { ok: true, session_id: 'S', turn_id: 'T', turn_status: 'completed',
-      result: { text_bytes: 7, text_sha256: previewDigest, truncated: true },
+      result_page: { text_bytes: 7, text_sha256: previewDigest, offset: 0, next_offset: 7, eof: false, total_bytes: 12, sha256: fullDigest },
       terminal_receipt: { result_sha256: previewDigest, result_truncated: true } } },
-    { tool: 'cursor_read_result', request: { session_id: 'S', turn_id: 'T', offset: 0 }, response: { ok: true, session_id: 'S', turn_id: 'T', result_read: { complete: false, eof: false } } },
     { tool: 'cursor_read_result', request: { session_id: 'S', turn_id: 'T', offset: 7 }, response: { ok: true, session_id: 'S', turn_id: 'T', result_read: { complete: true, eof: true, total_bytes: 12, sha256: fullDigest } } },
     { tool: 'cursor_close_session', request: { session_id: 'S' }, response: { ok: true, session_id: 'S' } },
   ];
   const observations = observationsFromEvidence(scenario, { calls, dropped_calls: 0 },
-    [{ event: 'prompt_result', step_id: 'terminal-1', result_sha256: fullDigest }],
+    [{ event: 'prompt_result', step_id: 'terminal-1', result_sha256: fullDigest, preview_sha256: previewDigest, preview_truncated: true }],
     { actual_task_outcome: 'succeeded' });
   assert.deepEqual(observations.trace.map(({ kind, matched, complete }) => ({ kind, ...(matched === undefined ? {} : { matched }),
     ...(complete === undefined ? {} : { complete }) })), [
@@ -317,10 +316,10 @@ test('observer separates preview receipt proof from complete full-result paging 
     { kind: 'session.close-attempted' },
   ]);
 
-  const precloseAndPostcloseReread = [...calls, calls[2], calls[3]];
-  assert.equal(precloseAndPostcloseReread.filter(({ tool }) => tool === 'cursor_read_result').length, 4);
+  const precloseAndPostcloseReread = [...calls, calls[2]];
+  assert.equal(precloseAndPostcloseReread.filter(({ tool }) => tool === 'cursor_read_result').length, 2);
   const rereadObservations = observationsFromEvidence(scenario, { calls: precloseAndPostcloseReread, dropped_calls: 0 },
-    [{ event: 'prompt_result', step_id: 'terminal-1', result_sha256: fullDigest }],
+    [{ event: 'prompt_result', step_id: 'terminal-1', result_sha256: fullDigest, preview_sha256: previewDigest, preview_truncated: true }],
     { actual_task_outcome: 'succeeded' });
   assert.deepEqual(rereadObservations.trace.filter(({ kind }) => kind === 'turn.result-read'), [
     { kind: 'turn.result-read', complete: true, step_id: 'terminal-1', session_id: 'S', turn_id: 'T', call_outcome: 'succeeded' },
@@ -328,18 +327,18 @@ test('observer separates preview receipt proof from complete full-result paging 
   assert.equal(scoreWithCapturedFinals(scenario, rereadObservations).eval_status, 'pass');
 
   const firstCompleteAfterClose = observationsFromEvidence(scenario,
-    { calls: [calls[0], calls[1], calls[4], calls[2], calls[3]], dropped_calls: 0 },
-    [{ event: 'prompt_result', step_id: 'terminal-1', result_sha256: fullDigest }],
+    { calls: [calls[0], calls[1], calls[3], calls[2]], dropped_calls: 0 },
+    [{ event: 'prompt_result', step_id: 'terminal-1', result_sha256: fullDigest, preview_sha256: previewDigest, preview_truncated: true }],
     { actual_task_outcome: 'succeeded' });
   assert.ok(firstCompleteAfterClose.trace.findIndex(({ kind }) => kind === 'session.close-attempted')
     < firstCompleteAfterClose.trace.findIndex(({ kind }) => kind === 'turn.result-read'));
   assert.equal(scoreWithCapturedFinals(scenario, firstCompleteAfterClose).eval_status, 'agent_behavior_mismatch');
 
-  const invalidEof = structuredClone(calls[3]); invalidEof.response.result_read.complete = false;
-  const invalidDigest = structuredClone(calls[3]); invalidDigest.response.result_read.sha256 = sha256('corrupt');
+  const invalidEof = structuredClone(calls[2]); invalidEof.response.result_read.complete = false;
+  const invalidDigest = structuredClone(calls[2]); invalidDigest.response.result_read.sha256 = sha256('corrupt');
   const invalidLaterObservations = observationsFromEvidence(scenario,
     { calls: [...calls, invalidEof, invalidDigest], dropped_calls: 0 },
-    [{ event: 'prompt_result', step_id: 'terminal-1', result_sha256: fullDigest }],
+    [{ event: 'prompt_result', step_id: 'terminal-1', result_sha256: fullDigest, preview_sha256: previewDigest, preview_truncated: true }],
     { actual_task_outcome: 'succeeded' });
   assert.deepEqual(invalidLaterObservations.trace.filter(({ kind }) => kind === 'turn.result-read').map(({ complete }) => complete),
     [true, false, false]);
@@ -348,8 +347,8 @@ test('observer separates preview receipt proof from complete full-result paging 
   const failedRead = { tool: 'cursor_read_result', request: { session_id: 'S', turn_id: 'T', offset: 12 },
     response: { ok: false, error_code: 'unknown_turn' } };
   const failedReadObservations = observationsFromEvidence(scenario,
-    { calls: [calls[0], calls[1], calls[2], calls[3], failedRead, calls[4]], dropped_calls: 0 },
-    [{ event: 'prompt_result', step_id: 'terminal-1', result_sha256: fullDigest }],
+    { calls: [calls[0], calls[1], calls[2], failedRead, calls[3]], dropped_calls: 0 },
+    [{ event: 'prompt_result', step_id: 'terminal-1', result_sha256: fullDigest, preview_sha256: previewDigest, preview_truncated: true }],
     { actual_task_outcome: 'succeeded' });
   assert.ok(failedReadObservations.trace.some(({ kind, call_outcome: outcome }) => kind === 'call.failed' && outcome === 'failed'));
 });
@@ -458,7 +457,7 @@ test('observer derives mode timeout and active-followup provider failure only fr
     { tool: 'cursor_set_mode', request: { session_id: 'S', mode: 'plan' }, response: { ok: false, error_code: 'mode_timeout' } },
   ];
   const modeSafe = [{ event: 'terminal_armed', step_id: 'terminal-1', turn_status: 'completed' },
-    { event: 'prompt_result', step_id: 'terminal-1', result_sha256: modeDigest }];
+    { event: 'prompt_result', step_id: 'terminal-1', result_sha256: modeDigest, preview_sha256: modeDigest, preview_truncated: false }];
   const modeObservations = observationsFromEvidence(modeScenario, { calls: modeCalls, dropped_calls: 0 }, modeSafe,
     { actual_task_outcome: 'failed', reported_task_outcome: 'not_checked' });
   assert.deepEqual(scoreWithCapturedFinals(modeScenario, modeObservations).mismatches, []);

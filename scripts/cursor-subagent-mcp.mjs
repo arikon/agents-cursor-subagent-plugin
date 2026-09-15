@@ -12,7 +12,7 @@ export const LIMITS = Object.freeze({ discoveryMs: 15_000, discoveryBytes: 1_048
   waitDefaultMs: 30_000, waitMinMs: 1_000, waitMaxMs: 180_000, live: 8, pending: 8,
   waiters: 8, tombstones: 64, events: 256, graceMs: 5_000, retentionMs: 300_000,
   inputBytes: 64_000, textBytes: 8_000, progressBytes: 512, fsBytes: 1_048_576,
-  resultBytes: 1_048_576, resultPageBytes: 8_000, frameBytes: 1_048_576 });
+  resultBytes: 1_048_576, resultPageBytes: 8_000, resultPageMaximumBytes: 10_000, frameBytes: 1_048_576 });
 const MCP_VERSION = '2024-11-05';
 const ADMITTED_TASK_SUBAGENT_TYPES = new Set(['computer_use', 'explore', 'video_review', 'browser_use', 'shell', 'vm_setup_helper', 'unspecified']);
 const opaqueId = () => randomBytes(16).toString('base64url');
@@ -285,6 +285,23 @@ function captureTerminalReceipt(session, turn) {
 function terminalReceipt(_session, turn) {
   return turn?.terminal_receipt ?? undefined;
 }
+function resultPage(session, turn, offset = 0) {
+  const encoded = Buffer.from(turn.full_result, 'utf8');
+  if (!Number.isSafeInteger(offset) || offset < 0 || offset > encoded.length) fail('invalid_args', 'invalid result offset');
+  try { decoder.decode(encoded.subarray(0, offset)); } catch { fail('invalid_args', 'result offset is not a UTF-8 boundary'); }
+  let end = encoded.length - offset <= LIMITS.resultPageMaximumBytes
+    ? encoded.length : Math.min(encoded.length, offset + LIMITS.resultPageBytes);
+  while (end > offset) {
+    try { decoder.decode(encoded.subarray(offset, end)); break; } catch { end -= 1; }
+  }
+  const eof = end === encoded.length;
+  return {
+    session_id: session.id, turn_id: turn.turn_id, offset,
+    next_offset: eof ? null : end, eof,
+    text: encoded.subarray(offset, end).toString('utf8'), total_bytes: encoded.length,
+    sha256: turn.full_result_sha256,
+  };
+}
 const MODEL_KEYS = ['model', 'effort', 'fast', 'optimize_for'];
 const LAUNCH_KEYS = [...MODEL_KEYS, 'plugin_dirs'];
 
@@ -353,7 +370,7 @@ class SessionRecord {
       pending: [...turn.pending.values()].map(({ request_id, kind, context }) => ({ request_id, kind, context })),
     };
     if (terminal) {
-      envelope.result = turn.result;
+      envelope.result_page = turn.result === null || turn.full_result === null ? null : resultPage(this, turn);
       envelope.terminal_reason = turn.terminal_reason;
       envelope.terminal_receipt = terminalReceipt(this, turn);
       if (this.provider_error) envelope.provider_error = this.provider_error;
@@ -860,21 +877,7 @@ export class Runtime {
     const session = this.session(text(args.session_id, 'session_id'));
     const turn = this.turn(session, text(args.turn_id, 'turn_id'));
     if (turn !== session.last || turn.result === null || turn.full_result === null) fail('protocol_error', 'turn has no retained terminal result');
-    const offset = args.offset ?? 0;
-    const encoded = Buffer.from(turn.full_result, 'utf8');
-    if (!Number.isSafeInteger(offset) || offset < 0 || offset > encoded.length) fail('invalid_args', 'invalid result offset');
-    try { decoder.decode(encoded.subarray(0, offset)); } catch { fail('invalid_args', 'result offset is not a UTF-8 boundary'); }
-    let end = Math.min(encoded.length, offset + LIMITS.resultPageBytes);
-    while (end > offset) {
-      try { decoder.decode(encoded.subarray(offset, end)); break; } catch { end -= 1; }
-    }
-    const eof = end === encoded.length;
-    return {
-      session_id: session.id, turn_id: turn.turn_id, offset,
-      next_offset: eof ? null : end, eof,
-      text: encoded.subarray(offset, end).toString('utf8'), total_bytes: encoded.length,
-      sha256: turn.full_result_sha256,
-    };
+    return resultPage(session, turn, args.offset ?? 0);
   }
   async call(name, args) {
     assertAggregate(args);

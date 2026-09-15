@@ -48,10 +48,14 @@ test('diagnostic replay retains every original trial and rejects drift or insuff
         const terminal = scenario.program.steps[0];
         const resultDigest = digest(terminal.result_text).sha256;
         harness.childResult.projection_inputs = { safe_evidence: [
-          { event: 'prompt_result', step_id: terminal.step_id, result_sha256: resultDigest },
+          { event: 'prompt_result', step_id: terminal.step_id, result_sha256: resultDigest,
+            preview_sha256: resultDigest, preview_truncated: false },
         ], turn_safe_evidence_starts: [0] };
         harness.childResult.transcript = structuredClone(harness.childResult.transcript);
         harness.childResult.transcript.calls[1].response.terminal_receipt = { result_sha256: resultDigest, result_truncated: false };
+        harness.childResult.transcript.calls[1].response.result_read = {
+          complete: true, eof: true, total_bytes: Buffer.byteLength(terminal.result_text), sha256: resultDigest,
+        };
         harness.childResult.observations.private_extra = 'not-for-publication';
         if (repairedAddress) {
           const wait = harness.childResult.transcript.calls[1];

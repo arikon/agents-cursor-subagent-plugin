@@ -36,6 +36,17 @@ const expectedModelArgv = process.env.FAKE_ACP_EXPECT_MODEL_ARGV
 const expectedPluginArgv = process.env.FAKE_ACP_EXPECT_PLUGIN_DIRS
   ? JSON.parse(process.env.FAKE_ACP_EXPECT_PLUGIN_DIRS).flatMap((root) => ['--plugin-dir', root])
   : [];
+function boundedPreview(value, limit = 8_000) {
+  if (Buffer.byteLength(value, 'utf8') <= limit) return { text: value, truncated: false };
+  const suffix = '…'; const contentLimit = limit - Buffer.byteLength(suffix, 'utf8');
+  let text = ''; let textBytes = 0;
+  for (const character of value) {
+    const characterBytes = Buffer.byteLength(character, 'utf8');
+    if (textBytes + characterBytes > contentLimit) break;
+    text += character; textBytes += characterBytes;
+  }
+  return { text: `${text}${suffix}`, truncated: true };
+}
 const expectedPolicyArgv = process.env.FAKE_ACP_EXPECT_DEFAULT_ARGV
   ? ['--auto-review', '--sandbox', 'enabled', ...expectedModelArgv, ...expectedPluginArgv, 'acp']
   : ['--auto-review', '--sandbox', 'enabled', ...expectedModelArgv, ...expectedPluginArgv];
@@ -153,9 +164,12 @@ const advanceProgram = () => {
       const id = promptId;
       promptId = null;
       send({ jsonrpc: '2.0', id, result: { stopReason: 'end_turn' } });
+      const acceptedText = typeof step.result_text === 'string' ? `${step.progress_text || ''}${step.result_text}` : null;
+      const preview = acceptedText === null ? null : boundedPreview(acceptedText);
       safeEvidence({ event: 'prompt_result', request_id: id, step_id: step.step_id,
         result_sha256: process.env.FAKE_ACP_RESULT_OVERFLOW === '1' ? null : typeof step.result_text === 'string'
-          ? createHash('sha256').update(`${step.progress_text || ''}${step.result_text}`).digest('hex') : null });
+          ? createHash('sha256').update(acceptedText).digest('hex') : null,
+        ...(preview === null ? {} : { preview_sha256: createHash('sha256').update(preview.text).digest('hex'), preview_truncated: preview.truncated }) });
       const exitAfterThisResult = process.env.FAKE_ACP_EXIT_AFTER_RESULT
         && (program?.resume_step_index === undefined || programStepIndex <= program.resume_step_index);
       if (exitAfterThisResult) setImmediate(() => process.exit(0));
@@ -350,7 +364,7 @@ input.on('line', (line) => {
     if (process.env.FAKE_ACP_PENDING === 'duplicate' && request.error) return;
     if (pendingResponsesRemaining > 0) pendingResponsesRemaining -= 1;
     if (pendingResponsesRemaining > 0) return;
-    if (promptId !== null) { finishPrompt(promptId, 'done'); promptId = null; }
+    if (promptId !== null) { finishPrompt(promptId, process.env.FAKE_ACP_RESULT ?? 'done'); promptId = null; }
     return;
   }
   if (request.method === 'initialize') {
