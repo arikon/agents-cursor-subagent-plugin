@@ -67,7 +67,9 @@ Cursor.
      `terminal_reason` and the need for a new user decision. Do not wait, retry,
      resume or redelegate. Runtime already stored the tombstone.
    - With `turn_id`: retain exact runtime `session_id`, provider `cursor_session_id`,
-     `turn_id` and launch choices in tool history. Observe live work below;
+     `turn_id` and launch choices in tool history. Treat these IDs as opaque:
+     copy them verbatim from the successful tool receipt and never construct,
+     shorten, normalize or substitute either ID. Observe live work below;
      handle terminality with step 5.
 
    For a live turn use
@@ -171,8 +173,10 @@ Cursor.
 
 ## Recovery
 
-- **Missing wait response:** repeat `cursor_wait` with retained session/turn IDs.
-  Repeated terminal state is observation, not execution; no prompt/resume/redelegate.
+- **Missing wait response:** repeat the same `cursor_wait` with the exact opaque
+  `session_id` and `turn_id` from the last successful delegate/send receipt—not
+  IDs from a failed call or inferred text. Repeated terminal state is observation,
+  not execution; no prompt/resume/redelegate.
 - **Rejected session call** (`unknown_session`, `unknown_turn`, `invalid_args`,
   `invalid_text_encoding`): compare against the latest retained public IDs.
   If an ID differs byte-for-byte, repeat that same call once with the exact

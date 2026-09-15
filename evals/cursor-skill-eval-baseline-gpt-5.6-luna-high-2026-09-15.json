@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "kind": "cursor-skill-eval-baseline",
+  "model": "gpt-5.6-luna",
+  "hosted_model_slug": "gpt-reserve",
+  "effort": "high",
+  "accepted_green": true,
+  "note": "High repair closeout: one declared full series ran three times at concurrency 4 and passed 81/81.",
+  "captured_at": "2026-09-15T08:48:31.065Z",
+  "reference_root": ".",
+  "candidate_digest": {
+    "sha256": "a6925c283be453d74fb06beeabed3a3fd19f0e4ae2af1e9274318b8ecac70850",
+    "bytes": 569
+  },
+  "final": {
+    "corpus": { "sha256": "0348da67f038ca6c147f63623dbc1ad4c0d081171a7eeded24ee7907b9b0e637", "bytes": 74875 },
+    "skill": { "sha256": "ce74c5f783f5ed4df3a6aa37fcf9c90bfc94c2e0483d32902166a3f1a1221fc1", "bytes": 14388 },
+    "evaluator": { "sha256": "48513400758c517e7fed06d94ac1ac4c7c86313f8d7423883c40d2d75d2669d1", "bytes": 6031 }
+  },
+  "series": {
+    "aggregate_bytes": 645982,
+    "aggregate_sha256": "793cdf2792d588edee397f3ba2fb46085f4511f149bcd537abf8e176649a000c",
+    "started_at": "2026-09-15T08:24:57.739Z",
+    "finished_at": "2026-09-15T08:48:31.065Z",
+    "duration_ms": 1413326,
+    "concurrency": 4,
+    "serial": 3,
+    "counts": { "total": 81, "pass": 81, "agent_behavior_mismatch": 0, "integration_failure": 0, "skipped": 0 },
+    "pass_rate": 1,
+    "digest_stable": true
+  }
+}
